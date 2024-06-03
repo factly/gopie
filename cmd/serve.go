@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/factly/gopie/api"
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/config"
+	"github.com/factly/gopie/http"
 	"github.com/factly/gopie/pkg"
 	"github.com/spf13/cobra"
 )
@@ -38,5 +38,5 @@ func serve() {
 	app.SetConfig(configService)
 	app.SetLogger(*logger)
 
-	api.RunHttpServer(app)
+	http.RunHttpServer(app)
 }
