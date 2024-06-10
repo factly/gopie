@@ -11,6 +11,7 @@ type Config struct {
 	Server ServerConfig
 	Logger LoggerConfig
 	Mode   ApplicationMode
+	DuckDB map[string]any
 }
 
 // config for server
@@ -85,8 +86,8 @@ func (config Config) LoadConfig() (*Config, error) {
 	if viper.IsSet("LOG_LEVEL") {
 		c.Logger.Level = viper.GetString("LOG_LEVEL")
 	} else {
-		c.Logger.Level = "info"
-		log.Println("❌ LOG_LEVEL env not set, using 'info' as default.")
+		c.Logger.Level = "debug"
+		log.Println("❌ LOG_LEVEL env not set, using 'debug' as default.")
 	}
 
 	if viper.IsSet("APPLICATION_MODE") {
@@ -94,6 +95,14 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		c.Mode.Mode = DEV
 		log.Println("❌ APPLICATION_MODE env not set, using 'dev' as default.")
+	}
+	c.DuckDB = make(map[string]any)
+
+	if viper.IsSet("DUCKDB_DSN") {
+		c.DuckDB["dsn"] = viper.GetString("DUCKDB_DSN")
+	} else {
+		c.DuckDB["dsn"] = "./data/main.db"
+		log.Println("❌ DUCKDB_DSN env not set, using './data/main.db' as default.")
 	}
 
 	return c, nil

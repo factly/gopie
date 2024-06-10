@@ -7,7 +7,7 @@ services:
       - 8000:8000
     volumes:
       - .:/app
-      - ./dataful:/duckdb
+      - ./data:/dataful
     networks:
       - gopie
 

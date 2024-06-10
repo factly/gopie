@@ -37,8 +37,8 @@ func RunHttpServer(app *app.App) {
 	router.Use(apiMiddleware.NilPointerMiddleware)
 	router.Use(middleware.Timeout(5 * time.Minute))
 
-	httpHandlerInitInput := api.HttpHandlerInitInput{Logger: *logger}
-	api.RegisterRoutes(router, httpHandlerInitInput)
+	conn := app.GetDuckDBConnection()
+	api.RegisterRoutes(router, logger, conn)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {

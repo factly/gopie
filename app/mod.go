@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/factly/gopie/config"
+	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/pkg"
 )
 
@@ -11,6 +12,7 @@ import (
 type App struct {
 	config *config.Config
 	logger pkg.Logger
+	duckdb *duckdb.Connection
 }
 
 func NewApp() *App {
@@ -19,6 +21,10 @@ func NewApp() *App {
 
 func (a *App) SetConfig(config *config.Config) {
 	a.config = config
+}
+
+func (a *App) SetDuckDBConnection(duckdb *duckdb.Connection) {
+	a.duckdb = duckdb
 }
 
 func (a *App) SetLogger(logger pkg.Logger) {
@@ -31,4 +37,8 @@ func (a *App) GetConfig() *config.Config {
 
 func (a *App) GetLogger() *pkg.Logger {
 	return &a.logger
+}
+
+func (a *App) GetDuckDBConnection() *duckdb.Connection {
+	return a.duckdb
 }
