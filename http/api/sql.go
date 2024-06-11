@@ -27,6 +27,7 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: body.Query})
 
 	if err != nil {
+		fmt.Println(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}

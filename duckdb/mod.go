@@ -7,12 +7,9 @@ import (
 	"io/fs"
 	"os"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/factly/gopie/pkg"
-	"golang.org/x/sync/semaphore"
 )
 
 type Driver struct {
@@ -49,19 +46,14 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		olapSemSize = 1
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 
 	c := &Connection{
-		config:         cfg,
-		ctx:            ctx,
-		cancel:         cancel,
-		logger:         logger,
-		metaSem:        semaphore.NewWeighted(1),
-		longRunningSem: semaphore.NewWeighted(1),
-		dbCond:         sync.NewCond(&sync.Mutex{}),
-		driverConfig:   cfgMap,
-		driverName:     d.name,
-		connTimes:      make(map[int]time.Time),
+		config:       cfg,
+		ctx:          ctx,
+		logger:       logger,
+		driverConfig: cfgMap,
+		driverName:   d.name,
 	}
 
 	err = c.reopenDB()

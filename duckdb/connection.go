@@ -9,35 +9,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/XSAM/otelsql"
 	"github.com/factly/gopie/pkg"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/marcboeker/go-duckdb"
-	"golang.org/x/sync/semaphore"
 )
 
 type Connection struct {
-	db             *sqlx.DB
-	driverConfig   map[string]any
-	driverName     string
-	config         *Config
-	logger         *pkg.Logger
-	metaSem        *semaphore.Weighted
-	longRunningSem *semaphore.Weighted
-	txMu           sync.RWMutex
-	dbConnCount    int
-	dbCond         *sync.Cond
-	dbReopen       bool
-	dbErr          error
-	connTimesMu    sync.Mutex
-	nextConnID     int
-	connTimes      map[int]time.Time
-	ctx            context.Context
-	cancel         context.CancelFunc
+	db           *sqlx.DB
+	driverConfig map[string]any
+	driverName   string
+	config       *Config
+	logger       *pkg.Logger
+	ctx          context.Context
 }
 
 func (c *Connection) Driver() string {
@@ -49,7 +34,6 @@ func (c *Connection) Config() map[string]any {
 }
 
 func (c *Connection) Close() error {
-	c.cancel()
 	return c.db.Close()
 }
 
@@ -185,53 +169,6 @@ func (c *Connection) reopenDB() error {
 	return nil
 }
 
-// acquireMetaConn gets a connection from the pool for "meta" queries like catalog and information schema (i.e. fast queries).
-// It returns a function that puts the connection back in the pool (if applicable).
-func (c *Connection) acquireMetaConn(ctx context.Context) (*sqlx.Conn, func() error, error) {
-	// Try to get conn from context (means the call is wrapped in WithConnection)
-	conn := connFromContext(ctx)
-	if conn != nil {
-		return conn, func() error { return nil }, nil
-	}
-
-	// Acquire semaphore
-	err := c.metaSem.Acquire(ctx, 1)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Get new conn
-	conn, releaseConn, err := c.acquireConn(ctx, false)
-	if err != nil {
-		c.metaSem.Release(1)
-		return nil, nil, err
-	}
-
-	// Build release func
-	release := func() error {
-		err := releaseConn()
-		c.metaSem.Release(1)
-		return err
-	}
-
-	return conn, release, nil
-}
-
-// checkErr marks the DB for reopening if the error is an internal DuckDB error.
-// In all other cases, it just proxies the err.
-// It should be wrapped around errors returned from DuckDB queries. **It must be called while still holding an acquired DuckDB connection.**
-func (c *Connection) checkErr(err error) error {
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "INTERNAL Error:") || strings.HasPrefix(err.Error(), "FATAL Error") {
-			c.dbCond.L.Lock()
-			defer c.dbCond.L.Unlock()
-			c.dbReopen = true
-			c.logger.Error("encountered internal DuckDB error - scheduling reopen of DuckDB", err.Error())
-		}
-	}
-	return err
-}
-
 func (c *Connection) tableVersion(name string) (string, bool, error) {
 	pathToFile := filepath.Join(c.config.DBStoragePath, name, "version.txt")
 	contents, err := os.ReadFile(pathToFile)
@@ -244,177 +181,36 @@ func (c *Connection) tableVersion(name string) (string, bool, error) {
 	return strings.TrimSpace(string(contents)), true, nil
 }
 
-func (c *Connection) accquireOLAPConn(ctx context.Context, longRunning, tx bool) (*sqlx.Conn, func() error, error) {
-	conn := connFromContext(ctx)
-	if conn != nil {
-		return conn, func() error { return nil }, nil
-	}
-
-	if longRunning {
-		err := c.longRunningSem.Acquire(ctx, 1)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	conn, releaseConn, err := c.acquireConn(ctx, tx)
-	if err != nil {
-		if longRunning {
-			c.longRunningSem.Release(1)
-		}
-		return nil, nil, err
-	}
-
-	release := func() error {
-		err := releaseConn()
-		if longRunning {
-			c.longRunningSem.Release(1)
-		}
-		return err
-	}
-	return conn, release, nil
-}
-
-// acquireConn returns a DuckDB connection. It should only be used internally in acquireMetaConn and acquireOLAPConn.
-// acquireConn implements the connection tracking and DB reopening logic described in the struct definition for connection.
-func (c *Connection) acquireConn(ctx context.Context, tx bool) (*sqlx.Conn, func() error, error) {
-	c.dbCond.L.Lock()
-	for {
-		if c.dbErr != nil {
-			c.dbCond.L.Unlock()
-			return nil, nil, c.dbErr
-		}
-		if !c.dbReopen {
-			break
-		}
-		c.dbCond.Wait()
-	}
-
-	c.dbConnCount++
-	c.dbCond.L.Unlock()
-
-	// Poor man's transaction support – see struct docstring for details.
-	if tx {
-		c.txMu.Lock()
-
-		// When tx is true, and the database is backed by a file, we reopen the database to ensure only one DuckDB connection is open.
-		// This avoids the following issue: https://github.com/duckdb/duckdb/issues/9150
-		if c.config.DBFilePath != "" {
-			err := c.reopenDB()
-			if err != nil {
-				c.txMu.Unlock()
-				return nil, nil, err
-			}
-		}
-	} else {
-		c.txMu.RLock()
-	}
-	releaseTx := func() {
-		if tx {
-			c.txMu.Unlock()
-		} else {
-			c.txMu.RUnlock()
-		}
-	}
-
-	conn, err := c.db.Connx(ctx)
-	if err != nil {
-		releaseTx()
-		return nil, nil, err
-	}
-
-	c.connTimesMu.Lock()
-	connID := c.nextConnID
-	c.nextConnID++
-	c.connTimes[connID] = time.Now()
-	c.connTimesMu.Unlock()
-
-	release := func() error {
-		err := conn.Close()
-		c.connTimesMu.Lock()
-		delete(c.connTimes, connID)
-		c.connTimesMu.Unlock()
-		releaseTx()
-		c.dbCond.L.Lock()
-		c.dbConnCount--
-		if c.dbConnCount == 0 && c.dbReopen {
-			c.dbReopen = false
-			err = c.reopenDB()
-			if err == nil {
-				c.logger.Info("reopened DuckDB successfully")
-			} else {
-				c.logger.Info("reopen of DuckDB failed - the handle is now permanently locked", err.Error())
-			}
-			c.dbErr = err
-			c.dbCond.Broadcast()
-		}
-		c.dbCond.L.Unlock()
-		return err
-	}
-
-	return conn, release, nil
-}
+var conn *sqlx.Conn
 
 func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result, outErr error) {
 	if c.config.LogQueries {
 		c.logger.Info("duckdb query: %v, %v", stmt.Query, stmt.Args)
 	}
 
-	if stmt.DryRun {
-		conn, release, err := c.acquireMetaConn(ctx)
+	if conn == nil {
+		var err error
+		conn, err = c.db.Connx(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error create a connection: %w", err)
 		}
-		defer func() { _ = release() }()
-
-		name := uuid.NewString()
-
-		_, err = conn.ExecContext(context.Background(), fmt.Sprintf("DROP VIEW %q", name))
-		return nil, c.checkErr(err)
-	}
-
-	conn, release, err := c.accquireOLAPConn(ctx, stmt.LongRunning, false)
-	if err != nil {
-		return nil, err
-	}
-
-	var cancelFunc context.CancelFunc
-	if stmt.ExecutionTimeout != 0 {
-		ctx, cancelFunc = context.WithTimeout(ctx, stmt.ExecutionTimeout)
 	}
 
 	rows, err := conn.QueryContext(ctx, stmt.Query, stmt.Args...)
 	if err != nil {
-		if cancelFunc != nil {
-			cancelFunc()
-		}
-
-		err = c.checkErr(err)
-		_ = release()
+		fmt.Println(err.Error())
 		return nil, err
 	}
 
 	schema, err := RowsToSchema(rows)
 	if err != nil {
-		if cancelFunc != nil {
-			cancelFunc()
-		}
 
-		err = c.checkErr(err)
-		_ = release()
 		return nil, err
 	}
 	res = &Result{
 		Rows:   rows,
 		Schema: schema,
 	}
-
-	res.SetCleanupFunc(func() error {
-		if cancelFunc != nil {
-			cancelFunc()
-		}
-		return release()
-	})
 
 	return res, nil
 }
