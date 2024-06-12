@@ -56,6 +56,20 @@ func (r *Result) SetCleanupFunc(fn func() error) {
 	r.cleanupFn = fn
 }
 
+func (r *Result) RowsToMap() (*[]map[string]any, error) {
+	var data []map[string]any
+	for r.Rows.Next() {
+		d := make(map[string]any)
+		err := r.MapScan(d)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, d)
+	}
+
+	return &data, nil
+}
+
 // Close wraps rows.Close and calls the Result's cleanup function (if it is set).
 // Close should be idempotent.
 func (r *Result) Close() error {

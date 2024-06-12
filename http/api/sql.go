@@ -32,19 +32,12 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data []map[string]any
-
-	for res.Rows.Next() {
-		d := make(map[string]any)
-		err = res.MapScan(d)
-		if err != nil {
-			fmt.Println(err.Error())
-			errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid request body", http.StatusBadRequest)))
-			return
-		}
-
-		data = append(data, d)
+	jsonRes, err := res.RowsToMap()
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
 	}
 
-	renderx.JSON(w, http.StatusOK, data)
+	renderx.JSON(w, http.StatusOK, jsonRes)
 }
