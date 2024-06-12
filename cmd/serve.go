@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/config"
+	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/http"
 	"github.com/factly/gopie/pkg"
 	"github.com/spf13/cobra"
@@ -23,20 +24,33 @@ var serveCmd = &cobra.Command{
 // setup and go-chi server
 func serve() {
 	config := config.New()
-	configService, err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		return
 	}
 
 	logger := pkg.NewLogger()
-	err = logger.SetConfig(&configService.Logger)
+	err = logger.SetConfig(&cfg.Logger)
 	if err != nil {
 		logger.Fatal("error setting logger config", "err", err.Error())
 	}
 
+	// create duckdb connnection
+	driver := duckdb.Driver{}
+	// set additional config for duckdb
+
+	duckDbCfg := cfg.DuckDB
+	duckDbCfg["external_table_storage"] = true
+	duckDbCfg["allow_host_access"] = true
+	conn, err := driver.Open(duckDbCfg, logger)
+	if err != nil {
+		logger.Fatal("Error creating duckdb connection: ", err.Error())
+	}
+
 	app := app.NewApp()
-	app.SetConfig(configService)
+	app.SetConfig(cfg)
 	app.SetLogger(*logger)
+	app.SetDuckDBConnection(conn)
 
 	http.RunHttpServer(app)
 }

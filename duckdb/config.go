@@ -16,8 +16,8 @@ const (
 	poolSizeMax    int     = 5
 )
 
-// config represents the DuckDB config
-type config struct {
+// Config represents the DuckDB Config
+type Config struct {
 	// DSN is the connection string.
 	DSN string `mapstructure:"dsn"`
 	// Path is the path to the database file. If set, it will tke precedence over the path contained in DSN.
@@ -54,13 +54,17 @@ type config struct {
 	LogQueries bool `mapstructure:"log_queries"`
 }
 
-func newConfig(cfgMap map[string]any) (*config, error) {
-	cfg := &config{}
+// create config from map[string]map
+// returns an error if failed to create config
+func newConfig(cfgMap map[string]any) (*Config, error) {
+	cfg := &Config{}
 	err := mapstructure.WeakDecode(cfgMap, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode config: %w", err)
 	}
 
+	// duckdb supports in-memory features but gopie's wont scale when duckdb is set to memory
+	// so it is ignored
 	if strings.HasPrefix(cfg.DSN, ":memory:") {
 		return nil, fmt.Errorf("in-memory database is not supported by 'gopie'")
 	}

@@ -1,15 +1,18 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 )
 
 type SqlRequestBody struct {
-	Query string `json:"email"`
+	Query string `json:"query"`
 }
 
 func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
@@ -21,5 +24,20 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderx.JSON(w, http.StatusOK, body)
+	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: body.Query})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
+	}
+
+	jsonRes, err := res.RowsToMap()
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
+	}
+
+	renderx.JSON(w, http.StatusOK, jsonRes)
 }

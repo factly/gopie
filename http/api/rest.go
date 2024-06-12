@@ -1,0 +1,170 @@
+package api
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/factly/gopie/duckdb"
+	"github.com/factly/x/errorx"
+	"github.com/factly/x/renderx"
+	"github.com/go-chi/chi/v5"
+)
+
+func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
+	// get the table name from path param
+	table := chi.URLParam(r, "tableName")
+	queryParams := r.URL.Query()
+
+	// get the columns of the table
+	columns := queryParams.Get("columns")
+	if columns == "" {
+		columns = "*"
+	}
+
+	// initialize base query
+	query := fmt.Sprintf("SELECT %s FROM %s", columns, table)
+
+	// valid filter is of pattern filter[column_name](gt|lt)=value
+	// value if a string should only wrapped around with single quotes
+	// value if not wrapped with single quotes are considered numbers and are parsed
+	// that means filter[col]lt='value', filter[col]=5 are valid filters
+	// where as filter[col]gt="value", filter[col]=value and filter[col]=Phase5 are invalid filters
+	whereQuery, err := parseFilters(queryParams)
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
+	}
+
+	if whereQuery != "" {
+		query = fmt.Sprintf("%s %s", query, whereQuery)
+	}
+
+	sort := queryParams.Get("sort")
+	if sort != "" {
+		orderBy := parseSort(sort)
+		query = fmt.Sprintf("%s %s", query, orderBy)
+	}
+
+	limit := queryParams.Get("limit")
+	if limit != "" {
+		query = fmt.Sprintf("%s LIMIT %s", query, limit)
+	}
+
+	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
+	}
+
+	jsonRes, err := res.RowsToMap()
+	if err != nil {
+		fmt.Println(err.Error())
+		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		return
+	}
+
+	renderx.JSON(w, http.StatusOK, jsonRes)
+}
+
+func parseSort(sort string) string {
+	split := strings.Split(sort, ",")
+	query := "ORDER BY"
+	if strings.HasPrefix(split[0], "-") {
+		runes := []rune(split[0])
+		s := string(runes[1:])
+		query = fmt.Sprintf("%s %s DESC", query, s)
+	} else {
+		query = fmt.Sprintf("%s %s ASC", query, split[0])
+	}
+
+	for _, s := range split[1:] {
+		if strings.HasPrefix(s, "-") {
+			runes := []rune(s)
+			s := string(runes[1:])
+			query = fmt.Sprintf("%s, %s DESC", query, s)
+		} else {
+			query = fmt.Sprintf("%s, %s ASC", query, s)
+		}
+	}
+	return query
+}
+
+func parseFilters(queryParams url.Values) (string, error) {
+	filters := make(map[string]string)
+	for key, values := range queryParams {
+		if len(values) > 0 && len(key) >= len("filter") && key[:len("filter")] == "filter" {
+			filters[key] = values[0]
+		}
+	}
+
+	whereConditions := []string{}
+
+	for key, value := range filters {
+		err := validateFilterValues(value)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+		procesedKey, err := validateAndProcessFilterKey(key)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+
+		condition := fmt.Sprintf("%s= %s", procesedKey, value)
+
+		whereConditions = append(whereConditions, condition)
+	}
+	if len(whereConditions) == 0 {
+		return "", nil
+	}
+	return "WHERE " + strings.Join(whereConditions, " AND "), nil
+}
+
+func validateFilterValues(value string) error {
+	if strings.HasPrefix(value, "'") {
+		if !strings.HasSuffix(value, "'") {
+			return fmt.Errorf("invalid filter value %s", value)
+		}
+		return nil
+	} else if strings.HasSuffix(value, `"`) {
+		return fmt.Errorf(`invalid filter value %s, value cannot start with " `, value)
+	} else {
+		if _, err := strconv.Atoi(value); err != nil {
+			if _, err := strconv.ParseFloat(value, 64); err != nil {
+				return fmt.Errorf("value should be a string starting and ending with ' or a number")
+			}
+		}
+	}
+	return nil
+}
+
+func validateAndProcessFilterKey(key string) (string, error) {
+	// Define a regular expression pattern for the filter key
+	pattern := `^filter\[([^\]]+)\](lt|gt)?$`
+	r := regexp.MustCompile(pattern)
+	match := r.FindStringSubmatch(key)
+	if match == nil {
+		return "", fmt.Errorf("filter does not follow the format filter[key](lt|gt|nothing)")
+	}
+	filterKey := match[1]
+	ltgt := match[2]
+
+	// If lt or gt exists, append it to the filter key
+	if ltgt != "" {
+		if ltgt == "lt" {
+			filterKey = fmt.Sprintf("%s <", filterKey)
+		} else {
+
+			filterKey = fmt.Sprintf("%s >", filterKey)
+		}
+	}
+	return filterKey, nil
+}
