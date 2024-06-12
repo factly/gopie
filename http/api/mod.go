@@ -16,6 +16,7 @@ func (h *httpHandler) routes() chi.Router {
 	router.Get("/health", h.healthHandler)
 	router.Post("/sql", h.sql)
 	router.Get("/tables/{tableName}", h.rest)
+	router.Get("/schema/{tableName}", h.schema)
 	return router
 }
 
