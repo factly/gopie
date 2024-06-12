@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/http/api"
 	apiMiddleware "github.com/factly/gopie/http/middleware"
@@ -38,7 +39,8 @@ func RunHttpServer(app *app.App) {
 	router.Use(middleware.Timeout(5 * time.Minute))
 
 	conn := app.GetDuckDBConnection()
-	api.RegisterRoutes(router, logger, conn)
+	openAiClient := ai.NewOpenAIClient("[REMOVED]")
+	api.RegisterRoutes(router, logger, conn, openAiClient)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {

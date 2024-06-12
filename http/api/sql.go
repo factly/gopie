@@ -10,18 +10,20 @@ import (
 	"github.com/factly/x/renderx"
 )
 
-type SqlRequestBody struct {
+type sqlRequestBody struct {
 	Query string `json:"query"`
 }
 
 func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
-	var body SqlRequestBody
+	var body sqlRequestBody
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid request body", http.StatusBadRequest)))
 		return
 	}
+	defer r.Body.Close()
 
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: body.Query})
 
