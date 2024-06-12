@@ -16,14 +16,14 @@ func (h httpHandler) schema(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: fmt.Sprintf("desc %s", table)})
 	if err != nil {
-		fmt.Println(err.Error())
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
 
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
-		fmt.Println(err.Error())
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}

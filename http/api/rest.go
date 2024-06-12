@@ -36,7 +36,7 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	// where as filter[col]gt="value", filter[col]=value and filter[col]=Phase5 are invalid filters
 	whereQuery, err := parseFilters(queryParams)
 	if err != nil {
-		fmt.Println(err.Error())
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
@@ -58,14 +58,14 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
 	if err != nil {
-		fmt.Println(err.Error())
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
 
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
-		fmt.Println(err.Error())
+		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
@@ -109,12 +109,10 @@ func parseFilters(queryParams url.Values) (string, error) {
 	for key, value := range filters {
 		err := validateFilterValues(value)
 		if err != nil {
-			fmt.Println(err.Error())
 			return "", err
 		}
 		procesedKey, err := validateAndProcessFilterKey(key)
 		if err != nil {
-			fmt.Println(err.Error())
 			return "", err
 		}
 
