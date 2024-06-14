@@ -53,8 +53,19 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 
 	limit := queryParams.Get("limit")
 	if limit != "" {
-		query = fmt.Sprintf("%s LIMIT %s", query, limit)
+		parsedLimit, err := strconv.Atoi(limit)
+		if err != nil {
+			h.logger.Error(err.Error())
+			errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid limit", http.StatusBadRequest)))
+			return
+		}
+		if parsedLimit > 1000 {
+			parsedLimit = 1000
+		}
+		query = fmt.Sprintf("%s LIMIT %d", query, parsedLimit)
 	}
+
+	query = imposeLimits(query)
 
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
 	if err != nil {
@@ -77,8 +88,7 @@ func parseSort(sort string) string {
 	split := strings.Split(sort, ",")
 	query := "ORDER BY"
 	if strings.HasPrefix(split[0], "-") {
-		runes := []rune(split[0])
-		s := string(runes[1:])
+		s := strings.TrimPrefix(split[0], "-")
 		query = fmt.Sprintf("%s %s DESC", query, s)
 	} else {
 		query = fmt.Sprintf("%s %s ASC", query, split[0])
@@ -86,8 +96,7 @@ func parseSort(sort string) string {
 
 	for _, s := range split[1:] {
 		if strings.HasPrefix(s, "-") {
-			runes := []rune(s)
-			s := string(runes[1:])
+			s := strings.TrimPrefix(s, "-")
 			query = fmt.Sprintf("%s, %s DESC", query, s)
 		} else {
 			query = fmt.Sprintf("%s, %s ASC", query, s)

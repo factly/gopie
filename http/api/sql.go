@@ -3,13 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
-	"github.com/xwb1989/sqlparser"
 )
 
 type sqlRequestBody struct {
@@ -27,14 +25,9 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	err = validateQuery(body.Query)
-	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusBadRequest)))
-		return
-	}
+	query := imposeLimits(body.Query)
 
-	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: body.Query})
+	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
 
 	if err != nil {
 		h.logger.Error(err.Error())
@@ -50,18 +43,4 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderx.JSON(w, http.StatusOK, jsonRes)
-}
-
-func validateQuery(q string) error {
-	stmt, err := sqlparser.Parse(q)
-	if err != nil {
-		return nil
-	}
-
-	switch stmt.(type) {
-	case *sqlparser.Select:
-		return nil
-	default:
-		return fmt.Errorf("Query is not read-only")
-	}
 }

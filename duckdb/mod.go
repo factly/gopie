@@ -85,5 +85,7 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		return nil, err
 	}
 
+	logger.Info("Readonly connection to duckdb established successfully....")
+
 	return c, nil
 }

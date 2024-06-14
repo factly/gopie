@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/config"
 	"github.com/factly/gopie/duckdb"
@@ -44,7 +46,7 @@ func serve() {
 	duckDbCfg["allow_host_access"] = true
 	conn, err := driver.Open(duckDbCfg, logger)
 	if err != nil {
-		logger.Fatal("Error creating duckdb connection: ", err.Error())
+		logger.Fatal(fmt.Sprintf("Error creating duckdb connection: %s", err.Error()))
 	}
 
 	app := app.NewApp()

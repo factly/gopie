@@ -72,7 +72,10 @@ func (c *Connection) reopenDB() error {
 		bootQueries = append(bootQueries, "SET preserve_insertion_order TO false")
 	}
 
-	connector, err := duckdb.NewConnector(c.config.DSN, func(execer driver.ExecerContext) error {
+	// make the connection to be read-only
+	dsn := fmt.Sprintf("%saccess_mode=read_only", c.config.DSN)
+
+	connector, err := duckdb.NewConnector(dsn, func(execer driver.ExecerContext) error {
 		for _, qry := range bootQueries {
 			_, err := execer.ExecContext(context.Background(), qry, nil)
 			if err != nil && strings.Contains(err.Error(), "Failed to download extension") {
@@ -192,7 +195,7 @@ func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result,
 		var err error
 		conn, err = c.db.Connx(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error create a connection: %w", err)
+			return nil, fmt.Errorf("error create a connection: %s", err.Error())
 		}
 	}
 
