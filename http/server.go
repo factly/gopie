@@ -7,7 +7,9 @@ import (
 
 	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
+	"github.com/factly/gopie/auth"
 	"github.com/factly/gopie/http/api"
+	authApi "github.com/factly/gopie/http/auth"
 	apiMiddleware "github.com/factly/gopie/http/middleware"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -38,9 +40,13 @@ func RunHttpServer(app *app.App) {
 	router.Use(apiMiddleware.NilPointerMiddleware)
 	router.Use(middleware.Timeout(5 * time.Minute))
 
+	iAuth := auth.NewAuth("./auth.db", logger, "masterkey")
+
 	conn := app.GetDuckDBConnection()
 	openAiClient := ai.NewOpenAIClient("[REMOVED]")
-	api.RegisterRoutes(router, logger, conn, openAiClient)
+
+	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient)
+	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware("masterkey")).(*chi.Mux), logger, iAuth)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {

@@ -17,13 +17,13 @@ type sqlRequestBody struct {
 func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	var body sqlRequestBody
 
+	defer r.Body.Close()
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid request body", http.StatusBadRequest)))
 		return
 	}
-	defer r.Body.Close()
 
 	query := imposeLimits(body.Query)
 

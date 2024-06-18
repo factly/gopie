@@ -101,7 +101,7 @@ func (config Config) LoadConfig() (*Config, error) {
 	if viper.IsSet("DUCKDB_DSN") {
 		c.DuckDB["dsn"] = viper.GetString("DUCKDB_DSN")
 	} else {
-		c.DuckDB["dsn"] = "./data/main.db"
+		c.DuckDB["dsn"] = "../rill/test-int/tmp/main.db"
 		log.Println("❌ DUCKDB_DSN env not set, using './data/main.db' as default.")
 	}
 
