@@ -35,7 +35,7 @@ func NewBboltInstance(path string, logger *pkg.Logger) (*Bbolt, error) {
 	return &Bbolt{db}, nil
 }
 
-func matchObj(obj, match map[string]string) bool {
+func matchObj(obj map[string]interface{}, match map[string]string) bool {
 	for k, v := range match {
 		if objV, ok := obj[k]; !ok || objV != v {
 			return false

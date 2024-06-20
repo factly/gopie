@@ -32,7 +32,7 @@ func (b *Bbolt) DeleteAllKeys(match map[string]string) error {
 			if obj["meta"] == nil {
 				return nil
 			}
-			if matchObj(obj["meta"].(map[string]string), match) {
+			if matchObj(obj["meta"].(map[string]interface{}), match) {
 				b.Delete(k)
 			}
 			return nil

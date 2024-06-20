@@ -12,11 +12,8 @@ func (a *authImpl) CreateKey(m map[string]any) (*models.AuthKey, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	m["token"] = token
-
 	key, err := a.db.CreateKey(m)
-
 	return key, err
 }
 

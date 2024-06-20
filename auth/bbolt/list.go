@@ -2,6 +2,8 @@ package bbolt
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 
 	"github.com/factly/gopie/auth/models"
 	"go.etcd.io/bbolt"
@@ -22,10 +24,16 @@ func (b *Bbolt) ListKeys(match map[string]string) ([]*models.AuthKey, error) {
 			if obj["meta"] == nil {
 				return nil
 			}
+			fmt.Println(reflect.TypeOf(obj["meta"]))
 
-			if matchObj(obj["meta"].(map[string]string), match) {
+			if obj["meta"] == nil {
+				return nil
+			}
+
+			if matchObj(obj["meta"].(map[string]interface{}), match) {
 				authKey := models.AuthKey{}
 				authKey.CreateFromMap(obj)
+				authKey.Token = models.AuthToken(k)
 				results = append(results, &authKey)
 			}
 

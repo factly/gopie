@@ -12,19 +12,17 @@ type httpHandler struct {
 }
 
 type key struct {
-	Key string `json:"api_key"`
+	Key string `json:"apikey"`
 }
 
 func (h *httpHandler) routes() chi.Router {
 	router := chi.NewRouter()
-	router.Post("/apikey/create", h.create)
+	router.Post("/apikey", h.create)
 	router.Patch("/apikey", h.update)
 	router.Delete("/apikey", h.delete_)
-	router.Route("/apikey", func(r chi.Router) {
-		r.Post("/list", h.list)
-		r.Post("/details", h.details)
-		r.Post("/invalidate", h.invalidate)
-	})
+	router.Get("/apikey", h.list)
+	router.Get("/apikey/details", h.details)
+	router.Post("/apikey/invalidate", h.invalidate)
 	return router
 }
 

@@ -62,7 +62,7 @@ func generateAPIKey(masterKey string) (string, error) {
 	h.Write([]byte(prefixBase64))
 	signature := h.Sum(nil)
 
-	apiKey := fmt.Sprintf("sk%s.%s", prefixBase64, base64.RawURLEncoding.EncodeToString(signature))
+	apiKey := fmt.Sprintf("gp%s.%s", prefixBase64, base64.RawURLEncoding.EncodeToString(signature))
 
 	return apiKey, nil
 }
