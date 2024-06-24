@@ -3,3 +3,5 @@ main
 /data
 /tmp
 auth.db
+config.env
+
