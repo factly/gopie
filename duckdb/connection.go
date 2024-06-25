@@ -17,20 +17,10 @@ import (
 )
 
 type Connection struct {
-	db           *sqlx.DB
-	driverConfig map[string]any
-	driverName   string
-	config       *Config
-	logger       *pkg.Logger
-	ctx          context.Context
-}
-
-func (c *Connection) Driver() string {
-	return c.driverName
-}
-
-func (c *Connection) Config() map[string]any {
-	return c.driverConfig
+	db     *sqlx.DB
+	config *Config
+	logger *pkg.Logger
+	ctx    context.Context
 }
 
 func (c *Connection) Close() error {
@@ -73,7 +63,9 @@ func (c *Connection) reopenDB() error {
 	}
 
 	// make the connection to be read-only
-	dsn := fmt.Sprintf("%saccess_mode=read_only", c.config.DSN)
+	// dsn := fmt.Sprintf("%saccess_mode=read_only", c.config.DSN)
+	// TODO: make the dsn read_only if mentioned in the envs
+	dsn := c.config.DSN
 
 	connector, err := duckdb.NewConnector(dsn, func(execer driver.ExecerContext) error {
 		for _, qry := range bootQueries {

@@ -59,7 +59,7 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 	if conf.BatchSize == "-1" {
 		batchSize = math.MaxInt64
 	}
-	opts := pkg.BlobOptions{
+	opts := objectstore.BlobOptions{
 		GlobPattern:           conf.url.Path,
 		RetainFiles:           c.config.RetainFiles,
 		BatchSizeBytes:        int64(batchSize.Bytes()),
@@ -70,7 +70,7 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 		KeepFilesUntilClose:   conf.BatchSize == "-1",
 	}
 
-	it, err := pkg.NewIterator(ctx, buckObj, opts, *c.logger)
+	it, err := objectstore.NewIterator(ctx, buckObj, opts, *c.logger)
 	if err != nil {
 		var failureErr awserr.RequestFailure
 		if !errors.As(err, &failureErr) {

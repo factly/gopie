@@ -41,19 +41,12 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		}
 	}
 
-	olapSemSize := cfg.PoolSize - 1
-	if olapSemSize < 1 {
-		olapSemSize = 1
-	}
-
 	ctx := context.Background()
 
 	c := &Connection{
-		config:       cfg,
-		ctx:          ctx,
-		logger:       logger,
-		driverConfig: cfgMap,
-		driverName:   d.name,
+		config: cfg,
+		ctx:    ctx,
+		logger: logger,
 	}
 
 	err = c.reopenDB()
@@ -85,7 +78,7 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		return nil, err
 	}
 
-	logger.Info("Readonly connection to duckdb established successfully....")
+	logger.Info("connection to duckdb established successfully....")
 
 	return c, nil
 }
