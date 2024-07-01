@@ -2,7 +2,6 @@ package duckdb
 
 import (
 	"database/sql"
-	"time"
 )
 
 type ColScanner interface {
@@ -12,12 +11,8 @@ type ColScanner interface {
 }
 
 type Statement struct {
-	Query            string
-	Args             []any
-	DryRun           bool
-	Priority         int
-	LongRunning      bool
-	ExecutionTimeout time.Duration
+	Query string
+	Args  []any
 }
 
 type Type struct {

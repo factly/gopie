@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -33,7 +32,6 @@ func (a *AuthKey) CreateFromMap(m map[string]any) {
 
 	// set key expiry
 	a.ExpiresAt = a.CreatedAt.Add(24 * time.Hour)
-	fmt.Println(a.CreatedAt, a.ExpiresAt)
 
 }
 

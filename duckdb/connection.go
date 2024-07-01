@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/XSAM/otelsql"
 	"github.com/factly/gopie/pkg"
@@ -176,12 +177,11 @@ func (c *Connection) tableVersion(name string) (string, bool, error) {
 	return strings.TrimSpace(string(contents)), true, nil
 }
 
+// TODO: change this type of usage
 var conn *sqlx.Conn
 
 func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result, outErr error) {
-	if c.config.LogQueries {
-		c.logger.Info("duckdb query: %v, %v", stmt.Query, stmt.Args)
-	}
+	c.logger.Info("duckdb query: %v, %v", stmt.Query, stmt.Args)
 
 	if conn == nil {
 		var err error
@@ -193,19 +193,263 @@ func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result,
 
 	rows, err := conn.QueryContext(ctx, stmt.Query, stmt.Args...)
 	if err != nil {
-		fmt.Println(err.Error())
 		return nil, err
 	}
 
 	schema, err := RowsToSchema(rows)
 	if err != nil {
-
 		return nil, err
 	}
 	res = &Result{
-		Rows:   rows,
 		Schema: schema,
+		Rows:   rows,
 	}
 
 	return res, nil
 }
+
+func (c *Connection) CreateTableAsSelect(ctx context.Context, name string, sql string) error {
+	c.logger.Info(fmt.Sprintf("create table %s", name))
+
+	if !c.config.ExtTableStorage {
+		return fmt.Errorf("gopie only supports exteranl table storages")
+	}
+
+	sourceDir := filepath.Join(c.config.DBStoragePath, name)
+	if err := os.Mkdir(sourceDir, fs.ModePerm); err != nil && !errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("create: unable to create dir %q: %w", sourceDir, err)
+	}
+
+	oldVerison, oldVersionExists, _ := c.tableVersion(name)
+	newVersion := fmt.Sprint(time.Now().UnixMilli())
+	dbFile := filepath.Join(sourceDir, fmt.Sprintf("%s.db", newVersion))
+	db := dbName(name, newVersion)
+
+	_, err := c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("ATTACH %s AS %s", fmt.Sprintf("'%s'", dbFile), safeName(db)),
+	})
+	if err != nil {
+		// removeDBFile(dbFile)
+		return fmt.Errorf("create: attatch %q db failed: %w", dbFile, err)
+	}
+
+	_, err = c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("CREATE OR REPLACE TABLE %s.default AS (%s\n)", safeSQLName(db), sql),
+	})
+
+	if err != nil {
+		c.logger.Error(err.Error())
+		return err
+	}
+
+	err = c.updateVersion(name, newVersion)
+	if err != nil {
+		c.detachAndRemoveFile(db, dbFile)
+		return err
+	}
+
+	qry, err := c.generateSelectQuery(ctx, db)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("CREATE OR REPLACE VIEW %s AS %s", safeSQLName(name), qry),
+	})
+	if err != nil {
+		c.logger.Error(err.Error())
+		return fmt.Errorf("CREATE OR REPLACE VIEW %s AS %s", safeSQLName(name), qry)
+	}
+	if oldVersionExists {
+		oldDB := dbName(name, oldVerison)
+		c.detachAndRemoveFile(oldDB, filepath.Join(sourceDir, fmt.Sprintf("%s.db", oldVerison)))
+	}
+
+	return nil
+}
+
+func (c *Connection) InsertTableAsSelect(ctx context.Context, name string, byName bool, sql string) error {
+	c.logger.Info(fmt.Sprintf("insert into table %s", name))
+	var insertByNameClause string
+	if byName {
+		insertByNameClause = "BY NAME"
+	} else {
+		insertByNameClause = ""
+	}
+
+	if !c.config.ExtTableStorage {
+		return fmt.Errorf("gopie only supports external table storage")
+	}
+
+	version, exists, err := c.tableVersion(name)
+	if err != nil {
+		c.logger.Error(err.Error())
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("InsertTableAsSelect: table %q does not exist", name)
+	}
+
+	_, err = c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("INSERT INTO %s.default %s (%s)", safeSQLName(dbName(name, version)), insertByNameClause, sql),
+	})
+	return err
+}
+
+func (c *Connection) updateVersion(name, version string) error {
+	pathToFile := filepath.Join(c.config.DBStoragePath, name, "version.txt")
+	file, err := os.Create(pathToFile)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.WriteString(version)
+	return err
+}
+
+func (c *Connection) detachAndRemoveFile(db, dbFile string) {
+	_, err := c.Execute(context.Background(), &Statement{Query: fmt.Sprintf("DETACH %s", safeSQLName(db))})
+	removeDBFile(dbFile)
+	if err != nil {
+		c.logger.Error(err.Error())
+	}
+}
+
+// duckDB raises Contents of view were altered: types don't match! error even when number of columns are same but sequence of column changes in underlying table.
+// duckDB raises Contents of view were altered: types don't match! error even when number of columns are same but sequence of column changes in underlying table.
+// This causes temporary query failures till the model view is not updated to reflect the new column sequence.
+// We ensure that view for external table storage is always generated using a stable order of columns of underlying table.
+// Additionally we want to keep the same order as the underlying table locally so that we can show columns in the same order as they appear in source data.
+// Using `AllowHostAccess` as proxy to check if we are running in local/cloud mode.
+func (c *Connection) generateSelectQuery(ctx context.Context, db string) (string, error) {
+	if c.config.AllowHostAccess {
+		return fmt.Sprintf("SELECT * FROM %s.default", safeSQLName(db)), nil
+	}
+
+	rows, err := c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf(`
+			SELECT column_name AS name
+			FROM information_schema.columns
+			WHERE table_catalog = %s AND table_name = 'default'
+			ORDER BY name ASC`, safeSQLString(db)),
+	})
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	cols := make([]string, 0)
+	var col string
+	for rows.Next() {
+		if err := rows.Scan(&col); err != nil {
+			return "", err
+		}
+		cols = append(cols, safeName(col))
+	}
+
+	return fmt.Sprintf("SELECT %s FROM %s.default", strings.Join(cols, ", "), safeSQLName(db)), nil
+}
+
+func (c *Connection) AddTableColumn(ctx context.Context, tableName, columnName, typ string) error {
+	c.logger.Info(fmt.Sprintf("add table column %s %s %s", tableName, columnName, typ))
+	if !c.config.ExtTableStorage {
+		return fmt.Errorf("gopie supports external storage table only")
+	}
+	version, exists, err := c.tableVersion(tableName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("table %q does not exist", tableName)
+	}
+
+	dbName := dbName(tableName, version)
+	_, err = c.Execute(ctx, &Statement{Query: fmt.Sprintf("ALTER TABLE %s.default ADD COLUMN %s %s", safeSQLName(dbName), safeSQLName(columnName), typ)})
+	if err != nil {
+		return err
+	}
+	_, err = c.Execute(ctx, &Statement{Query: fmt.Sprintf("CREATE OR REPLACE VIEW %s AS SELECT * FROM %s.default", safeSQLName(tableName), safeSQLName(dbName))})
+	if err != nil {
+		c.logger.Error(err.Error())
+	}
+	return err
+}
+
+func (c *Connection) AlterTableColumn(ctx context.Context, tableName, columnName, newType string) error {
+	c.logger.Info(fmt.Sprintf("alter table column %s %s %s", tableName, columnName, newType))
+
+	if !c.config.ExtTableStorage {
+		return fmt.Errorf("gopie supports external storage table only")
+	}
+	version, exists, err := c.tableVersion(tableName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("table %q does not exist", tableName)
+	}
+
+	dbName := dbName(tableName, version)
+
+	_, err = c.Execute(ctx, &Statement{Query: fmt.Sprintf("ALTER TABLE %s.default ALTER %s TYPE %s", safeSQLName(dbName), safeSQLName(columnName), newType)})
+	if err != nil {
+		c.logger.Error(err.Error())
+		return err
+	}
+	_, err = c.Execute(ctx, &Statement{Query: fmt.Sprintf("CREATE OR REPLACE VIEW %s AS SELECT * FROM %s.default", safeSQLName(tableName), safeSQLName(dbName))})
+	if err != nil {
+		c.logger.Error(err.Error())
+	}
+	return err
+}
+
+// func (c *Connection) converToEnum(ctx context.Context, table string, cols []string) error {
+// 	if len(cols) == 0 {
+// 		return fmt.Errorf("empty list")
+// 	}
+//
+// 	if !c.config.ExtTableStorage {
+// 		return fmt.Errorf("Gopie only supports external table storage")
+// 	}
+//
+// 	c.logger.Info("convert column to enum %s %s", table, cols)
+// 	olderVersoin, exists, err := c.tableVersion(table)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	if !exists {
+// 		return fmt.Errorf("table %q does not exists", table)
+// 	}
+//
+//
+// 	res, err := c.Execute(ctx, &Statement{
+// 		Query:    "SELECT current_database(), current_schema()",
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	var mainDB, mainSchema string
+// 	if res.Next() {
+// 		if err := res.Scan(&mainDB, &mainSchema); err != nil {
+// 			_ = res.Close()
+// 			return err
+// 		}
+// 	}
+//
+// 	_ = res.Close()
+//
+// 	sourceDir := filepath.Join(c.config.DBStoragePath, table)
+// 	newVersion := fmt.Sprint(time.Now().UnixMilli())
+// 	newDBFile := filepath.Join(sourceDir, fmt.Sprintf("%s.db", newVersion))
+// 	newDB := dbName(table, newVersion)
+//
+// 	_, err = c.Execute(ctx, &Statement{Query:fmt.Sprintf("USE %s", safeSQLName(newDB))})
+// 	if err != nil {
+// 		fmt.Sprintf(err.Error())
+// 	}
+// }

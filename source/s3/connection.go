@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/c2h5oh/datasize"
 	"github.com/factly/gopie/pkg"
-	"github.com/factly/gopie/source/objectstore"
+	"github.com/factly/gopie/source"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/s3blob"
 )
@@ -39,8 +39,9 @@ func (c *Connection) getCredentials() (*credentials.Credentials, error) {
 	return creds, nil
 }
 
-func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (objectstore.FileIterator, error) {
+func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (source.FileIterator, error) {
 	conf, err := parseSourceProperties(src)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
@@ -50,7 +51,7 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 		return nil, err
 	}
 
-	buckObj, err := c.openBucket(ctx, conf, conf.url.Host, creds)
+	buckObj, err := c.openBucket(ctx, c.config.Bucket, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open bucket %q, %w", conf.url.Host, err)
 	}
@@ -59,8 +60,8 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 	if conf.BatchSize == "-1" {
 		batchSize = math.MaxInt64
 	}
-	opts := objectstore.BlobOptions{
-		GlobPattern:           conf.url.Path,
+	opts := source.BlobOptions{
+		GlobPattern:           "*.{csv,parquet}",
 		RetainFiles:           c.config.RetainFiles,
 		BatchSizeBytes:        int64(batchSize.Bytes()),
 		GlobPageSize:          conf.GlobPageSize,
@@ -70,7 +71,9 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 		KeepFilesUntilClose:   conf.BatchSize == "-1",
 	}
 
-	it, err := objectstore.NewIterator(ctx, buckObj, opts, *c.logger)
+	path := src["path"].(string)
+
+	it, err := source.NewIterator(ctx, buckObj, opts, *c.logger, &path)
 	if err != nil {
 		var failureErr awserr.RequestFailure
 		if !errors.As(err, &failureErr) {
@@ -86,17 +89,18 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (obj
 	return it, nil
 }
 
-func (c *Connection) getAwsSessionConfig(conf *sourceProperties, creds *credentials.Credentials) (*session.Session, error) {
+func (c *Connection) getAwsSessionConfig(creds *credentials.Credentials) (*session.Session, error) {
+	endpoint := c.config.Endpoint
 	return session.NewSession(&aws.Config{
-		Region:           aws.String(conf.AWSRegion),
-		Endpoint:         &conf.S3Endpoint,
+		Region:           aws.String(c.config.Region),
+		Endpoint:         &endpoint,
 		S3ForcePathStyle: aws.Bool(true),
 		Credentials:      creds,
 	})
 }
 
-func (c *Connection) openBucket(ctx context.Context, conf *sourceProperties, bucket string, creds *credentials.Credentials) (*blob.Bucket, error) {
-	sess, err := c.getAwsSessionConfig(conf, creds)
+func (c *Connection) openBucket(ctx context.Context, bucket string, creds *credentials.Credentials) (*blob.Bucket, error) {
+	sess, err := c.getAwsSessionConfig(creds)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to start session: %w", err)

@@ -12,6 +12,9 @@ type configProperties struct {
 	AccessKeyID     string `mapstructure:"aws_access_key_id"`
 	SecretAccessKey string `mapstructure:"aws_secret_access_key"`
 	SessionToken    string `mapstructure:"aws_access_token"`
+	Region          string `mapstructure:"aws_region"`
+	Endpoint        string `mapstructure:"aws_endpoint"`
+	Bucket          string `mapstructure:"aws_bucket"`
 	AllowHostAccess bool   `mapstructure:"allow_host_access"`
 	RetainFiles     bool   `mapstructure:"retain_files"`
 }
@@ -19,7 +22,6 @@ type configProperties struct {
 type sourceProperties struct {
 	Path                 string         `mapstructure:"path"`
 	URI                  string         `mapstructure:"uri"`
-	AWSRegion            string         `mapstructure:"aws_region"`
 	GlobMaxTotalSize     int64          `mapstructure:"glob.max_total_size"`
 	GlobMaxObjectMatched int            `mapstructure:"glob.max_object_matched"`
 	GlobMaxObjetsListed  int64          `mapstructure:"glob.max_objets_listed"`

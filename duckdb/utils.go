@@ -556,3 +556,19 @@ func MapScan(r ColScanner, dest map[string]any) error {
 
 	return r.Err()
 }
+
+func FullExt(path string) string {
+	fullExt := filepath.Ext(path)
+	fullName := strings.TrimSuffix(path, fullExt)
+
+	for {
+		ext := filepath.Ext(fullName)
+		if ext == "" {
+			break
+		}
+		fullExt = ext + fullExt
+		fullName = strings.TrimSuffix(path, fullExt)
+	}
+
+	return fullExt
+}

@@ -16,6 +16,10 @@ type Driver struct {
 	name string
 }
 
+type Transpoter interface {
+	Transfer(ctx context.Context, srcProps, sinkProps map[string]any) error
+}
+
 func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, error) {
 	cfg, err := newConfig(cfgMap)
 	if err != nil {

@@ -8,9 +8,12 @@ import (
 	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/auth"
+	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/http/api"
+	"github.com/factly/gopie/http/api/s3"
 	authApi "github.com/factly/gopie/http/auth"
 	apiMiddleware "github.com/factly/gopie/http/middleware"
+	s3Source "github.com/factly/gopie/source/s3"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -24,9 +27,7 @@ func RunHttpServer(app *app.App) {
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(cors.Options{
-		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-		AllowedOrigins: []string{"http://*"},
-		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedOrigins:   []string{"http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-User", "X-Organisation"},
 		ExposedHeaders:   []string{"Link"},
@@ -40,13 +41,27 @@ func RunHttpServer(app *app.App) {
 	router.Use(apiMiddleware.NilPointerMiddleware)
 	router.Use(middleware.Timeout(5 * time.Minute))
 
-	iAuth := auth.NewAuth("./auth.db", logger, "masterkey")
+	masterKey := cfg.Auth.Mastkey
+
+	iAuth := auth.NewAuth(cfg.Auth.BboltPath, logger, masterKey)
 
 	conn := app.GetDuckDBConnection()
-	openAiClient := ai.NewOpenAIClient("[REMOVED]")
+	openAiClient := ai.NewOpenAIClient(cfg.OpenAI.APIKey)
 
+	objectStore := s3Source.NewS3Objectstore(logger, map[string]any{
+		"aws_access_key_id":     cfg.S3.AccessKey,
+		"aws_secret_access_key": cfg.S3.SecretAccessKey,
+		"allow_host_access":     true,
+		"aws_region":            "us-east-1",
+		"aws_endpoint":          cfg.S3.Endpoint,
+		"aws_bucket":            cfg.S3.Bucket,
+		"retain_files":          false,
+	})
+
+	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient)
-	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware("masterkey")).(*chi.Mux), logger, iAuth)
+	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, iAuth)
+	s3.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, objectStoreTranspoter)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {
