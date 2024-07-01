@@ -52,6 +52,7 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		query = fmt.Sprintf("%s %s", query, orderBy)
 	}
 
+	l := 0
 	limit := queryParams.Get("limit")
 	if limit != "" {
 		parsedLimit, err := strconv.Atoi(limit)
@@ -63,7 +64,19 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		if parsedLimit > 1000 {
 			parsedLimit = 1000
 		}
+		l = parsedLimit
 		query = fmt.Sprintf("%s LIMIT %d", query, parsedLimit)
+	}
+
+	page := queryParams.Get("page")
+	if page != "" {
+		parsedPage, err := strconv.Atoi(page)
+		if err != nil {
+			h.logger.Error(err.Error())
+			errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid limit", http.StatusBadRequest)))
+			return
+		}
+		query = fmt.Sprintf("%s OFFSET %d", query, (parsedPage-1)*l)
 	}
 
 	query = imposeLimits(query)

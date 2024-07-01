@@ -182,7 +182,7 @@ func (c *Connection) tableVersion(name string) (string, bool, error) {
 var conn *sqlx.Conn
 
 func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result, outErr error) {
-	c.logger.Info("running duckdb query: %v, %v", stmt.Query, stmt.Args)
+	c.logger.Info(fmt.Sprintf("running duckdb query: %v, %v", stmt.Query, stmt.Args))
 
 	if conn == nil {
 		var err error

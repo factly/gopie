@@ -50,8 +50,6 @@ type Config struct {
 	DBFilePath string `mapstructure:"_"`
 	// DBStoragePath is the path where the database files are stored. It is inferred from the DSN (can't be provided by the user).
 	DBStoragePath string `mapstructure:"_"`
-	// LogQueries controls whether to log the raw SQL passed to OLAP.Exectute. (Internal queries will not be logged.)
-	LogQueries bool `mapstructure:"log_queries"`
 }
 
 // create config from map[string]map
@@ -77,7 +75,7 @@ func newConfig(cfgMap map[string]any) (*Config, error) {
 
 	qry, err := url.ParseQuery(uri.RawQuery)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse dsb: %w", err)
+		return nil, fmt.Errorf("could not parse dsn: %w", err)
 	}
 
 	if cfg.Path != "" {
