@@ -2,7 +2,6 @@ package auth
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -40,22 +39,9 @@ func NewAuth(path string, logger *pkg.Logger, masterKey string) IAuth {
 	return &authImpl{logger, db, masterKey}
 }
 
-func generateRandomBytes(length int) ([]byte, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
-}
-
 func generateAPIKey(masterKey string) (string, error) {
-	prefix, err := generateRandomBytes(14)
-	if err != nil {
-		return "", err
-	}
-
-	prefixBase64 := fmt.Sprintf("%s", base64.RawStdEncoding.EncodeToString(prefix))
+	prefix := pkg.RandomString(14)
+	prefixBase64 := fmt.Sprintf("%s", base64.RawStdEncoding.EncodeToString([]byte(prefix)))
 
 	h := hmac.New(sha256.New224, []byte(masterKey))
 

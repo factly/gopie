@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 
 	"github.com/factly/gopie/duckdb"
@@ -44,7 +43,7 @@ func (h *httpHandler) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tableName := fmt.Sprintf("gp_%s", randomString())
+	tableName := fmt.Sprintf("gp_%s", pkg.RandomString(12))
 
 	err = h.objectStore.Transfer(context.Background(), map[string]any{
 		"allow_schema_relaxation": false,
@@ -60,15 +59,4 @@ func (h *httpHandler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderx.JSON(w, http.StatusCreated, map[string]string{"message": fmt.Sprintf("created duckdb file for '%s' as '%s'", body.Path, tableName), "tableName": tableName})
-}
-
-const charset = "abcdefghijklmnopqrstuvwxyz" +
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-func randomString() string {
-	b := make([]byte, 12)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b)
 }

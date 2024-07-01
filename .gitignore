@@ -4,4 +4,4 @@ main
 /tmp
 auth.db
 config.env
-
+auth_bbolt.db
