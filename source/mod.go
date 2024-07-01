@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/factly/gopie/custom_errors"
 	"github.com/factly/gopie/pkg"
 	"gocloud.dev/blob"
 	"golang.org/x/sync/errgroup"
@@ -56,6 +57,9 @@ func NewIterator(ctx context.Context, bucket *blob.Bucket, opts BlobOptions, log
 		close(it.batchCh)
 		it.Close()
 		return nil, err
+	}
+	if len(objects) == 0 {
+		return nil, custom_errors.NoObjectsFound
 	}
 	it.objects = objects
 

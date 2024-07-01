@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/factly/gopie/custom_errors"
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
@@ -31,6 +32,10 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.logger.Error(err.Error())
+		if err == custom_errors.TableNotFound {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage("Table with given name is not found", http.StatusNotFound)))
+			return
+		}
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}

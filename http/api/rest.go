@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/factly/gopie/custom_errors"
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
@@ -77,6 +78,10 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
 		h.logger.Error(err.Error())
+		if err == custom_errors.TableNotFound {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("Table with name %s is not found", table), http.StatusNotFound)))
+			return
+		}
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}

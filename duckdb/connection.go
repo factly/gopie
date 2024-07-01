@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/XSAM/otelsql"
+	"github.com/factly/gopie/custom_errors"
 	"github.com/factly/gopie/pkg"
 	"github.com/jmoiron/sqlx"
 	"github.com/marcboeker/go-duckdb"
@@ -181,7 +182,7 @@ func (c *Connection) tableVersion(name string) (string, bool, error) {
 var conn *sqlx.Conn
 
 func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result, outErr error) {
-	c.logger.Info("duckdb query: %v, %v", stmt.Query, stmt.Args)
+	c.logger.Info("running duckdb query: %v, %v", stmt.Query, stmt.Args)
 
 	if conn == nil {
 		var err error
@@ -193,6 +194,10 @@ func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result,
 
 	rows, err := conn.QueryContext(ctx, stmt.Query, stmt.Args...)
 	if err != nil {
+		// TODO: find a better to handle this error
+		if strings.Contains(err.Error(), "does not exist!") {
+			return nil, custom_errors.TableNotFound
+		}
 		return nil, err
 	}
 

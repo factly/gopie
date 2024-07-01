@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/factly/gopie/custom_errors"
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/pkg"
 	"github.com/factly/x/errorx"
@@ -54,6 +55,10 @@ func (h *httpHandler) upload(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.logger.Error(err.Error())
+		if err == custom_errors.NoObjectsFound {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusBadRequest)))
+			return
+		}
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
