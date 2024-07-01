@@ -60,7 +60,11 @@ func (a *authImpl) ValidateKey(k string) (bool, error) {
 		return false, err
 	}
 
-	return key.ExpiresAt.After(time.Now()), nil
+	expiry := time.Unix(key.ExpiresAt, 0)
+
+	duration := time.Until(expiry)
+
+	return duration > 0, nil
 }
 
 func (a *authImpl) DeleteAllKeys(m map[string]string) error {

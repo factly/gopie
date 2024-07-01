@@ -18,7 +18,7 @@ type AuthKey struct {
 	Name        string         `json:"name" mapstructure:"name"`
 	Token       AuthToken      `json:"token" mapstructure:"token"`
 	Meta        map[string]any `json:"meta" mapstructure:"meta"`
-	ExpiresAt   time.Time      `json:"expires_at"`
+	ExpiresAt   int64          `json:"expires_at" mapstructure:"expires_at"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
@@ -31,7 +31,7 @@ func (a *AuthKey) CreateFromMap(m map[string]any) {
 	a.UpdatedAt = time.Now()
 
 	// set key expiry
-	a.ExpiresAt = a.CreatedAt.Add(24 * time.Hour)
+	a.ExpiresAt = a.CreatedAt.Add(24 * time.Hour).Unix()
 
 }
 
@@ -49,7 +49,7 @@ func (a *AuthKey) StructToBytes() ([]byte, error) {
 	tempStruct := struct {
 		Description string         `json:"description,omitempty"`
 		Name        string         `json:"name"`
-		ExpiresAt   time.Time      `json:"expires_at"`
+		ExpiresAt   int64          `json:"expires_at"`
 		CreatedAt   time.Time      `json:"created_at"`
 		UpdatedAt   time.Time      `json:"updated_at"`
 		Meta        map[string]any `json:"meta,omitempty"`
@@ -65,5 +65,5 @@ func (a *AuthKey) StructToBytes() ([]byte, error) {
 }
 
 func (a *AuthKey) Invalidate() {
-	a.ExpiresAt = time.Now()
+	a.ExpiresAt = 0
 }

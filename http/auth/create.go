@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
@@ -24,6 +25,14 @@ func (h *httpHandler) create(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("name is a required field ")
 		errorx.Render(w, errorx.Parser(errorx.GetMessage("name is required field", http.StatusBadRequest)))
 		return
+	}
+
+	if m["expiry"] == "" {
+		m["expires_at"] = time.Now().Add(24 * time.Hour).Unix()
+	} else {
+		if expiry, ok := m["expiry"].(int64); ok {
+			m["expires_at"] = expiry
+		}
 	}
 
 	key, err := h.a.CreateKey(m)
