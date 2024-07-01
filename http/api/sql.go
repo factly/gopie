@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/factly/gopie/custom_errors"
@@ -34,6 +35,9 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error(err.Error())
 		if err == custom_errors.TableNotFound {
 			errorx.Render(w, errorx.Parser(errorx.GetMessage("Table with given name is not found", http.StatusNotFound)))
+			return
+		} else if err == custom_errors.InvalidSQL {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("invalid sql query: %s", body.Query), http.StatusBadRequest)))
 			return
 		}
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
