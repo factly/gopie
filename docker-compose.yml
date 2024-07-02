@@ -1,15 +1,17 @@
 services:
-  # gopie:
-  #   build:
-  #     context: ./
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - 8000:8000
-  #   volumes:
-  #     - .:/app
-  #     - ./data:/dataful
-  #   networks:
-  #     - gopie
+  gopie:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    volumes:
+      # - .:/app
+      - ./data:/home/gopie/data
+      - ./migrations:/home/gopie/migrations
+      - ./config.env:/home/gopie/config.env
+    networks:
+      - gopie
   #########################################################################
   #####                        MINIO                                #######
   #########################################################################
