@@ -31,7 +31,7 @@ func (a *AuthKey) CreateFromMap(m map[string]any) {
 	a.UpdatedAt = time.Now()
 
 	// set key expiry
-	a.ExpiresAt = a.CreatedAt.Add(24 * time.Hour).Unix()
+	a.ExpiresAt = m["expires_at"].(int64)
 
 }
 

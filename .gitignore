@@ -2,6 +2,5 @@ main
 /dataful
 /data
 /tmp
-auth.db
 config.env
-./auth_bbolt.db
+*.db
