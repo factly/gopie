@@ -83,6 +83,13 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
 	if err != nil {
+		if err == custom_errors.TableNotFound {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("Table with name %s is not found", table), http.StatusNotFound)))
+			return
+		} else if err == custom_errors.InvalidSQL {
+			errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusBadRequest)))
+			return
+		}
 		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
@@ -91,10 +98,6 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
 		h.logger.Error(err.Error())
-		if err == custom_errors.TableNotFound {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("Table with name %s is not found", table), http.StatusNotFound)))
-			return
-		}
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
@@ -181,6 +184,8 @@ func validateAndProcessFilterKey(key string) (string, error) {
 	}
 	filterKey := match[1]
 	ltgt := match[2]
+	// Wrap filterKey in double quotes
+	filterKey = fmt.Sprintf("\"%s\"", filterKey)
 
 	// If lt or gt exists, append it to the filter key
 	if ltgt != "" {

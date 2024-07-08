@@ -198,7 +198,7 @@ func (c *Connection) Execute(ctx context.Context, stmt *Statement) (res *Result,
 		if strings.Contains(err.Error(), "does not exist!") {
 			return nil, custom_errors.TableNotFound
 		}
-		if strings.Contains(err.Error(), "Parser Error") {
+		if strings.Contains(err.Error(), "Parser Error") || strings.Contains(err.Error(), "Binder Error") {
 			return nil, custom_errors.InvalidSQL
 		}
 		return nil, err
