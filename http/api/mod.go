@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -37,4 +38,18 @@ func imposeLimits(query string) string {
 		query = fmt.Sprintf("%s limit 1000", query)
 	}
 	return query
+}
+
+func getSchemaAsJson(conn *duckdb.Connection, table string) ([]map[string]any, error) {
+
+	res, err := conn.Execute(context.Background(), &duckdb.Statement{Query: fmt.Sprintf("desc %s", table)})
+	if err != nil {
+		return nil, err
+	}
+
+	jsonRes, err := res.RowsToMap()
+	if err != nil {
+		return nil, err
+	}
+	return *jsonRes, err
 }

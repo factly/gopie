@@ -1,12 +1,10 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/factly/gopie/custom_errors"
-	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 	"github.com/go-chi/chi/v5"
@@ -15,14 +13,7 @@ import (
 func (h httpHandler) schema(w http.ResponseWriter, r *http.Request) {
 	table := chi.URLParam(r, "tableName")
 
-	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: fmt.Sprintf("desc %s", table)})
-	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
-		return
-	}
-
-	jsonRes, err := res.RowsToMap()
+	jsonRes, err := getSchemaAsJson(h.conn, table)
 	if err != nil {
 		h.logger.Error(err.Error())
 		if err == custom_errors.TableNotFound {
