@@ -61,7 +61,7 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (sou
 		batchSize = math.MaxInt64
 	}
 	opts := source.BlobOptions{
-		GlobPattern:           "*.{csv,parquet}",
+		GlobPattern:           "**/*.{csv,parquet}",
 		RetainFiles:           c.config.RetainFiles,
 		BatchSizeBytes:        int64(batchSize.Bytes()),
 		GlobPageSize:          conf.GlobPageSize,

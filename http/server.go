@@ -61,7 +61,7 @@ func RunHttpServer(app *app.App) {
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient)
 	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, iAuth)
-	s3.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, objectStoreTranspoter)
+	s3.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {

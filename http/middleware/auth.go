@@ -40,7 +40,8 @@ func ApiKeyMiddleware(validate func(k string) (bool, error)) func(next http.Hand
 
 			cond, err := validate(m)
 			if err != nil {
-				errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusUnauthorized)))
+				log.Error(err)
+				errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid Api Key", http.StatusUnauthorized)))
 				return
 			}
 			if !cond {

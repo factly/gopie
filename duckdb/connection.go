@@ -414,6 +414,29 @@ func (c *Connection) AlterTableColumn(ctx context.Context, tableName, columnName
 	return err
 }
 
+func (c *Connection) DropTable(ctx context.Context, name string) error {
+	c.logger.Info(fmt.Sprintf("dropping table %s...", name))
+	version, exists, err := c.tableVersion(name)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	oldDB := dbName(name, version)
+
+	_, err = c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("DETACH %s", safeSQLName(oldDB)),
+	})
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(filepath.Join(c.config.DBStoragePath, name))
+}
+
 // func (c *Connection) converToEnum(ctx context.Context, table string, cols []string) error {
 // 	if len(cols) == 0 {
 // 		return fmt.Errorf("empty list")

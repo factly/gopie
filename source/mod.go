@@ -304,6 +304,7 @@ func (it *blobIterator) getObjs(path *string) ([]*blob.ListObject, error) {
 
 		token = nextToken
 		for _, obj := range objs {
+
 			if matched, _ := doublestar.Match(it.opts.GlobPattern, obj.Key); matched {
 				if path != nil {
 					if obj.Key == *path {
