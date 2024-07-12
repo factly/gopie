@@ -1,0 +1,31 @@
+project_name: tagore
+
+builds:
+- id: gopie
+  binary: gopie
+  env:
+  - CGO_ENABLED=0
+  - GO386=softfloat
+  goos:
+  - linux
+
+dockers:
+- dockerfile: Dockerfile
+  image_templates:
+    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
+    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
+
+  use: docker
+  build_flag_templates:
+  - "--platform=linux/amd64"
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
