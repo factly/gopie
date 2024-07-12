@@ -28,7 +28,7 @@ func NewObjectStoreToDuckDB(conn *Connection, logger *pkg.Logger, objectStore so
 	}
 }
 
-func (o *objectStoreToDuckDB) Transfer(ctx context.Context, srcProps, sinkProps map[string]any) error {
+func (o *objectStoreToDuckDB) Transfer(ctx context.Context, srcProps, sinkProps map[string]any, bucket string) error {
 	sinkCfg, err := parseSinkProperties(sinkProps)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (o *objectStoreToDuckDB) Transfer(ctx context.Context, srcProps, sinkProps 
 		return err
 	}
 
-	iterator, err := o.objectStore.DownloadFiles(ctx, srcProps)
+	iterator, err := o.objectStore.DownloadFiles(ctx, srcProps, bucket)
 	if err != nil {
 		return err
 	}

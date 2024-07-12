@@ -39,7 +39,7 @@ func (c *Connection) getCredentials() (*credentials.Credentials, error) {
 	return creds, nil
 }
 
-func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (source.FileIterator, error) {
+func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any, bucket string) (source.FileIterator, error) {
 	conf, err := parseSourceProperties(src)
 
 	if err != nil {
@@ -51,7 +51,7 @@ func (c *Connection) DownloadFiles(ctx context.Context, src map[string]any) (sou
 		return nil, err
 	}
 
-	buckObj, err := c.openBucket(ctx, c.config.Bucket, creds)
+	buckObj, err := c.openBucket(ctx, bucket, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open bucket %q, %w", conf.url.Host, err)
 	}

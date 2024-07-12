@@ -54,7 +54,6 @@ func RunHttpServer(app *app.App) {
 		"allow_host_access":     true,
 		"aws_region":            "us-east-1",
 		"aws_endpoint":          cfg.S3.Endpoint,
-		"aws_bucket":            cfg.S3.Bucket,
 		"retain_files":          false,
 	})
 

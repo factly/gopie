@@ -24,7 +24,7 @@ type FileIterator interface {
 }
 
 type ObjectStore interface {
-	DownloadFiles(ctx context.Context, src map[string]any) (FileIterator, error)
+	DownloadFiles(ctx context.Context, src map[string]any, bucket string) (FileIterator, error)
 }
 
 type ProgressUnit int

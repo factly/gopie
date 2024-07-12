@@ -14,7 +14,6 @@ type configProperties struct {
 	SessionToken    string `mapstructure:"aws_access_token"`
 	Region          string `mapstructure:"aws_region"`
 	Endpoint        string `mapstructure:"aws_endpoint"`
-	Bucket          string `mapstructure:"aws_bucket"`
 	AllowHostAccess bool   `mapstructure:"allow_host_access"`
 	RetainFiles     bool   `mapstructure:"retain_files"`
 }
