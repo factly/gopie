@@ -1,4 +1,4 @@
-version: 2
+# version: 2
 
 project_name: gopie
 
@@ -25,7 +25,7 @@ dockers:
     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
 
-  use: buildx
+  use: docker
   build_flag_templates:
   - "--platform=linux/amd64"
 
