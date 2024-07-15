@@ -6,8 +6,15 @@ builds:
   env:
   - CGO_ENABLED=0
   - GO386=softfloat
+  - GOARCH=amd64
   goos:
   - linux
+
+# archives:
+#   - id: gipie
+#     builds:
+#       - gopie
+#     name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
 - dockerfile: Dockerfile
