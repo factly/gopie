@@ -10,6 +10,9 @@ builds:
   - GO386=softfloat
   goos:
   - linux
+  ignore:
+    - goos: windows
+      goarch: arm
   # goarch:
   #   - amd64
 
