@@ -93,7 +93,7 @@ func newConfig(cfgMap map[string]any) (*Config, error) {
 	}
 
 	if maxMemory > 0 {
-		qry.Add("max_memory", fmt.Sprintf("%dGB", maxMemory))
+		qry.Add("memory_limit", fmt.Sprintf("%dGB", maxMemory))
 	}
 
 	// Set thread limit
