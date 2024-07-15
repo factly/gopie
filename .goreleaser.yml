@@ -8,9 +8,10 @@ builds:
   env:
   - CGO_ENABLED=0
   - GO386=softfloat
-  # - GOARCH=amd64
   goos:
   - linux
+  goarch:
+    - amd64
 
 # archives:
 #   - id: gipie
