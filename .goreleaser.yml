@@ -10,11 +10,11 @@ builds:
   - GO386=softfloat
   goos:
   - linux
-  goarch:
-    - amd64
+  # goarch:
+  #   - amd64
 
 # archives:
-#   - id: gipie
+#   - id: gopie
 #     builds:
 #       - gopie
 #     name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
