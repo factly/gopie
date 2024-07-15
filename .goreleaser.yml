@@ -1,44 +1,87 @@
+# version: 2
+
+# project_name: gopie
+
+# builds:
+# - id: gopie
+#   binary: gopie
+#   env:
+#   - CGO_ENABLED=0
+#   - GO386=softfloat
+#   goos:
+#   - linux
+#   ignore:
+#     - goos: windows
+#       goarch: arm
+#   # goarch:
+#   #   - amd64
+
+# # archives:
+# #   - id: gopie
+# #     builds:
+# #       - gopie
+# #     name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+# dockers:
+# - dockerfile: Dockerfile
+#   image_templates:
+#     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
+#     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
+
+#   use: docker
+#   build_flag_templates:
+#   - "--platform=linux/amd64"
+
+# checksum:
+#   name_template: 'checksums.txt'
+# snapshot:
+#   name_template: "{{ incpatch .Tag }}-next"
+# changelog:
+#   sort: asc
+#   filters:
+#     exclude:
+#       - '^docs:'
+#       - '^test:'
+
+########################
+
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=jcroql
 version: 2
 
-project_name: gopie
 
 builds:
-- id: gopie
-  binary: gopie
-  env:
-  - CGO_ENABLED=0
-  - GO386=softfloat
-  goos:
-  - linux
-  ignore:
-    - goos: windows
-      goarch: arm
-  # goarch:
-  #   - amd64
+  - env:
+      - CGO_ENABLED=0
+      - GO386=softfloat
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ignore:
+      - goos: windows
+        goarch: arm
 
-# archives:
-#   - id: gopie
-#     builds:
-#       - gopie
-#     name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
-dockers:
-- dockerfile: Dockerfile
-  image_templates:
-    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
-    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
-
-  use: docker
-  build_flag_templates:
-  - "--platform=linux/amd64"
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
+
 snapshot:
   name_template: "{{ incpatch .Tag }}-next"
+
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^test:"
+      - "^docs:"
+dockers:
+  - image_templates:
+      - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
+      - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+
