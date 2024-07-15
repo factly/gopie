@@ -130,13 +130,13 @@ func (config Config) LoadConfig() (*Config, error) {
 	if viper.IsSet("DUCKDB_MEMORY_LIMIT") {
 		c.DuckDB["memory_limit_gb"] = viper.GetInt("DUCKDB_MEMORY_LIMIT")
 		if err != nil {
-			c.DuckDB["memory_limit_gb"] = 4
-			log.Println("❌ DUCKDB_MEMORY_LIMIT env is invalid, using '4gb' as default.")
+			// c.DuckDB["memory_limit_gb"] = 4
+			// log.Println("❌ DUCKDB_MEMORY_LIMIT env is invalid, using '4gb' as default.")
 		}
 	} else {
 		// set default max_memory to 4gb
-		c.DuckDB["memory_limit_gb"] = 4
-		log.Println("❌ DUCKDB_MAX_MEMORY env not set, using '4gb' as default.")
+		// c.DuckDB["memory_limit_gb"] = 4
+		// log.Println("❌ DUCKDB_MAX_MEMORY env not set, using '4gb' as default.")
 	}
 
 	if viper.IsSet("DUCKDB_THREADS_LIMIT") {
