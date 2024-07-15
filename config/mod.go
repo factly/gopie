@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -124,6 +125,30 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		c.DuckDB["dsn"] = "./data/main.db"
 		log.Println("❌ DUCKDB_DSN env not set, using './data/main.db' as default.")
+	}
+
+	if viper.IsSet("DUCKDB_MEMORY_LIMIT") {
+		c.DuckDB["memory_limit_gb"], err = strconv.Atoi(viper.GetString("DUCKDB_MEMORY_LIMIT"))
+		if err != nil {
+			c.DuckDB["memory_limit_gb"] = 4
+			log.Println("❌ DUCKDB_MAX_MEMORY env is invalid, using '4gb' as default.")
+		}
+	} else {
+		// set default max_memory to 4gb
+		c.DuckDB["memory_limit_gb"] = 4
+		log.Println("❌ DUCKDB_MAX_MEMORY env not set, using '4gb' as default.")
+	}
+
+	if viper.IsSet("DUCKDB_THREADS_LIMIT") {
+		c.DuckDB["threads_override"], _ = strconv.Atoi(viper.GetString("DUCKDB_THREADS_LIMIT"))
+	}
+
+	if viper.IsSet("DUCKDB_CPU_LIMIT") {
+		c.DuckDB["cpu"], _ = strconv.Atoi(viper.GetString("DUCKDB_CPU_LIMIT"))
+	}
+
+	if viper.IsSet("DUCKDB_POOL_SIZE") {
+		c.DuckDB["cpu"], _ = strconv.Atoi(viper.GetString("DUCKDB_POOL_SIZE"))
 	}
 
 	if viper.IsSet("BBOLT_PATH") {
