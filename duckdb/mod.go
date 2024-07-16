@@ -72,15 +72,7 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		}
 	}
 
-	conn, err := c.db.Connx(context.Background())
-	if err != nil && strings.Contains(err.Error(), "Symbol is not found") {
-		fmt.Printf("Your version of macOs is not supported.")
-		os.Exit(1)
-	} else if err == nil {
-		conn.Close()
-	} else {
-		return nil, err
-	}
+	c.Execute(ctx, &Statement{Query: fmt.Sprintf("set memory_limit='%dGB';SET preserve_insertion_order = false;", cfg.MemoryLimitGB)})
 
 	logger.Info("connection to duckdb established successfully....")
 

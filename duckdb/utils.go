@@ -123,7 +123,7 @@ func generateReadCsvStatement(paths []string, properties map[string]any) (string
 	ingestionProps := copyMap(properties)
 	// set sample_size to 200000 by default
 	if _, sampleSizeDefined := ingestionProps["sample_size"]; !sampleSizeDefined {
-		ingestionProps["sample_size"] = 200000
+		ingestionProps["sample_size"] = 200
 	}
 	// auto_detect (enables auto-detection of parameters) is true by default, it takes care of params/schema
 	return fmt.Sprintf("read_csv_auto(%s)", convertToStatementParamsStr(paths, ingestionProps)), nil
