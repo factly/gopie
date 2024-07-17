@@ -2,6 +2,7 @@ FROM golang:1.22 as builder
 WORKDIR /app
 COPY . .
 RUN go mod download
+RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 RUN go build -o gopie main.go 
 
@@ -11,7 +12,7 @@ ENV USER=gopie
 ENV HOME_DIR=/home/$USER
 ENV DATA_DIR=$HOME_DIR/dataful
 
-RUN apt-get update && apt-get install -y ca-certificates gcc musl-dev g++ gcc-aarch64-linux-gnu
+RUN apt-get update && apt-get install -y ca-certificates gcc musl-dev g++
 
 COPY --from=builder /app/gopie /usr/local/bin
 RUN chmod 777 /usr/local/bin/gopie
