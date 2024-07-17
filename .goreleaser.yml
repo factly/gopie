@@ -6,7 +6,7 @@ builds:
 - id: gopie
   binary: gopie
   env:
-  - CGO_ENABLED=0
+  - CGO_ENABLED=1 # changed from 0 to 1 ref: https://github.com/marcboeker/go-duckdb/issues/199#issuecomment-2107614112
   - GO386=softfloat
   - GOARCH=amd64
   goos:
