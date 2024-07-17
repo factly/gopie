@@ -4,7 +4,7 @@ COPY . .
 RUN go mod download
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
-RUN go build -o gopie main.go 
+RUN CC=aarch64-linux-gnu-gcc go build -o gopie main.go
 
 FROM ubuntu:jammy as runtime
 
