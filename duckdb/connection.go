@@ -130,38 +130,38 @@ func (c *Connection) reopenDB() error {
 		return err
 	}
 
-	entries, err := os.ReadDir(c.config.DBStoragePath)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		path := filepath.Join(c.config.DBStoragePath, entry.Name())
-		version, exist, err := c.tableVersion(entry.Name())
-
-		if err != nil {
-			c.logger.Error("error in fetching db verison: ", err.Error())
-			_ = os.RemoveAll(path)
-			continue
-		}
-		if !exist {
-			_ = os.RemoveAll(path)
-			continue
-		}
-
-		dbFile := filepath.Join(path, fmt.Sprintf("%s.db", version))
-		db := dbName(entry.Name(), version)
-		_, err = conn.ExecContext(context.Background(), fmt.Sprintf("ATTACH %s AS %s", safeSQLString(dbFile), safeSQLName(db)))
-
-		if err != nil {
-			c.logger.Error("attach failed clearing db file", err.Error())
-			_, _ = conn.ExecContext(context.Background(), fmt.Sprintf("DROP VIEW IF EXISTS %s", safeSQLName(entry.Name())))
-			_ = os.RemoveAll(path)
-		}
-	}
+	// entries, err := os.ReadDir(c.config.DBStoragePath)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// for _, entry := range entries {
+	// 	if !entry.IsDir() {
+	// 		continue
+	// 	}
+	// 	path := filepath.Join(c.config.DBStoragePath, entry.Name())
+	// 	version, exist, err := c.tableVersion(entry.Name())
+	//
+	// 	if err != nil {
+	// 		c.logger.Error("error in fetching db verison: ", err.Error())
+	// 		_ = os.RemoveAll(path)
+	// 		continue
+	// 	}
+	// 	if !exist {
+	// 		_ = os.RemoveAll(path)
+	// 		continue
+	// 	}
+	//
+	// 	dbFile := filepath.Join(path, fmt.Sprintf("%s.db", version))
+	// 	db := dbName(entry.Name(), version)
+	// 	_, err = conn.ExecContext(context.Background(), fmt.Sprintf("ATTACH %s AS %s", safeSQLString(dbFile), safeSQLName(db)))
+	//
+	// 	if err != nil {
+	// 		c.logger.Error("attach failed clearing db file", err.Error())
+	// 		_, _ = conn.ExecContext(context.Background(), fmt.Sprintf("DROP VIEW IF EXISTS %s", safeSQLName(entry.Name())))
+	// 		_ = os.RemoveAll(path)
+	// 	}
+	// }
 
 	return nil
 }
