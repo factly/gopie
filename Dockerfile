@@ -2,9 +2,8 @@ FROM golang:1.22 as builder
 WORKDIR /app
 COPY . .
 RUN go mod download
-RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
-RUN CC=aarch64-linux-gnu-gcc go build -o gopie main.go
+RUN go build -o gopie main.go
 
 FROM ubuntu:jammy as runtime
 
