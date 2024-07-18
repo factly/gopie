@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/factly/x/renderx"
 )
@@ -47,13 +48,17 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractTableName(query string) (string, error) {
-	// Regular expression to match "FROM table_name" case-insensitively
-	re := regexp.MustCompile(`(?i)\bFROM\s+([a-zA-Z0-9_]+)`)
+	// Regular expression to match "FROM table_name" or 'FROM "table name"'
+	re := regexp.MustCompile(`(?i)\bFROM\s+(?:([a-zA-Z0-9_]+)|"([^"]*)")`)
 
 	matches := re.FindStringSubmatch(query)
 	if len(matches) < 2 {
 		return "", fmt.Errorf("no table name found in query")
 	}
 
-	return matches[1], nil
+	// If the first capture group is empty, use the second (quoted) group
+	if matches[1] != "" {
+		return matches[1], nil
+	}
+	return strings.Replace(matches[2], `\"`, `"`, -1), nil
 }
