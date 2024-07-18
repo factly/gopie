@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/factly/gopie/custom_errors"
-	"github.com/factly/gopie/duckdb"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 )
@@ -22,35 +20,30 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid request body", http.StatusBadRequest)))
+		h.handleError(w, err, "error decoding body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	schema, err := getSchemaAsJson(h.conn, body.TableName)
+	schemaRes, err := h.executeQuery(fmt.Sprintf("DESC %s", body.TableName), body.TableName)
 	if err != nil {
-		h.logger.Error(err.Error())
-		if err == custom_errors.TableNotFound {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("Table with name %s is not found", body.TableName), http.StatusNotFound)))
-			return
-		}
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		h.handleError(w, err, "error executing schema query", http.StatusInternalServerError)
 		return
 	}
 
-	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: fmt.Sprintf("SELECT * FROM %s ORDER BY RANDOM() LIMIT 20", body.TableName)})
+	schema, err := schemaRes.RowsToMap()
 	if err != nil {
-		h.logger.Error(err.Error())
-		if err == custom_errors.TableNotFound {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage("Table with given name is not found", http.StatusNotFound)))
-			return
-		}
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		h.handleError(w, err, "error converting resutl to JSON", http.StatusInternalServerError)
 		return
 	}
 
-	first20Rows, err := res.RowsToMap()
+	first20RowsRes, err := h.executeQuery(fmt.Sprintf("SELECT * FROM %s ORDER BY RANDOM() LIMIT 20", body.TableName), body.TableName)
+	if err != nil {
+		h.handleError(w, err, "error getting random rows: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	first20Rows, err := first20RowsRes.RowsToMap()
 	if err != nil {
 		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))

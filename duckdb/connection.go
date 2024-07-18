@@ -178,6 +178,30 @@ func (c *Connection) tableVersion(name string) (string, bool, error) {
 	return strings.TrimSpace(string(contents)), true, nil
 }
 
+func (c *Connection) AttachOldTable(ctx context.Context, name string) error {
+
+	sourceDir := filepath.Join(c.config.DBStoragePath, name)
+	if err := os.Mkdir(sourceDir, fs.ModePerm); err != nil && !errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("create: unable to create dir %q: %w", sourceDir, err)
+	}
+	oldVerison, oldVersionExists, _ := c.tableVersion(name)
+	if !oldVersionExists {
+		return custom_errors.TableNotFound
+	}
+	dbFile := filepath.Join(sourceDir, fmt.Sprintf("%s.db", oldVerison))
+	db := dbName(name, oldVerison)
+
+	_, err := c.Execute(ctx, &Statement{
+		Query: fmt.Sprintf("ATTACH %s AS %s", fmt.Sprintf("'%s'", dbFile), safeName(db)),
+	})
+	if err != nil {
+		// removeDBFile(dbFile)
+		return fmt.Errorf("create: attatch %q db failed: %w", dbFile, err)
+	}
+
+	return nil
+}
+
 // TODO: change this type of usage
 var conn *sqlx.Conn
 

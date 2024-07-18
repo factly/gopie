@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,9 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/factly/gopie/custom_errors"
-	"github.com/factly/gopie/duckdb"
-	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 	"github.com/go-chi/chi/v5"
 )
@@ -21,6 +17,30 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	table := chi.URLParam(r, "tableName")
 	queryParams := r.URL.Query()
 
+	query, err := buildQuery(table, queryParams)
+	if err != nil {
+		h.handleError(w, err, "error building query", http.StatusBadRequest)
+		return
+	}
+
+	query = imposeLimits(query)
+
+	res, err := h.executeQuery(query, table)
+
+	if err != nil {
+		h.handleError(w, err, "Error executing query", http.StatusInternalServerError)
+		return
+	}
+
+	jsonRes, err := res.RowsToMap()
+	if err != nil {
+		h.handleError(w, err, "Error converting result to JSON", http.StatusInternalServerError)
+	}
+
+	renderx.JSON(w, http.StatusOK, jsonRes)
+}
+
+func buildQuery(table string, queryParams url.Values) (string, error) {
 	// get the columns of the table
 	columns := queryParams.Get("columns")
 	if columns == "" {
@@ -37,9 +57,7 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	// where as filter[col]gt="value", filter[col]=value and filter[col]=Phase5 are invalid filters
 	whereQuery, err := parseFilters(queryParams)
 	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
-		return
+		return "", err
 	}
 
 	if whereQuery != "" {
@@ -57,9 +75,7 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	if limit != "" {
 		parsedLimit, err := strconv.Atoi(limit)
 		if err != nil {
-			h.logger.Error(err.Error())
-			errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid limit", http.StatusBadRequest)))
-			return
+			return "", err
 		}
 		if parsedLimit > 1000 {
 			parsedLimit = 1000
@@ -72,37 +88,12 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	if page != "" {
 		parsedPage, err := strconv.Atoi(page)
 		if err != nil {
-			h.logger.Error(err.Error())
-			errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid limit", http.StatusBadRequest)))
-			return
+			return "", err
 		}
 		query = fmt.Sprintf("%s OFFSET %d", query, (parsedPage-1)*l)
 	}
 
-	query = imposeLimits(query)
-
-	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
-	if err != nil {
-		if err == custom_errors.TableNotFound {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("Table with name %s is not found", table), http.StatusNotFound)))
-			return
-		} else if err == custom_errors.InvalidSQL {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusBadRequest)))
-			return
-		}
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
-		return
-	}
-
-	jsonRes, err := res.RowsToMap()
-	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
-		return
-	}
-
-	renderx.JSON(w, http.StatusOK, jsonRes)
+	return imposeLimits(query), nil
 }
 
 func parseSort(sort string) string {

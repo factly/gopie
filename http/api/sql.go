@@ -1,14 +1,11 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 
-	"github.com/factly/gopie/custom_errors"
-	"github.com/factly/gopie/duckdb"
-	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 )
 
@@ -22,34 +19,41 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage("Invalid request body", http.StatusBadRequest)))
+		h.handleError(w, err, "error decoding body", http.StatusBadRequest)
 		return
 	}
 
 	query := imposeLimits(body.Query)
 
-	res, err := h.conn.Execute(context.Background(), &duckdb.Statement{Query: query})
-
+	table, err := extractTableName(query)
 	if err != nil {
-		h.logger.Error(err.Error())
-		if err == custom_errors.TableNotFound {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage("Table with given name is not found", http.StatusNotFound)))
-			return
-		} else if err == custom_errors.InvalidSQL {
-			errorx.Render(w, errorx.Parser(errorx.GetMessage(fmt.Sprintf("invalid sql query: %s", body.Query), http.StatusBadRequest)))
-			return
-		}
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		h.handleError(w, err, "error extracting table name", http.StatusBadRequest)
+		return
+	}
+
+	res, err := h.executeQuery(query, table)
+	if err != nil {
+		h.handleError(w, err, "error executing query", http.StatusInternalServerError)
 		return
 	}
 
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
-		h.logger.Error(err.Error())
-		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
+		h.handleError(w, err, "error converting result to JSON", http.StatusInternalServerError)
 		return
 	}
 
 	renderx.JSON(w, http.StatusOK, jsonRes)
+}
+
+func extractTableName(query string) (string, error) {
+	// Regular expression to match "FROM table_name" case-insensitively
+	re := regexp.MustCompile(`(?i)\bFROM\s+([a-zA-Z0-9_]+)`)
+
+	matches := re.FindStringSubmatch(query)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("no table name found in query")
+	}
+
+	return matches[1], nil
 }
