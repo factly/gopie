@@ -16,11 +16,16 @@ type Config struct {
 	Auth   AuthConfig
 	OpenAI OpenAIConfig
 	S3     S3Config
+	D      DetachCmdConfig
 }
 
 // config for server
 type ServerConfig struct {
 	Port string
+}
+
+type DetachCmdConfig struct {
+	GopieUrl string
 }
 
 // config for auth
@@ -196,10 +201,10 @@ func (config Config) LoadConfig() (*Config, error) {
 		log.Println("❌ S3_ENDPOINT env not set")
 	}
 
-	if viper.IsSet("S3_BUCKET_NAME") {
-		c.S3.Bucket = viper.GetString("S3_BUCKET_NAME")
+	if viper.IsSet("GOPIE_SERVER_URL") {
+		c.D.GopieUrl = viper.GetString("GOPIE_SERVER_URL")
 	} else {
-		log.Println("❌ S3_BUCKET_NAME env not set")
+		log.Println("❌ GOPIE_SERVER_URL env not set, using 'http://localhost:8000' as default")
 	}
 
 	return c, nil

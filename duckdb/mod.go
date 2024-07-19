@@ -72,7 +72,9 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		}
 	}
 
-	c.Execute(ctx, &Statement{Query: fmt.Sprintf("set memory_limit='%dGB';SET preserve_insertion_order = false;", cfg.MemoryLimitGB)})
+	if cfg.MemoryLimitGB != 0 {
+		c.Execute(ctx, &Statement{Query: fmt.Sprintf("set memory_limit='%dGB'", cfg.MemoryLimitGB)})
+	}
 
 	logger.Info("connection to duckdb established successfully....")
 

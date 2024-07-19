@@ -22,5 +22,6 @@ func (h *httpHandler) routes() chi.Router {
 	router.Post("/s3", h.create)
 	router.Put("/s3", h.update)
 	router.Delete("/s3", h.delete_)
+	router.Post("/detach", h.detach)
 	return router
 }

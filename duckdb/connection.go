@@ -290,6 +290,8 @@ func (c *Connection) CreateTableAsSelect(ctx context.Context, name string, sql s
 	})
 	if err != nil {
 		c.logger.Error(err.Error())
+		oldDB := dbName(name, oldVerison)
+		c.detachAndRemoveFile(oldDB, filepath.Join(sourceDir, fmt.Sprintf("%s.db", oldVerison)))
 		return fmt.Errorf("CREATE OR REPLACE VIEW %s AS %s", safeSQLName(name), qry)
 	}
 	if oldVersionExists {
@@ -440,25 +442,26 @@ func (c *Connection) AlterTableColumn(ctx context.Context, tableName, columnName
 
 func (c *Connection) DropTable(ctx context.Context, name string) error {
 	c.logger.Info(fmt.Sprintf("dropping table %s...", name))
-	version, exists, err := c.tableVersion(name)
+	err := c.DetachTable(ctx, name)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(filepath.Join(c.config.DBStoragePath, name))
+}
+
+func (c *Connection) DetachTable(ctx context.Context, name string) error {
+	c.logger.Info("detaching table", "table", name)
+	version, _, err := c.tableVersion(name)
 	if err != nil {
 		return err
 	}
 
-	if !exists {
-		return nil
-	}
-
-	oldDB := dbName(name, version)
+	db := dbName(name, version)
 
 	_, err = c.Execute(ctx, &Statement{
-		Query: fmt.Sprintf("DETACH %s", safeSQLName(oldDB)),
+		Query: fmt.Sprintf("DETACH %s", safeSQLName(db)),
 	})
-	if err != nil {
-		return err
-	}
-
-	return os.RemoveAll(filepath.Join(c.config.DBStoragePath, name))
+	return err
 }
 
 // func (c *Connection) converToEnum(ctx context.Context, table string, cols []string) error {

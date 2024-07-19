@@ -12,6 +12,7 @@ import (
 	"github.com/factly/gopie/http/api"
 	"github.com/factly/gopie/http/api/s3"
 	authApi "github.com/factly/gopie/http/auth"
+	"github.com/factly/gopie/http/metrics"
 	apiMiddleware "github.com/factly/gopie/http/middleware"
 	s3Source "github.com/factly/gopie/source/s3"
 	"github.com/go-chi/chi/middleware"
@@ -58,8 +59,13 @@ func RunHttpServer(app *app.App) {
 	})
 
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
+	// register api routes with api key validating middleware
 	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient)
+	// register auth routes with master_key validating middleware
 	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, iAuth)
+	// register metric routes with master_key validating middleware
+	metrics.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, conn)
+	// register file upload routes with master_key validating middleware
 	s3.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)

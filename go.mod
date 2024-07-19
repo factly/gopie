@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.54.6
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
+	github.com/eapache/go-resiliency v1.6.0
 	github.com/factly/x v0.0.96
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.12
