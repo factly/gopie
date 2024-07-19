@@ -44,6 +44,7 @@ func serve() {
 	duckDbCfg := cfg.DuckDB
 	duckDbCfg["external_table_storage"] = true
 	duckDbCfg["allow_host_access"] = true
+	duckDbCfg["read_only"] = cfg.Server.ReadOnly
 	conn, err := driver.Open(duckDbCfg, logger)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error creating duckdb connection: %s", err.Error()))

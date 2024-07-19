@@ -21,7 +21,8 @@ type Config struct {
 
 // config for server
 type ServerConfig struct {
-	Port string
+	Port     string
+	ReadOnly bool
 }
 
 type DetachCmdConfig struct {
@@ -101,6 +102,13 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		c.Server.Port = "8000"
 		log.Println("❌ SERVER_PORT env not set, using '8000' as default.")
+	}
+
+	if viper.IsSet("READ_ONLY") {
+		c.Server.ReadOnly = viper.GetBool("READ_ONLY")
+	} else {
+		log.Println("❌ READ_ONLY env not set, Gopie will run as read-only server")
+		c.Server.ReadOnly = true
 	}
 
 	if viper.IsSet("LOG_OUTPUT") {
@@ -204,6 +212,7 @@ func (config Config) LoadConfig() (*Config, error) {
 	if viper.IsSet("GOPIE_SERVER_URL") {
 		c.D.GopieUrl = viper.GetString("GOPIE_SERVER_URL")
 	} else {
+		c.D.GopieUrl = "http://localhost:8000"
 		log.Println("❌ GOPIE_SERVER_URL env not set, using 'http://localhost:8000' as default")
 	}
 

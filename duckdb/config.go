@@ -50,6 +50,7 @@ type Config struct {
 	DBFilePath string `mapstructure:"_"`
 	// DBStoragePath is the path where the database files are stored. It is inferred from the DSN (can't be provided by the user).
 	DBStoragePath string `mapstructure:"_"`
+	ReadOnly      bool   `mapstructure:"read_only"`
 }
 
 // create config from map[string]map
@@ -111,6 +112,9 @@ func newConfig(cfgMap map[string]any) (*Config, error) {
 		qry.Add("threads", strconv.Itoa(threads))
 	}
 
+	if cfg.ReadOnly {
+		qry.Add("access_mode", "READ_ONLY")
+	}
 	// Set poolsize
 	poolSize := cfg.PoolSize
 	if qry.Has("gopie_pool_size") {

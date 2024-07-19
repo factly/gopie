@@ -76,7 +76,14 @@ func (d Driver) Open(cfgMap map[string]any, logger *pkg.Logger) (*Connection, er
 		c.Execute(ctx, &Statement{Query: fmt.Sprintf("set memory_limit='%dGB'", cfg.MemoryLimitGB)})
 	}
 
-	logger.Info("connection to duckdb established successfully....")
+	if cfg.ReadOnly {
+		logger.Info("using read-only connection..")
+	} else {
+
+		logger.Info("using read-write connection..")
+	}
+
+	logger.Info("connection to duckdb established successfully...")
 
 	return c, nil
 }
