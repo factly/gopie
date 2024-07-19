@@ -32,5 +32,5 @@ func (h *httpHandler) delete_(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderx.JSON(w, http.StatusCreated, map[string]string{"message": fmt.Sprintf("deleted table: '%s'", body.TableName)})
+	renderx.JSON(w, http.StatusOK, map[string]string{"message": fmt.Sprintf("deleted table: '%s'", body.TableName)})
 }

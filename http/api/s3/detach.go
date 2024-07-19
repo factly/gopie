@@ -23,7 +23,6 @@ func (h *httpHandler) detach(w http.ResponseWriter, r *http.Request) {
 
 	err = h.conn.DetachTable(context.Background(), body.TableName)
 	if err != nil {
-
 		h.logger.Error(err.Error())
 		if err == custom_errors.TableNotFound {
 			errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusNotFound)))

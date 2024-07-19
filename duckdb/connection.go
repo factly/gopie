@@ -442,15 +442,12 @@ func (c *Connection) AlterTableColumn(ctx context.Context, tableName, columnName
 
 func (c *Connection) DropTable(ctx context.Context, name string) error {
 	c.logger.Info(fmt.Sprintf("dropping table %s...", name))
-	err := c.DetachTable(ctx, name)
-	if err != nil {
-		return err
-	}
+	_ = c.DetachTable(ctx, name)
 	return os.RemoveAll(filepath.Join(c.config.DBStoragePath, name))
 }
 
 func (c *Connection) DetachTable(ctx context.Context, name string) error {
-	c.logger.Info("detaching table", "table", name)
+	c.logger.Info("detaching table", "table", safeSQLName(name))
 	version, _, err := c.tableVersion(name)
 	if err != nil {
 		return err

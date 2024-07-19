@@ -78,5 +78,5 @@ func (h *httpHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderx.JSON(w, http.StatusCreated, map[string]string{"message": fmt.Sprintf("updated duckdb file for '%s' as '%s'", body.Path, body.TableName)})
+	renderx.JSON(w, http.StatusOK, map[string]string{"message": fmt.Sprintf("updated duckdb file for '%s' as '%s'", body.Path, body.TableName)})
 }
