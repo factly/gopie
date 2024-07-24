@@ -10,7 +10,7 @@ import (
 type httpHandler struct {
 	logger       *pkg.Logger
 	conn         *duckdb.Connection
-	openAIClient *ai.OpenAI
+	openAIClient *ai.PortKeyClient
 }
 
 func (h *httpHandler) routes() chi.Router {
@@ -23,7 +23,7 @@ func (h *httpHandler) routes() chi.Router {
 	return router
 }
 
-func RegisterRoutes(router *chi.Mux, logger *pkg.Logger, conn *duckdb.Connection, openAIClient *ai.OpenAI) {
+func RegisterRoutes(router *chi.Mux, logger *pkg.Logger, conn *duckdb.Connection, openAIClient *ai.PortKeyClient) {
 	handler := httpHandler{logger, conn, openAIClient}
 	router.Mount("/api", handler.routes())
 }

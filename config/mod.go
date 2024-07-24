@@ -9,14 +9,15 @@ import (
 
 // struct for the config of entire application
 type Config struct {
-	Server ServerConfig
-	Logger LoggerConfig
-	Mode   ApplicationMode
-	DuckDB map[string]any
-	Auth   AuthConfig
-	OpenAI OpenAIConfig
-	S3     S3Config
-	D      DetachCmdConfig
+	Server  ServerConfig
+	Logger  LoggerConfig
+	Mode    ApplicationMode
+	DuckDB  map[string]any
+	Auth    AuthConfig
+	OpenAI  OpenAIConfig
+	S3      S3Config
+	D       DetachCmdConfig
+	PortKey map[string]any
 }
 
 // config for server
@@ -132,6 +133,7 @@ func (config Config) LoadConfig() (*Config, error) {
 		log.Println("❌ APPLICATION_MODE env not set, using 'dev' as default.")
 	}
 	c.DuckDB = make(map[string]any)
+	c.PortKey = make(map[string]any)
 
 	if viper.IsSet("DUCKDB_DSN") {
 		c.DuckDB["dsn"] = viper.GetString("DUCKDB_DSN")
@@ -214,6 +216,24 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		c.D.GopieUrl = "http://localhost:8000"
 		log.Println("❌ GOPIE_SERVER_URL env not set, using 'http://localhost:8000' as default")
+	}
+
+	if viper.IsSet("PORT_KEY_API_KEY") {
+		c.PortKey["portkey_api_key"] = viper.GetString("PORT_KEY_API_KEY")
+	} else {
+		log.Println("❌ PORT_KEY_API_KEY env is not set")
+	}
+
+	if viper.IsSet("PORT_KEY_VIRTUAL_KEY") {
+		c.PortKey["portkey_virtual_key"] = viper.GetString("PORT_KEY_VIRTUAL_KEY")
+	} else {
+		log.Println("❌ PORT_KEY_VIRTUAL_KEY env is not set")
+	}
+
+	if viper.IsSet("PORT_KEY_BASE_URL") {
+		c.PortKey["portkey_base_url"] = viper.GetString("PORT_KEY_BASE_URL")
+	} else {
+		log.Println("❌ PORT_KEY_BASE_URL env is not set")
 	}
 
 	return c, nil

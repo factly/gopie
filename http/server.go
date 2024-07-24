@@ -47,7 +47,7 @@ func RunHttpServer(app *app.App) {
 	iAuth := auth.NewAuth(cfg.Auth.BboltPath, logger, masterKey)
 
 	conn := app.GetDuckDBConnection()
-	openAiClient := ai.NewOpenAIClient(cfg.OpenAI.APIKey)
+	openAiClient := ai.NewPortKeyClient(cfg.PortKey)
 
 	objectStore := s3Source.NewS3Objectstore(logger, map[string]any{
 		"aws_access_key_id":     cfg.S3.AccessKey,

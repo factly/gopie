@@ -1,11 +1,11 @@
-FROM golang:1.22 as builder
+FROM golang:1.22 AS builder
 WORKDIR /app
 COPY . .
 RUN go mod download
 
 RUN go build -o gopie main.go
 
-FROM ubuntu:jammy as runtime
+FROM ubuntu:jammy AS runtime
 
 ENV USER=gopie
 ENV HOME_DIR=/home/$USER
