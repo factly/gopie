@@ -1,15 +1,82 @@
 services:
-  gopie:
+  write:
     build:
       context: ./
       dockerfile: Dockerfile
     ports:
       - 8000:8000
     volumes:
+      - ./volumes/write:/home/gopie/data
+    environment:
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_LOG_LEVEL=debug
+      - GOPIE_LOG_OUTPUT=stdout
+      - GOPIE_APPLICATION_MODE=dev
+      - GOPIE_MASTER_KEY=masterkey
+      - GOPIE_SERVER_PORT=8000
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_DUCKDB_MEMORY_LIMIT=1
+      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_OPEN_AI_API_KEY=[REMOVED]
+      - GOPIE_S3_ACCESS_KEY=miniokey
+      - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
+      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
+      - GOPIE_SERVER_READ_ONLY=false
+    networks:
+      - gopie
+  read-1:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8001:8000
+    volumes:
       # - .:/app
-      - ./data:/home/gopie/data
-      - ./migrations:/home/gopie/migrations
-      - ./config.env:/home/gopie/config.env
+      - ./volumes/read:/home/gopie/data
+    environment:
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_LOG_LEVEL=debug
+      - GOPIE_LOG_OUTPUT=stdout
+      - GOPIE_APPLICATION_MODE=dev
+      - GOPIE_MASTER_KEY=masterkey
+      - GOPIE_SERVER_PORT=8000
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_DUCKDB_MEMORY_LIMIT=1
+      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_OPEN_AI_API_KEY=[REMOVED]
+      - GOPIE_S3_ACCESS_KEY=miniokey
+      - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
+      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
+      - GOPIE_SERVER_READ_ONLY=true
+    networks:
+      - gopie
+
+  read-2:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8002:8000
+    volumes:
+      - ./volumes/read:/home/gopie/data
+    environment:
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_LOG_LEVEL=debug
+      - GOPIE_LOG_OUTPUT=stdout
+      - GOPIE_APPLICATION_MODE=dev
+      - GOPIE_MASTER_KEY=masterkey
+      - GOPIE_SERVER_PORT=8000
+      - GOPIE_DUCKDB_DSN=./data/main.db
+      - GOPIE_DUCKDB_MEMORY_LIMIT=1
+      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_OPEN_AI_API_KEY=[REMOVED]
+      - GOPIE_S3_ACCESS_KEY=miniokey
+      - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
+      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
+      - GOPIE_SERVER_READ_ONLY=true
     networks:
       - gopie
   #########################################################################
