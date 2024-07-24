@@ -12,12 +12,14 @@ import (
 
 type PortKeyClient struct {
 	client *openai.Client
+	model  string
 }
 
 type config struct {
 	VirtualKey string `mapstructure:"portkey_virtual_key"`
 	PKApikey   string `mapstructure:"portkey_api_key"`
 	PKBaseUrl  string `mapstructure:"portkey_base_url"`
+	AIModel    string `mapstructure:"ai_model"`
 }
 
 type defaultHeaderTransport struct {
@@ -64,7 +66,8 @@ func NewPortKeyClient(cfg map[string]any) *PortKeyClient {
 	oaConfig.BaseURL = config.PKBaseUrl
 
 	client := openai.NewClientWithConfig(oaConfig)
-	return &PortKeyClient{client}
+	model := config.AIModel
+	return &PortKeyClient{client, model}
 }
 
 func (c *PortKeyClient) Complete(ctx context.Context, content string) (map[string]string, error) {
@@ -74,7 +77,7 @@ func (c *PortKeyClient) Complete(ctx context.Context, content string) (map[strin
 	}
 
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:       "gpt-4o-mini",
+		Model:       c.model,
 		Messages:    []openai.ChatCompletionMessage{msgs},
 		Temperature: 0.2,
 	})

@@ -236,6 +236,13 @@ func (config Config) LoadConfig() (*Config, error) {
 		log.Println("❌ PORT_KEY_BASE_URL env is not set")
 	}
 
+	if viper.IsSet("PORT_KEY_AI_MODEL") {
+		c.PortKey["ai_model"] = viper.GetString("PORT_KEY_AI_MODEL")
+	} else {
+		log.Println("❌ PORT_KEY_AI_MODEL env is not set, using gpt-4o-mini as default")
+		c.PortKey["ai_model"] = "gpt-4o-mini"
+	}
+
 	return c, nil
 }
 
