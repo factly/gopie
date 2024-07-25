@@ -16,11 +16,11 @@ services:
       - GOPIE_SERVER_PORT=8000
       - GOPIE_DUCKDB_DSN=./data/main.db
       - GOPIE_DUCKDB_MEMORY_LIMIT=1
-      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_BBOLT_PATH=./data/auth_bblot.db
       - GOPIE_OPEN_AI_API_KEY=[REMOVED]
       - GOPIE_S3_ACCESS_KEY=miniokey
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
-      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_S3_ENDPOINT=http://minio:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
       - GOPIE_READ_ONLY=false
     networks:
@@ -30,7 +30,7 @@ services:
       context: ./
       dockerfile: Dockerfile
     ports:
-      - 8001:8000
+      - 8003:8000
     volumes:
       # - .:/app
       - ./volumes/read:/home/gopie/data
@@ -43,11 +43,11 @@ services:
       - GOPIE_SERVER_PORT=8000
       - GOPIE_DUCKDB_DSN=./data/main.db
       - GOPIE_DUCKDB_MEMORY_LIMIT=1
-      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_BBOLT_PATH=./data/auth_bblot.db
       - GOPIE_OPEN_AI_API_KEY=[REMOVED]
       - GOPIE_S3_ACCESS_KEY=miniokey
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
-      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_S3_ENDPOINT=http://minio:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
       - GOPIE_READ_ONLY=true
     networks:
@@ -70,11 +70,11 @@ services:
       - GOPIE_SERVER_PORT=8000
       - GOPIE_DUCKDB_DSN=./data/main.db
       - GOPIE_DUCKDB_MEMORY_LIMIT=1
-      - GOPIE_BBOLT_PATH=./auth_bblot.db
+      - GOPIE_BBOLT_PATH=./data/auth_bblot.db
       - GOPIE_OPEN_AI_API_KEY=[REMOVED]
       - GOPIE_S3_ACCESS_KEY=miniokey
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
-      - GOPIE_S3_ENDPOINT=http://localhost:9000
+      - GOPIE_S3_ENDPOINT=http://minio:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
       - GOPIE_READ_ONLY=true
     networks:
@@ -105,6 +105,12 @@ services:
     entrypoint: >
       /bin/sh -c " apk add --no-cache bash; wait-for-it.sh minio:9000 -- echo 'Minio is up. Creating the bucket!!'; /usr/bin/mc config host add myminio http://minio:9000 miniokey miniosecret; /usr/bin/mc mb myminio/gopie; /usr/bin/mc anonymous set public myminio/gopie; exit 0; "
  
+  rsync:
+    image: alpine
+    command: ["sh", "-c", "apk add --no-cache rsync && tail -f /dev/null"]
+    volumes:
+      - ./volumes/read:/read
+      - ./volumes/write:/write
 networks:
   gopie:
 
