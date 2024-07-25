@@ -25,7 +25,4 @@ RUN chown -R $USER:$USER $HOME_DIR
 WORKDIR $HOME_DIR
 USER gopie
 
-# COPY 
-# RUN gopie migrate
-# ENTRYPOINT ["gopie"]
-CMD gopie migrate && gopie serve
+CMD gopie serve

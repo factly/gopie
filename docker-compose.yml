@@ -22,7 +22,7 @@ services:
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
       - GOPIE_S3_ENDPOINT=http://localhost:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
-      - GOPIE_SERVER_READ_ONLY=false
+      - GOPIE_READ_ONLY=false
     networks:
       - gopie
   read-1:
@@ -49,7 +49,7 @@ services:
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
       - GOPIE_S3_ENDPOINT=http://localhost:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
-      - GOPIE_SERVER_READ_ONLY=true
+      - GOPIE_READ_ONLY=true
     networks:
       - gopie
 
@@ -76,7 +76,7 @@ services:
       - GOPIE_S3_SECRET_ACCESS_KEY=miniosecret
       - GOPIE_S3_ENDPOINT=http://localhost:9000
       - GOPIE_GOPIE_SERVER_URL=http://localhost:8000
-      - GOPIE_SERVER_READ_ONLY=true
+      - GOPIE_READ_ONLY=true
     networks:
       - gopie
   #########################################################################
