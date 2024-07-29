@@ -98,6 +98,7 @@ Here's a detailed explanation of its workflow:
 ## API Endpoints
 
 ### Auth Endpoints:
+*Note: you need to pass masterkey in the Authorization heaader*
   1. POST `/auth/apikey`:
       - creates an apikey for gopie query apis
       - body:
@@ -192,7 +193,7 @@ Here's a detailed explanation of its workflow:
             }'
          ```
 ### S3 File uploads
-
+*Note: you need to pass masterkey in the Authorization heaader*
    1. POST `/source/s3`:
       - upload a csv/parquet
       - body:
@@ -247,7 +248,7 @@ Here's a detailed explanation of its workflow:
             }'
          ```
 ### Gopie query apis
-
+*Note: you need to pass created apikey in the Authorization heaader*
    1. GET `/api/{table_name}`:
 
       - To query a dataset using query parameters in gopie, you can send a GET request to the /api/tables/{table_name} endpoint, where table_name is the name of the dataset you want to query. You can then specify the query operators in the URL query parameters.
