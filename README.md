@@ -97,14 +97,241 @@ Here's a detailed explanation of its workflow:
 
 ## API Endpoints
 
+### Auth Endpoints:
+  1. POST `/auth/apikey`:
+      - creates an apikey for gopie query apis
+      - body:
+         ```
+           description: string (optional) 
+           name: string 
+           meta: object (optional)
+           expiry: string (optional, valid timestamp)
+         ```
+      - sample curl request:
+         ```bash
+            curl --location 'localhost:8000/auth/apikey' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+               "name": "testing",
+               "expiry": "1731456549"
+            }'
+         ```
+   2. PATCH `/auth/apikey`:
+      - update apikey info
+      - body:
+         ```
+           key: api token
+           delta:
+              description: string
+              name: string 
+              meta: object 
+         ```
+      - sample curl request:
+         ```
+            curl --location --request PATCH 'localhost:8000/auth/apikey' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+               "key": "{apikey}",
+               "delta": {
+                  "name": "update",
+                  "meta": {
+                     "org_id": 2
+                  }
+               }
+            }'
+         ```
+   3. DELETE `/auth/apikey`:
+      - delete apikey
+      - body:
+         ```
+            key: api token
+         ```
+      - sample curl request:
+         ```
+            curl --location --request DELETE 'localhost:8000/auth/apikey' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+               "key": "{apikey}",
+            }'
+         ```
+   4. GET `/auth/apikey`
+      - get list of apikeys based on metadata
+      - pass each field of meta data as query param
+      - sample curl request:
+         ```
+            curl --location --request GET 'localhost:8000/auth/apikey?org_id=1' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+         ```
+   5. GET `/auth/apikey/details`
+      - get apikey info
+      - pass api token in API_KEY header
+      - sample curl request:
+         ```
+            curl --location --request GET 'localhost:8000/auth/apikey?org_id=1' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'API_KEY: {api token}' \
+            --header 'Content-Type: application/json' \
+         ```
+   6. POST `/auth/apikey/invalidate`:
+      - invalidate an api token
+      - body:
+         ```
+            key: api token
+         ```
+      - sample curl request:
+         ```
+            curl --location 'localhost:8000/auth/apikey' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+               "key": "{apikey}",
+            }'
+         ```
+### S3 File uploads
 
-## Development
+   1. POST `/source/s3`:
+      - upload a csv/parquet
+      - body:
+         ```
+            path: string
+         ```
+      - valid pat: s3://{bucket_name}/{path_to_file}
+      - sample request:
+         ```
+         curl --location 'localhost:8000/source/s3' \
+         --header 'Authorization: Bearer masterkey' \
+         --header 'Content-Type: application/json' \
+         --data '{
+             "path": "s3://gopie/aqi.csv",
+             "table_name":"gp_WcMmocuYox1k"
+         }'
+         ```
+   2. POST `/source/s3`
+      - update a table (uploaded file)
+      - this is an upsert operation.
+         - if exists deletes and replaces it with new file
+         - else creates an new file with give table_name
+      - body:
+         ```
+            path: string (path to new file)
+            table_name: string
+         ```
+      - sample curl request:
+         ```
+            curl --location --request PUT 'localhost:8000/source/s3' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+                "path": "s3://gopie/aqi.csv",
+                "table_name":"gp_WcMmocuYox1k"
+            }'
+         ```
+         
+   3. DELETE `/source/s3`
+      - delete a table
+      - body:
+         ```
+            table_name: string
+         ```
+      - sample curl request:
+         ```
+            curl --location --request DELETE 'localhost:8000/source/s3' \
+            --header 'Authorization: Bearer masterkey' \
+            --header 'Content-Type: application/json' \
+            --data '{
+                "table_name":"gp_WcMmocuYox1k"
+            }'
+         ```
+### Gopie query apis
 
-- The project is set up for hot reloading using Air.
+   1. GET `/api/{table_name}`:
 
-## Deployment
+      - To query a dataset using query parameters in gopie, you can send a GET request to the /api/tables/{table_name} endpoint, where table_name is the name of the dataset you want to query. You can then specify the query operators in the URL query parameters.
+      - For example, the following request will return the first 10 rows of the customers dataset, sorted in ascending order by the last_name column:
+      ```
+         /api/tables/customers?sort=last_name&limit=10"
+      ```
 
-[Add deployment instructions here]
+      - You can also use the filter parameter to specify a filter condition. For example, the following request will return all rows from the customers dataset where the first_name column is equal to John:
+      ```
+         /api/tables/customers?filter[first_name]=John"
+      ```
+
+      - You can use the page and limit parameters to paginate the results. For example, the following request will return the second page of results, where each page contains 10 rows:
+      ```
+         /api/tables/customers?page=2&limit=10"
+      ```
+
+
+      - The /api/tables/{table_name} endpoint supports the following query parameters:
+          1. columns: specifies which columns of the dataset to include in the response.
+
+          2. sort: specifies the order in which the rows of the dataset should be sorted. This parameter can be used to sort the rows in ascending or descending order by one or more columns.
+
+          3. limit: specifies the maximum number of rows to include in the response.
+
+          4. filter: specifies a condition that rows must satisfy in order to be included in the response.
+
+          5. page: specifies which page of the dataset to include in the response, when pagination is used. For example, to sort the rows of the dataset by the col1 and col2 columns in ascending and descending order, respectively, and return only the first 100 rows, the query might look like this:
+
+      - Sample for sorting and limiting
+      ```
+         /api/tables/{table_name}?sort=col1,-col2&limit=100
+      ```
+
+      - These query parameters can be combined in various ways to retrieve the desired subset of the dataset.
+      - sample curl request: 
+         ```
+            curl --location --globoff 'localhost:8003/api/tables/gp_hw9NPJ4qX60c?filter[aqi_value]=214' \
+            --header 'Authorization: Bearer gpWGhScTNSVXhickZJUFg.cjYLHkBb5JtjY6rqQBDVN2cwZYWoRj3EonNl_A'
+         ```
+   2. POST `/api/sql`:
+      - query a dataset with sql
+      - body: 
+         ```
+            query: "select * from {table_name}"
+         ```
+      - sample curl request:
+         ```
+            curl --location 'localhost:8000/api/sql' \
+            --header 'Authorization: Bearer gpMktybXZURU0zc2N3YWs.xXkhQDoZT9YDT5RWRsZ1bKH9Ldl8tFBjycHv8g' \
+            --header 'Content-Type: application/json' \
+            --data '{
+
+                "query":"select * from {table_name}"
+            }'
+         ```
+   3. GET `/api/schema/{table_name}`
+      - returns the schema of the dataset
+      - sample curl request:
+         ```
+            curl --location 'localhost:8003/api/schema/gp_hw9NPJ4qX60c' \
+            --header 'Authorization: Bearer gpWGhScTNSVXhickZJUFg.cjYLHkBb5JtjY6rqQBDVN2cwZYWoRj3EonNl_A'
+         ```
+   4. POST `/api/nl2sql`:
+      - returns a sql for the passed natural language query
+      - body: 
+         ```
+            query: string
+            table_name: string
+         ```
+      - sample curl request:
+         ```
+            curl --location 'localhost:8000/api/nl2sql' \
+            --header 'Authorization: Bearer gpMktybXZURU0zc2N3YWs.xXkhQDoZT9YDT5RWRsZ1bKH9Ldl8tFBjycHv8g' \
+            --header 'Content-Type: application/json' \
+            --data '{
+
+                "query":"get all data",
+                "table_name":"gp_olOdJwwhdoSg"
+            }'
+         ```
+   5. GET `/api/health`:
+      - check health of the application
 
 ## Troubleshooting
 
