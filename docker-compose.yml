@@ -30,7 +30,7 @@ services:
       context: ./
       dockerfile: Dockerfile
     ports:
-      - 8003:8000
+      - 8001:8000
     volumes:
       # - .:/app
       - ./volumes/read:/home/gopie/data

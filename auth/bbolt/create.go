@@ -9,7 +9,13 @@ func (b *Bbolt) CreateKey(m map[string]any) (*models.AuthKey, error) {
 	key := &models.AuthKey{}
 	key.CreateFromMap(m)
 
-	err := b.Batch(func(tx *bbolt.Tx) error {
+	db, err := b.openConn()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	err = db.Batch(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketName)
 
 		v, err := key.StructToBytes()

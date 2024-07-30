@@ -10,7 +10,13 @@ import (
 func (b *Bbolt) ListKeys(match map[string]string) ([]*models.AuthKey, error) {
 	var results []*models.AuthKey
 
-	err := b.View(func(tx *bbolt.Tx) error {
+	db, err := b.openConn()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	err = db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketName)
 
 		err := b.ForEach(func(k, v []byte) error {

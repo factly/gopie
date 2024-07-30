@@ -9,7 +9,13 @@ import (
 
 func (b *Bbolt) DeleteKey(k models.AuthToken) error {
 
-	err := b.Batch(func(tx *bbolt.Tx) error {
+	db, err := b.openConn()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = db.Batch(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketName)
 		err := b.Delete(k.ToBytes())
 		return err
@@ -19,7 +25,12 @@ func (b *Bbolt) DeleteKey(k models.AuthToken) error {
 }
 
 func (b *Bbolt) DeleteAllKeys(match map[string]string) error {
-	err := b.Batch(func(tx *bbolt.Tx) error {
+	db, err := b.openConn()
+	if err != nil {
+		return err
+	}
+
+	err = db.Batch(func(tx *bbolt.Tx) error {
 
 		b := tx.Bucket(bucketName)
 

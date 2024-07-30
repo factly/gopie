@@ -13,7 +13,13 @@ func (b *Bbolt) UpdateKey(k models.AuthToken, m map[string]any) (*models.AuthKey
 
 	key = key.UpdateFromMap(m)
 
-	err = b.Batch(func(tx *bbolt.Tx) error {
+	db, err := b.openConn()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	err = db.Batch(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketName)
 
 		k := key.Token.ToBytes()
