@@ -5,15 +5,16 @@ import (
 	"net/http"
 	"time"
 
+	meterus "github.com/elliot14A/meterus-go"
 	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/auth"
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/http/api"
-	authApi "github.com/factly/gopie/http/auth"
 	"github.com/factly/gopie/http/metrics"
 	apiMiddleware "github.com/factly/gopie/http/middleware"
 	"github.com/factly/gopie/http/s3"
+	"github.com/factly/gopie/metering"
 	s3Source "github.com/factly/gopie/source/s3"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -42,9 +43,11 @@ func RunHttpServer(app *app.App) {
 	router.Use(apiMiddleware.NilPointerMiddleware)
 	router.Use(middleware.Timeout(5 * time.Minute))
 
-	masterKey := cfg.Auth.Mastkey
-
-	iAuth := auth.NewAuth(cfg.Auth.BboltPath, logger, masterKey)
+	meterus, err := meterus.NewMeterusClient(cfg.Meterus.Addr, cfg.Meterus.ApiKey)
+	if err != nil {
+		logger.Fatal("error initializing meterus service: ", err)
+	}
+	iAuth, _ := auth.NewAuth(meterus)
 
 	conn := app.GetDuckDBConnection()
 	openAiClient := ai.NewPortKeyClient(cfg.PortKey)
@@ -58,17 +61,17 @@ func RunHttpServer(app *app.App) {
 		"retain_files":          false,
 	})
 
+	metering, err := metering.NewMeteringClient(meterus, cfg.Meterus.EventType)
+
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	// register api routes with api key validating middleware
-	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient)
-	// register auth routes with master_key validating middleware
-	authApi.RegisterAuthRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, iAuth)
+	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient, metering)
 	// register metric routes with master_key validating middleware
-	metrics.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, conn)
+	metrics.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn)
 	// register file upload routes with master_key validating middleware
-	s3.RegisterRoutes(router.With(apiMiddleware.MasterKeyMiddleware(masterKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
+	s3.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
+	err = http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("error starting Http Server: %s", err.Error()))
 	}

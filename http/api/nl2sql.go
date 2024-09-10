@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/factly/gopie/http/middleware"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 )
@@ -69,6 +70,22 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
+	}
+
+	subject, ok := middleware.GetSubjectFromContext(r.Context())
+
+	if ok {
+		params := ingestEventParams{
+			subject:        subject,
+			dataset:        body.TableName,
+			userID:         r.Header.Get("x-gopie-user-id"),
+			organisationID: r.Header.Get("x-gopie-organisation-id"),
+			method:         r.Method,
+			endpoint:       r.URL.String(),
+		}
+		ingestEvent(h.metering, params)
+	} else {
+		h.logger.Error("Failed retriev subject")
 	}
 
 	renderx.JSON(w, http.StatusOK, sql)
