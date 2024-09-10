@@ -18,6 +18,13 @@ type Config struct {
 	S3      S3Config
 	D       DetachCmdConfig
 	PortKey map[string]any
+	Meterus MeterusConfig
+}
+
+type MeterusConfig struct {
+	Addr      string
+	ApiKey    string
+	EventType string
 }
 
 // config for server
@@ -32,8 +39,7 @@ type DetachCmdConfig struct {
 
 // config for auth
 type AuthConfig struct {
-	BboltPath string
-	Mastkey   string
+	Mastkey string
 }
 
 type OpenAIConfig struct {
@@ -166,13 +172,6 @@ func (config Config) LoadConfig() (*Config, error) {
 		c.DuckDB["cpu"], _ = strconv.Atoi(viper.GetString("DUCKDB_POOL_SIZE"))
 	}
 
-	if viper.IsSet("BBOLT_PATH") {
-		c.Auth.BboltPath = viper.GetString("bbolt_path")
-	} else {
-		c.Auth.BboltPath = "./bbolt.db"
-		log.Println("❌ BBOLT_PATH env not set, using './auth/bbolt.db' as default.")
-	}
-
 	if viper.IsSet("MASTER_KEY") {
 		c.Auth.Mastkey = viper.GetString("MASTER_KEY")
 	} else {
@@ -241,6 +240,26 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		log.Println("❌ PORT_KEY_AI_MODEL env is not set, using gpt-4o-mini as default")
 		c.PortKey["ai_model"] = "gpt-4o-mini"
+	}
+
+	if viper.IsSet("METERUS_ADDR") {
+		c.Meterus.Addr = viper.GetString("METERUS_ADDR")
+	} else {
+		log.Println("❌ METERUS_ADDR is not set, using `localhost:50051` as default")
+		c.Meterus.Addr = "localhost:50051"
+	}
+
+	if viper.IsSet("METERUS_API_KEY") {
+		c.Meterus.ApiKey = viper.GetString("METERUS_API_KEY")
+	} else {
+		log.Println("❌ METERUS_API_KEY is not set, events wont be ingested")
+	}
+
+	if viper.IsSet("METERUS_EVENT_TYPE") {
+		c.Meterus.EventType = viper.GetString("METERUS_EVENT_TYPE")
+	} else {
+		log.Println("❌ METERUS_EVENT_TYPE is not set, using `gopie.api_requests` as default")
+		c.Meterus.EventType = "gopie.api_requests"
 	}
 
 	return c, nil

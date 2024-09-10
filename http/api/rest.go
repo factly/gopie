@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/factly/gopie/http/middleware"
 	"github.com/factly/x/renderx"
 	"github.com/go-chi/chi/v5"
 )
@@ -35,6 +36,21 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	jsonRes, err := res.RowsToMap()
 	if err != nil {
 		h.handleError(w, err, "Error converting result to JSON", http.StatusInternalServerError)
+	}
+
+	subject, ok := middleware.GetSubjectFromContext(r.Context())
+	if ok {
+		params := ingestEventParams{
+			subject:        subject,
+			dataset:        table,
+			userID:         r.Header.Get("x-gopie-user-id"),
+			organisationID: r.Header.Get("x-gopie-organisation-id"),
+			method:         r.Method,
+			endpoint:       r.URL.String(),
+		}
+		ingestEvent(h.metering, params)
+	} else {
+		h.logger.Error("Failed retriev subject")
 	}
 
 	renderx.JSON(w, http.StatusOK, jsonRes)

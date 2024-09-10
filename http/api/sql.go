@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/factly/gopie/http/middleware"
 	"github.com/factly/x/renderx"
 )
 
@@ -42,6 +43,21 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.handleError(w, err, "error converting result to JSON", http.StatusInternalServerError)
 		return
+	}
+
+	subject, ok := middleware.GetSubjectFromContext(r.Context())
+	if ok {
+		params := ingestEventParams{
+			subject:        subject,
+			dataset:        table,
+			userID:         r.Header.Get("x-gopie-user-id"),
+			organisationID: r.Header.Get("x-gopie-organisation-id"),
+			method:         r.Method,
+			endpoint:       r.URL.String(),
+		}
+		ingestEvent(h.metering, params)
+	} else {
+		h.logger.Error("Failed retriev subject")
 	}
 
 	renderx.JSON(w, http.StatusOK, jsonRes)
