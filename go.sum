@@ -69,6 +69,10 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/elliot14A/meterus-go v0.1.5 h1:wbH4ZCBN9HfGEaOUdF9x1Eb88JObOPzveBFIttsYZac=
 github.com/elliot14A/meterus-go v0.1.5/go.mod h1:wa18XIsj4E5tpTDsbPRippbYLAdLIPsPfxu4O817Cmk=
+github.com/elliot14A/meterus-go v0.1.6 h1:ZTiK1l86H29grikh5H8K/lDohuU9XHgbZLPmkC+ROjQ=
+github.com/elliot14A/meterus-go v0.1.6/go.mod h1:wa18XIsj4E5tpTDsbPRippbYLAdLIPsPfxu4O817Cmk=
+github.com/elliot14A/meterus-go v0.1.54 h1:C7qVQYW3iHmA6LloozaMoRPftTyrbj1ECz1O3/a6lMQ=
+github.com/elliot14A/meterus-go v0.1.54/go.mod h1:wa18XIsj4E5tpTDsbPRippbYLAdLIPsPfxu4O817Cmk=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=

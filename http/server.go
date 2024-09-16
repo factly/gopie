@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	meterus "github.com/elliot14A/meterus-go"
+	meterus "github.com/elliot14A/meterus-go/client"
 	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
 	"github.com/factly/gopie/auth"

@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.54.6
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
-	github.com/elliot14A/meterus-go v0.1.5
+	github.com/elliot14A/meterus-go v0.1.6
 	github.com/factly/x v0.0.96
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.12
@@ -21,6 +21,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	gocloud.dev v0.37.0
 	golang.org/x/sync v0.7.0
+	google.golang.org/protobuf v1.34.2
 )
 
 require (
@@ -83,7 +84,6 @@ require (
 	google.golang.org/api v0.171.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
 	google.golang.org/grpc v1.66.0 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

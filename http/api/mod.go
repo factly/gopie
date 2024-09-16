@@ -19,7 +19,7 @@ type ingestEventParams struct {
 
 func ingestEvent(m *metering.MeteringClient, params ingestEventParams) {
 	go func() {
-		m.Ingest(params.endpoint, params.userID, params.organisationID, params.dataset, params.method, params.subject)
+		m.Ingest(params.endpoint, params.userID, params.organisationID, params.dataset, params.method)
 	}()
 }
 
