@@ -5,16 +5,18 @@ import (
 	"time"
 
 	meterus "github.com/elliot14A/meterus-go/client"
+	"github.com/factly/gopie/pkg"
 )
 
 type MeteringClient struct {
+	Logger    *pkg.Logger
 	service   *meterus.MeteringService
 	eventType string
 }
 
-func NewMeteringClient(client *meterus.Client, eventType string) (*MeteringClient, error) {
+func NewMeteringClient(client *meterus.Client, eventType string, logger *pkg.Logger) (*MeteringClient, error) {
 	service := client.NewMeteringService()
-	return &MeteringClient{service, eventType}, nil
+	return &MeteringClient{logger, service, eventType}, nil
 
 }
 

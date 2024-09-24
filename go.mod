@@ -12,6 +12,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-chi/cors v1.2.1
+	github.com/go-chi/httprate v0.14.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/marcboeker/go-duckdb v1.6.6
 	github.com/mitchellh/mapstructure v1.5.0
@@ -21,7 +22,6 @@ require (
 	github.com/spf13/viper v1.19.0
 	gocloud.dev v0.37.0
 	golang.org/x/sync v0.7.0
-	google.golang.org/protobuf v1.34.2
 )
 
 require (
@@ -45,6 +45,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.4 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -84,6 +85,7 @@ require (
 	google.golang.org/api v0.171.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
 	google.golang.org/grpc v1.66.0 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

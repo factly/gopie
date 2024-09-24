@@ -19,7 +19,12 @@ type ingestEventParams struct {
 
 func ingestEvent(m *metering.MeteringClient, params ingestEventParams) {
 	go func() {
-		m.Ingest(params.endpoint, params.userID, params.organisationID, params.dataset, params.method)
+		err := m.Ingest(params.endpoint, params.userID, params.organisationID, params.dataset, params.method)
+		if err != nil {
+			m.Logger.Error("cannot ingest event", "error", err)
+		} else {
+			m.Logger.Info("Ingested event successfully!")
+		}
 	}()
 }
 

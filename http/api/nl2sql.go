@@ -62,6 +62,8 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 	   2. DONT SEND RESPONSES WITH PATTERN LIKE "QUERY: SELECT * FROM TABLE", "SQL: SELECT * FROM TABLE" THESE ARE INVALID. VALID RESPONSES PATTERNS ARE "SELECT * FROM TABLE", "SELECT * FROM TABLE WHERE COL = VAL"
 	   3. QUERY IS THE NATURAL LANGUAGE TEXT YOU SHOULD CONVERT THAT INTO SQL
 	   4. DONOT END THE STATEMENT WITH A SEMI-COLON i.e. ';'
+	   5. ALWAYS USE ILIKE FOR COMPARISION FOR EX. QUERY: 'get me all data where medal is silver' THEN GENERATE ILIKE '%%gold%%' OPERATOR. CONSIDER CASE SENSITIVITY AS WELL
+	   6. IF QUERY SAYS EXACT THEN USE WHERE OPERATOR, EX: QUERY: 'get me all data where medal is exactly Silver' THEN GENERATE WHERE "medal" = 'Silver'. DON'T HAVE TO CONSIDER CASE SENSITIVITY
 		`, body.TableName, body.Query, schema, first20Rows)
 
 	sql, err := h.openAIClient.Complete(context.Background(), content)

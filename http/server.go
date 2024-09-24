@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 )
 
 func RunHttpServer(app *app.App) {
@@ -27,6 +28,8 @@ func RunHttpServer(app *app.App) {
 
 	logger.Info("🚀🚀 Starting HTTP server on port: " + cfg.Server.Port)
 	router := chi.NewRouter()
+
+	router.Use(httprate.LimitByIP(1000, 1*time.Minute))
 
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://*"},
@@ -61,7 +64,7 @@ func RunHttpServer(app *app.App) {
 		"retain_files":          false,
 	})
 
-	metering, err := metering.NewMeteringClient(meterus, cfg.Meterus.EventType)
+	metering, err := metering.NewMeteringClient(meterus, cfg.Meterus.EventType, logger)
 
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	// register api routes with api key validating middleware
