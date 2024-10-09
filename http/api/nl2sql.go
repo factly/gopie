@@ -1,9 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/factly/gopie/http/middleware"
@@ -14,6 +17,42 @@ import (
 type nl2SqlRequestBody struct {
 	Query     string `json:"query"`
 	TableName string `json:"table_name"`
+}
+
+// Function to convert schema to JSON
+func convertSchemaToJSON(schema interface{}) string {
+	schemaJSON, err := json.Marshal(schema)
+	if err != nil {
+		log.Fatal("Error marshalling schema to JSON:", err)
+	}
+	return string(schemaJSON)
+}
+
+// Function to convert random rows to CSV
+func convertRowsToCSV(rows []map[string]interface{}) string {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	// Write CSV headers (column names)
+	if len(rows) > 0 {
+		headers := make([]string, 0, len(rows[0]))
+		for key := range rows[0] {
+			headers = append(headers, key)
+		}
+		writer.Write(headers)
+
+		// Write CSV data rows
+		for _, row := range rows {
+			record := make([]string, 0, len(row))
+			for _, value := range row {
+				record = append(record, fmt.Sprintf("%v", value))
+			}
+			writer.Write(record)
+		}
+	}
+
+	writer.Flush()
+	return buf.String()
 }
 
 func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
@@ -34,40 +73,60 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 
 	schema, err := schemaRes.RowsToMap()
 	if err != nil {
-		h.handleError(w, err, "error converting resutl to JSON", http.StatusInternalServerError)
+		h.handleError(w, err, "error converting result to JSON", http.StatusInternalServerError)
 		return
 	}
 
-	first20RowsRes, err := h.executeQuery(fmt.Sprintf("SELECT * FROM %s ORDER BY RANDOM() LIMIT 20", body.TableName), body.TableName)
+	randomNRowsRes, err := h.executeQuery(fmt.Sprintf("SELECT * FROM %s ORDER BY RANDOM() LIMIT 50", body.TableName), body.TableName)
 	if err != nil {
 		h.handleError(w, err, "error getting random rows: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	first20Rows, err := first20RowsRes.RowsToMap()
+	randomNRows, err := randomNRowsRes.RowsToMap()
 	if err != nil {
-		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
 
+	// Dereference the pointer to randomNRows
+	schemaJSON := convertSchemaToJSON(schema)
+	rowsCSV := convertRowsToCSV(*randomNRows)
+
 	content := fmt.Sprintf(`
-    NATURAL LANGUAGE TO SQL CONVERSION \n
-		TABLE_NAME: %s \n
-	  QUERY: %s 
-		SCHEMA: %s
-		RANDOM 20 ROWS: %s
-		NOTE: 
-		 1. RETURN ONLY SQL AND NOTHING ELSE. THE SCHEMA IS THE DESCRIPTION THE TABLE. ALWAYS USE DOUBLE QUOTES FOR THE TABLES AND COLUMNS NAMES IN SQL AND USE SINGLE QUOTES FOR VALUES
-	   2. DONT SEND RESPONSES WITH PATTERN LIKE "QUERY: SELECT * FROM TABLE", "SQL: SELECT * FROM TABLE" THESE ARE INVALID. VALID RESPONSES PATTERNS ARE "SELECT * FROM TABLE", "SELECT * FROM TABLE WHERE COL = VAL"
-	   3. QUERY IS THE NATURAL LANGUAGE TEXT YOU SHOULD CONVERT THAT INTO SQL
-	   4. DONOT END THE STATEMENT WITH A SEMI-COLON i.e. ';'
-		`, body.TableName, body.Query, schema, first20Rows)
+    You are a DuckDB expert. Given the query in natural language, create a syntactically correct DuckDB query to run.
+
+	QUERY IN NATURAL LANGUAGE: %s 
+
+	TABLE NAME: %s
+
+	TABLE SCHEMA IN JSON: 
+	
+	---------------------
+	%s
+	---------------------
+
+	RANDOM 50 ROWS IN CSV: 
+	
+	---------------------
+	%s
+	---------------------
+
+	NOTE: 
+	- IMP: Return only an syntactially correct DuckDB SQL and nothing else
+	- Do not end the statement with a semicolon ';' 
+	- Do not wrap the response in code blocks or quotes
+	- Always use double quotes for the table and column names in SQL and use single quotes for values
+	- Do not send responses with patterns like "query: select * from table", "sql: select * from table" these are invalid. Valid response patterns are "select * from table", "select * from table where col = val"
+	- Use Table Schema provided in JSON to understand the columns and their data types
+	- Use Random 50 Rows provided in CSV to understand the data in the table. This is not complete data, just a sample of 50 rows to understand the data in the table. Use your understanding of the data to write the query.
+		`, body.Query, body.TableName, schemaJSON, rowsCSV)
+
+	// Log the content being sent // Log the content to the terminal
 
 	sql, err := h.openAIClient.Complete(context.Background(), content)
 
 	if err != nil {
-		h.logger.Error(err.Error())
 		errorx.Render(w, errorx.Parser(errorx.GetMessage(err.Error(), http.StatusInternalServerError)))
 		return
 	}
@@ -85,9 +144,7 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 		}
 		ingestEvent(h.metering, params)
 	} else {
-		h.logger.Error("Failed retriev subject")
 	}
 
 	renderx.JSON(w, http.StatusOK, sql)
-
 }
