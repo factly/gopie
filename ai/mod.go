@@ -77,9 +77,9 @@ func (c *PortKeyClient) Complete(ctx context.Context, content string) (map[strin
 	}
 
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:       c.model,
-		Messages:    []openai.ChatCompletionMessage{msgs},
-		Temperature: 0.2,
+		Model:    c.model,
+		Messages: []openai.ChatCompletionMessage{msgs},
+		// Temperature: 0.2,
 	})
 	if err != nil {
 		return nil, err
