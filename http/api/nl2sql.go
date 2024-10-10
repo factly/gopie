@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/factly/gopie/http/middleware"
+	"github.com/factly/gopie/pkg/duckdbsql"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
 )
@@ -64,6 +65,24 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	if body.Query == "get all data" {
+		sql := map[string]string{
+			"sql": fmt.Sprintf("select * from %s", body.TableName),
+		}
+		renderx.JSON(w, http.StatusOK, sql)
+		return
+	}
+
+	_, err = duckdbsql.Parse(body.Query)
+
+	if err == nil {
+		sql := map[string]string{
+			"sql": body.Query,
+		}
+		renderx.JSON(w, http.StatusOK, sql)
+		return
+	}
 
 	schemaRes, err := h.executeQuery(fmt.Sprintf("DESC %s", body.TableName), body.TableName)
 	if err != nil {
@@ -122,8 +141,6 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 	- Use Random 50 Rows provided in CSV to understand the data in the table. This is not complete data, just a sample of 50 rows to understand the data in the table. Use your understanding of the data to write the query.
 		`, body.Query, body.TableName, schemaJSON, rowsCSV)
 
-	// Log the content being sent // Log the content to the terminal
-
 	sql, err := h.openAIClient.Complete(context.Background(), content)
 
 	if err != nil {
@@ -143,7 +160,6 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 			endpoint:       r.URL.String(),
 		}
 		ingestEvent(h.metering, params)
-	} else {
 	}
 
 	renderx.JSON(w, http.StatusOK, sql)
