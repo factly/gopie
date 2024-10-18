@@ -1,40 +1,32 @@
-version: 2
-
 project_name: gopie
 
 builds:
 - id: gopie
   binary: gopie
   env:
-  - CGO_ENABLED=1 # changed from 0 to 1 ref: https://github.com/marcboeker/go-duckdb/issues/199#issuecomment-2107614112
+  - CGO_ENABLED=0
   - GO386=softfloat
-  - GOARCH=amd64
-  - CC=aarch64-linux-gnu-gcc
   goos:
   - linux
-  ignore:
-    - goos: windows
-      goarch: arm
-  overrides:
-    - goarch: amd64
-  # goarch:
-  #   - amd64
 
-# archives:
-#   - id: gopie
-#     builds:
-#       - gopie
-#     name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+archives:
+  - id: gopie
+    builds:
+      - gopie
+    name_template: "gopie_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
 - dockerfile: Dockerfile
   image_templates:
     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
-    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:latest"
-
-  use: buildx
+  use: docker
   build_flag_templates:
   - "--platform=linux/amd64"
+
+docker_manifests:
+  -
+    image_templates:
+    - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Version }}"
 
 checksum:
   name_template: 'checksums.txt'
@@ -46,4 +38,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-
