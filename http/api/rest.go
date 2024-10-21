@@ -50,7 +50,7 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		}
 		ingestEvent(h.metering, params)
 	} else {
-		h.logger.Error("Failed retriev subject")
+		h.logger.Error("Failed to retrieve subject")
 	}
 
 	renderx.JSON(w, http.StatusOK, jsonRes)
