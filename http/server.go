@@ -8,6 +8,7 @@ import (
 	meterus "github.com/elliot14A/meterus-go/client"
 	"github.com/factly/gopie/ai"
 	"github.com/factly/gopie/app"
+	"github.com/factly/gopie/auth"
 	"github.com/factly/gopie/duckdb"
 	"github.com/factly/gopie/http/api"
 	"github.com/factly/gopie/http/metrics"
@@ -49,7 +50,7 @@ func RunHttpServer(app *app.App) {
 	if err != nil {
 		logger.Fatal("error initializing meterus service: ", err)
 	}
-	// iAuth, _ := auth.NewAuth(meterus)
+	iAuth, _ := auth.NewAuth(meterus)
 
 	conn := app.GetDuckDBConnection()
 	openAiClient := ai.NewPortKeyClient(cfg.PortKey)
@@ -67,11 +68,11 @@ func RunHttpServer(app *app.App) {
 
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	// register api routes with api key validating middleware
-	api.RegisterRoutes(router, logger, conn, openAiClient, metering)
+	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient, metering)
 	// register metric routes with master_key validating middleware
-	metrics.RegisterRoutes(router, logger, conn)
+	metrics.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn)
 	// register file upload routes with master_key validating middleware
-	s3.RegisterRoutes(router, logger, objectStoreTranspoter, conn)
+	s3.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
 
 	err = http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {
