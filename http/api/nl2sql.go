@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/factly/gopie/http/middleware"
 	"github.com/factly/gopie/pkg/duckdbsql"
 	"github.com/factly/x/errorx"
 	"github.com/factly/x/renderx"
@@ -148,19 +147,14 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject, ok := middleware.GetSubjectFromContext(r.Context())
-
-	if ok {
-		params := ingestEventParams{
-			subject:        subject,
-			dataset:        body.TableName,
-			userID:         r.Header.Get("x-gopie-user-id"),
-			organisationID: r.Header.Get("x-gopie-organisation-id"),
-			method:         r.Method,
-			endpoint:       r.URL.String(),
-		}
-		ingestEvent(h.metering, params)
-	}
+  params := ingestEventParams{
+    subject:        r.Header.Get("x-gopie-organisation-id"),
+    dataset:        body.TableName,
+    userID:         r.Header.Get("x-gopie-user-id"),
+    method:         r.Method,
+    endpoint:       r.URL.String(),
+  }
+  ingestEvent(h.metering, params)
 
 	renderx.JSON(w, http.StatusOK, sql)
 }

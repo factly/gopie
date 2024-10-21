@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/factly/gopie/http/middleware"
 	"github.com/factly/x/renderx"
 )
 
@@ -45,20 +44,14 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject, ok := middleware.GetSubjectFromContext(r.Context())
-	if ok {
-		params := ingestEventParams{
-			subject:        subject,
-			dataset:        table,
-			userID:         r.Header.Get("x-gopie-user-id"),
-			organisationID: r.Header.Get("x-gopie-organisation-id"),
-			method:         r.Method,
-			endpoint:       r.URL.String(),
-		}
-		ingestEvent(h.metering, params)
-	} else {
-		h.logger.Error("Failed retriev subject")
+	params := ingestEventParams{
+		subject:        r.Header.Get("x-gopie-organisation-id"),
+		dataset:        table,
+		userID:         r.Header.Get("x-gopie-user-id"),
+		method:         r.Method,
+		endpoint:       r.URL.String(),
 	}
+	ingestEvent(h.metering, params)
 
 	renderx.JSON(w, http.StatusOK, jsonRes)
 }
@@ -76,5 +69,5 @@ func extractTableName(query string) (string, error) {
 	if matches[1] != "" {
 		return matches[1], nil
 	}
-	return strings.Replace(matches[2], `\"`, `"`, -1), nil
+	return strings.ReplaceAll(matches[2], `\"`, `"`, ), nil
 }
