@@ -66,13 +66,17 @@ func RunHttpServer(app *app.App) {
 
 	metering, err := metering.NewMeteringClient(meterus, cfg.Meterus.EventType, logger)
 
+	if cfg.EnableAuthorization {
+		router = router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux)
+	}
+
 	objectStoreTranspoter := duckdb.NewObjectStoreToDuckDB(conn, logger, objectStore)
 	// register api routes with api key validating middleware
-	api.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn, openAiClient, metering)
+	api.RegisterRoutes(router, logger, conn, openAiClient, metering)
 	// register metric routes with master_key validating middleware
-	metrics.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, conn)
+	metrics.RegisterRoutes(router, logger, conn)
 	// register file upload routes with master_key validating middleware
-	s3.RegisterRoutes(router.With(apiMiddleware.ApiKeyMiddleware(iAuth.ValidateKey)).(*chi.Mux), logger, objectStoreTranspoter, conn)
+	s3.RegisterRoutes(router, logger, objectStoreTranspoter, conn)
 
 	err = http.ListenAndServe(fmt.Sprintf(":%s", cfg.Server.Port), router)
 	if err != nil {

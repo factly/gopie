@@ -9,16 +9,17 @@ import (
 
 // struct for the config of entire application
 type Config struct {
-	Server  ServerConfig
-	Logger  LoggerConfig
-	Mode    ApplicationMode
-	DuckDB  map[string]any
-	Auth    AuthConfig
-	OpenAI  OpenAIConfig
-	S3      S3Config
-	D       DetachCmdConfig
-	PortKey map[string]any
-	Meterus MeterusConfig
+	Server              ServerConfig
+	Logger              LoggerConfig
+	Mode                ApplicationMode
+	DuckDB              map[string]any
+	Auth                AuthConfig
+	OpenAI              OpenAIConfig
+	S3                  S3Config
+	D                   DetachCmdConfig
+	PortKey             map[string]any
+	Meterus             MeterusConfig
+	EnableAuthorization bool
 }
 
 type MeterusConfig struct {
@@ -260,6 +261,13 @@ func (config Config) LoadConfig() (*Config, error) {
 	} else {
 		log.Println("❌ METERUS_EVENT_TYPE is not set, using `gopie.api_requests` as default")
 		c.Meterus.EventType = "gopie.api_requests"
+	}
+
+	if viper.IsSet("ENABLE_AUTHORIZATION") {
+		c.EnableAuthorization = viper.GetBool("ENABLE_AUTHORIZATION")
+	} else {
+		log.Println("Authorization is enabled by default")
+		c.EnableAuthorization = true
 	}
 
 	return c, nil
