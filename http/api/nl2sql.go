@@ -141,7 +141,8 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 	- The data has 'All India' with totals for all states as a part of 'state' column. This should be excluded from queries when filtering on 'state' column or aggregating data based on 'state' column.
 	- If user asks for 'share' of column, it means the percentage of the column value in the total of the column. For example, if user asks for 'share of sales', it means the percentage of sales in the total sales.
 	- In some datasets 'Total' is part of categorical columns. Calculations go wrong in such cases. Please exclude 'Total' from calculations for all categorical fields in the queries. 
-	- Most tables have 'units' or 'unit' column which is explanation of the value columns in the row. For eg: 'value in absolute number', 'amount spent in rupees', 'capital in rupees, exports in percentage' etc. Add this column to the query output when displaying values for better understanding of the data.
+	- Most tables have 'units' or 'unit' column which is explanation of the value columns in the row. Eg content for units: 'value in absolute number', 'amount_spent in rupees', 'capital in rupees, exports in percentage' where 'value', 'amount_spent, 'capital', 'exports' are column names. 
+	- Add 'units'/'unit' to the query output when displaying counts from the value columns like 'value', 'amount_spent', 'capital', 'exports' in the above example.
 		`, body.Query, body.TableName, schemaJSON, rowsCSV)
 
 	sql, err := h.openAIClient.Complete(context.Background(), content)
