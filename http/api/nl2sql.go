@@ -138,6 +138,10 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 	- Do not send responses with patterns like "query: select * from table", "sql: select * from table" these are invalid. Valid response patterns are "select * from table", "select * from table where col = val"
 	- Use Table Schema provided in JSON to understand the columns and their data types
 	- Use Random 50 Rows provided in CSV to understand the data in the table. This is not complete data, just a sample of 50 rows to understand the data in the table. Use your understanding of the data to write the query.
+	- The data has 'All India' with totals for all states as a part of 'state' column. This should be excluded from queries when filtering on 'state' column or aggregating data based on 'state' column.
+	- If user asks for 'share' of column, it means the percentage of the column value in the total of the column. For example, if user asks for 'share of sales', it means the percentage of sales in the total sales.
+	- In some datasets 'Total' is part of categorical columns. Calculations go wrong in such cases. Please exclude 'Total' from calculations for all categorical fields in the queries. 
+	- Most tables have 'units' or 'unit' column which is explanation of the value columns in the row. For eg: 'value in absolute number', 'amount spent in rupees', 'capital in rupees, exports in percentage' etc. Add this column to the query output when displaying values for better understanding of the data.
 		`, body.Query, body.TableName, schemaJSON, rowsCSV)
 
 	sql, err := h.openAIClient.Complete(context.Background(), content)
@@ -147,14 +151,14 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  params := ingestEventParams{
-    subject:        r.Header.Get("x-gopie-organisation-id"),
-    dataset:        body.TableName,
-    userID:         r.Header.Get("x-gopie-user-id"),
-    method:         r.Method,
-    endpoint:       r.URL.String(),
-  }
-  ingestEvent(h.metering, params)
+	params := ingestEventParams{
+		subject:  r.Header.Get("x-gopie-organisation-id"),
+		dataset:  body.TableName,
+		userID:   r.Header.Get("x-gopie-user-id"),
+		method:   r.Method,
+		endpoint: r.URL.String(),
+	}
+	ingestEvent(h.metering, params)
 
 	renderx.JSON(w, http.StatusOK, sql)
 }
