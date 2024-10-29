@@ -143,6 +143,7 @@ func (h httpHandler) nl2sql(w http.ResponseWriter, r *http.Request) {
 	- In some datasets 'Total' is part of categorical columns. Calculations go wrong in such cases. Please exclude 'Total' from calculations for all categorical fields in the queries. 
 	- Most tables have 'units' or 'unit' column which is explanation of the value columns in the row. Eg content for units: 'value in absolute number', 'amount_spent in rupees', 'capital in rupees, exports in percentage' where 'value', 'amount_spent, 'capital', 'exports' are column names. 
 	- Add 'units'/'unit' to the query output when displaying counts from the value columns like 'value', 'amount_spent', 'capital', 'exports' in the above example.
+	- When the user specifically asks for similar or approximate matches in string comparisons, use Levenshtein distance.
 		`, body.Query, body.TableName, schemaJSON, rowsCSV)
 
 	sql, err := h.openAIClient.Complete(context.Background(), content)
