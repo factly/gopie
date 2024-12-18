@@ -37,11 +37,10 @@ function Breadcrumb({
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
-  // Fetch all projects for dropdown
-  const { data: projects } = useProjects();
-
-  // Get current project data
   const projectId = segments[0];
+  const datasetId = segments[1];
+
+  const { data: projects } = useProjects();
   const { data: project, isLoading: isLoadingProject } = useProject(
     projectId
       ? {
@@ -58,6 +57,7 @@ function Breadcrumb({
       {...props}
     >
       <ol className="flex items-center space-x-2">
+        {/* Home Link */}
         <li>
           <Link
             href="/"
@@ -67,24 +67,64 @@ function Breadcrumb({
             <span className="sr-only">Home</span>
           </Link>
         </li>
+
         {segments.map((segment, index) => {
           const path = `/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
 
-          // Show loading state while fetching project name
-          if (index === 0 && isLoadingProject) {
-            return (
-              <React.Fragment key={path}>
-                <ChevronRight className="size-4 text-muted-foreground" />
-                <li>
-                  <Skeleton className="h-4 w-[100px]" />
-                </li>
-              </React.Fragment>
-            );
+          // Project Segment (First)
+          if (index === 0) {
+            if (isLoadingProject) {
+              return (
+                <React.Fragment key={path}>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                  <li>
+                    <Skeleton className="h-4 w-[100px]" />
+                  </li>
+                </React.Fragment>
+              );
+            }
+
+            if (project) {
+              return (
+                <React.Fragment key={path}>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                  <li>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-sm font-medium text-foreground hover:no-underline flex items-center gap-1"
+                        >
+                          {project.name}
+                          <ChevronDown className="size-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {projects?.map((p) => (
+                          <DropdownMenuItem
+                            key={p.id}
+                            onSelect={() => router.push(`/${p.id}`)}
+                            className="min-w-[200px]"
+                          >
+                            <span className="truncate">{p.name}</span>
+                            {p.id === project.id && (
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                Current
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </li>
+                </React.Fragment>
+              );
+            }
           }
 
-          // Show dropdown for project segment
-          if (index === 0 && project) {
+          // Dataset Segment (Second)
+          if (index === 1 && project) {
             return (
               <React.Fragment key={path}>
                 <ChevronRight className="size-4 text-muted-foreground" />
@@ -95,19 +135,21 @@ function Breadcrumb({
                         variant="link"
                         className="h-auto p-0 text-sm font-medium text-foreground hover:no-underline flex items-center gap-1"
                       >
-                        {project.name}
+                        {segment}
                         <ChevronDown className="size-3 opacity-50" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      {projects?.map((p) => (
+                      {project.datasets?.map((dataset) => (
                         <DropdownMenuItem
-                          key={p.id}
-                          onSelect={() => router.push(`/${p.id}`)}
+                          key={dataset}
+                          onSelect={() =>
+                            router.push(`/${projectId}/${dataset}`)
+                          }
                           className="min-w-[200px]"
                         >
-                          <span className="truncate">{p.name}</span>
-                          {p.id === project.id && (
+                          <span className="truncate">{dataset}</span>
+                          {dataset === datasetId && (
                             <span className="ml-auto text-xs text-muted-foreground">
                               Current
                             </span>
@@ -121,7 +163,7 @@ function Breadcrumb({
             );
           }
 
-          // Regular breadcrumb item for non-project segments
+          // Other segments (if any)
           return (
             <React.Fragment key={path}>
               <ChevronRight className="size-4 text-muted-foreground" />

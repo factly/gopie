@@ -3,9 +3,11 @@
 import * as React from "react";
 import { useProject } from "@/lib/queries/project/get-project";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FolderIcon, UploadIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TableIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { UploadDatasetDialog } from "@/components/dataset/upload-dataset-dialog";
+import { DatasetCard } from "@/components/dataset/dataset-card";
+import { motion } from "framer-motion"; // Add this import
 
 export default function ProjectPage({
   params,
@@ -91,20 +93,38 @@ export default function ProjectPage({
               {project.datasets?.length}
             </Badge>
           </h2>
-          <Button size="sm" className="h-9">
-            <UploadIcon className="mr-2 size-4" />
-            Upload Dataset
-          </Button>
+          <UploadDatasetDialog projectId={projectId} />
         </div>
 
         {project.datasets?.length === 0 ? (
-          <div className="text-muted-foreground text-base">
-            No datasets added yet
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 space-y-4 border rounded-lg bg-muted/50"
+          >
+            <TableIcon className="h-8 w-8 text-muted-foreground" />
+            <p className="text-base text-muted-foreground">
+              No datasets added yet
+            </p>
+            <UploadDatasetDialog projectId={projectId} />
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Dataset cards will go here */}
-          </div>
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {project.datasets.map((dataset: string, idx) => (
+              <motion.div
+                key={dataset}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <DatasetCard dataset={dataset} projectId={projectId} />
+              </motion.div>
+            ))}
+          </motion.div>
         )}
       </div>
     </div>

@@ -111,8 +111,16 @@ services:
     volumes:
       - ./volumes/read:/read
       - ./volumes/write:/write
+
+  companion:
+    image: transloadit/companion:sha-e80a7f7
+    ports:
+      - "3020:3020"
+    env_file: ./companion/.env
+
 networks:
   gopie:
+
 
 volumes: 
   volumes:
