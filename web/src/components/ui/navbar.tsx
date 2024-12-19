@@ -16,16 +16,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme/toggle";
 
 function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
       className={cn(
         "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-3",
-        className,
+        className
       )}
       {...props}
-    />
+    >
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          <Breadcrumb />
+          <ThemeToggle />
+        </div>
+      </div>
+    </nav>
   );
 }
 
@@ -47,7 +55,7 @@ function Breadcrumb({
           variables: { projectId },
           enabled: segments.length > 0,
         }
-      : { enabled: false },
+      : { enabled: false }
   );
 
   return (
@@ -174,7 +182,7 @@ function Breadcrumb({
                     "text-sm hover:text-foreground leading-none",
                     isLast
                       ? "font-medium text-foreground"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                   aria-current={isLast ? "page" : undefined}
                 >
