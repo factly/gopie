@@ -3,12 +3,19 @@
 import * as React from "react";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import { PlayIcon } from "lucide-react";
+import { PlayIcon, KeyboardIcon } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { useTheme } from "next-themes";
 import Editor, { BeforeMount } from "@monaco-editor/react";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+import { Toggle } from "@/components/ui/toggle";
+
+declare global {
+  interface Window {
+    require: any;
+  }
+}
 
 export default function SqlPage({
   params,
@@ -23,6 +30,9 @@ export default function SqlPage({
   const { theme } = useTheme();
   const executeSql = useDatasetSql();
   const editorRef = React.useRef<any>(null);
+  const [isVimMode, setIsVimMode] = React.useState(false);
+  const statusBarRef = React.useRef<HTMLDivElement>(null);
+  const vimModeRef = React.useRef<any>(null);
 
   const { data: schema } = useGetSchema({
     variables: {
@@ -30,8 +40,13 @@ export default function SqlPage({
     },
   });
 
-  const handleEditorDidMount = (editor: any) => {
+  const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
+
+    // Only setup vim mode if it's enabled
+    if (isVimMode) {
+      initVimMode(editor);
+    }
   };
 
   const beforeMount: BeforeMount = (monaco) => {
@@ -97,6 +112,35 @@ export default function SqlPage({
     });
   };
 
+  const initVimMode = React.useCallback((editor: any) => {
+    // Configure require.js for monaco-vim
+    window.require.config({
+      paths: {
+        "monaco-vim": "https://unpkg.com/monaco-vim/dist/monaco-vim",
+      },
+    });
+
+    // Initialize vim mode
+    window.require(["monaco-vim"], function (MonacoVim: any) {
+      if (vimModeRef.current) {
+        vimModeRef.current.dispose();
+      }
+      vimModeRef.current = MonacoVim.initVimMode(editor, statusBarRef.current);
+    });
+  }, []);
+
+  // Handle vim mode toggle
+  React.useEffect(() => {
+    const editor = editorRef.current;
+    if (editor) {
+      if (isVimMode) {
+        initVimMode(editor);
+      } else if (vimModeRef.current) {
+        vimModeRef.current.dispose();
+      }
+    }
+  }, [isVimMode, initVimMode]);
+
   const handleExecute = async () => {
     if (!query.trim()) {
       toast.error("Please enter a SQL query");
@@ -117,7 +161,24 @@ export default function SqlPage({
       <div className="grid grid-rows-[auto_1fr] gap-6 h-[calc(100vh-120px)]">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-medium tracking-tight">SQL Query</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-medium tracking-tight">SQL Query</h2>
+              <Toggle
+                aria-label="Toggle Vim mode"
+                pressed={isVimMode}
+                onPressedChange={setIsVimMode}
+                size="sm"
+              >
+                <KeyboardIcon className="h-4 w-4 mr-1" />
+                Vim Mode
+              </Toggle>
+              {isVimMode && (
+                <code
+                  ref={statusBarRef}
+                  className="text-sm font-mono text-muted-foreground bg-muted/30 px-2 py-1 rounded"
+                />
+              )}
+            </div>
             <Button onClick={handleExecute} disabled={executeSql.isPending}>
               <PlayIcon className="mr-2 h-4 w-4" />
               Execute Query
