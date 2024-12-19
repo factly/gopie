@@ -1,18 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { TableIcon, DownloadIcon, FileSpreadsheetIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import { DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DataPreview } from "@/components/dataset/data-preview";
+import { useDatasetSql } from "@/lib/queries/dataset/sql";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+
+const MotionCard = motion(Card);
 
 export default function DatasetPage({
   params,
@@ -20,94 +19,161 @@ export default function DatasetPage({
   params: Promise<{ projectId: string; datasetId: string }>;
 }) {
   const { projectId, datasetId } = React.use(params);
-  // TODO: Add query to fetch dataset details
+
+  const { data: totalRowsData, isLoading: isTotalRowsLoading } = useDatasetSql({
+    variables: {
+      sql: `SELECT COUNT(*) as cnt FROM ${datasetId}`,
+    },
+  });
+  const totalRows = totalRowsData?.[0]?.cnt;
+
+  const { data: tableSchema, isLoading: isSchemaLoading } = useGetSchema({
+    variables: {
+      datasetId,
+    },
+  });
+
+  const isLoading = isTotalRowsLoading || isSchemaLoading;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Loading Header */}
+          <div className="bg-background p-6 rounded-lg shadow-sm border">
+            <div className="space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-[300px]" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                  <Skeleton className="h-6 w-[200px]" />
+                </div>
+                <Skeleton className="h-9 w-[150px]" />
+              </div>
+
+              <div className="flex items-center gap-8 pt-4 mt-4 border-t border-border/40">
+                <div className="flex flex-col gap-0.5">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Data Preview */}
+          <div className="bg-background rounded-lg shadow-sm border p-6">
+            <DataPreview datasetId={datasetId} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-      {/* Dataset Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground/90">
-              {datasetId}
-            </h1>
-            <Badge variant="secondary" className="h-6">
-              CSV
-            </Badge>
+    <div className="min-h-screen">
+      <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Dataset Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-background p-6 rounded-lg shadow-sm border"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <motion.h1
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
+                  >
+                    {datasetId}
+                  </motion.h1>
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: 0.3 }}
+                  >
+                    <Badge variant="secondary" className="h-6 font-medium">
+                      CSV
+                    </Badge>
+                  </motion.div>
+                </div>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-lg text-muted-foreground"
+                >
+                  Dataset information and preview
+                </motion.p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 hover:shadow-md transition-shadow"
+              >
+                <DownloadIcon className="mr-2 h-4 w-4" />
+                Download Dataset
+              </Button>
+            </div>
+
+            {/* Dataset Stats */}
+            <div className="flex items-center gap-8 pt-4 mt-4 border-t border-border/40">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex flex-col gap-0.5"
+              >
+                <span className="text-sm font-medium text-muted-foreground">
+                  Total Rows
+                </span>
+                <div className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {isTotalRowsLoading ? (
+                    <Skeleton className="h-8 w-20" />
+                  ) : (
+                    new Intl.NumberFormat().format(totalRows)
+                  )}
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="flex flex-col gap-0.5"
+              >
+                <span className="text-sm font-medium text-muted-foreground">
+                  Columns
+                </span>
+                <div className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {isSchemaLoading ? (
+                    <Skeleton className="h-8 w-20" />
+                  ) : (
+                    tableSchema?.length
+                  )}
+                </div>
+              </motion.div>
+            </div>
           </div>
-          <p className="text-lg text-muted-foreground/90">
-            Dataset information and preview
-          </p>
-        </div>
-        <Button variant="outline" size="sm" className="h-9">
-          <DownloadIcon className="mr-2 h-4 w-4" />
-          Download Dataset
-        </Button>
-      </div>
+        </motion.div>
 
-      {/* Dataset Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Rows
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Columns
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              File Size
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2.4 MB</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Preview */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-medium tracking-tight">Data Preview</h2>
-          <Badge variant="outline" className="h-6">
-            <FileSpreadsheetIcon className="mr-2 h-4 w-4" />
-            First 100 rows
-          </Badge>
-        </div>
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Column 1</TableHead>
-                <TableHead>Column 2</TableHead>
-                <TableHead>Column 3</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>Value 1</TableCell>
-                  <TableCell>Value 2</TableCell>
-                  <TableCell>Value 3</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        {/* Data Preview */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-background rounded-lg shadow-sm border p-6"
+        >
+          <DataPreview datasetId={datasetId} />
+        </motion.div>
       </div>
     </div>
   );
