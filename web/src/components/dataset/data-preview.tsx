@@ -50,10 +50,17 @@ import {
   ArrowUpDown,
   TableIcon,
   Code2Icon,
+  X,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
 import { SqlPreview } from "@/components/dataset/sql/sql-preview";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 const MotionCard = motion.create(Card);
 const MotionTableRow = motion.create(TableRow);
@@ -67,6 +74,20 @@ export function DataPreview(props: { datasetId: string }) {
     Record<string, "asc" | "desc" | null>
   >({});
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
+  type FilterOperator = "e" | "gt" | "lt";
+  type Filter = {
+    column: string;
+    value: string;
+    operator: FilterOperator;
+  };
+
+  const [filters, setFilters] = React.useState<Filter[]>([]);
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const [newFilter, setNewFilter] = React.useState<Filter>({
+    column: "",
+    operator: "e",
+    value: "",
+  });
 
   const { data, isLoading: isTableLoading } = useGetTable({
     variables: {
@@ -81,6 +102,7 @@ export function DataPreview(props: { datasetId: string }) {
           column,
           direction: direction as "asc" | "desc",
         })),
+      filter: filters,
     },
   });
 
@@ -338,6 +360,174 @@ export function DataPreview(props: { datasetId: string }) {
                     </CommandList>
                   </CommandGroup>
                 </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
+              Filters:
+            </span>
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-[200px] justify-between shadow-sm"
+                >
+                  {filters.length} active filters
+                  <Filter className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Active Filters</h4>
+                      {filters.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFilters([])}
+                          className="h-auto p-1 text-xs text-muted-foreground hover:text-destructive"
+                        >
+                          Clear all
+                        </Button>
+                      )}
+                    </div>
+                    <ScrollArea className="h-[120px] rounded-md border bg-muted/5 p-2">
+                      {filters.length > 0 ? (
+                        <div className="space-y-2 p-1">
+                          {filters.map((filter, index) => (
+                            <div
+                              key={index}
+                              className="group flex items-center gap-2 rounded-md border bg-background p-2 shadow-sm transition-colors hover:bg-muted/30"
+                            >
+                              <div className="flex flex-1 items-center gap-2">
+                                <Badge
+                                  variant="secondary"
+                                  className="font-mono"
+                                >
+                                  {filter.column}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {filter.operator === "e"
+                                    ? "equals"
+                                    : filter.operator === "gt"
+                                    ? "greater than or equals"
+                                    : "less than or equals"}
+                                </span>
+                                <Badge variant="outline" className="font-mono">
+                                  {filter.value}
+                                </Badge>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setFilters((prev) =>
+                                    prev.filter((_, i) => i !== index)
+                                  )
+                                }
+                                className="h-auto p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                          No active filters
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Add Filter</h4>
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="column">Column</Label>
+                        <Select
+                          value={newFilter.column}
+                          onValueChange={(value) =>
+                            setNewFilter((prev) => ({ ...prev, column: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select column" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {columnsToShow.map((column) => (
+                              <SelectItem key={column} value={column}>
+                                {column}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="operator">Operator</Label>
+                        <Select
+                          value={newFilter.operator}
+                          onValueChange={(value) =>
+                            setNewFilter((prev) => ({
+                              ...prev,
+                              operator: value as typeof newFilter.operator,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="e">Equals (=)</SelectItem>
+                            <SelectItem value="gt">
+                              Greater Than Or Equals (&gt;=)
+                            </SelectItem>
+                            <SelectItem value="lt">
+                              Less Than Or Equals (&lt;=)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="value">Value</Label>
+                        <Input
+                          id="value"
+                          value={newFilter.value}
+                          onChange={(e) =>
+                            setNewFilter((prev) => ({
+                              ...prev,
+                              value: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter filter value"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => {
+                          if (newFilter.column && newFilter.value) {
+                            setFilters((prev) => [...prev, { ...newFilter }]);
+                            setNewFilter({
+                              column: "",
+                              operator: "e",
+                              value: "",
+                            });
+                          }
+                        }}
+                        disabled={!newFilter.column || !newFilter.value}
+                      >
+                        Add Filter
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
           </div>

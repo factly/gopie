@@ -10,8 +10,8 @@ import { ColumnInfo } from "@/lib/queries/dataset/get-schema";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
-const MotionTableBody = motion(TableBody);
-const MotionTableRow = motion(TableRow);
+const MotionTableBody = motion.create(TableBody);
+const MotionTableRow = motion.create(TableRow);
 
 const container = {
   hidden: { opacity: 0 },

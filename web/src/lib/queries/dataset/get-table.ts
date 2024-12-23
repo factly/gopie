@@ -20,11 +20,11 @@ export const useGetTable = createQuery({
       column: string;
       direction: "asc" | "desc";
     }[];
-    filter?: {
+    filter: {
       column: string;
       value: string;
-      operator: "=" | ">" | "<" | ">=" | "<=";
-    };
+      operator: "e" | "gt" | "lt";
+    }[];
   }) => {
     const res = await ky.get(
       `${env.NEXT_PUBLIC_GOPIE_API_URL}/api/tables/${datasetId}`,
@@ -36,9 +36,15 @@ export const useGetTable = createQuery({
           sort: sort
             .map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`)
             .join(","),
+          ...Object.fromEntries(
+            filter.map((f) => [
+              `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
+              f.value,
+            ])
+          ),
         },
       }
     );
-    return (await res.json()) as Record<string, any>[];
+    return (await res.json()) as Record<string, unknown>[];
   },
 });
