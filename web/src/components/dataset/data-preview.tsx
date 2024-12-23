@@ -17,9 +17,7 @@ import { useGetTable } from "@/lib/queries/dataset/get-table";
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
-  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -55,8 +53,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
-import Editor from "@monaco-editor/react";
-import { useTheme } from "next-themes";
+import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 
 const MotionCard = motion(Card);
 const MotionTableRow = motion(TableRow);
@@ -71,8 +68,6 @@ export function DataPreview(props: { datasetId: string }) {
   >({});
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
 
-  const { theme } = useTheme();
-
   const { data, isLoading: isTableLoading } = useGetTable({
     variables: {
       limit: rowsPerPage,
@@ -80,6 +75,7 @@ export function DataPreview(props: { datasetId: string }) {
       datasetId: props.datasetId,
       columns: selectedColumns.length > 0 ? selectedColumns : [],
       sort: Object.entries(sortState)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .filter(([_, direction]) => direction !== null)
         .map(([column, direction]) => ({
           column,
@@ -116,7 +112,7 @@ export function DataPreview(props: { datasetId: string }) {
     if (allColumns.length > 0 && selectedColumns.length === 0) {
       setSelectedColumns(allColumns);
     }
-  }, [allColumns]);
+  }, [allColumns, selectedColumns.length]);
 
   const handleRowsPerPageChange = (value: string) => {
     setRowsPerPage(Number(value));
@@ -424,20 +420,10 @@ export function DataPreview(props: { datasetId: string }) {
           </Table>
         ) : (
           <div className="h-[600px]">
-            <Editor
-              height="100%"
-              defaultLanguage="json"
+            <SqlPreview
               value={JSON.stringify(data, null, 2)}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: "on",
-                roundedSelection: false,
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                theme: theme === "dark" ? "vs-dark" : "vs-light",
-              }}
+              language="json"
+              height="100%"
             />
           </div>
         )}

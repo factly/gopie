@@ -25,19 +25,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableIcon, Code2Icon } from "lucide-react";
-import Editor from "@monaco-editor/react";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { SqlPreview } from "./sql-preview";
 
 interface ResultsTableProps {
-  results: Record<string, any>[];
+  results: Record<string, unknown>[];
 }
 
 export function ResultsTable({ results }: ResultsTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
-  const { theme } = useTheme();
 
   const handleRowsPerPageChange = (value: string) => {
     setRowsPerPage(Number(value));
@@ -193,20 +191,10 @@ export function ResultsTable({ results }: ResultsTableProps) {
         </>
       ) : (
         <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage="json"
+          <SqlPreview
             value={JSON.stringify(results, null, 2)}
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: "on",
-              roundedSelection: false,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              theme: theme === "dark" ? "vs-dark" : "vs-light",
-            }}
+            language="json"
+            height="100%"
           />
         </div>
       )}

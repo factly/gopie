@@ -5,12 +5,12 @@ import { createMutation } from "react-query-kit";
 export const useDatasetSql = createMutation({
   mutationKey: ["dataset-sql"],
   mutationFn: async (sql: string) => {
-    return await (
+    return (await (
       await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/api/sql`, {
         body: JSON.stringify({
           query: sql,
         }),
       })
-    ).json();
+    ).json()) as Record<string, unknown>[];
   },
 });

@@ -1,0 +1,183 @@
+"use client";
+
+import * as React from "react";
+import { useDatasetSql } from "@/lib/mutations/dataset/sql";
+import { Button } from "@/components/ui/button";
+import { PlayIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { ResultsTable } from "@/components/dataset/sql/results-table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
+import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
+import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+import { SqlEditor } from "@/components/dataset/sql/sql-editor";
+import { SqlPreview } from "@/components/dataset/sql/sql-preview";
+
+declare global {
+  interface Window {
+    require: ((
+      deps: string[],
+      callback: (...args: unknown[]) => void
+    ) => void) & {
+      config: (config: { paths: Record<string, string> }) => void;
+    };
+  }
+}
+
+export default function SqlPage({
+  params,
+}: {
+  params: Promise<{ projectId: string; datasetId: string }>;
+}) {
+  const { datasetId } = React.use(params);
+  const [query, setQuery] = React.useState(
+    `SELECT * FROM ${datasetId} LIMIT 10`
+  );
+  const [results, setResults] = React.useState<
+    Record<string, unknown>[] | null
+  >(null);
+  const executeSql = useDatasetSql();
+  const nl2Sql = useNl2Sql();
+  const [queryMode, setQueryMode] = React.useState<"sql" | "natural">("sql");
+  const [naturalQuery, setNaturalQuery] = React.useState("");
+  const [generatedSql, setGeneratedSql] = React.useState<string>("");
+
+  const { data: schema } = useGetSchema({
+    variables: {
+      datasetId,
+    },
+  });
+
+  const handleExecute = async () => {
+    if (queryMode === "sql") {
+      if (!query.trim()) {
+        toast.error("Please enter a SQL query");
+        return;
+      }
+
+      toast.promise(executeSql.mutateAsync(query), {
+        loading: "Executing SQL query...",
+        success: (response) => {
+          setResults(response);
+          return "Query executed successfully";
+        },
+        error: (err) => `Failed to execute query: ${err.message}`,
+      });
+    } else {
+      if (!naturalQuery.trim()) {
+        toast.error("Please enter your question");
+        return;
+      }
+
+      const promiseId = toast.loading("Processing your question...");
+
+      try {
+        toast.loading("Converting to SQL...", { id: promiseId });
+        const sqlQuery = await nl2Sql.mutateAsync({
+          query: naturalQuery,
+          datasetId,
+        });
+
+        setGeneratedSql(sqlQuery.sql);
+        setQuery(sqlQuery.sql);
+
+        toast.loading("Executing generated SQL...", { id: promiseId });
+        const response = await executeSql.mutateAsync(sqlQuery.sql);
+        setResults(response);
+
+        toast.success("Query executed successfully", { id: promiseId });
+      } catch (error) {
+        toast.error("Failed to process question: " + (error as Error).message, {
+          id: promiseId,
+        });
+      }
+    }
+  };
+
+  const isLoading = executeSql.isPending || nl2Sql.isPending;
+
+  return (
+    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-rows-[auto_1fr] gap-6 h-[calc(100vh-120px)]">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-medium tracking-tight">
+                Query Data
+              </h2>
+              <ToggleGroup
+                type="single"
+                value={queryMode}
+                onValueChange={(value) =>
+                  value && setQueryMode(value as "sql" | "natural")
+                }
+              >
+                <ToggleGroupItem value="sql" aria-label="SQL Mode">
+                  SQL
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="natural"
+                  aria-label="Natural Language Mode"
+                >
+                  Natural Language
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <Button onClick={handleExecute} disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <PlayIcon className="mr-2 h-4 w-4" />
+              )}
+              {queryMode === "sql" ? "Execute Query" : "Ask Question"}
+            </Button>
+          </div>
+          <div className="border rounded-md overflow-hidden">
+            {queryMode === "sql" ? (
+              <SqlEditor
+                value={query}
+                onChange={setQuery}
+                schema={schema}
+                datasetId={datasetId}
+              />
+            ) : (
+              <div className="p-4 space-y-4">
+                <div className="relative">
+                  <Textarea
+                    placeholder="Ask a question about your data..."
+                    value={naturalQuery}
+                    onChange={(e) => setNaturalQuery(e.target.value)}
+                    className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50"
+                  />
+                </div>
+                {(nl2Sql.isPending || generatedSql) && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Generated SQL:
+                    </p>
+                    {nl2Sql.isPending ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-md p-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing your question...
+                      </div>
+                    ) : (
+                      <div className="border rounded-md overflow-hidden bg-muted/5">
+                        <SqlPreview value={generatedSql} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {results && (
+          <div className="flex-1 overflow-auto">
+            <ResultsTable results={results} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

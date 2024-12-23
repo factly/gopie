@@ -4,23 +4,22 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataPreview } from "@/components/dataset/data-preview";
 import { useDatasetSql } from "@/lib/queries/dataset/sql";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
 
-const MotionCard = motion(Card);
-
 export default function DatasetPage({
   params,
 }: {
   params: Promise<{ projectId: string; datasetId: string }>;
 }) {
-  const { projectId, datasetId } = React.use(params);
+  const { datasetId } = React.use(params);
 
-  const { data: totalRowsData, isLoading: isTotalRowsLoading } = useDatasetSql({
+  const { data: totalRowsData, isLoading: isTotalRowsLoading } = useDatasetSql<
+    Array<{ cnt: number }>
+  >({
     variables: {
       sql: `SELECT COUNT(*) as cnt FROM ${datasetId}`,
     },
@@ -140,7 +139,7 @@ export default function DatasetPage({
                   {isTotalRowsLoading ? (
                     <Skeleton className="h-8 w-20" />
                   ) : (
-                    new Intl.NumberFormat().format(totalRows)
+                    new Intl.NumberFormat().format(totalRows ?? 0)
                   )}
                 </div>
               </motion.div>
