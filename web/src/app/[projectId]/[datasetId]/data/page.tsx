@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
 import { PlayIcon, Loader2 } from "lucide-react";
@@ -23,6 +24,21 @@ declare global {
     };
   }
 }
+
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: { duration: 0.3 },
+  },
+};
+
+const fadeInVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.2 },
+};
 
 export default function SqlPage({
   params,
@@ -97,10 +113,18 @@ export default function SqlPage({
   const isLoading = executeSql.isPending || nl2Sql.isPending;
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"
+    >
       <div className="grid grid-rows-[auto_1fr] gap-6 h-[calc(100vh-120px)]">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <motion.div
+            variants={fadeInVariants}
+            className="flex items-center justify-between"
+          >
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-medium tracking-tight">
                 Query Data
@@ -131,53 +155,78 @@ export default function SqlPage({
               )}
               {queryMode === "sql" ? "Execute Query" : "Ask Question"}
             </Button>
-          </div>
-          <div className="border rounded-md overflow-hidden">
-            {queryMode === "sql" ? (
-              <SqlEditor
-                value={query}
-                onChange={setQuery}
-                schema={schema}
-                datasetId={datasetId}
-              />
-            ) : (
-              <div className="p-4 space-y-4">
-                <div className="relative">
-                  <Textarea
-                    placeholder="Ask a question about your data..."
-                    value={naturalQuery}
-                    onChange={(e) => setNaturalQuery(e.target.value)}
-                    className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50"
+          </motion.div>
+
+          <motion.div layout className="border rounded-md overflow-hidden">
+            <AnimatePresence mode="wait">
+              {queryMode === "sql" ? (
+                <motion.div key="sql-editor" {...fadeInVariants}>
+                  <SqlEditor
+                    value={query}
+                    onChange={setQuery}
+                    schema={schema}
+                    datasetId={datasetId}
                   />
-                </div>
-                {(nl2Sql.isPending || generatedSql) && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Generated SQL:
-                    </p>
-                    {nl2Sql.isPending ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-md p-4">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing your question...
-                      </div>
-                    ) : (
-                      <div className="border rounded-md overflow-hidden bg-muted/5">
-                        <SqlPreview value={generatedSql} />
-                      </div>
-                    )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="natural-language"
+                  className="p-4 space-y-4"
+                  {...fadeInVariants}
+                >
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Ask a question about your data..."
+                      value={naturalQuery}
+                      onChange={(e) => setNaturalQuery(e.target.value)}
+                      className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50"
+                    />
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                  <AnimatePresence>
+                    {(nl2Sql.isPending || generatedSql) && (
+                      <motion.div
+                        className="space-y-2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Generated SQL:
+                        </p>
+                        {nl2Sql.isPending ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-md p-4">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing your question...
+                          </div>
+                        ) : (
+                          <div className="border rounded-md overflow-hidden bg-muted/5">
+                            <SqlPreview value={generatedSql} />
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
 
-        {results && (
-          <div className="flex-1 overflow-auto">
-            <ResultsTable results={results} />
-          </div>
-        )}
+        <AnimatePresence>
+          {results && (
+            <motion.div
+              className="flex-1 overflow-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ResultsTable results={results} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

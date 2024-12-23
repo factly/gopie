@@ -9,6 +9,8 @@ import { DataPreview } from "@/components/dataset/data-preview";
 import { useDatasetSql } from "@/lib/queries/dataset/sql";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+import { SchemaTable } from "@/components/dataset/schema-table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DatasetPage({
   params,
@@ -65,9 +67,10 @@ export default function DatasetPage({
             </div>
           </div>
 
-          {/* Loading Data Preview */}
+          {/* Loading Content */}
           <div className="bg-background rounded-lg shadow-sm border p-6">
-            <DataPreview datasetId={datasetId} />
+            <Skeleton className="h-10 w-[200px] mb-6" />
+            <Skeleton className="h-[400px] w-full" />
           </div>
         </div>
       </div>
@@ -105,14 +108,23 @@ export default function DatasetPage({
                     </Badge>
                   </motion.div>
                 </div>
-                <motion.p
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="text-lg text-muted-foreground"
+                  className="flex items-center gap-4 text-muted-foreground"
                 >
-                  Dataset information and preview
-                </motion.p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">Rows:</span>
+                    <span>
+                      {new Intl.NumberFormat().format(totalRows ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">Columns:</span>
+                    <span>{tableSchema?.length}</span>
+                  </div>
+                </motion.div>
               </div>
               <Button
                 variant="outline"
@@ -123,55 +135,28 @@ export default function DatasetPage({
                 Download Dataset
               </Button>
             </div>
-
-            {/* Dataset Stats */}
-            <div className="flex items-center gap-8 pt-4 mt-4 border-t border-border/40">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="flex flex-col gap-0.5"
-              >
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total Rows
-                </span>
-                <div className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {isTotalRowsLoading ? (
-                    <Skeleton className="h-8 w-20" />
-                  ) : (
-                    new Intl.NumberFormat().format(totalRows ?? 0)
-                  )}
-                </div>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="flex flex-col gap-0.5"
-              >
-                <span className="text-sm font-medium text-muted-foreground">
-                  Columns
-                </span>
-                <div className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {isSchemaLoading ? (
-                    <Skeleton className="h-8 w-20" />
-                  ) : (
-                    tableSchema?.length
-                  )}
-                </div>
-              </motion.div>
-            </div>
           </div>
         </motion.div>
 
-        {/* Data Preview */}
+        {/* Content Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.6 }}
           className="bg-background rounded-lg shadow-sm border p-6"
         >
-          <DataPreview datasetId={datasetId} />
+          <Tabs defaultValue="preview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="preview">Data Preview</TabsTrigger>
+              <TabsTrigger value="schema">Schema</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preview" className="space-y-4">
+              <DataPreview datasetId={datasetId} />
+            </TabsContent>
+            <TabsContent value="schema" className="space-y-4">
+              <SchemaTable schema={tableSchema || []} />
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
     </div>

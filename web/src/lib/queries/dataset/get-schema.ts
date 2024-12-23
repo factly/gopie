@@ -2,7 +2,7 @@ import { env } from "@/lib/env";
 import ky from "ky";
 import { createQuery } from "react-query-kit";
 
-interface ColumnInfo {
+export interface ColumnInfo {
   column_name: string;
   column_type: string;
   default: any;

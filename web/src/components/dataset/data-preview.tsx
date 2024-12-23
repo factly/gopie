@@ -55,8 +55,8 @@ import { cn } from "@/lib/utils";
 import { useGetSchema } from "@/lib/queries/dataset/get-schema";
 import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 
-const MotionCard = motion(Card);
-const MotionTableRow = motion(TableRow);
+const MotionCard = motion.create(Card);
+const MotionTableRow = motion.create(TableRow);
 
 export function DataPreview(props: { datasetId: string }) {
   const [currentPage, setCurrentPage] = React.useState(1);
