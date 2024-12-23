@@ -45,7 +45,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
   const totalPages = Math.ceil(results.length / rowsPerPage);
   const paginatedResults = results.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
   const columns = results.length > 0 ? Object.keys(results[0]) : [];
 

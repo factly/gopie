@@ -22,7 +22,7 @@ export function SqlEditor({
 }: SqlEditorProps) {
   const { theme } = useTheme();
   const editorRef = React.useRef<monaco.editor.IStandaloneCodeEditor | null>(
-    null
+    null,
   );
   const [isVimMode, setIsVimMode] = React.useState(false);
   const statusBarRef = React.useRef<HTMLDivElement>(null);
@@ -87,7 +87,7 @@ export function SqlEditor({
               insertText: col.column_name,
               detail: `Column (${col.column_type})`,
               range: range,
-            }))
+            })),
           );
         }
 
@@ -111,11 +111,11 @@ export function SqlEditor({
         }
         vimModeRef.current = MonacoVim.initVimMode(
           editor,
-          statusBarRef.current
+          statusBarRef.current,
         );
       });
     },
-    []
+    [],
   );
 
   React.useEffect(() => {

@@ -53,7 +53,7 @@ export default function DatasetLayout({
                     "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors hover:text-foreground",
                     isActive
                       ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:border-border"
+                      : "border-transparent text-muted-foreground hover:border-border",
                   )}
                 >
                   <tab.icon className="h-4 w-4" />

@@ -40,10 +40,10 @@ export const useGetTable = createQuery({
             filter.map((f) => [
               `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
               f.value,
-            ])
+            ]),
           ),
         },
-      }
+      },
     );
     return (await res.json()) as Record<string, unknown>[];
   },

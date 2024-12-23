@@ -18,7 +18,7 @@ declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void
+      callback: (...args: unknown[]) => void,
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -47,7 +47,7 @@ export default function SqlPage({
 }) {
   const { datasetId } = React.use(params);
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${datasetId} LIMIT 10`
+    `SELECT * FROM ${datasetId} LIMIT 10`,
   );
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
