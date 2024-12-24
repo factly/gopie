@@ -1,5 +1,6 @@
 import { createMutation } from "react-query-kit";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { Project } from "@/types/project";
 
 export const useAddDatasetToProject = createMutation({
   mutationKey: ["add-dataset-to-project"],
@@ -10,11 +11,10 @@ export const useAddDatasetToProject = createMutation({
     projectId: string;
     datasetId: string;
   }) => {
-    console.log(projectId, datasetId);
     // Fetch the project from the local storage
     const projects = JSON.parse(
       localStorage.getItem(STORAGE_KEYS.PROJECTS) || "[]",
-    ) as any[];
+    ) as Project[];
     const project = projects.find((p) => p.id === projectId);
 
     if (!project) {

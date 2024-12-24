@@ -9,7 +9,6 @@ import Link from "next/link";
 
 export default function Home() {
   const { data: projects, isLoading, error } = useProjects();
-  console.log(projects);
 
   if (isLoading) {
     return (

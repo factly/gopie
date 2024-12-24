@@ -2,7 +2,7 @@ export type Project = {
   id: string;
   name: string;
   description?: string;
-  datasets: any[];
+  datasets: string[];
 };
 
 export type ProjectInput = {

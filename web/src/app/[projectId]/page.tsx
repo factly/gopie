@@ -7,7 +7,7 @@ import { TableIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UploadDatasetDialog } from "@/components/dataset/upload-dataset-dialog";
 import { DatasetCard } from "@/components/dataset/dataset-card";
-import { motion } from "framer-motion"; // Add this import
+import { motion } from "framer-motion";
 
 export default function ProjectPage({
   params,
