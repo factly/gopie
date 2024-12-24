@@ -9,7 +9,7 @@ async function fetchProject({
 }): Promise<Project> {
   try {
     const projects = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.PROJECTS) || "[]"
+      localStorage.getItem(STORAGE_KEYS.PROJECTS) || "[]",
     ) as Project[];
 
     const project = projects.find((p) => p.id === projectId);

@@ -32,7 +32,7 @@ export const useSchemas = createQuery({
     return await Promise.all(
       datasetIds.map(async (datasetId) => {
         return fetchSchema({ datasetId });
-      })
+      }),
     );
   },
 });

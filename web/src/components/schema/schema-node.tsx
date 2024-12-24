@@ -68,7 +68,7 @@ function FieldRow({
       className={cn(
         "group flex items-center gap-2 pl-8 pr-3 py-2 hover:bg-muted/50 relative",
         isPrimary && "hover:bg-primary/10",
-        isLast && "rounded-b-lg"
+        isLast && "rounded-b-lg",
       )}
     >
       <Handle
@@ -78,7 +78,7 @@ function FieldRow({
         className={cn(
           "w-3 h-3 border-2 !bg-background z-10",
           "opacity-0 group-hover:opacity-100",
-          isPrimary && "!border-primary"
+          isPrimary && "!border-primary",
         )}
         style={{
           left: 8,
@@ -95,7 +95,7 @@ function FieldRow({
           variant={isPrimary ? "default" : "outline"}
           className={cn(
             "font-mono text-[10px] px-1.5 py-0 h-5 shrink-0",
-            field.null === "YES" && "border-dashed opacity-80"
+            field.null === "YES" && "border-dashed opacity-80",
           )}
         >
           {field.column_type}
