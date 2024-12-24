@@ -18,12 +18,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme/toggle";
 
+// Add this helper at the top of the file
+const isDatasetId = (segment: string) => segment.startsWith("gp_");
+
 function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
       className={cn(
         "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-3",
-        className,
+        className
       )}
       {...props}
     >
@@ -55,7 +58,7 @@ function Breadcrumb({
           variables: { projectId },
           enabled: segments.length > 0,
         }
-      : { enabled: false },
+      : { enabled: false }
   );
 
   return (
@@ -133,6 +136,10 @@ function Breadcrumb({
 
           // Dataset Segment (Second)
           if (index === 1 && project) {
+            if (!isDatasetId(segment)) {
+              return null;
+            }
+
             return (
               <React.Fragment key={path}>
                 <ChevronRight className="size-4 text-muted-foreground" />
@@ -182,7 +189,7 @@ function Breadcrumb({
                     "text-sm hover:text-foreground leading-none",
                     isLast
                       ? "font-medium text-foreground"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                   aria-current={isLast ? "page" : undefined}
                 >

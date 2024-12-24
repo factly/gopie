@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataPreview } from "@/components/dataset/data-preview";
 import { useDatasetSql } from "@/lib/queries/dataset/sql";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+import { useSchema } from "@/lib/queries/dataset/get-schema";
 import { SchemaTable } from "@/components/dataset/schema-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -28,7 +28,7 @@ export default function DatasetPage({
   });
   const totalRows = totalRowsData?.[0]?.cnt;
 
-  const { data: tableSchema, isLoading: isSchemaLoading } = useGetSchema({
+  const { data: tableSchema, isLoading: isSchemaLoading } = useSchema({
     variables: {
       datasetId,
     },

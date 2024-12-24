@@ -10,7 +10,7 @@ import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
-import { useGetSchema } from "@/lib/queries/dataset/get-schema";
+import { useSchema } from "@/lib/queries/dataset/get-schema";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 
@@ -18,7 +18,7 @@ declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void,
+      callback: (...args: unknown[]) => void
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -47,7 +47,7 @@ export default function SqlPage({
 }) {
   const { datasetId } = React.use(params);
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${datasetId} LIMIT 10`,
+    `SELECT * FROM ${datasetId} LIMIT 10`
   );
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
@@ -58,7 +58,7 @@ export default function SqlPage({
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
 
-  const { data: schema } = useGetSchema({
+  const { data: schema } = useSchema({
     variables: {
       datasetId,
     },
