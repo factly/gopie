@@ -45,12 +45,12 @@ export function ResultsTable({ results }: ResultsTableProps) {
   const totalPages = Math.ceil(results.length / rowsPerPage);
   const paginatedResults = results.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage,
+    currentPage * rowsPerPage
   );
   const columns = results.length > 0 ? Object.keys(results[0]) : [];
 
   return (
-    <div className="flex flex-col gap-4 h-full min-h-0">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Results</h3>
         <div className="flex items-center gap-4">
@@ -190,11 +190,11 @@ export function ResultsTable({ results }: ResultsTableProps) {
           )}
         </>
       ) : (
-        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+        <div className="h-[600px] border rounded-lg overflow-hidden">
           <SqlPreview
             value={JSON.stringify(results, null, 2)}
             language="json"
-            height="100%"
+            height="600px"
           />
         </div>
       )}

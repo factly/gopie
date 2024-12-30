@@ -18,22 +18,25 @@ export function SqlPreview({
   const { theme } = useTheme();
 
   return (
-    <Editor
-      height={height}
-      defaultLanguage={language}
-      value={value}
-      theme={theme === "dark" ? "vs-dark" : "vs-light"}
-      options={{
-        readOnly: true,
-        minimap: { enabled: false },
-        fontSize: 14,
-        lineNumbers: "off",
-        roundedSelection: false,
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-        folding: false,
-        wordWrap: "on",
-      }}
-    />
+    <div className="overflow-hidden rounded-[var(--radius)] [&_.monaco-editor]:rounded-[var(--radius)]">
+      <Editor
+        height={height}
+        defaultLanguage={language}
+        value={value}
+        theme={theme === "dark" ? "vs-dark" : "vs-light"}
+        options={{
+          readOnly: true,
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: "off",
+          roundedSelection: false,
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          folding: false,
+          wordWrap: "on",
+        }}
+        className="rounded-[var(--radius)]"
+      />
+    </div>
   );
 }
