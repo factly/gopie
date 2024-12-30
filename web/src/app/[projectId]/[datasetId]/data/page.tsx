@@ -93,11 +93,9 @@ export default function SqlPage({
           datasetId,
         });
         setGeneratedSql(sqlQuery.sql);
-        setQuery(sqlQuery.sql);
 
         toast.loading("Executing generated SQL...", { id: promiseId });
-        const sqlToExecute = sqlQuery.sql;
-        const response = await executeSql.mutateAsync(sqlToExecute);
+        const response = await executeSql.mutateAsync(sqlQuery.sql);
         setResults(response);
 
         toast.success("Query executed successfully", { id: promiseId });
