@@ -81,7 +81,7 @@ const MessageCard = ({
       <div
         className={cn(
           "flex flex-col gap-2 max-w-[80%] w-full",
-          isUser && "items-end"
+          isUser && "items-end",
         )}
       >
         {isUser ? (
@@ -112,7 +112,7 @@ const MessageCard = ({
                           "gap-2 transition-all",
                           runningQueries[response.query]
                             ? "opacity-70"
-                            : "hover:scale-105"
+                            : "hover:scale-105",
                         )}
                       >
                         {runningQueries[response.query] ? (
@@ -266,7 +266,7 @@ export default function ChatPage({
             };
           }
           return msg;
-        })
+        }),
       );
     } catch (error) {
       // Let the error bubble up to MessageCard's error handler
