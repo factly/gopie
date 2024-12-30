@@ -12,13 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
 import { useSchema } from "@/lib/queries/dataset/get-schema";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
-import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 
 declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void,
+      callback: (...args: unknown[]) => void
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -47,7 +46,7 @@ export default function SqlPage({
 }) {
   const { datasetId } = React.use(params);
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${datasetId} LIMIT 10`,
+    `SELECT * FROM ${datasetId} LIMIT 10`
   );
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
@@ -93,12 +92,12 @@ export default function SqlPage({
           query: naturalQuery,
           datasetId,
         });
-
         setGeneratedSql(sqlQuery.sql);
         setQuery(sqlQuery.sql);
 
         toast.loading("Executing generated SQL...", { id: promiseId });
-        const response = await executeSql.mutateAsync(sqlQuery.sql);
+        const sqlToExecute = sqlQuery.sql;
+        const response = await executeSql.mutateAsync(sqlToExecute);
         setResults(response);
 
         toast.success("Query executed successfully", { id: promiseId });
@@ -108,6 +107,22 @@ export default function SqlPage({
         });
       }
     }
+  };
+
+  const handleRunGeneratedSql = async () => {
+    if (!generatedSql.trim()) {
+      toast.error("No SQL query to execute");
+      return;
+    }
+
+    toast.promise(executeSql.mutateAsync(generatedSql), {
+      loading: "Executing SQL query...",
+      success: (response) => {
+        setResults(response);
+        return "Query executed successfully";
+      },
+      error: (err) => `Failed to execute query: ${err.message}`,
+    });
   };
 
   const isLoading = executeSql.isPending || nl2Sql.isPending;
@@ -153,7 +168,7 @@ export default function SqlPage({
               ) : (
                 <PlayIcon className="mr-2 h-4 w-4" />
               )}
-              {queryMode === "sql" ? "Execute Query" : "Ask Question"}
+              {queryMode === "sql" ? "Execute Query" : "Generate Query"}
             </Button>
           </motion.div>
 
@@ -191,9 +206,23 @@ export default function SqlPage({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Generated SQL:
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Generated SQL:
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={handleRunGeneratedSql}
+                            disabled={executeSql.isPending}
+                          >
+                            {executeSql.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <PlayIcon className="mr-2 h-4 w-4" />
+                            )}
+                            Run SQL
+                          </Button>
+                        </div>
                         {nl2Sql.isPending ? (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-md p-4">
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -201,7 +230,12 @@ export default function SqlPage({
                           </div>
                         ) : (
                           <div className="border rounded-md overflow-hidden bg-muted/5">
-                            <SqlPreview value={generatedSql} />
+                            <SqlEditor
+                              value={generatedSql}
+                              onChange={setGeneratedSql}
+                              schema={schema}
+                              datasetId={datasetId}
+                            />
                           </div>
                         )}
                       </motion.div>
