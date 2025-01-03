@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,27 +35,69 @@ interface SqlMessage extends BaseMessage {
   results?: Record<string, unknown>[];
 }
 
-type Message =
-  | {
-      role: "user";
-      content: string;
-    }
-  | {
-      role: "assistant";
-      responses: (TextMessage | SqlMessage)[];
-    };
+interface UserMessage {
+  role: "user";
+  content: string;
+}
+
+interface AssistantMessage {
+  role: "assistant";
+  responses: (TextMessage | SqlMessage)[];
+}
+
+type Message = UserMessage | AssistantMessage;
+
+interface StreamingState {
+  isStreaming: boolean;
+  streamedContent: string;
+}
 
 const MessageCard = ({
   message,
   onRunQuery,
+  isLatest,
 }: {
   message: Message;
   onRunQuery: (query: string) => Promise<void>;
+  isLatest: boolean;
 }) => {
   const isUser = message.role === "user";
   const [runningQueries, setRunningQueries] = useState<{
     [key: string]: boolean;
   }>({});
+  const [streamingStates, setStreamingStates] = useState<{
+    [key: number]: StreamingState;
+  }>({});
+
+  useEffect(() => {
+    if (!isLatest || isUser) return;
+    const assistantMessage = message as AssistantMessage;
+
+    assistantMessage.responses.forEach((response, idx) => {
+      if (response.type === "text") {
+        setStreamingStates((prev) => ({
+          ...prev,
+          [idx]: { isStreaming: true, streamedContent: "" },
+        }));
+
+        let currentContent = "";
+        const words = response.content.split(" ");
+
+        words.forEach((word, wordIdx) => {
+          setTimeout(() => {
+            currentContent += (wordIdx === 0 ? "" : " ") + word;
+            setStreamingStates((prev) => ({
+              ...prev,
+              [idx]: {
+                isStreaming: wordIdx < words.length - 1,
+                streamedContent: currentContent,
+              },
+            }));
+          }, wordIdx * 100);
+        });
+      }
+    });
+  }, [isLatest, isUser, message, message.responses, message.role]);
 
   const handleRunQuery = async (query: string) => {
     setRunningQueries((prev) => ({ ...prev, [query]: true }));
@@ -72,8 +114,19 @@ const MessageCard = ({
   };
 
   return (
-    <div className={cn("flex gap-3 mb-4", isUser && "flex-row-reverse")}>
-      <Avatar className="h-8 w-8">
+    <div
+      className={cn(
+        "flex gap-3 mb-4 transition-opacity duration-300",
+        isUser && "flex-row-reverse",
+        isLatest ? "opacity-100" : "opacity-90"
+      )}
+    >
+      <Avatar
+        className={cn(
+          "h-8 w-8 ring-2",
+          isUser ? "ring-primary/20" : "ring-muted"
+        )}
+      >
         <AvatarFallback className={isUser ? "bg-primary/10" : "bg-muted"}>
           {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </AvatarFallback>
@@ -81,62 +134,76 @@ const MessageCard = ({
       <div
         className={cn(
           "flex flex-col gap-2 max-w-[80%] w-full",
-          isUser && "items-end",
+          isUser && "items-end"
         )}
       >
         {isUser ? (
-          <Card className="p-3 shadow-sm bg-primary/10">
+          <Card className="p-3 shadow-sm bg-primary/10 hover:bg-primary/15 transition-colors">
             <p>{message.content}</p>
           </Card>
         ) : (
-          message.responses.map((response, idx) => (
+          (message as AssistantMessage).responses.map((response, idx) => (
             <div key={idx} className="w-full space-y-2">
               {response.type === "text" ? (
-                <Card className="p-3 shadow-sm bg-muted">
-                  <p>{response.content}</p>
+                <Card className="p-3 shadow-sm bg-muted hover:bg-muted/90 transition-colors">
+                  <p>
+                    {streamingStates[idx]?.streamedContent || response.content}
+                    {streamingStates[idx]?.isStreaming && (
+                      <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse" />
+                    )}
+                  </p>
                 </Card>
               ) : (
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="query">
-                    <div className="flex items-center justify-between">
-                      <AccordionTrigger className="hover:no-underline flex-1">
-                        <div className="text-sm text-muted-foreground">
-                          SQL Query
-                        </div>
-                      </AccordionTrigger>
-                      <Button
-                        size="sm"
-                        onClick={() => handleRunQuery(response.query)}
-                        disabled={runningQueries[response.query]}
-                        className={cn(
-                          "gap-2 transition-all",
-                          runningQueries[response.query]
-                            ? "opacity-70"
-                            : "hover:scale-105",
-                        )}
-                      >
-                        {runningQueries[response.query] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <PlayIcon className="h-4 w-4" />
-                        )}
-                        {runningQueries[response.query]
-                          ? "Running..."
-                          : "Run Query"}
-                      </Button>
-                    </div>
-                    <AccordionContent>
-                      <div className="space-y-2">
-                        <SqlPreview value={response.query} height="100px" />
-                        {response.results && (
-                          <Card className="p-4">
-                            <ResultsTable results={response.results} />
-                          </Card>
-                        )}
+                <div className="space-y-4">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="query" className="border rounded-lg">
+                      <div className="flex items-center justify-between p-2">
+                        <AccordionTrigger className="hover:no-underline flex-1 py-0">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="h-2 w-2 rounded-full bg-primary/50" />
+                            SQL Query
+                          </div>
+                        </AccordionTrigger>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRunQuery(response.query)}
+                          disabled={runningQueries[response.query]}
+                          className={cn(
+                            "gap-2 transition-all",
+                            runningQueries[response.query]
+                              ? "opacity-70"
+                              : "hover:scale-105 hover:shadow-md"
+                          )}
+                        >
+                          {runningQueries[response.query] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <PlayIcon className="h-4 w-4" />
+                          )}
+                          {runningQueries[response.query]
+                            ? "Running..."
+                            : "Run Query"}
+                        </Button>
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                      <AccordionContent>
+                        <div className="p-2">
+                          <SqlPreview value={response.query} height="100px" />
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  {response.results && (
+                    <Card className="border shadow-sm">
+                      <div className="p-3 border-b bg-muted/50">
+                        <div className="text-sm font-medium">Query Results</div>
+                      </div>
+                      <div className="p-4">
+                        <ResultsTable results={response.results} />
+                      </div>
+                    </Card>
+                  )}
+                </div>
               )}
             </div>
           ))
@@ -229,12 +296,21 @@ export default function ChatPage({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { datasetId } = use(params);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { mutateAsync: executeSql } = useDatasetSql();
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const mockStreamingResponse = async (question: string) => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const mockResponses = getMockResponses(datasetId);
     const randomResponse =
@@ -266,10 +342,9 @@ export default function ChatPage({
             };
           }
           return msg;
-        }),
+        })
       );
     } catch (error) {
-      // Let the error bubble up to MessageCard's error handler
       throw error;
     }
   };
@@ -284,36 +359,64 @@ export default function ChatPage({
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex flex-col h-full">
-        <ScrollArea className="flex-1 pr-4">
+    <div className="container mx-auto p-4 max-w-4xl h-[calc(100vh-4rem)]">
+      <div className="flex flex-col h-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border shadow-sm">
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4 mb-4">
             {messages.map((message, index) => (
               <MessageCard
                 key={index}
                 message={message}
                 onRunQuery={handleRunQuery}
+                isLatest={index === messages.length - 1}
               />
             ))}
             {isLoading && (
-              <Card className="p-3 bg-muted w-fit">
-                <p className="animate-pulse">Thinking...</p>
-              </Card>
+              <div className="flex gap-3">
+                <Avatar className="h-8 w-8 ring-2 ring-muted">
+                  <AvatarFallback className="bg-muted">
+                    <Bot className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <Card className="p-3 bg-muted w-fit">
+                  <div className="flex gap-1">
+                    <div
+                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
+                </Card>
+              </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
-        <form onSubmit={handleSubmit} className="flex gap-2 pt-4 border-t">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your data..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={isLoading}>
-            <Send className="h-4 w-4" />
-          </Button>
+        <form onSubmit={handleSubmit} className="p-4 border-t bg-background/95">
+          <div className="flex gap-2 items-center">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about your data..."
+              disabled={isLoading}
+              className="flex-1 bg-background"
+            />
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="transition-transform hover:scale-105"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </form>
       </div>
     </div>
