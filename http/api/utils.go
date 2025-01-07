@@ -45,3 +45,22 @@ func (h *httpHandler) handleError(w http.ResponseWriter, err error, logMessage s
 
 	errorx.Render(w, errorx.Parser(errorx.GetMessage(message, status)))
 }
+
+func (h *httpHandler) getQueryCount(query string) (int, error) {
+	query = fmt.Sprintf("select count(*) from (%s) as count", query)
+	res, err := h.executeQuery(query, "")
+	if err != nil {
+		return 0, err
+	}
+
+	json, err := res.RowsToMap()
+	if err != nil {
+		return 0, err
+	}
+
+	if len(*json) == 0 {
+		return 0, nil
+	}
+
+	return (*json)[0]["count"].(int), nil
+}

@@ -23,6 +23,19 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	count, err := h.getQueryCount(query)
+	if err != nil {
+		h.handleError(w, err, "Error getting query count", http.StatusInternalServerError)
+		return
+	}
+
+	if count == 0 {
+		renderx.JSON(w, http.StatusOK, []map[string]interface{}{
+			{"total": 0},
+			{"rows": []map[string]interface{}{}},
+		})
+	}
+
 	query = imposeLimits(query)
 
 	res, err := h.executeQuery(query, table)
@@ -37,16 +50,19 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err, "Error converting result to JSON", http.StatusInternalServerError)
 	}
 
-  params := ingestEventParams{
-    subject:        r.Header.Get("x-gopie-organisation-id"),
-    dataset:        table,
-    userID:         r.Header.Get("x-gopie-user-id"),
-    method:         r.Method,
-    endpoint:       r.URL.String(),
-  }
-  ingestEvent(h.metering, params)
+	params := ingestEventParams{
+		subject:  r.Header.Get("x-gopie-organisation-id"),
+		dataset:  table,
+		userID:   r.Header.Get("x-gopie-user-id"),
+		method:   r.Method,
+		endpoint: r.URL.String(),
+	}
+	ingestEvent(h.metering, params)
 
-	renderx.JSON(w, http.StatusOK, jsonRes)
+	renderx.JSON(w, http.StatusOK, []map[string]interface{}{
+		{"total": count},
+		{"rows": jsonRes},
+	})
 }
 
 func buildQuery(table string, queryParams url.Values) (string, error) {
