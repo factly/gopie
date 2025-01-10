@@ -24,19 +24,19 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := h.getQueryCount(body.Query)
-	if err != nil {
-		h.handleError(w, err, "error getting query count", http.StatusInternalServerError)
-		return
-	}
-
-	if count == 0 {
-		renderx.JSON(w, http.StatusOK, []map[string]interface{}{
-			{"total": 0},
-			{"rows": []map[string]interface{}{}},
-		})
-		return
-	}
+	// count, err := h.getQueryCount(body.Query, "gp_bHJ8z1aW5pds")
+	// if err != nil {
+	// 	h.handleError(w, err, "error getting query count", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// if count == 0 {
+	// 	renderx.JSON(w, http.StatusOK, []map[string]interface{}{
+	// 		{"total": 0},
+	// 		{"rows": []map[string]interface{}{}},
+	// 	})
+	// 	return
+	// }
 
 	query := imposeLimits(body.Query)
 
@@ -67,10 +67,7 @@ func (h *httpHandler) sql(w http.ResponseWriter, r *http.Request) {
 	}
 	ingestEvent(h.metering, params)
 
-	renderx.JSON(w, http.StatusOK, map[string]interface{}{
-		"total": count,
-		"rows":  jsonRes,
-	})
+	renderx.JSON(w, http.StatusOK, jsonRes)
 }
 
 func extractTableName(query string) (string, error) {

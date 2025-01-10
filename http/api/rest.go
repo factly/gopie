@@ -23,10 +23,35 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := h.getQueryCount(query)
+	count, err := h.getQueryCount(query, table)
 	if err != nil {
 		h.handleError(w, err, "Error getting query count", http.StatusInternalServerError)
 		return
+	}
+
+	l := 0
+	limit := queryParams.Get("limit")
+	if limit != "" {
+		parsedLimit, err := strconv.Atoi(limit)
+		if err != nil {
+			h.handleError(w, err, "Error parsing limit", http.StatusBadRequest)
+			return
+		}
+		if parsedLimit > 1000 {
+			parsedLimit = 1000
+		}
+		l = parsedLimit
+		query = fmt.Sprintf("%s LIMIT %d", query, parsedLimit)
+	}
+
+	page := queryParams.Get("page")
+	if page != "" {
+		parsedPage, err := strconv.Atoi(page)
+		if err != nil {
+			h.handleError(w, err, "Error parsing page", http.StatusBadRequest)
+			return
+		}
+		query = fmt.Sprintf("%s OFFSET %d", query, (parsedPage-1)*l)
 	}
 
 	if count == 0 {
@@ -95,30 +120,7 @@ func buildQuery(table string, queryParams url.Values) (string, error) {
 		query = fmt.Sprintf("%s %s", query, orderBy)
 	}
 
-	l := 0
-	limit := queryParams.Get("limit")
-	if limit != "" {
-		parsedLimit, err := strconv.Atoi(limit)
-		if err != nil {
-			return "", err
-		}
-		if parsedLimit > 1000 {
-			parsedLimit = 1000
-		}
-		l = parsedLimit
-		query = fmt.Sprintf("%s LIMIT %d", query, parsedLimit)
-	}
-
-	page := queryParams.Get("page")
-	if page != "" {
-		parsedPage, err := strconv.Atoi(page)
-		if err != nil {
-			return "", err
-		}
-		query = fmt.Sprintf("%s OFFSET %d", query, (parsedPage-1)*l)
-	}
-
-	return imposeLimits(query), nil
+	return query, nil
 }
 
 func parseSort(sort string) string {
