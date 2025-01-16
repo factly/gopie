@@ -42,6 +42,9 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 		}
 		l = parsedLimit
 		query = fmt.Sprintf("%s LIMIT %d", query, parsedLimit)
+	} else {
+		l = 1000
+		query = fmt.Sprintf("%s LIMIT %d", query, l)
 	}
 
 	page := queryParams.Get("page")
