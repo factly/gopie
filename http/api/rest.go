@@ -84,9 +84,9 @@ func (h *httpHandler) rest(w http.ResponseWriter, r *http.Request) {
 	}
 	ingestEvent(h.metering, params)
 
-	renderx.JSON(w, http.StatusOK, []map[string]interface{}{
-		{"total": count},
-		{"rows": jsonRes},
+	renderx.JSON(w, http.StatusOK, map[string]interface{}{
+		"total": count,
+		"rows":  jsonRes,
 	})
 }
 
