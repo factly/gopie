@@ -1,0 +1,62 @@
+package http
+
+import (
+	"log"
+
+	"github.com/factly/gopie/application/services"
+	"github.com/factly/gopie/domain/pkg/config"
+	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/source/s3"
+	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"go.uber.org/zap"
+)
+
+func ServeHttp() error {
+	config, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal("error loading config ", "error-> ", err)
+		return err
+	}
+
+	logger, err := logger.NewLogger(
+		map[string]interface{}{
+			"log_level": config.Logger.Level,
+			"mode":      config.Logger.Mode,
+			"log_file":  config.Logger.LogFile,
+		},
+	)
+
+	source := s3.NewS3SourceRepository(&s3.S3Config{
+		Region:          config.S3.Region,
+		AccessKeyID:     config.S3.AccessKey,
+		SecretAccessKey: config.S3.SecretKey,
+		Endpoint:        config.S3.Endpoint,
+	}, logger)
+
+	service := services.NewDriver(nil, nil, source)
+
+	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
+
+	app := fiber.New(fiber.Config{
+		CaseSensitive: true,
+		StrictRouting: true,
+		AppName:       "gopie",
+	})
+
+	app.Use(cors.New())
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
+	s3Routers := app.Group("/source/s3")
+	s3Routes.Routes(s3Routers, service)
+
+	log.Fatal(app.Listen(":3000"))
+
+	return nil
+}
