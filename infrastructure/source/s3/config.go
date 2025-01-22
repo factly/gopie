@@ -7,13 +7,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type S3Config struct {
-	AccessKeyID     string `mapstructure:"access_key_id"`
-	SecretAccessKey string `mapstructure:"secret_access_key"`
-	Region          string `mapstructure:"region"`
-	Endpoint        string `mapstructure:"endpoint"`
-}
-
 type bucketURL struct {
 	Scheme string
 	Host   string

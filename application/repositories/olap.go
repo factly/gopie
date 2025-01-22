@@ -1,9 +1,14 @@
 package repositories
 
+import (
+	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg/config"
+)
+
 type OlapRepository interface {
-	Connect() error
-	CreateTable(query string) ([][]string, error)
-	Query(query string) ([][]string, error)
-	DropTable(query string) ([][]string, error)
-	Disconnect() error
+	Connect(*config.MotherDuckConfig) error
+	CreateTable(filePath, tableName, format string) error
+	Query(query string) (*models.Result, error)
+	DropTable(tableName string) error
+	Close() error
 }

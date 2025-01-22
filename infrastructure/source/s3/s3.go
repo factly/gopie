@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/factly/gopie/application/repositories"
+	domainCfg "github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/zap"
@@ -22,11 +24,11 @@ import (
 // s3Source represents a connection to an AWS S3 storage bucket.
 // It holds the configuration and logger required for S3 operations.
 type s3Source struct {
-	config *S3Config      // AWS S3 configuration including credentials and endpoint
-	logger *logger.Logger // Logger instance for error and debug logging
+	config *domainCfg.S3Config // AWS S3 configuration including credentials and endpoint
+	logger *logger.Logger      // Logger instance for error and debug logging
 }
 
-func NewS3SourceRepository(config *S3Config, logger *logger.Logger) repositories.SourceRepository {
+func NewS3SourceRepository(config *domainCfg.S3Config, logger *logger.Logger) repositories.SourceRepository {
 	return &s3Source{
 		config: config,
 		logger: logger,
@@ -50,13 +52,13 @@ func (s *s3Source) getAWSConfig(ctx context.Context) (aws.Config, error) {
 		config.WithCredentialsProvider(
 			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 				// Validate required credentials
-				if s.config.AccessKeyID == "" || s.config.SecretAccessKey == "" {
+				if s.config.AccessKey == "" || s.config.SecretKey == "" {
 					return aws.Credentials{}, fmt.Errorf("aws credentials are required")
 				}
 				// Return credentials object with access key, secret key
 				return aws.Credentials{
-					AccessKeyID:     s.config.AccessKeyID,
-					SecretAccessKey: s.config.SecretAccessKey,
+					AccessKeyID:     s.config.AccessKey,
+					SecretAccessKey: s.config.SecretKey,
 				}, nil
 			}),
 		),
@@ -120,11 +122,19 @@ type DownloadFileConfig struct {
 func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string, error) {
 	srcCfg := DownloadFileConfig{}
 	err := mapstructure.Decode(cfg, &srcCfg)
-	fmt.Println("==> ", cfg)
 
 	if srcCfg.FilePath == "" {
 		return "", fmt.Errorf("file path is required")
 	}
+
+	// extract file format from the file path
+	// should consider the last part of the file path as the file name
+	// after splitting the file path by '/'
+	// e.g. file path: "path/to/file.txt"
+	fileParts := strings.Split(srcCfg.FilePath, "/")
+	fileName := fileParts[len(fileParts)-1]
+	formatParts := strings.Split(fileName, ".")
+	format := formatParts[len(formatParts)-1]
 
 	c.logger.Info("starting file download from S3",
 		zap.String("bucket", srcCfg.Bucket),
@@ -156,9 +166,10 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 	defer obj.Close()
 
 	// Extract the filename from the path for the local file
-	fileName := fmt.Sprintf("/tmp/gp_%s_%d",
-		filepath.Base(srcCfg.FilePath),
-		time.Now().Unix())
+	fileName = fmt.Sprintf("/tmp/gp_%d.%s",
+		time.Now().Unix(),
+		format,
+	)
 
 	file, err := os.Create(fileName)
 	if err != nil {

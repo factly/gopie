@@ -6,7 +6,9 @@ import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/olap/motherduck"
 	"github.com/factly/gopie/infrastructure/source/s3"
+	"github.com/factly/gopie/interfaces/http/routes/api"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -27,15 +29,16 @@ func ServeHttp() error {
 			"log_file":  config.Logger.LogFile,
 		},
 	)
+	logger.Info("logger initialized")
 
-	source := s3.NewS3SourceRepository(&s3.S3Config{
-		Region:          config.S3.Region,
-		AccessKeyID:     config.S3.AccessKey,
-		SecretAccessKey: config.S3.SecretKey,
-		Endpoint:        config.S3.Endpoint,
-	}, logger)
+	source := s3.NewS3SourceRepository(&config.S3, logger)
+	olap, err := motherduck.NewMotherDuckOlapoDriver(&config.MotherDuck, logger)
+	if err != nil {
+		logger.Error("error connecting to motherduck", zap.Error(err))
+		return err
+	}
 
-	service := services.NewDriver(nil, nil, source)
+	service := services.NewDriver(olap, nil, source)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
@@ -53,10 +56,10 @@ func ServeHttp() error {
 		})
 	})
 
-	s3Routers := app.Group("/source/s3")
-	s3Routes.Routes(s3Routers, service)
+	s3Routes.Routes(app.Group("/source/s3"), service, logger)
+	api.Routes(app.Group("/api"), service, logger)
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":" + config.Serve.Port))
 
 	return nil
 }

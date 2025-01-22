@@ -1,4 +1,4 @@
-package s3
+package api
 
 import (
 	"github.com/factly/gopie/application/services"
@@ -13,5 +13,5 @@ type httpHandler struct {
 
 func Routes(router fiber.Router, svc *services.Driver, logger *logger.Logger) {
 	httpHandler := httpHandler{svc, logger}
-	router.Post("/upload", httpHandler.upload)
+	router.Post("/sql", httpHandler.sql)
 }

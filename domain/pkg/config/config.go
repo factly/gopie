@@ -26,9 +26,15 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Serve  ServeConfig
-	S3     S3Config
-	Logger LoggerConfig
+	Serve      ServeConfig
+	S3         S3Config
+	Logger     LoggerConfig
+	MotherDuck MotherDuckConfig
+}
+
+type MotherDuckConfig struct {
+	DBName string
+	Token  string
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -41,11 +47,6 @@ func LoadConfig() (*GopieConfig, error) {
 		log.Fatalf("Error reading config file, %s", err)
 		log.Fatalf("Using environment variables")
 	}
-
-	fmt.Printf("Using config file: %s\n", viper.ConfigFileUsed())
-
-	fmt.Printf("S3 Access Key: %s\n", viper.GetString("S3_ACCESS_KEY"))
-	fmt.Printf("S3 Secret Key: %s\n", viper.GetString("S3_SECRET_KEY"))
 
 	viper.AutomaticEnv()
 	// print all the envs with prefix GOPIE
@@ -78,6 +79,10 @@ func LoadConfig() (*GopieConfig, error) {
 			LogFile: viper.GetString("LOGGER_FILE"),
 			Mode:    viper.GetString("LOGGER_MODE"),
 		},
+		MotherDuck: MotherDuckConfig{
+			DBName: viper.GetString("MOTHERDUCK_DB_NAME"),
+			Token:  viper.GetString("MOTHERDUCK_TOKEN"),
+		},
 	}
 
 	// Validate required fields
@@ -89,6 +94,12 @@ func LoadConfig() (*GopieConfig, error) {
 	}
 	if config.S3.Region == "" {
 		return nil, fmt.Errorf("missing S3 region")
+	}
+	if config.MotherDuck.DBName == "" {
+		return nil, fmt.Errorf("missing MotherDuck DB name")
+	}
+	if config.MotherDuck.Token == "" {
+		return nil, fmt.Errorf("missing MotherDuck token")
 	}
 
 	return config, nil
