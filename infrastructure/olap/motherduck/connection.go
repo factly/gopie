@@ -2,12 +2,14 @@ package motherduck
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/marcboeker/go-duckdb"
 	_ "github.com/marcboeker/go-duckdb"
 	"go.uber.org/zap"
 )
@@ -82,7 +84,7 @@ func (m *motherDuckOlapoDriver) Query(query string) (*models.Result, error) {
 	rows, err := m.db.Query(query)
 	if err != nil {
 		m.logger.Error("error querying motherduck", zap.Error(err))
-		return nil, err
+		return nil, parseError(err)
 	}
 
 	result := models.Result{
@@ -97,5 +99,28 @@ func (m *motherDuckOlapoDriver) DropTable(tableName string) error {
 
 	_, err := m.db.Exec(sql)
 
+	return err
+}
+
+func parseError(err error) error {
+	var duckErr *duckdb.Error
+	if errors.As(err, &duckErr) {
+		switch duckErr.Type {
+		case duckdb.ErrorTypeCatalog:
+			return fmt.Errorf("DuckDB catalog error: %w", err)
+		case duckdb.ErrorTypeBinder:
+			return fmt.Errorf("DuckDB binding error (e.g. column not found): %w", err)
+		case duckdb.ErrorTypeParser:
+			return fmt.Errorf("DuckDB syntax error: %w", err)
+		case duckdb.ErrorTypeConstraint:
+			return fmt.Errorf("DuckDB constraint violation: %w", err)
+		case duckdb.ErrorTypeConversion:
+			return fmt.Errorf("DuckDB type conversion error: %w", err)
+		case duckdb.ErrorTypeInvalidInput:
+			return fmt.Errorf("DuckDB invalid input: %w", err)
+		case duckdb.ErrorTypeConnection:
+			return fmt.Errorf("DuckDB connection error: %w", err)
+		}
+	}
 	return err
 }

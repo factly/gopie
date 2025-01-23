@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/factly/gopie/domain"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -20,13 +22,21 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 	result, err := h.svc.SqlQuery(body.Query)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
+
 		if domain.IsSqlError(err) {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   err.Error(),
 				"message": "Invalid query",
 				"code":    fiber.StatusBadRequest,
 			})
+		} else if strings.HasPrefix(err.Error(), "DuckDB") {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Invalid query",
+				"code":    fiber.StatusBadRequest,
+			})
 		}
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Unknown error occurred while executing query",

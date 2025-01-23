@@ -30,20 +30,27 @@ func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 	result, err := h.svc.RestQuery(params)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
+
 		if domain.IsSqlError(err) {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   err.Error(),
 				"message": "Invalid query",
 				"code":    fiber.StatusBadRequest,
 			})
-		}
-		if domain.IsRestParamsError(err) {
+		} else if domain.IsRestParamsError(err) {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   err.Error(),
 				"message": "Invalid rest params",
 				"code":    fiber.StatusBadRequest,
 			})
+		} else if strings.HasPrefix(err.Error(), "DuckDB") {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Invalid query",
+				"code":    fiber.StatusBadRequest,
+			})
 		}
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Unknown error occurred while executing query",
