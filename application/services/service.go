@@ -98,7 +98,7 @@ func parseFilepath(filepath string) (string, string, error) {
 	return bucket, path, nil
 }
 
-func (d *Driver) Query(sql string) ([]map[string]any, error) {
+func (d *Driver) SqlQuery(sql string) (map[string]any, error) {
 
 	hasMultiple, err := pkg.HasMultipleStatements(sql)
 	if err != nil {
@@ -121,7 +121,28 @@ func (d *Driver) Query(sql string) ([]map[string]any, error) {
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	sql, err = pkg.AddOrValidateLimit(sql, 1000)
+	countSql, err := pkg.BuildCountQuery(sql)
+	if err != nil {
+		d.logger.Error("Invalid query: %v", zap.Error(err))
+		return nil, err
+	}
+
+	countResult, err := d.olap.Query(countSql)
+	if err != nil {
+		return nil, err
+	}
+
+	countResultMap, err := countResult.RowsToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	count, ok := (*countResultMap)[0]["count_star()"].(int64)
+	if !ok {
+		return nil, fmt.Errorf("invalid count_star() value")
+	}
+
+	sql, err = pkg.ImposeLimits(sql, 1000)
 	if err != nil {
 		d.logger.Error("Invalid query: %v", zap.Error(err))
 		return nil, err
@@ -138,5 +159,42 @@ func (d *Driver) Query(sql string) ([]map[string]any, error) {
 		return nil, err
 	}
 
-	return *resultMap, nil
+	return map[string]any{
+		"total": count,
+		"data":  resultMap,
+	}, nil
+}
+
+func (d *Driver) RestQuery(params models.RestParams) (map[string]any, error) {
+	sql, err := pkg.BuildSelectQueryFromRestParams(params)
+	if err != nil {
+		return nil, err
+	}
+
+	countSql, err := pkg.BuildCountQuery(sql)
+	if err != nil {
+		return nil, err
+	}
+
+	countResult, err := d.olap.Query(countSql)
+	if err != nil {
+		return nil, err
+	}
+
+	countResultMap, err := countResult.RowsToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	count := (*countResultMap)[0]["count_star()"].(int64)
+
+	sql, err = pkg.ImposeLimits(sql, 1000)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := d.olap.Query(sql)
+
+	resultMap, err := result.RowsToMap()
+	return map[string]any{"total": count, "data": resultMap}, nil
 }

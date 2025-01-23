@@ -14,4 +14,5 @@ type httpHandler struct {
 func Routes(router fiber.Router, svc *services.Driver, logger *logger.Logger) {
 	httpHandler := httpHandler{svc, logger}
 	router.Post("/sql", httpHandler.sql)
+	router.Get("/tables/:tableName", httpHandler.rest)
 }

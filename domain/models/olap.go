@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 type Result struct {
@@ -10,6 +11,9 @@ type Result struct {
 
 func (r *Result) RowsToMap() (*[]map[string]any, error) {
 	var data []map[string]any
+	if r.Rows == nil {
+		return nil, fmt.Errorf("rows is nil")
+	}
 	for r.Rows.Next() {
 		d := make(map[string]any)
 		err := r.MapScan(d)

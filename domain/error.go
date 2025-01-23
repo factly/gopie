@@ -34,3 +34,33 @@ func IsSqlError(err error) bool {
 	_, ok := err.(SqlError)
 	return ok
 }
+
+type RestParamsError int
+
+const (
+	ErrInvalidFilterKey RestParamsError = iota
+	ErrInvalidFilterOperator
+	ErrInvalidFilterValue
+)
+
+func (e RestParamsError) Error() string {
+	return e.String()
+}
+
+func (e RestParamsError) String() string {
+	switch e {
+	case ErrInvalidFilterKey:
+		return "invalid filter key"
+	case ErrInvalidFilterOperator:
+		return "invalid filter operator"
+	case ErrInvalidFilterValue:
+		return "invalid filter value"
+	default:
+		return "unknown error"
+	}
+}
+
+func IsRestParamsError(err error) bool {
+	_, ok := err.(RestParamsError)
+	return ok
+}

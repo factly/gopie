@@ -79,7 +79,6 @@ func (m *motherDuckOlapoDriver) CreateTable(filePath, tableName, format string) 
 }
 
 func (m *motherDuckOlapoDriver) Query(query string) (*models.Result, error) {
-
 	rows, err := m.db.Query(query)
 	if err != nil {
 		m.logger.Error("error querying motherduck", zap.Error(err))
