@@ -6,20 +6,26 @@ import (
 	"strings"
 
 	"github.com/factly/gopie/application/repositories"
+	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/domain/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type Driver struct {
 	olap   repositories.OlapRepository
 	store  repositories.StoreRepository
 	source repositories.SourceRepository
+	logger *logger.Logger
 }
 
-func NewDriver(olap repositories.OlapRepository, store repositories.StoreRepository, source repositories.SourceRepository) *Driver {
+func NewDriver(olap repositories.OlapRepository, store repositories.StoreRepository, source repositories.SourceRepository, logger *logger.Logger) *Driver {
 	return &Driver{
 		olap:   olap,
 		store:  store,
 		source: source,
+		logger: logger,
 	}
 }
 
@@ -93,6 +99,34 @@ func parseFilepath(filepath string) (string, string, error) {
 }
 
 func (d *Driver) Query(sql string) ([]map[string]any, error) {
+
+	hasMultiple, err := pkg.HasMultipleStatements(sql)
+	if err != nil {
+		d.logger.Error("Invalid query: %v", zap.Error(err))
+		return nil, err
+	}
+
+	if hasMultiple {
+		d.logger.Error("Multiple statements are not allowed", zap.String("query", sql))
+		return nil, domain.ErrMultipleSqlStatements
+	}
+
+	isSelect, err := pkg.IsSelectStatement(sql)
+	if err != nil {
+		d.logger.Error("Invalid query: %v", zap.Error(err))
+		return nil, err
+	}
+	if !isSelect {
+		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
+		return nil, domain.ErrNotSelectStatement
+	}
+
+	sql, err = pkg.AddOrValidateLimit(sql, 1000)
+	if err != nil {
+		d.logger.Error("Invalid query: %v", zap.Error(err))
+		return nil, err
+	}
+
 	result, err := d.olap.Query(sql)
 	if err != nil {
 		return nil, err

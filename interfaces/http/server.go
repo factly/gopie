@@ -38,7 +38,7 @@ func ServeHttp() error {
 		return err
 	}
 
-	service := services.NewDriver(olap, nil, source)
+	service := services.NewDriver(olap, nil, source, logger)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
