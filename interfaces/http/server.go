@@ -59,7 +59,10 @@ func ServeHttp() error {
 		})
 	})
 
-	s3Routes.Routes(app.Group("/source/s3"), service, logger)
+	if config.MotherDuck.AccessMode != "read_only" {
+		s3Routes.Routes(app.Group("/source/s3"), service, logger)
+	}
+
 	api.Routes(app.Group("/api"), service, aiService, logger)
 
 	log.Fatal(app.Listen(":" + config.Serve.Port))

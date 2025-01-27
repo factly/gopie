@@ -38,6 +38,10 @@ func NewMotherDuckOlapoDriver(cfg *config.MotherDuckConfig, logger *logger.Logge
 
 func (m *motherDuckOlapoDriver) Connect(cfg *config.MotherDuckConfig) error {
 	dsn := fmt.Sprintf("md:%s?motherduck_token=%s", cfg.DBName, cfg.Token)
+	if cfg.AccessMode != "" {
+		dsn = fmt.Sprintf("%s&access_mode=%s", dsn, cfg.AccessMode)
+	}
+
 	db, err := sql.Open("duckdb", dsn)
 	if err != nil {
 		m.logger.Error("error connecting to motherduck", zap.Error(err))
@@ -70,8 +74,6 @@ func (m *motherDuckOlapoDriver) CreateTable(filePath, tableName, format string) 
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
-	fmt.Println("createSql: ", createSql)
-	fmt.Println("tableName: ", tableName)
 
 	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, createSql)
 
