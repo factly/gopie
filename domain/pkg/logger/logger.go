@@ -54,7 +54,13 @@ func NewLogger(properties map[string]any) (*Logger, error) {
 	}
 
 	zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	zapConfig.OutputPaths = []string{config.LogFile}
+
+	outputs := []string{"stdout"}
+	if config.LogFile != "" {
+		outputs = append(outputs, config.LogFile)
+	}
+	zapConfig.OutputPaths = outputs
+	zapConfig.DisableStacktrace = true
 
 	logger, err = zapConfig.Build()
 	if err != nil {

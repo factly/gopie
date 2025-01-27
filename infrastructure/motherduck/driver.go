@@ -24,7 +24,6 @@ func NewMotherDuckOlapoDriver(cfg *config.MotherDuckConfig, logger *logger.Logge
 		logger: logger,
 	}
 	logger.Info("connecting to motherduck")
-	fmt.Println("connecting to motherduck")
 	err := olap.Connect(cfg)
 	if err != nil {
 		logger.Error("error connecting to motherduck", zap.Error(err))
@@ -32,7 +31,6 @@ func NewMotherDuckOlapoDriver(cfg *config.MotherDuckConfig, logger *logger.Logge
 		return nil, err
 	}
 	logger.Info("connected to motherduck")
-	fmt.Println("connected to motherduck")
 	return &olap, nil
 }
 

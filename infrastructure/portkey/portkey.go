@@ -34,7 +34,6 @@ func (t *defaultHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 
 // Create new portkey client from config
 func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) repositories.AiRepository {
-	logger.Info("connecting to portkey")
 
 	// set portkey config in for request
 	header := http.Header{}
@@ -56,7 +55,7 @@ func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) repositor
 
 	client := openai.NewClientWithConfig(oaConfig)
 	model := cfg.AIModel
-	logger.Info("connected to portkey")
+	logger.Info("Portkey client initialized", zap.String("model", model))
 	return &PortkeyClient{client, model, logger}
 }
 

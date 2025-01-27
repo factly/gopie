@@ -11,6 +11,7 @@ import (
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
+	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"go.uber.org/zap"
@@ -52,6 +53,9 @@ func ServeHttp() error {
 	})
 
 	app.Use(cors.New())
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: logger.Sugar().Desugar(),
+	}))
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
