@@ -3,12 +3,15 @@ package http
 import (
 	"log"
 
+	"github.com/elliot14A/meterus-go/client"
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/meterus"
 	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/s3"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
@@ -56,6 +59,22 @@ func ServeHttp() error {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Sugar().Desugar(),
 	}))
+
+	// Only enable authorization if meterus is configured
+	if config.Meterus.ApiKey == "" || config.Meterus.Addr == "" {
+		logger.Error("meterus config not found")
+		logger.Warn("meterus is not configured, authorization will be disabled")
+	} else {
+		logger.Info("meterus config found")
+		client, err := client.NewMeterusClient(config.Meterus.Addr, config.Meterus.ApiKey)
+		if err != nil {
+			logger.Error("error creating meterus client", zap.Error(err))
+			return err
+		}
+		logger.Info("meterus client created")
+		meterus := meterus.NewMeterusApiKeyValidator(client)
+		app.Use(middleware.WithApiKeyAuth(meterus, logger))
+	}
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{

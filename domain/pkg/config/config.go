@@ -12,6 +12,11 @@ type ServeConfig struct {
 	Port string
 }
 
+type MeterusConfig struct {
+	Addr   string
+	ApiKey string
+}
+
 type S3Config struct {
 	AccessKey string
 	SecretKey string
@@ -31,6 +36,7 @@ type GopieConfig struct {
 	Logger     LoggerConfig
 	MotherDuck MotherDuckConfig
 	PortKey    PortKeyConfig
+	Meterus    MeterusConfig
 }
 
 type MotherDuckConfig struct {
@@ -128,6 +134,10 @@ func LoadConfig() (*GopieConfig, error) {
 			VirtualKey: viper.GetString("PORTKEY_VIRTUALKEY"),
 			Apikey:     viper.GetString("PORTKEY_APIKEY"),
 			BaseUrl:    viper.GetString("PORTKEY_BASEURL"),
+		},
+		Meterus: MeterusConfig{
+			Addr:   viper.GetString("METERUS_ADDR"),
+			ApiKey: viper.GetString("METERUS_APIKEY"),
 		},
 	}
 
