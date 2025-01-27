@@ -63,4 +63,24 @@ func (e RestParamsError) String() string {
 func IsRestParamsError(err error) bool {
 	_, ok := err.(RestParamsError)
 	return ok
+
+}
+
+type AiError int
+
+const (
+	ErrFailedToGenerateSql AiError = iota
+)
+
+func (e AiError) Error() string {
+	return e.String()
+}
+
+func (e AiError) String() string {
+	switch e {
+	case ErrFailedToGenerateSql:
+		return "failed to generate sql"
+	default:
+		return "unknown error"
+	}
 }

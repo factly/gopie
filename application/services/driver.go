@@ -198,3 +198,30 @@ func (d *Driver) RestQuery(params models.RestParams) (map[string]any, error) {
 	resultMap, err := result.RowsToMap()
 	return map[string]any{"total": count, "data": resultMap}, nil
 }
+
+func (d *Driver) GetTableSchema(tableName string) ([]map[string]any, error) {
+	schemaRes, err := d.olap.Query(fmt.Sprintf("desc %s", tableName))
+	if err != nil {
+		return nil, err
+	}
+	schema, err := schemaRes.RowsToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	return *schema, nil
+}
+
+func (d *Driver) ExecuteQuery(query string) ([]map[string]any, error) {
+	res, err := d.olap.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	mapRes, err := res.RowsToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	return *mapRes, nil
+}

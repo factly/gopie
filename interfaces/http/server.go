@@ -6,8 +6,9 @@ import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
-	"github.com/factly/gopie/infrastructure/olap/motherduck"
-	"github.com/factly/gopie/infrastructure/source/s3"
+	"github.com/factly/gopie/infrastructure/motherduck"
+	"github.com/factly/gopie/infrastructure/portkey"
+	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/fiber/v2"
@@ -37,8 +38,10 @@ func ServeHttp() error {
 		logger.Error("error connecting to motherduck", zap.Error(err))
 		return err
 	}
+	porkeyClient := portkey.NewPortKeyClient(config.PortKey, logger)
 
 	service := services.NewDriver(olap, nil, source, logger)
+	aiService := services.NewAiDriver(porkeyClient)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
@@ -57,7 +60,7 @@ func ServeHttp() error {
 	})
 
 	s3Routes.Routes(app.Group("/source/s3"), service, logger)
-	api.Routes(app.Group("/api"), service, logger)
+	api.Routes(app.Group("/api"), service, aiService, logger)
 
 	log.Fatal(app.Listen(":" + config.Serve.Port))
 

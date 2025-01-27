@@ -30,38 +30,77 @@ type GopieConfig struct {
 	S3         S3Config
 	Logger     LoggerConfig
 	MotherDuck MotherDuckConfig
+	PortKey    PortKeyConfig
 }
 
 type MotherDuckConfig struct {
-	DBName string
-	Token  string
+	DBName     string
+	Token      string
+	AccessMode string
 }
 
-func LoadConfig() (*GopieConfig, error) {
+type PortKeyConfig struct {
+	VirtualKey string
+	Apikey     string
+	BaseUrl    string
+	AIModel    string
+}
+
+func initializeViper() error {
+	viper.SetEnvPrefix("gopie")
 	viper.SetConfigName("config")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
-
-	// Add this line to read the config file
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file, %s", err)
-		log.Fatalf("Using environment variables")
-	}
-
 	viper.AutomaticEnv()
-	// print all the envs with prefix GOPIE
 
-	// Server configuration
+	if err := viper.ReadInConfig(); err != nil {
+		log.Printf("Error reading config file: %s", err)
+		log.Println("Using environment variables")
+		return nil
+	}
+	return nil
+}
+
+func setDefaults() {
 	viper.SetDefault("SERVE_HOST", "localhost")
 	viper.SetDefault("SERVE_PORT", "8080")
-
-	// S3 configuration
 	viper.SetDefault("S3_REGION", "us-east-1")
-
-	// Logger configuration
 	viper.SetDefault("LOGGER_LEVEL", "info")
 	viper.SetDefault("LOGGER_FILE", "gopie.log")
 	viper.SetDefault("LOGGER_MODE", "dev")
+	viper.SetDefault("MOTHERDUCK_ACCESS_MODE", "read_only")
+}
+
+func validateConfig(config *GopieConfig) error {
+	validations := []struct {
+		value string
+		name  string
+	}{
+		{config.S3.AccessKey, "S3 access key"},
+		{config.S3.SecretKey, "S3 secret key"},
+		{config.S3.Region, "S3 region"},
+		{config.MotherDuck.DBName, "MotherDuck DB name"},
+		{config.MotherDuck.Token, "MotherDuck token"},
+		{config.PortKey.VirtualKey, "portkey virtual key"},
+		{config.PortKey.Apikey, "portkey api key"},
+		{config.PortKey.BaseUrl, "portkey base url"},
+		{config.PortKey.AIModel, "portkey ai model"},
+	}
+
+	for _, v := range validations {
+		if v.value == "" {
+			return fmt.Errorf("missing %s", v.name)
+		}
+	}
+	return nil
+}
+
+func LoadConfig() (*GopieConfig, error) {
+	if err := initializeViper(); err != nil {
+		return nil, err
+	}
+
+	setDefaults()
 
 	config := &GopieConfig{
 		Serve: ServeConfig{
@@ -80,26 +119,20 @@ func LoadConfig() (*GopieConfig, error) {
 			Mode:    viper.GetString("LOGGER_MODE"),
 		},
 		MotherDuck: MotherDuckConfig{
-			DBName: viper.GetString("MOTHERDUCK_DB_NAME"),
-			Token:  viper.GetString("MOTHERDUCK_TOKEN"),
+			DBName:     viper.GetString("MOTHERDUCK_DB_NAME"),
+			Token:      viper.GetString("MOTHERDUCK_TOKEN"),
+			AccessMode: viper.GetString("MOTHERDUCK_ACCESS_MODE"),
+		},
+		PortKey: PortKeyConfig{
+			AIModel:    viper.GetString("PORTKEY_MODEL"),
+			VirtualKey: viper.GetString("PORTKEY_VIRTUALKEY"),
+			Apikey:     viper.GetString("PORTKEY_APIKEY"),
+			BaseUrl:    viper.GetString("PORTKEY_BASEURL"),
 		},
 	}
 
-	// Validate required fields
-	if config.S3.AccessKey == "" {
-		return nil, fmt.Errorf("missing S3 access key")
-	}
-	if config.S3.SecretKey == "" {
-		return nil, fmt.Errorf("missing S3 secret key")
-	}
-	if config.S3.Region == "" {
-		return nil, fmt.Errorf("missing S3 region")
-	}
-	if config.MotherDuck.DBName == "" {
-		return nil, fmt.Errorf("missing MotherDuck DB name")
-	}
-	if config.MotherDuck.Token == "" {
-		return nil, fmt.Errorf("missing MotherDuck token")
+	if err := validateConfig(config); err != nil {
+		return nil, err
 	}
 
 	return config, nil

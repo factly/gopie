@@ -27,7 +27,7 @@ func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 		Table:  table,
 	}
 
-	result, err := h.svc.RestQuery(params)
+	result, err := h.driverSvc.RestQuery(params)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 

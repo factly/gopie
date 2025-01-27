@@ -7,12 +7,15 @@ import (
 )
 
 type httpHandler struct {
-	svc    *services.Driver
-	logger *logger.Logger
+	driverSvc *services.Driver
+	aiSvc     *services.AiDriver
+	logger    *logger.Logger
 }
 
-func Routes(router fiber.Router, svc *services.Driver, logger *logger.Logger) {
-	httpHandler := httpHandler{svc, logger}
+func Routes(router fiber.Router, driverSvc *services.Driver, aiSvc *services.AiDriver, logger *logger.Logger) {
+	httpHandler := httpHandler{driverSvc, aiSvc, logger}
 	router.Post("/sql", httpHandler.sql)
 	router.Get("/tables/:tableName", httpHandler.rest)
+	router.Post("/nl2sql", httpHandler.nl2sql)
+	router.Get("/schema/:tableName", httpHandler.schema)
 }

@@ -19,7 +19,7 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	result, err := h.svc.SqlQuery(body.Query)
+	result, err := h.driverSvc.SqlQuery(body.Query)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 
