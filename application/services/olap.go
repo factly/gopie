@@ -13,23 +13,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type Driver struct {
+type OlapService struct {
 	olap   repositories.OlapRepository
-	store  repositories.StoreRepository
 	source repositories.SourceRepository
 	logger *logger.Logger
 }
 
-func NewDriver(olap repositories.OlapRepository, store repositories.StoreRepository, source repositories.SourceRepository, logger *logger.Logger) *Driver {
-	return &Driver{
+func NewOlapService(olap repositories.OlapRepository, source repositories.SourceRepository, logger *logger.Logger) *OlapService {
+	return &OlapService{
 		olap:   olap,
-		store:  store,
 		source: source,
 		logger: logger,
 	}
 }
 
-func (d *Driver) UploadFile(ctx context.Context, filepath string) (*models.Dataset, error) {
+func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.UploadDatasetResult, error) {
 	// parse filepath to bucketname and path
 	// s3://bucketname/path/to/file
 	bucket, path, err := parseFilepath(filepath)
@@ -58,7 +56,11 @@ func (d *Driver) UploadFile(ctx context.Context, filepath string) (*models.Datas
 		return nil, err
 	}
 
-	return &models.Dataset{Name: filepath}, nil
+	return &models.UploadDatasetResult{
+		FilePath:  filepath,
+		TableName: tableName,
+		Format:    format,
+	}, nil
 }
 
 func parseFilepath(filepath string) (string, string, error) {
@@ -98,7 +100,7 @@ func parseFilepath(filepath string) (string, string, error) {
 	return bucket, path, nil
 }
 
-func (d *Driver) SqlQuery(sql string) (map[string]any, error) {
+func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 
 	hasMultiple, err := pkg.HasMultipleStatements(sql)
 	if err != nil {
@@ -165,7 +167,7 @@ func (d *Driver) SqlQuery(sql string) (map[string]any, error) {
 	}, nil
 }
 
-func (d *Driver) RestQuery(params models.RestParams) (map[string]any, error) {
+func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error) {
 	sql, err := pkg.BuildSelectQueryFromRestParams(params)
 	if err != nil {
 		return nil, err
@@ -199,7 +201,7 @@ func (d *Driver) RestQuery(params models.RestParams) (map[string]any, error) {
 	return map[string]any{"total": count, "data": resultMap}, nil
 }
 
-func (d *Driver) GetTableSchema(tableName string) ([]map[string]any, error) {
+func (d *OlapService) GetTableSchema(tableName string) ([]map[string]any, error) {
 	schemaRes, err := d.olap.Query(fmt.Sprintf("desc %s", tableName))
 	if err != nil {
 		return nil, err
@@ -212,7 +214,7 @@ func (d *Driver) GetTableSchema(tableName string) ([]map[string]any, error) {
 	return *schema, nil
 }
 
-func (d *Driver) ExecuteQuery(query string) ([]map[string]any, error) {
+func (d *OlapService) ExecuteQuery(query string) ([]map[string]any, error) {
 	res, err := d.olap.Query(query)
 	if err != nil {
 		return nil, err

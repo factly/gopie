@@ -7,11 +7,11 @@ import (
 )
 
 type httpHandler struct {
-	svc    *services.Driver
+	svc    *services.OlapService
 	logger *logger.Logger
 }
 
-func Routes(router fiber.Router, svc *services.Driver, logger *logger.Logger) {
+func Routes(router fiber.Router, svc *services.OlapService, logger *logger.Logger) {
 	httpHandler := httpHandler{svc, logger}
 	router.Post("/upload", httpHandler.upload)
 }

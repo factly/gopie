@@ -37,6 +37,7 @@ type GopieConfig struct {
 	MotherDuck MotherDuckConfig
 	PortKey    PortKeyConfig
 	Meterus    MeterusConfig
+	Postgres   PostgresConfig
 }
 
 type MotherDuckConfig struct {
@@ -50,6 +51,14 @@ type PortKeyConfig struct {
 	Apikey     string
 	BaseUrl    string
 	AIModel    string
+}
+
+type PostgresConfig struct {
+	Host     string
+	Port     string
+	Database string
+	User     string
+	Password string
 }
 
 func initializeViper() error {
@@ -91,6 +100,11 @@ func validateConfig(config *GopieConfig) error {
 		{config.PortKey.Apikey, "portkey api key"},
 		{config.PortKey.BaseUrl, "portkey base url"},
 		{config.PortKey.AIModel, "portkey ai model"},
+		{config.Postgres.Host, "postgres host"},
+		{config.Postgres.Port, "postgres port"},
+		{config.Postgres.Database, "postgres database"},
+		{config.Postgres.User, "postgres user"},
+		{config.Postgres.Password, "postgres password"},
 	}
 
 	for _, v := range validations {
@@ -138,6 +152,12 @@ func LoadConfig() (*GopieConfig, error) {
 		Meterus: MeterusConfig{
 			Addr:   viper.GetString("METERUS_ADDR"),
 			ApiKey: viper.GetString("METERUS_APIKEY"),
+		},
+		Postgres: PostgresConfig{
+			Host:     viper.GetString("POSTGRES_HOST"),
+			Port:     viper.GetString("POSTGRES_PORT"),
+			Database: viper.GetString("POSTGRES_DB"),
+			User:     viper.GetString("POSTGRES_USER"),
 		},
 	}
 

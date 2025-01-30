@@ -44,7 +44,7 @@ func ServeHttp() error {
 	}
 	porkeyClient := portkey.NewPortKeyClient(config.PortKey, logger)
 
-	service := services.NewDriver(olap, nil, source, logger)
+	service := services.NewOlapService(olap, source, logger)
 	aiService := services.NewAiDriver(porkeyClient)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
