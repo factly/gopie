@@ -9,10 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *PostgresDatasetStore) List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error) {
-	ds, err := s.q.ListDatasets(ctx, gen.ListDatasetsParams{
-		Limit:  int32(pagination.Limit),
-		Offset: int32(pagination.Offset),
+func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error) {
+	ds, err := s.q.ListProjectDatasets(ctx, gen.ListProjectDatasetsParams{
+		ProjectID: projectID,
+		Limit:     int32(pagination.Limit),
+		Offset:    int32(pagination.Offset),
 	})
 	if err != nil {
 		s.logger.Error("Error fetching datasets", zap.Error(err))
@@ -38,6 +39,32 @@ func (s *PostgresDatasetStore) List(ctx context.Context, projectID string, pagin
 		})
 	}
 
-	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(0), datasets)
+	count, err := s.q.GetProjectDatasetsCount(ctx, projectID)
+	if err != nil {
+		s.logger.Error("Error fetching datasets count", zap.Error(err))
+		return nil, err
+	}
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), datasets)
 	return &paginationView, nil
+}
+
+func (s *PgDatasetStore) ListFailedUploads(ctx context.Context) ([]*models.FailedDatasetUpload, error) {
+	failedUploads, err := s.q.ListFailedDatasetUploads(ctx)
+	if err != nil {
+		s.logger.Error("Error fetching failed uploads", zap.Error(err))
+		return nil, err
+	}
+
+	var failedUploadsList []*models.FailedDatasetUpload
+	for _, f := range failedUploads {
+		failedUploadsList = append(failedUploadsList, &models.FailedDatasetUpload{
+			ID:        f.ID,
+			DatasetID: f.DatasetID,
+			Error:     f.Error,
+			CreatedAt: f.CreatedAt.Time,
+		})
+	}
+
+	return failedUploadsList, nil
 }

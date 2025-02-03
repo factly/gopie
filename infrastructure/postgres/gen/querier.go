@@ -6,8 +6,6 @@ package gen
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -16,31 +14,23 @@ type Querier interface {
 	BatchAddDatasetsToProject(ctx context.Context, arg BatchAddDatasetsToProjectParams) error
 	BatchRemoveDatasetsFromProject(ctx context.Context, arg BatchRemoveDatasetsFromProjectParams) error
 	CreateDataset(ctx context.Context, arg CreateDatasetParams) (Dataset, error)
+	CreateFailedDatasetUpload(ctx context.Context, arg CreateFailedDatasetUploadParams) (FailedDatasetUpload, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DeleteDataset(ctx context.Context, id string) error
+	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, id string) error
 	GetDataset(ctx context.Context, id string) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)
-	GetDatasetsByDateRange(ctx context.Context, arg GetDatasetsByDateRangeParams) ([]Dataset, error)
-	GetDatasetsByIds(ctx context.Context, dollar_1 []pgtype.UUID) ([]Dataset, error)
+	GetFailedDatasetUploadsCount(ctx context.Context) (int64, error)
 	GetProject(ctx context.Context, id string) (GetProjectRow, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
-	GetProjectsByDateRange(ctx context.Context, arg GetProjectsByDateRangeParams) ([]GetProjectsByDateRangeRow, error)
 	GetProjectsCount(ctx context.Context) (int64, error)
-	ListDatasetProjects(ctx context.Context, arg ListDatasetProjectsParams) ([]ListDatasetProjectsRow, error)
-	ListDatasets(ctx context.Context, arg ListDatasetsParams) ([]Dataset, error)
+	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
 	ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error)
-	ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error)
 	RemoveDatasetFromProject(ctx context.Context, arg RemoveDatasetFromProjectParams) error
 	SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error)
-	// Search and Filter Operations
-	SearchDatasetsByColumn(ctx context.Context, arg SearchDatasetsByColumnParams) ([]Dataset, error)
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error)
-	UpdateDatasetColumns(ctx context.Context, arg UpdateDatasetColumnsParams) (Dataset, error)
-	UpdateDatasetPath(ctx context.Context, arg UpdateDatasetPathParams) (Dataset, error)
-	// You might also want these additional queries:
-	UpdateDatasetStats(ctx context.Context, arg UpdateDatasetStatsParams) (Dataset, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 }
 

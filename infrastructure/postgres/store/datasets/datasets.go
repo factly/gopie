@@ -7,13 +7,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresDatasetStore struct {
+type PgDatasetStore struct {
 	q      *gen.Queries
 	logger *logger.Logger
 }
 
 func NewPostgresDatasetStore(db interface{}, logger *logger.Logger) repositories.DatasetStoreRepository {
-	return &PostgresDatasetStore{
+	return &PgDatasetStore{
 		q:      gen.New(db.(*pgxpool.Pool)),
 		logger: logger,
 	}

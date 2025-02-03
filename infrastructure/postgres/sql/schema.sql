@@ -13,7 +13,7 @@ create table if not exists datasets(
 );
 
 create table if not exists projects(
-    id text primary key,
+    id text primary key default uuid_generate_v4(),
     name text not null,
     description text default null,
     created_at timestamp with time zone not null default now(),
@@ -28,8 +28,8 @@ create table if not exists project_datasets(
 );
 
 create table if not exists failed_dataset_uploads(
-    id uuid primary key default uuid_generate_v4(),
-    dataset_id uuid not null references datasets(id) on delete cascade,
+    id text primary key default uuid_generate_v4(),
+    dataset_id text not null references datasets(id) on delete cascade,
     error text not null,
     created_at timestamp with time zone not null default now()
 );

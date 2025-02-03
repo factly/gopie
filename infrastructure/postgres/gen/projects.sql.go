@@ -93,65 +93,9 @@ func (q *Queries) GetProjectsCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const listProjects = `-- name: ListProjects :many
-select 
-    p.id, p.name, p.description, p.created_at, p.updated_at,
-    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
-    count(pd.dataset_id) as dataset_count
-from projects p
-left join project_datasets pd on p.id = pd.project_id
-group by p.id
-order by p.created_at desc
-limit $1 offset $2
-`
-
-type ListProjectsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-type ListProjectsRow struct {
-	ID           string             `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	DatasetIds   interface{}        `json:"datasetIds"`
-	DatasetCount int64              `json:"datasetCount"`
-}
-
-func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error) {
-	rows, err := q.db.Query(ctx, listProjects, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListProjectsRow
-	for rows.Next() {
-		var i ListProjectsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DatasetIds,
-			&i.DatasetCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const searchProjects = `-- name: SearchProjects :many
 SELECT 
     p.id, p.name, p.description, p.created_at, p.updated_at,
-    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
 FROM projects p
 LEFT JOIN project_datasets pd ON p.id = pd.project_id
@@ -181,7 +125,6 @@ type SearchProjectsRow struct {
 	Description  pgtype.Text        `json:"description"`
 	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	DatasetIds   interface{}        `json:"datasetIds"`
 	DatasetCount int64              `json:"datasetCount"`
 }
 
@@ -200,7 +143,6 @@ func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) 
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.DatasetIds,
 			&i.DatasetCount,
 		); err != nil {
 			return nil, err

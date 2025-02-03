@@ -50,18 +50,19 @@ func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.
 
 	tableName := filenameParts[0]
 	format := filenameParts[1]
-
-	err = d.olap.CreateTable(filepath, tableName, format)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.UploadDatasetResult{
+	res := models.UploadDatasetResult{
 		FilePath:  filepath,
 		TableName: tableName,
 		Format:    format,
 		Size:      int(size),
-	}, nil
+	}
+
+	err = d.olap.CreateTable(filepath, tableName, format)
+	if err != nil {
+		return &res, err
+	}
+
+	return &res, nil
 }
 
 func parseFilepath(filepath string) (string, string, error) {

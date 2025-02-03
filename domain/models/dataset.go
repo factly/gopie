@@ -44,3 +44,19 @@ type CreateDatasetParams struct {
 	Columns     []map[string]any `json:"columns"`
 	Size        int              `json:"size"`
 }
+
+type UpdateDatasetParams struct {
+	Description string           `json:"description"`
+	Format      string           `json:"format"`
+	FilePath    string           `json:"file_path"`
+	RowCount    int              `json:"rows"`
+	Columns     []map[string]any `json:"columns"`
+	Size        int              `json:"size"`
+}
+
+type FailedDatasetUpload struct {
+	ID        string    `json:"id"`
+	DatasetID string    `json:"datasetId"`
+	Error     string    `json:"error"`
+	CreatedAt time.Time `json:"createdAt"`
+}
