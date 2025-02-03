@@ -27,8 +27,8 @@ func (s *PostgresDatasetStore) Create(ctx context.Context, params *models.Create
 		Name:        params.Name,
 		Description: pgtype.Text{String: params.Description, Valid: true},
 		Format:      params.Format,
-		RowCount:    pgtype.Int4{Int32: int32(params.RowCount)},
-		Size:        pgtype.Int8{Int64: int64(params.Size)},
+		RowCount:    pgtype.Int4{Int32: int32(params.RowCount), Valid: true},
+		Size:        pgtype.Int8{Int64: int64(params.Size), Valid: true},
 		FilePath:    params.FilePath,
 		Columns:     columns,
 	})

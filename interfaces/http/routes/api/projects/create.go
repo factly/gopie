@@ -5,13 +5,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type CreateRequestBody struct {
+type createRequestBody struct {
 	Name        string `json:"name" validate:"required,min=3,max=50"`
 	Description string `json:"description" validate:"required,min=10,max=500"`
 }
 
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
-	body := ctx.Locals("body").(*CreateRequestBody)
+	body := ctx.Locals("body").(*createRequestBody)
 
 	project, err := h.svc.Create(models.CreateProjectParams{
 		Name:        body.Name,

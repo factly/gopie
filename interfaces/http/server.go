@@ -67,7 +67,6 @@ func ServeHttp() error {
 
 	app := fiber.New(fiber.Config{
 		CaseSensitive: true,
-		StrictRouting: true,
 		AppName:       "gopie",
 	})
 

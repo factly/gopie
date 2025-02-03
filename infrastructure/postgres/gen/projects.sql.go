@@ -149,30 +149,30 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]L
 }
 
 const searchProjects = `-- name: SearchProjects :many
-select 
+SELECT 
     p.id, p.name, p.description, p.created_at, p.updated_at,
     array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
-from projects p
-left join project_datasets pd on p.id = pd.project_id
-where 
-    p.name ilike concat('%', $1, '%') or
-    p.description ilike concat('%', $1, '%')
-group by p.id
-order by 
-    case 
-        when p.name ilike concat($1, '%') then 1
-        when p.name ilike concat('%', $1, '%') then 2
-        else 3
-    end,
-    p.created_at desc
-limit $2 offset $3
+FROM projects p
+LEFT JOIN project_datasets pd ON p.id = pd.project_id
+WHERE 
+    p.name ILIKE concat('%', $1::text, '%') OR
+    p.description ILIKE concat('%', $1::text, '%')
+GROUP BY p.id
+ORDER BY 
+    CASE 
+        WHEN p.name ILIKE concat($1::text, '%') THEN 1
+        WHEN p.name ILIKE concat('%', $1::text, '%') THEN 2
+        ELSE 3
+    END,
+    p.created_at DESC
+LIMIT $2 OFFSET $3
 `
 
 type SearchProjectsParams struct {
-	Concat interface{} `json:"concat"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
+	Column1 string `json:"column1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 type SearchProjectsRow struct {
@@ -186,7 +186,7 @@ type SearchProjectsRow struct {
 }
 
 func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error) {
-	rows, err := q.db.Query(ctx, searchProjects, arg.Concat, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, searchProjects, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

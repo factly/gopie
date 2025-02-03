@@ -10,22 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
-type reqBody struct {
-	FilePath    string `json:"file_path" validate:"required"`
-	Description string `json:"description" validate:"required,min=10,max=500"`
-	ProjectID   string `json:"project_id" validate:"required"`
+type uploadRequestBody struct {
+	FilePath    string `json:"file_path" validate:"required,min=1"`
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
+	ProjectID   string `json:"project_id" validate:"required,uuid"`
 }
 
 // upload files to gopie from s3
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
-	var body reqBody
-	if err := ctx.BodyParser(&body); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Invalid request body",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
+	body := ctx.Locals("body").(*uploadRequestBody)
 
 	// Validate project exists
 	_, err := h.projectSvc.Details(body.ProjectID)
@@ -83,6 +76,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
+	// BUG: for some reason size and row count is not being returned fix this
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
 		Name:        res.TableName,
 		Description: body.Description,

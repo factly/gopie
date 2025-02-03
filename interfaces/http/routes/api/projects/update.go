@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type UpdateProjectBody struct {
+type updateProjectBody struct {
 	Name        string `json:"name,omitempty" validate:"required,min=3,max=50"`
 	Description string `json:"description,omitempty" validate:"omitempty,max=500"`
 }
@@ -16,7 +16,7 @@ type UpdateProjectBody struct {
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 
-	body := ctx.Locals("body").(*UpdateProjectBody)
+	body := ctx.Locals("body").(*updateProjectBody)
 
 	project, err := h.svc.Update(projectID, &models.UpdateProjectParams{
 		Name:        body.Name,

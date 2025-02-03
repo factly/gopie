@@ -37,17 +37,8 @@ func (service *ProjectService) Delete(id string) error {
 	return service.projectRepo.Delete(context.Background(), id)
 }
 
-// List - List projects
-func (service *ProjectService) List(limit, offset int) (*models.PaginationView[*models.Project], error) {
-	pagination := models.NewPagination()
-	if limit != 0 {
-		pagination.Limit = limit
-	}
-	return service.projectRepo.List(context.Background(), pagination)
-}
-
-// SearchProjects - Search projects
-func (service *ProjectService) SearchProjects(query string, limit, offset int) (*models.PaginationView[*models.SearchProjectsResults], error) {
+// List - Search projects
+func (service *ProjectService) List(query string, limit, offset int) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit

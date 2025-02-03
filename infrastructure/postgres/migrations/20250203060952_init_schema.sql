@@ -32,9 +32,9 @@ create table if not exists datasets(
     format text not null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
-    row_count integer,
+    row_count integer not null default 0,
     -- in bytes
-    size bigint,
+    size bigint not null default 0,
     file_path text not null,
     columns jsonb
 );
@@ -73,9 +73,9 @@ select trigger_updated_at('projects'::regclass);
 
 -- +goose down
 drop table if exists project_datasets;
+drop table if exists failed_dataset_uploads;
 drop table if exists projects;
 drop table if exists datasets;
-drop table if exists failed_dataset_uploads;
 drop collation if exists case_insensitive;
 drop function if exists trigger_updated_at(regclass);
 drop function if exists set_updated_at();

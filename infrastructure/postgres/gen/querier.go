@@ -28,7 +28,6 @@ type Querier interface {
 	GetProjectsByDateRange(ctx context.Context, arg GetProjectsByDateRangeParams) ([]GetProjectsByDateRangeRow, error)
 	GetProjectsCount(ctx context.Context) (int64, error)
 	ListDatasetProjects(ctx context.Context, arg ListDatasetProjectsParams) ([]ListDatasetProjectsRow, error)
-	// Advanced Dataset Queries
 	ListDatasets(ctx context.Context, arg ListDatasetsParams) ([]Dataset, error)
 	ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error)
 	ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error)

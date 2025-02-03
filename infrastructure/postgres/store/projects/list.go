@@ -77,9 +77,9 @@ func (s *PostgresProjectStore) ListProjectDatasets(ctx context.Context, id strin
 
 func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, pagination models.Pagination) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	ps, err := s.q.SearchProjects(ctx, gen.SearchProjectsParams{
-		Concat: query,
-		Limit:  int32(pagination.Limit),
-		Offset: int32(pagination.Offset),
+		Column1: query,
+		Limit:   int32(pagination.Limit),
+		Offset:  int32(pagination.Offset),
 	})
 	if err != nil {
 		s.logger.Error("Error fetching projects", zap.Error(err))

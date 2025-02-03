@@ -138,7 +138,6 @@ type ListDatasetsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-// Advanced Dataset Queries
 func (q *Queries) ListDatasets(ctx context.Context, arg ListDatasetsParams) ([]Dataset, error) {
 	rows, err := q.db.Query(ctx, listDatasets, arg.Limit, arg.Offset)
 	if err != nil {

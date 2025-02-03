@@ -16,9 +16,9 @@ type httpHandler struct {
 func Routes(router fiber.Router, svc *services.ProjectService, datasetService *services.DatasetService, logger *logger.Logger) {
 	httpHandler := httpHandler{logger, svc}
 	router.Get("/", httpHandler.list)
-	router.Post("/", middleware.ValidateReqBodyMiddleware(new(CreateRequestBody)), httpHandler.create)
+	router.Post("/", middleware.ValidateReqBodyMiddleware(new(createRequestBody)), httpHandler.create)
 	router.Get("/:projectID", httpHandler.details)
-	router.Patch("/:projectID", middleware.ValidateReqBodyMiddleware(new(UpdateProjectBody)), httpHandler.update)
+	router.Patch("/:projectID", middleware.ValidateReqBodyMiddleware(new(updateProjectBody)), httpHandler.update)
 	router.Delete("/:projectID", httpHandler.delete)
 	datasets.Routes(router.Group("/:projectID/datasets"), datasetService, logger)
 }
