@@ -39,6 +39,9 @@ type Querier interface {
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error)
 	UpdateDatasetColumns(ctx context.Context, arg UpdateDatasetColumnsParams) (Dataset, error)
+	UpdateDatasetPath(ctx context.Context, arg UpdateDatasetPathParams) (Dataset, error)
+	// You might also want these additional queries:
+	UpdateDatasetStats(ctx context.Context, arg UpdateDatasetStatsParams) (Dataset, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 }
 

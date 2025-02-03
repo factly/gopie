@@ -36,7 +36,7 @@ func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.
 		return nil, err
 	}
 
-	filepath, err = d.source.DownloadFile(ctx, map[string]any{
+	filepath, size, err := d.source.DownloadFile(ctx, map[string]any{
 		"bucket":   bucket,
 		"filepath": path,
 	})
@@ -60,6 +60,7 @@ func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.
 		FilePath:  filepath,
 		TableName: tableName,
 		Format:    format,
+		Size:      int(size),
 	}, nil
 }
 

@@ -8,33 +8,33 @@ import (
 )
 
 type ProjectService struct {
-	ProjectRepo repositories.ProjectStoreRepository
+	projectRepo repositories.ProjectStoreRepository
 }
 
 func NewProjectService(projectRepo repositories.ProjectStoreRepository) *ProjectService {
 	return &ProjectService{
-		ProjectRepo: projectRepo,
+		projectRepo: projectRepo,
 	}
 }
 
 // Create - Create project
 func (service *ProjectService) Create(params models.CreateProjectParams) (*models.Project, error) {
-	return service.ProjectRepo.Create(context.Background(), params)
+	return service.projectRepo.Create(context.Background(), params)
 }
 
 // Details - Get project by id
 func (service *ProjectService) Details(id string) (*models.Project, error) {
-	return service.ProjectRepo.Details(context.Background(), id)
+	return service.projectRepo.Details(context.Background(), id)
 }
 
 // Update - Update project
 func (service *ProjectService) Update(projectID string, params *models.UpdateProjectParams) (*models.Project, error) {
-	return service.ProjectRepo.Update(context.Background(), projectID, params)
+	return service.projectRepo.Update(context.Background(), projectID, params)
 }
 
 // Delete - Delete project
 func (service *ProjectService) Delete(id string) error {
-	return service.ProjectRepo.Delete(context.Background(), id)
+	return service.projectRepo.Delete(context.Background(), id)
 }
 
 // List - List projects
@@ -43,7 +43,7 @@ func (service *ProjectService) List(limit, offset int) (*models.PaginationView[*
 	if limit != 0 {
 		pagination.Limit = limit
 	}
-	return service.ProjectRepo.List(context.Background(), pagination)
+	return service.projectRepo.List(context.Background(), pagination)
 }
 
 // SearchProjects - Search projects
@@ -52,5 +52,35 @@ func (service *ProjectService) SearchProjects(query string, limit, offset int) (
 	if limit != 0 {
 		pagination.Limit = limit
 	}
-	return service.ProjectRepo.SearchProject(context.Background(), query, pagination)
+	return service.projectRepo.SearchProject(context.Background(), query, pagination)
+}
+
+type DatasetService struct {
+	datasetRepo repositories.DatasetStoreRepository
+}
+
+func NewDatasetService(datasetRepo repositories.DatasetStoreRepository) *DatasetService {
+	return &DatasetService{
+		datasetRepo: datasetRepo,
+	}
+}
+
+func (service *DatasetService) Create(params *models.CreateDatasetParams) (*models.Dataset, error) {
+	return service.datasetRepo.Create(context.Background(), params)
+}
+
+func (service *DatasetService) Details(id string) (*models.Dataset, error) {
+	return service.datasetRepo.Details(context.Background(), id)
+}
+
+func (service *DatasetService) List(projectID string, limit, offset int) (*models.PaginationView[*models.Dataset], error) {
+	pagination := models.NewPagination()
+	if limit != 0 {
+		pagination.Limit = limit
+	}
+	return service.datasetRepo.List(context.Background(), projectID, pagination)
+}
+
+func (service *DatasetService) Delete(id string) error {
+	return service.datasetRepo.Delete(context.Background(), id)
 }

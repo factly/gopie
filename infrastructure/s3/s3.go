@@ -119,12 +119,12 @@ type DownloadFileConfig struct {
 // DownloadFile downloads a file from an S3 bucket to a local file.
 // It returns the path to the downloaded file on success.
 // Stores the file in /tmp directory with a unique name.
-func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string, error) {
+func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string, int64, error) {
 	srcCfg := DownloadFileConfig{}
 	err := mapstructure.Decode(cfg, &srcCfg)
 
 	if srcCfg.FilePath == "" {
-		return "", fmt.Errorf("file path is required")
+		return "", 0, fmt.Errorf("file path is required")
 	}
 
 	// extract file format from the file path
@@ -145,7 +145,7 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 		c.logger.Error("failed to open bucket",
 			zap.String("bucket", srcCfg.Bucket),
 			zap.Error(err))
-		return "", fmt.Errorf("failed to open bucket: %w", err)
+		return "", 0, fmt.Errorf("failed to open bucket: %w", err)
 	}
 
 	c.logger.Debug("bucket opened successfully", zap.String("bucket", srcCfg.Bucket))
@@ -156,7 +156,7 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 			zap.String("bucket", srcCfg.Bucket),
 			zap.String("file", srcCfg.FilePath),
 			zap.Error(err))
-		return "", fmt.Errorf("failed to open file: %w", err)
+		return "", 0, fmt.Errorf("failed to open file: %w", err)
 	}
 
 	c.logger.Debug("file opened successfully",
@@ -176,7 +176,7 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 		c.logger.Error("failed to create file",
 			zap.String("path", fileName),
 			zap.Error(err))
-		return "", fmt.Errorf("failed to create file: %w", err)
+		return "", 0, fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
@@ -186,7 +186,7 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 			zap.String("bucket", srcCfg.Bucket),
 			zap.String("file", srcCfg.FilePath),
 			zap.Error(err))
-		return "", fmt.Errorf("failed to write file: %w", err)
+		return "", 0, fmt.Errorf("failed to write file: %w", err)
 	}
 
 	c.logger.Info("file downloaded successfully",
@@ -195,5 +195,5 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 		zap.String("saved_to", fileName),
 		zap.Int64("bytes_downloaded", written))
 
-	return fileName, nil
+	return fileName, written, nil
 }

@@ -12,9 +12,12 @@ type Dataset struct {
 	ID          string             `json:"id"`
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
+	Format      string             `json:"format"`
 	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
 	RowCount    pgtype.Int4        `json:"rowCount"`
+	Size        pgtype.Int8        `json:"size"`
+	FilePath    string             `json:"filePath"`
 	Columns     []byte             `json:"columns"`
 }
 

@@ -73,7 +73,7 @@ func (q *Queries) GetDatasetProjectsCount(ctx context.Context, datasetID string)
 }
 
 const getDatasetsByDateRange = `-- name: GetDatasetsByDateRange :many
-select id, name, description, created_at, updated_at, row_count, columns
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
 from datasets
 where created_at between $1 and $2
 order by created_at desc
@@ -105,9 +105,12 @@ func (q *Queries) GetDatasetsByDateRange(ctx context.Context, arg GetDatasetsByD
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 		); err != nil {
 			return nil, err
@@ -251,7 +254,7 @@ func (q *Queries) ListDatasetProjects(ctx context.Context, arg ListDatasetProjec
 
 const listProjectDatasets = `-- name: ListProjectDatasets :many
 select 
-    d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.columns,
+    d.id, d.name, d.description, d.format, d.created_at, d.updated_at, d.row_count, d.size, d.file_path, d.columns,
     pd.created_at as added_at
 from datasets d
 join project_datasets pd on d.id = pd.dataset_id
@@ -270,9 +273,12 @@ type ListProjectDatasetsRow struct {
 	ID          string             `json:"id"`
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
+	Format      string             `json:"format"`
 	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
 	RowCount    pgtype.Int4        `json:"rowCount"`
+	Size        pgtype.Int8        `json:"size"`
+	FilePath    string             `json:"filePath"`
 	Columns     []byte             `json:"columns"`
 	AddedAt     pgtype.Timestamptz `json:"addedAt"`
 }
@@ -290,9 +296,12 @@ func (q *Queries) ListProjectDatasets(ctx context.Context, arg ListProjectDatase
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 			&i.AddedAt,
 		); err != nil {
@@ -322,7 +331,7 @@ func (q *Queries) RemoveDatasetFromProject(ctx context.Context, arg RemoveDatase
 }
 
 const searchDatasetsByColumn = `-- name: SearchDatasetsByColumn :many
-select id, name, description, created_at, updated_at, row_count, columns
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
 from datasets
 where columns @> $1
 order by created_at desc
@@ -349,9 +358,12 @@ func (q *Queries) SearchDatasetsByColumn(ctx context.Context, arg SearchDatasets
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 		); err != nil {
 			return nil, err

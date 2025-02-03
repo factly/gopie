@@ -22,3 +22,10 @@ type ProjectStoreRepository interface {
 	Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error)
 	SearchProject(ctx context.Context, query string, pagination models.Pagination) (*models.PaginationView[*models.SearchProjectsResults], error)
 }
+
+type DatasetStoreRepository interface {
+	Create(ctx context.Context, params *models.CreateDatasetParams) (*models.Dataset, error)
+	Delete(ctx context.Context, id string) error
+	Details(ctx context.Context, id string) (*models.Dataset, error)
+	List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
+}

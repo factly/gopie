@@ -29,9 +29,13 @@ create table if not exists datasets(
     id uuid primary key default uuid_generate_v4(),
     name text not null,
     description text default null,
+    format text not null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
     row_count integer,
+    -- in bytes
+    size bigint,
+    file_path text not null,
     columns jsonb
 );
 
@@ -50,6 +54,13 @@ create table if not exists project_datasets(
     primary key (project_id, dataset_id)
 );
 
+create table if not exists failed_dataset_uploads(
+    id uuid primary key default uuid_generate_v4(),
+    dataset_id uuid not null references datasets(id) on delete cascade,
+    error text not null,
+    created_at timestamp with time zone not null default now()
+);
+
 -- create indexes
 create index if not exists idx_project_datasets_project_id on project_datasets(project_id);
 create index if not exists idx_project_datasets_dataset_id on project_datasets(dataset_id);
@@ -64,6 +75,8 @@ select trigger_updated_at('projects'::regclass);
 drop table if exists project_datasets;
 drop table if exists projects;
 drop table if exists datasets;
+drop table if exists failed_dataset_uploads;
 drop collation if exists case_insensitive;
 drop function if exists trigger_updated_at(regclass);
 drop function if exists set_updated_at();
+

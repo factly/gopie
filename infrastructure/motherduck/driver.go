@@ -38,6 +38,7 @@ func (m *motherDuckOlapoDriver) Connect(cfg *config.MotherDuckConfig) error {
 	dsn := fmt.Sprintf("md:%s?motherduck_token=%s", cfg.DBName, cfg.Token)
 	if cfg.AccessMode != "" {
 		dsn = fmt.Sprintf("%s&access_mode=%s", dsn, cfg.AccessMode)
+		m.logger.Info("access mode", zap.String("mode", cfg.AccessMode))
 	}
 
 	db, err := sql.Open("duckdb", dsn)

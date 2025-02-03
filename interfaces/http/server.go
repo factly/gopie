@@ -11,6 +11,7 @@ import (
 	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
+	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
@@ -55,10 +56,12 @@ func ServeHttp() error {
 		return err
 	}
 	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
+	datasetStore := datasets.NewPostgresDatasetStore(store.GetDB(), logger)
 
-	service := services.NewOlapService(olap, source, logger)
+	olapService := services.NewOlapService(olap, source, logger)
 	aiService := services.NewAiDriver(porkeyClient)
 	projectService := services.NewProjectService(projectStore)
+	datasetService := services.NewDatasetService(datasetStore)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
@@ -96,11 +99,12 @@ func ServeHttp() error {
 	})
 
 	if config.MotherDuck.AccessMode != "read_only" {
-		s3Routes.Routes(app.Group("/source/s3"), service, logger)
+		logger.Info("s3 upload routes enabled")
+		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, logger)
 	}
 
-	api.Routes(app.Group("/v1/api"), service, aiService, logger)
-	projectApi.Routes(app.Group("/v1/api/projects"), projectService, logger)
+	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)
+	projectApi.Routes(app.Group("/v1/api/projects"), projectService, datasetService, logger)
 
 	log.Fatal(app.Listen(":" + config.Serve.Port))
 

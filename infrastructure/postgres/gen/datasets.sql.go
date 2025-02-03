@@ -15,16 +15,22 @@ const createDataset = `-- name: CreateDataset :one
 insert into datasets (
     name,
     description,
+    format,
     row_count,
+    size,
+    file_path,
     columns
-) values ($1, $2, $3, $4)
-returning id, name, description, created_at, updated_at, row_count, columns
+) values ($1, $2, $3, $4, $5, $6, $7)
+returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
 `
 
 type CreateDatasetParams struct {
 	Name        string      `json:"name"`
 	Description pgtype.Text `json:"description"`
+	Format      string      `json:"format"`
 	RowCount    pgtype.Int4 `json:"rowCount"`
+	Size        pgtype.Int8 `json:"size"`
+	FilePath    string      `json:"filePath"`
 	Columns     []byte      `json:"columns"`
 }
 
@@ -32,7 +38,10 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 	row := q.db.QueryRow(ctx, createDataset,
 		arg.Name,
 		arg.Description,
+		arg.Format,
 		arg.RowCount,
+		arg.Size,
+		arg.FilePath,
 		arg.Columns,
 	)
 	var i Dataset
@@ -40,9 +49,12 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
 		&i.Columns,
 	)
 	return i, err
@@ -58,7 +70,7 @@ func (q *Queries) DeleteDataset(ctx context.Context, id string) error {
 }
 
 const getDataset = `-- name: GetDataset :one
-select id, name, description, created_at, updated_at, row_count, columns from datasets where id = $1
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets where id = $1
 `
 
 func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
@@ -68,16 +80,19 @@ func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
 		&i.Columns,
 	)
 	return i, err
 }
 
 const getDatasetsByIds = `-- name: GetDatasetsByIds :many
-select id, name, description, created_at, updated_at, row_count, columns from datasets
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets
 where id = any($1::uuid[])
 `
 
@@ -94,9 +109,12 @@ func (q *Queries) GetDatasetsByIds(ctx context.Context, dollar_1 []pgtype.UUID) 
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 		); err != nil {
 			return nil, err
@@ -110,7 +128,7 @@ func (q *Queries) GetDatasetsByIds(ctx context.Context, dollar_1 []pgtype.UUID) 
 }
 
 const listDatasets = `-- name: ListDatasets :many
-select id, name, description, created_at, updated_at, row_count, columns from datasets
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets
 order by created_at desc
 limit $1 offset $2
 `
@@ -134,9 +152,12 @@ func (q *Queries) ListDatasets(ctx context.Context, arg ListDatasetsParams) ([]D
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 		); err != nil {
 			return nil, err
@@ -150,10 +171,11 @@ func (q *Queries) ListDatasets(ctx context.Context, arg ListDatasetsParams) ([]D
 }
 
 const searchDatasets = `-- name: SearchDatasets :many
-select id, name, description, created_at, updated_at, row_count, columns from datasets
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets
 where 
     name ilike concat('%', $1, '%') or
-    description ilike concat('%', $1, '%')
+    description ilike concat('%', $1, '%') or
+    format ilike concat('%', $1, '%') 
 order by 
     case 
         when name ilike concat($1, '%') then 1
@@ -183,9 +205,12 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Size,
+			&i.FilePath,
 			&i.Columns,
 		); err != nil {
 			return nil, err
@@ -203,16 +228,22 @@ update datasets
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    row_count = coalesce($3, row_count),
-    columns = coalesce($4, columns)
-where id = $5
-returning id, name, description, created_at, updated_at, row_count, columns
+    format = coalesce($3, format),
+    row_count = coalesce($4, row_count),
+    size = coalesce($5, size),
+    file_path = coalesce($6, file_path),
+    columns = coalesce($7, columns)
+where id = $8
+returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
 `
 
 type UpdateDatasetParams struct {
 	Name        string      `json:"name"`
 	Description pgtype.Text `json:"description"`
+	Format      string      `json:"format"`
 	RowCount    pgtype.Int4 `json:"rowCount"`
+	Size        pgtype.Int8 `json:"size"`
+	FilePath    string      `json:"filePath"`
 	Columns     []byte      `json:"columns"`
 	ID          string      `json:"id"`
 }
@@ -221,7 +252,10 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 	row := q.db.QueryRow(ctx, updateDataset,
 		arg.Name,
 		arg.Description,
+		arg.Format,
 		arg.RowCount,
+		arg.Size,
+		arg.FilePath,
 		arg.Columns,
 		arg.ID,
 	)
@@ -230,9 +264,12 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
 		&i.Columns,
 	)
 	return i, err
@@ -242,7 +279,7 @@ const updateDatasetColumns = `-- name: UpdateDatasetColumns :one
 update datasets
 set columns = $1
 where id = $2
-returning id, name, description, created_at, updated_at, row_count, columns
+returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
 `
 
 type UpdateDatasetColumnsParams struct {
@@ -257,9 +294,77 @@ func (q *Queries) UpdateDatasetColumns(ctx context.Context, arg UpdateDatasetCol
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+	)
+	return i, err
+}
+
+const updateDatasetPath = `-- name: UpdateDatasetPath :one
+update datasets
+set file_path = $1
+where id = $2
+returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
+`
+
+type UpdateDatasetPathParams struct {
+	FilePath string `json:"filePath"`
+	ID       string `json:"id"`
+}
+
+func (q *Queries) UpdateDatasetPath(ctx context.Context, arg UpdateDatasetPathParams) (Dataset, error) {
+	row := q.db.QueryRow(ctx, updateDatasetPath, arg.FilePath, arg.ID)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Format,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+	)
+	return i, err
+}
+
+const updateDatasetStats = `-- name: UpdateDatasetStats :one
+
+update datasets
+set 
+    row_count = $1,
+    size = $2
+where id = $3
+returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
+`
+
+type UpdateDatasetStatsParams struct {
+	RowCount pgtype.Int4 `json:"rowCount"`
+	Size     pgtype.Int8 `json:"size"`
+	ID       string      `json:"id"`
+}
+
+// You might also want these additional queries:
+func (q *Queries) UpdateDatasetStats(ctx context.Context, arg UpdateDatasetStatsParams) (Dataset, error) {
+	row := q.db.QueryRow(ctx, updateDatasetStats, arg.RowCount, arg.Size, arg.ID)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Format,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
 		&i.Columns,
 	)
 	return i, err
