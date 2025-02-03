@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *PostgresDatasetStore) Details(ctx context.Context, datasetID string) (*models.Dataset, error) {
+func (s *PgDatasetStore) Details(ctx context.Context, datasetID string) (*models.Dataset, error) {
 	d, err := s.q.GetDataset(ctx, datasetID)
 	if err != nil {
 		s.logger.Error("Error fetching dataset", zap.Error(err))

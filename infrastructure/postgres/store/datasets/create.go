@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *PostgresDatasetStore) Create(ctx context.Context, params *models.CreateDatasetParams) (*models.Dataset, error) {
+func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatasetParams) (*models.Dataset, error) {
 	// check if project exists
 	project, err := s.q.GetProject(ctx, params.ProjectID)
 	if err != nil {
@@ -57,5 +57,23 @@ func (s *PostgresDatasetStore) Create(ctx context.Context, params *models.Create
 		Size:        int(d.Size.Int64),
 		FilePath:    d.FilePath,
 		Columns:     columnsMap,
+	}, nil
+}
+
+func (s *PgDatasetStore) CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error) {
+	f, err := s.q.CreateFailedDatasetUpload(ctx, gen.CreateFailedDatasetUploadParams{
+		DatasetID: datasetID,
+		Error:     errorMsg,
+	})
+	if err != nil {
+		s.logger.Error("Error creating failed dataset upload", zap.Error(err))
+		return nil, err
+	}
+
+	return &models.FailedDatasetUpload{
+		ID:        f.ID,
+		DatasetID: f.DatasetID,
+		Error:     f.Error,
+		CreatedAt: f.CreatedAt.Time,
 	}, nil
 }

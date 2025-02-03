@@ -26,21 +26,9 @@ returning *;
 -- name: DeleteProject :exec
 delete from projects where id = $1;
 
--- name: ListProjects :many
-select 
-    p.*,
-    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
-    count(pd.dataset_id) as dataset_count
-from projects p
-left join project_datasets pd on p.id = pd.project_id
-group by p.id
-order by p.created_at desc
-limit $1 offset $2;
-
 -- name: SearchProjects :many
 SELECT 
     p.*,
-    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
 FROM projects p
 LEFT JOIN project_datasets pd ON p.id = pd.project_id

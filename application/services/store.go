@@ -75,3 +75,15 @@ func (service *DatasetService) List(projectID string, limit, offset int) (*model
 func (service *DatasetService) Delete(id string) error {
 	return service.datasetRepo.Delete(context.Background(), id)
 }
+
+func (services *DatasetService) CreateFailedUpload(datasetID, errorMsg string) (*models.FailedDatasetUpload, error) {
+	return services.datasetRepo.CreateFailedUpload(context.Background(), datasetID, errorMsg)
+}
+
+func (services *DatasetService) ListFailedUploads() ([]*models.FailedDatasetUpload, error) {
+	return services.datasetRepo.ListFailedUploads(context.Background())
+}
+
+func (services *DatasetService) DeleteFailedUploadsByDatasetID(datasetID string) error {
+	return services.datasetRepo.DeleteFailedUploadsByDatasetID(context.Background(), datasetID)
+}

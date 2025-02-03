@@ -17,16 +17,6 @@ where pd.project_id = $1
 order by pd.created_at desc
 limit $2 offset $3;
 
--- name: ListDatasetProjects :many
-select 
-    p.*,
-    pd.created_at as added_at
-from projects p
-join project_datasets pd on p.id = pd.project_id
-where pd.dataset_id = $1
-order by pd.created_at desc
-limit $2 offset $3;
-
 -- name: GetProjectDatasetsCount :one
 select count(*) 
 from project_datasets
@@ -46,30 +36,3 @@ on conflict do nothing;
 -- name: BatchRemoveDatasetsFromProject :exec
 delete from project_datasets
 where project_id = $1 and dataset_id = any($2::uuid[]);
-
--- Search and Filter Operations
--- name: SearchDatasetsByColumn :many
-select *
-from datasets
-where columns @> $1
-order by created_at desc
-limit $2 offset $3;
-
--- name: GetProjectsByDateRange :many
-select 
-    p.*,
-    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
-    count(pd.dataset_id) as dataset_count
-from projects p
-left join project_datasets pd on p.id = pd.project_id
-where p.created_at between $1 and $2
-group by p.id
-order by p.created_at desc
-limit $3 offset $4;
-
--- name: GetDatasetsByDateRange :many
-select *
-from datasets
-where created_at between $1 and $2
-order by created_at desc
-limit $3 offset $4;

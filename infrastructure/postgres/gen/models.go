@@ -21,6 +21,13 @@ type Dataset struct {
 	Columns     []byte             `json:"columns"`
 }
 
+type FailedDatasetUpload struct {
+	ID        string             `json:"id"`
+	DatasetID string             `json:"datasetId"`
+	Error     string             `json:"error"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+}
+
 type Project struct {
 	ID          string             `json:"id"`
 	Name        string             `json:"name"`
