@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/factly/gopie/domain"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -61,17 +62,17 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	// Validate table exists
 	schemaRes, err := h.driverSvc.GetTableSchema(body.TableName)
 	if err != nil {
-		h.logger.Error("Error executing query", zap.Error(err))
-		if strings.HasPrefix(err.Error(), "DuckDB") {
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":   err.Error(),
-				"message": "Invalid query or table does not exist",
-				"code":    fiber.StatusBadRequest,
+		h.logger.Error("Error getting table schema", zap.Error(err))
+		if strings.Contains(err.Error(), "does not exist") {
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   domain.ErrTableNotFound.Error(),
+				"message": fmt.Sprintf("Table '%s' not found", body.TableName),
+				"code":    fiber.StatusNotFound,
 			})
 		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Unknown error occurred while executing query",
+			"message": "Error validating table",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -145,7 +146,7 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 
 	if sql == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Empty SQL generated",
+			"error":   domain.ErrFailedToGenerateSql.Error(),
 			"message": "Could not generate SQL query from the given natural language input",
 			"code":    fiber.StatusBadRequest,
 		})
