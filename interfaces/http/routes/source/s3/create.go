@@ -8,22 +8,15 @@ import (
 	"go.uber.org/zap"
 )
 
-type reqBody struct {
-	FilePath    string `json:"file_path"`
-	Description string `json:"description"`
-	ProjectID   string `json:"project_id"`
+type uploadRequestBody struct {
+	FilePath    string `json:"file_path" validate:"required,min=1"`
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
+	ProjectID   string `json:"project_id" validate:"required,uuid"`
 }
 
 // upload files to gopie from s3
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
-	var body reqBody
-	if err := ctx.BodyParser(&body); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "invalid request body",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
+	body := ctx.Locals("body").(*uploadRequestBody)
 
 	res, err := h.olapSvc.UploadFile(ctx.Context(), body.FilePath)
 	if err != nil {
@@ -49,7 +42,6 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if !ok {
 		return fiber.NewError(fiber.StatusInternalServerError, "error fetching count")
 	}
-	h.logger.Info("count", zap.Int64("count", count))
 
 	columns, err := h.olapSvc.ExecuteQuery("desc " + res.TableName)
 	if err != nil {
@@ -60,6 +52,8 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 
 	}
+
+	// BUG: for some reason size and row count is not being returned fix this
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
 		Name:        res.TableName,
 		Description: "Dataset created from S3",
@@ -70,6 +64,14 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		RowCount:    int(count),
 		Size:        res.Size,
 	})
+
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "error creating dataset",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
 	// delete res.FilePath in tmp
 	err = os.Remove(res.FilePath)
 	if err != nil {
