@@ -10,9 +10,12 @@ import (
 	"github.com/factly/gopie/infrastructure/meterus"
 	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
+	"github.com/factly/gopie/infrastructure/postgres/store"
+	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
+	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
@@ -44,8 +47,18 @@ func ServeHttp() error {
 	}
 	porkeyClient := portkey.NewPortKeyClient(config.PortKey, logger)
 
+	// Store setup
+	store := store.NewPostgresStoreRepository(logger)
+	err = store.Connect(&config.Postgres)
+	if err != nil {
+		logger.Error("error connecting to postgres", zap.Error(err))
+		return err
+	}
+	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
+
 	service := services.NewOlapService(olap, source, logger)
 	aiService := services.NewAiDriver(porkeyClient)
+	projectService := services.NewProjectService(projectStore)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
@@ -86,7 +99,8 @@ func ServeHttp() error {
 		s3Routes.Routes(app.Group("/source/s3"), service, logger)
 	}
 
-	api.Routes(app.Group("/api"), service, aiService, logger)
+	api.Routes(app.Group("/v1/api"), service, aiService, logger)
+	projectApi.Routes(app.Group("/v1/api/projects"), projectService, logger)
 
 	log.Fatal(app.Listen(":" + config.Serve.Port))
 

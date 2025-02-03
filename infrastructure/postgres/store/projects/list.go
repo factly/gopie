@@ -36,7 +36,7 @@ func (s *PostgresProjectStore) List(ctx context.Context, pagination models.Pagin
 		return nil, err
 	}
 
-	paginationView := models.NewPaginationView(pagination.Limit, pagination.Offset, int(count), projects)
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), projects)
 	return &paginationView, nil
 }
 
@@ -71,7 +71,7 @@ func (s *PostgresProjectStore) ListProjectDatasets(ctx context.Context, id strin
 		})
 	}
 
-	paginationView := models.NewPaginationView(pagination.Limit, pagination.Offset, len(res), datasets)
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, len(res), datasets)
 	return &paginationView, nil
 }
 
@@ -104,6 +104,6 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 		return nil, err
 	}
 
-	paginationView := models.NewPaginationView(pagination.Limit, pagination.Offset, int(count), projects)
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), projects)
 	return &paginationView, nil
 }

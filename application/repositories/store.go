@@ -10,6 +10,7 @@ import (
 type StoreRepository interface {
 	Connect(cfg *config.PostgresConfig) error
 	Close() error
+	GetDB() interface{}
 }
 
 type ProjectStoreRepository interface {

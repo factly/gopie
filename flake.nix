@@ -27,6 +27,7 @@
               golangci-lint
               gotests
               jq
+              goose
             ];
             shellHook = ''
               export GOPATH="$HOME/go"

@@ -158,6 +158,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Port:     viper.GetString("POSTGRES_PORT"),
 			Database: viper.GetString("POSTGRES_DB"),
 			User:     viper.GetString("POSTGRES_USER"),
+			Password: viper.GetString("POSTGRES_PASSWORD"),
 		},
 	}
 

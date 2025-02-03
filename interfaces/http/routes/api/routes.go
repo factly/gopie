@@ -17,5 +17,5 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	router.Post("/sql", httpHandler.sql)
 	router.Get("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
-	router.Get("/schema/:tableName", httpHandler.schema)
+	router.Get("/schemas/:tableName", httpHandler.schema)
 }

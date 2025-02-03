@@ -1,0 +1,4 @@
+{
+  "driver": "postgres",
+  "dir": "infrastructure/postgres/migrations"
+}
