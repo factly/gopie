@@ -63,7 +63,6 @@ func (e RestParamsError) String() string {
 func IsRestParamsError(err error) bool {
 	_, ok := err.(RestParamsError)
 	return ok
-
 }
 
 type AiError int
@@ -83,4 +82,36 @@ func (e AiError) String() string {
 	default:
 		return "unknown error"
 	}
+}
+
+// StoreError represents errors that can occur in the data store
+type StoreError int
+
+const (
+	ErrRecordNotFound StoreError = iota
+	ErrDuplicateRecord
+	ErrInvalidData
+)
+
+func (e StoreError) Error() string {
+	return e.String()
+}
+
+func (e StoreError) String() string {
+	switch e {
+	case ErrRecordNotFound:
+		return "record not found"
+	case ErrDuplicateRecord:
+		return "record already exists"
+	case ErrInvalidData:
+		return "invalid data"
+	default:
+		return "unknown error"
+	}
+}
+
+// IsStoreError checks if an error is of type StoreError
+func IsStoreError(err error) bool {
+	_, ok := err.(StoreError)
+	return ok
 }

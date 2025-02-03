@@ -1,12 +1,10 @@
 package middleware
 
 import (
-	"errors"
-
 	"github.com/factly/gopie/application/services"
+	"github.com/factly/gopie/domain"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5"
 )
 
 type ValidationError struct {
@@ -57,7 +55,7 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 		projectID := c.Params("projectID")
 		_, err := projectSvc.Details(projectID)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
+			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 					"error":   "Project not found",
 					"message": "The requested project does not exist",

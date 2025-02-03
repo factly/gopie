@@ -1,10 +1,8 @@
 package projects
 
 import (
-	"errors"
-
+	"github.com/factly/gopie/domain"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5"
 )
 
 func (h *httpHandler) delete(ctx *fiber.Ctx) error {
@@ -12,7 +10,7 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 
 	err := h.svc.Delete(projectID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "Project not found",
 				"message": "The requested project does not exist",

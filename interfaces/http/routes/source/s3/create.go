@@ -1,13 +1,13 @@
 package s3
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	// Check if project exists
 	project, err := h.projectSvc.Details(body.ProjectID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   "Project not found",
@@ -48,39 +48,11 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
-		// Create dataset entry for failed upload with improved error handling
-		dataset, e := h.datasetSvc.Create(&models.CreateDatasetParams{
-			Name:        res.TableName,
-			Description: body.Description,
-			ProjectID:   body.ProjectID,
-			FilePath:    body.FilePath,
-		})
-		if e != nil {
-			h.logger.Error("Error creating dataset record for failed upload", zap.Error(e))
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   fmt.Sprintf("Multiple errors occurred: Upload error: %v, Dataset creation error: %v", err, e),
-				"message": "Failed to process file upload and create dataset record",
-				"code":    fiber.StatusInternalServerError,
-			})
-		}
-
-		// Record failed upload details
-		failed, e := h.datasetSvc.CreateFailedUpload(dataset.ID, err.Error())
-		if e != nil {
-			h.logger.Error("Error recording failed upload details", zap.Error(e), zap.String("dataset_id", dataset.ID))
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   fmt.Sprintf("Multiple errors occurred: Upload error: %v, Failed upload record error: %v", err, e),
-				"message": "Failed to process file upload and record failure details",
-				"code":    fiber.StatusInternalServerError,
-				"data":    dataset,
-			})
-		}
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		// For S3 upload failures, return a more specific error
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "File upload failed",
-			"code":    fiber.StatusInternalServerError,
-			"data":    failed,
+			"message": "Failed to upload file from S3. Please check if the file exists and you have proper access.",
+			"code":    fiber.StatusBadRequest,
 		})
 	}
 
@@ -118,9 +90,12 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
+	// Extract filename from the S3 path for dataset name
+	_, filename := filepath.Split(body.FilePath)
+
 	// Create dataset entry for successful upload
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:        res.TableName,
+		Name:        filename, // Use filename instead of table name for better readability
 		Description: body.Description,
 		ProjectID:   body.ProjectID,
 		Columns:     columns,
