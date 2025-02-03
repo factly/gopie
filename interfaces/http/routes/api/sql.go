@@ -9,7 +9,7 @@ import (
 )
 
 type sqlRequestBody struct {
-	Query string `json:"query"`
+	Query string `json:"query" validate:"required,min=1"`
 }
 
 func (h *httpHandler) sql(ctx *fiber.Ctx) error {

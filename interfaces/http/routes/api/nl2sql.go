@@ -12,8 +12,8 @@ import (
 )
 
 type nl2SqlRequest struct {
-	Query     string `json:"query"`
-	TableName string `json:"table"`
+	Query     string `json:"query" validate:"required,min=3"`
+	TableName string `json:"table" validate:"required"`
 }
 
 func convertSchemaToJson(schema any) string {
@@ -58,20 +58,14 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if body.Query == "get all data" {
-		sql := map[string]string{
-			"query": "select * from " + body.TableName,
-		}
-		return ctx.Status(fiber.StatusOK).JSON(sql)
-	}
-
+	// Validate table exists
 	schemaRes, err := h.driverSvc.GetTableSchema(body.TableName)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 		if strings.HasPrefix(err.Error(), "DuckDB") {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   err.Error(),
-				"message": "Invalid query",
+				"message": "Invalid query or table does not exist",
 				"code":    fiber.StatusBadRequest,
 			})
 		}
@@ -82,12 +76,19 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if body.Query == "get all data" {
+		sql := map[string]string{
+			"query": "select * from " + body.TableName,
+		}
+		return ctx.Status(fiber.StatusOK).JSON(sql)
+	}
+
 	randomNRows, err := h.driverSvc.ExecuteQuery(fmt.Sprintf("select * from %s order by random() limit 50", body.TableName))
 	if err != nil {
-		h.logger.Error("Error executing query", zap.Error(err))
+		h.logger.Error("Error fetching sample data", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Unknown error occurred while executing query",
+			"message": "Error fetching sample data from table",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -134,11 +135,19 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 
 	sql, err := h.aiSvc.GenerateSql(content)
 	if err != nil {
-		h.logger.Error("Error executing query", zap.Error(err))
+		h.logger.Error("Error generating SQL", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Unknown error occurred generating SQL",
+			"message": "Error generating SQL query from natural language",
 			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	if sql == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Empty SQL generated",
+			"message": "Could not generate SQL query from the given natural language input",
+			"code":    fiber.StatusBadRequest,
 		})
 	}
 

@@ -1,8 +1,11 @@
 package projects
 
 import (
+	"errors"
+
 	"github.com/factly/gopie/domain/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 )
 
 type UpdateProjectBody struct {
@@ -20,6 +23,13 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		Description: body.Description,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   "Project not found",
+				"message": "The requested project does not exist",
+				"code":    fiber.StatusNotFound,
+			})
+		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error updating project",
