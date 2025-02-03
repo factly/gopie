@@ -20,5 +20,5 @@ func Routes(router fiber.Router, svc *services.ProjectService, datasetService *s
 	router.Get("/:projectID", httpHandler.details)
 	router.Patch("/:projectID", middleware.ValidateReqBodyMiddleware(new(updateProjectBody)), httpHandler.update)
 	router.Delete("/:projectID", httpHandler.delete)
-	datasets.Routes(router.Group("/:projectID/datasets"), datasetService, logger)
+	datasets.Routes(router.Group("/:projectID/datasets"), datasetService, svc, logger)
 }
