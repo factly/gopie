@@ -26,8 +26,5 @@ go.work.sum
 # env file
 .env
 /volumes
-requests
-ingestions
-ingest.sh
-*.csv
-
+*.log
+*.lock

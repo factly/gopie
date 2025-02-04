@@ -1,0 +1,70 @@
+package datasets
+
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/infrastructure/postgres/gen"
+	"go.uber.org/zap"
+)
+
+func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error) {
+	ds, err := s.q.ListProjectDatasets(ctx, gen.ListProjectDatasetsParams{
+		ProjectID: projectID,
+		Limit:     int32(pagination.Limit),
+		Offset:    int32(pagination.Offset),
+	})
+	if err != nil {
+		s.logger.Error("Error fetching datasets", zap.Error(err))
+		return nil, err
+	}
+
+	var datasets []*models.Dataset
+	for _, d := range ds {
+		columns := make([]map[string]any, 0)
+		_ = json.Unmarshal([]byte(d.Columns), &columns)
+
+		datasets = append(datasets, &models.Dataset{
+			ID:          d.ID,
+			Name:        d.Name,
+			Description: d.Description.String,
+			CreatedAt:   d.CreatedAt.Time,
+			UpdatedAt:   d.UpdatedAt.Time,
+			Columns:     columns,
+			RowCount:    int(d.RowCount.Int32),
+			Size:        int(d.Size.Int64),
+			FilePath:    d.FilePath,
+			Format:      d.Format,
+		})
+	}
+
+	count, err := s.q.GetProjectDatasetsCount(ctx, projectID)
+	if err != nil {
+		s.logger.Error("Error fetching datasets count", zap.Error(err))
+		return nil, err
+	}
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), datasets)
+	return &paginationView, nil
+}
+
+func (s *PgDatasetStore) ListFailedUploads(ctx context.Context) ([]*models.FailedDatasetUpload, error) {
+	failedUploads, err := s.q.ListFailedDatasetUploads(ctx)
+	if err != nil {
+		s.logger.Error("Error fetching failed uploads", zap.Error(err))
+		return nil, err
+	}
+
+	var failedUploadsList []*models.FailedDatasetUpload
+	for _, f := range failedUploads {
+		failedUploadsList = append(failedUploadsList, &models.FailedDatasetUpload{
+			ID:        f.ID,
+			DatasetID: f.DatasetID,
+			Error:     f.Error,
+			CreatedAt: f.CreatedAt.Time,
+		})
+	}
+
+	return failedUploadsList, nil
+}

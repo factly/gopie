@@ -1,5 +1,8 @@
 data
 tmp
-ingestions
-requests
-*.csv
+volumes
+.air.toml
+.gitignore
+.dockerignore
+*.log
+main

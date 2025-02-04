@@ -1,0 +1,52 @@
+services:
+  #########################################################################
+  #####                        MINIO                                #######
+  #########################################################################
+  minio:
+    image: bitnami/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./volumes/minio/data:/data
+    environment:
+      - MINIO_ROOT_USER=miniokey
+      - MINIO_ROOT_PASSWORD=miniosecret
+    networks:
+      - gopie
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    networks:
+      - gopie
+    entrypoint: >
+      /bin/sh -c " apk add --no-cache bash; wait-for-it.sh minio:9000 -- echo 'Minio is up. Creating the bucket!!'; /usr/bin/mc config host add myminio http://minio:9000 miniokey miniosecret; /usr/bin/mc mb myminio/gopie; /usr/bin/mc anonymous set public myminio/gopie; exit 0; "
+
+  #########################################################################
+  #####                        DATABASE                             #######
+  #########################################################################
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gopie
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gopie
+
+networks:
+  gopie:
+
+volumes: 
+  volumes:
