@@ -95,7 +95,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 
 	// Create dataset entry for successful upload
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:        filename, // Use filename instead of table name for better readability
+		Name:       res.TableName
 		Description: body.Description,
 		ProjectID:   body.ProjectID,
 		Columns:     columns,
