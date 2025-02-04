@@ -3,9 +3,12 @@ package datasets
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
+	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -13,6 +16,9 @@ func (s *PgDatasetStore) Details(ctx context.Context, datasetID string) (*models
 	d, err := s.q.GetDataset(ctx, datasetID)
 	if err != nil {
 		s.logger.Error("Error fetching dataset", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRecordNotFound
+		}
 		return nil, err
 	}
 	columns := make([]map[string]any, 0)

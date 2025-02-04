@@ -99,7 +99,7 @@ func ServeHttp() error {
 
 	if config.MotherDuck.AccessMode != "read_only" {
 		logger.Info("s3 upload routes enabled")
-		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, logger)
+		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, projectService, logger)
 	}
 
 	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)
