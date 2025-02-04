@@ -3,7 +3,6 @@ package s3
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
@@ -90,12 +89,9 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Extract filename from the S3 path for dataset name
-	_, filename := filepath.Split(body.FilePath)
-
 	// Create dataset entry for successful upload
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:       res.TableName
+		Name:        res.TableName,
 		Description: body.Description,
 		ProjectID:   body.ProjectID,
 		Columns:     columns,
