@@ -20,6 +20,7 @@ type Querier interface {
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, id string) error
 	GetDataset(ctx context.Context, id string) (Dataset, error)
+	GetDatasetByName(ctx context.Context, name string) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)
 	GetFailedDatasetUploadsCount(ctx context.Context) (int64, error)
 	GetProject(ctx context.Context, id string) (GetProjectRow, error)

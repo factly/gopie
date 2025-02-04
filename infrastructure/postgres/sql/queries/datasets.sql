@@ -41,3 +41,6 @@ order by
     end,
     created_at desc
 limit $2 offset $3;
+
+-- name: GetDatasetByName :one
+select * from datasets where name = $1;

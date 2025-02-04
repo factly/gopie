@@ -10,40 +10,46 @@ import (
 	"go.uber.org/zap"
 )
 
-type uploadRequestBody struct {
-	FilePath    string `json:"file_path" validate:"required,min=1"`
+type updateRequestBody struct {
+	FilePath    string `json:"file_path,omitempty" validate:"omitempty,min=1"`
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
-	ProjectID   string `json:"project_id" validate:"required,uuid"`
+	Dataset     string `json:"dataset" validate:"required"`
 }
 
 // upload files to gopie from s3
-func (h *httpHandler) upload(ctx *fiber.Ctx) error {
+func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	// Get request body from context
-	body := ctx.Locals("body").(*uploadRequestBody)
+	body := ctx.Locals("body").(*updateRequestBody)
 
-	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID)
+	// Check if d exists
+	d, err := h.datasetSvc.GetByTableName(body.Dataset)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
-			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
+			h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.Dataset))
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error":   "Project not found",
-				"message": fmt.Sprintf("Project with ID %s not found", body.ProjectID),
+				"error":   "Dataset not found",
+				"message": fmt.Sprintf("Dataset with name %s not found", body.Dataset),
 				"code":    fiber.StatusNotFound,
 			})
 		}
-		h.logger.Error("Error fetching project", zap.Error(err), zap.String("project_id", body.ProjectID))
+		h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("dataset_id", body.Dataset))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Error validating project",
+			"message": "Error validating dataset",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
 
-	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("project_id", project.ID))
+	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("dataset_id", d.ID))
+
+	// if filepath is not provided, use the existing filepath
+	filePath := body.FilePath
+	if filePath == "" {
+		filePath = d.FilePath
+	}
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.UploadFile(ctx.Context(), body.FilePath, "")
+	res, err := h.olapSvc.UploadFile(ctx.Context(), filePath, d.Name)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
@@ -89,22 +95,20 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Create dataset entry for successful upload
-	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:        res.TableName,
+	// update dataset entry for successful upload
+	dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
 		Description: body.Description,
-		ProjectID:   body.ProjectID,
-		Columns:     columns,
 		Format:      res.Format,
-		FilePath:    body.FilePath,
+		FilePath:    filePath,
 		RowCount:    int(count),
 		Size:        res.Size,
+		Columns:     columns,
 	})
 	if err != nil {
-		h.logger.Error("Error creating dataset record", zap.Error(err))
+		h.logger.Error("Error updating dataset record", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Error creating dataset record",
+			"message": "Error updating dataset record",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -115,12 +119,10 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			zap.Error(err),
 			zap.String("file_path", res.FilePath),
 			zap.String("dataset_id", dataset.ID))
-		// Continue execution as this is not a critical error
 	}
 
 	h.logger.Info("File upload completed successfully",
-		zap.String("dataset_id", dataset.ID),
-		zap.String("project_id", project.ID))
+		zap.String("dataset_id", dataset.ID))
 
 	// Return success response
 	return ctx.Status(fiber.StatusCreated).JSON(map[string]interface{}{

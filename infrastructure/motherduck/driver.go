@@ -59,22 +59,22 @@ func (m *motherDuckOlapoDriver) Close() error {
 }
 
 func (m *motherDuckOlapoDriver) CreateTable(filePath, tableName, format string) error {
-	createSql := ""
+	readSql := ""
 	switch format {
 	case "parquet":
-		createSql = fmt.Sprintf("select * from read_parquet('%s')", filePath)
+		readSql = fmt.Sprintf("select * from read_parquet('%s')", filePath)
 		break
 	case "csv":
-		createSql = fmt.Sprintf("select * from read_csv('%s')", filePath)
+		readSql = fmt.Sprintf("select * from read_csv('%s')", filePath)
 		break
 	case "json":
-		createSql = fmt.Sprintf("select * read_json('%s')", filePath)
+		readSql = fmt.Sprintf("select * read_json('%s')", filePath)
 		break
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
 
-	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, createSql)
+	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
 
 	_, err := m.db.Exec(sql)
 

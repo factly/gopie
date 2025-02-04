@@ -17,4 +17,5 @@ type httpHandler struct {
 func Routes(router fiber.Router, olapSvc *services.OlapService, datasetSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
 	httpHandler := httpHandler{logger, olapSvc, datasetSvc, projectSvc}
 	router.Post("/upload", middleware.ValidateReqBodyMiddleware(new(uploadRequestBody)), httpHandler.upload)
+	router.Post("/update", middleware.ValidateReqBodyMiddleware(new(updateRequestBody)), httpHandler.update)
 }

@@ -64,6 +64,10 @@ func (service *DatasetService) Details(id string) (*models.Dataset, error) {
 	return service.datasetRepo.Details(context.Background(), id)
 }
 
+func (service *DatasetService) GetByTableName(tableName string) (*models.Dataset, error) {
+	return service.datasetRepo.GetByTableName(context.Background(), tableName)
+}
+
 func (service *DatasetService) List(projectID string, limit, offset int) (*models.PaginationView[*models.Dataset], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
@@ -74,6 +78,10 @@ func (service *DatasetService) List(projectID string, limit, offset int) (*model
 
 func (service *DatasetService) Delete(id string) error {
 	return service.datasetRepo.Delete(context.Background(), id)
+}
+
+func (service *DatasetService) Update(id string, params *models.UpdateDatasetParams) (*models.Dataset, error) {
+	return service.datasetRepo.Update(context.Background(), id, params)
 }
 
 func (services *DatasetService) CreateFailedUpload(datasetID, errorMsg string) (*models.FailedDatasetUpload, error) {

@@ -114,6 +114,7 @@ func (c *s3Source) openBucket(ctx context.Context, bucket string) (*blob.Bucket,
 type DownloadFileConfig struct {
 	Bucket   string `mapstructure:"bucket"`
 	FilePath string `mapstructure:"filepath"`
+	Name     string `mapstructure:"name"`
 }
 
 // DownloadFile downloads a file from an S3 bucket to a local file.
@@ -165,9 +166,14 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 
 	defer obj.Close()
 
+	tableName := srcCfg.Name
+	if tableName == "" {
+		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
+	}
+
 	// Extract the filename from the path for the local file
-	fileName = fmt.Sprintf("/tmp/gp_%s.%s",
-		pkg.RandomString(13),
+	fileName = fmt.Sprintf("/tmp/%s.%s",
+		tableName,
 		format,
 	)
 

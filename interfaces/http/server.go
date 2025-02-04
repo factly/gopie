@@ -103,7 +103,12 @@ func ServeHttp() error {
 	}
 
 	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)
-	projectApi.Routes(app.Group("/v1/api/projects"), projectService, datasetService, logger)
+	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
+		Logger:         logger,
+		ProjectService: projectService,
+		DatasetService: datasetService,
+		OlapService:    olapService,
+	})
 
 	log.Fatal(app.Listen(":" + config.Serve.Port))
 

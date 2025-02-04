@@ -27,6 +27,7 @@ type DatasetStoreRepository interface {
 	Details(ctx context.Context, id string) (*models.Dataset, error)
 	List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
 	Update(ctx context.Context, datasetID string, params *models.UpdateDatasetParams) (*models.Dataset, error)
+	GetByTableName(ctx context.Context, tableName string) (*models.Dataset, error)
 
 	CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error)
 	DeleteFailedUploadsByDatasetID(ctx context.Context, datasetID string) error

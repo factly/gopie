@@ -8,7 +8,7 @@ import (
 
 func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
-	err := h.svc.Delete(datasetID)
+	dataset, err := h.datasetsSvc.Details(datasetID)
 	if err != nil {
 		h.logger.Error("Error deleting dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -24,5 +24,17 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
+
+	err = h.datasetsSvc.Delete(datasetID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error deleting dataset",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	h.olapSvc.DropTable(dataset.Name)
+
 	return ctx.SendStatus(fiber.StatusNoContent)
 }

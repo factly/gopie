@@ -11,7 +11,7 @@ import (
 )
 
 func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDatasetParams *models.UpdateDatasetParams) (*models.Dataset, error) {
-	columns, err := json.Marshal(updateDatasetParams.Columns)
+	columnsBytes, err := json.Marshal(updateDatasetParams.Columns)
 	if err != nil {
 		s.logger.Error("Error marshaling columns", zap.Error(err))
 		return nil, err
@@ -22,9 +22,11 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		Format:      updateDatasetParams.Format,
 		RowCount:    pgtype.Int4{Int32: int32(updateDatasetParams.RowCount), Valid: true},
 		Size:        pgtype.Int8{Int64: int64(updateDatasetParams.Size), Valid: true},
-		Columns:     columns,
+		Columns:     columnsBytes,
 		FilePath:    updateDatasetParams.FilePath,
 	})
+	columns := make([]map[string]any, 0)
+	_ = json.Unmarshal(columnsBytes, &columns)
 	return &models.Dataset{
 		ID:          d.ID,
 		Name:        d.Name,
@@ -35,5 +37,6 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		RowCount:    int(d.RowCount.Int32),
 		Size:        int(d.Size.Int64),
 		FilePath:    d.FilePath,
+		Columns:     columns,
 	}, nil
 }

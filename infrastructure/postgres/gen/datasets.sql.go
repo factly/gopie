@@ -91,6 +91,28 @@ func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
 	return i, err
 }
 
+const getDatasetByName = `-- name: GetDatasetByName :one
+select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets where name = $1
+`
+
+func (q *Queries) GetDatasetByName(ctx context.Context, name string) (Dataset, error) {
+	row := q.db.QueryRow(ctx, getDatasetByName, name)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Format,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+	)
+	return i, err
+}
+
 const searchDatasets = `-- name: SearchDatasets :many
 select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets
 where 

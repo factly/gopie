@@ -13,12 +13,27 @@ type httpHandler struct {
 	svc    *services.ProjectService
 }
 
-func Routes(router fiber.Router, svc *services.ProjectService, datasetService *services.DatasetService, logger *logger.Logger) {
-	httpHandler := httpHandler{logger, svc}
+type RouterParams struct {
+	Logger         *logger.Logger
+	ProjectService *services.ProjectService
+	DatasetService *services.DatasetService
+	OlapService    *services.OlapService
+}
+
+func Routes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{
+		logger: params.Logger,
+		svc:    params.ProjectService,
+	}
 	router.Get("/", httpHandler.list)
 	router.Post("/", middleware.ValidateReqBodyMiddleware(new(createRequestBody)), httpHandler.create)
 	router.Get("/:projectID", httpHandler.details)
 	router.Patch("/:projectID", middleware.ValidateReqBodyMiddleware(new(updateProjectBody)), httpHandler.update)
 	router.Delete("/:projectID", httpHandler.delete)
-	datasets.Routes(router.Group("/:projectID/datasets"), datasetService, svc, logger)
+	datasets.Routes(router.Group("/:projectID/datasets"), datasets.RouterParams{
+		Logger:      params.Logger,
+		DatasetSvc:  params.DatasetService,
+		OlapService: params.OlapService,
+		ProjectSvc:  params.ProjectService,
+	})
 }

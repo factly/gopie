@@ -13,7 +13,7 @@ func (h *httpHandler) list(ctx *fiber.Ctx) error {
 
 	limit, page := pkg.ParseLimitAndPage(limitStr, pageStr)
 
-	datasets, err := h.svc.List(projectID, limit, page)
+	datasets, err := h.datasetsSvc.List(projectID, limit, page)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {

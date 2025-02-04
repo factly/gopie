@@ -27,7 +27,7 @@ func NewOlapService(olap repositories.OlapRepository, source repositories.Source
 	}
 }
 
-func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.UploadDatasetResult, error) {
+func (d *OlapService) UploadFile(ctx context.Context, filepath string, name string) (*models.UploadDatasetResult, error) {
 	// parse filepath to bucketname and path
 	// s3://bucketname/path/to/file
 	bucket, path, err := parseFilepath(filepath)
@@ -39,6 +39,7 @@ func (d *OlapService) UploadFile(ctx context.Context, filepath string) (*models.
 	filepath, size, err := d.source.DownloadFile(ctx, map[string]any{
 		"bucket":   bucket,
 		"filepath": path,
+		"name":     name,
 	})
 	if err != nil {
 		return nil, err
@@ -228,4 +229,8 @@ func (d *OlapService) ExecuteQuery(query string) ([]map[string]any, error) {
 	}
 
 	return *mapRes, nil
+}
+
+func (d *OlapService) DropTable(tableName string) error {
+	return d.olap.DropTable(tableName)
 }

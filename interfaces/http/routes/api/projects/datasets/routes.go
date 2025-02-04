@@ -8,16 +8,24 @@ import (
 )
 
 type httpHandler struct {
-	logger *logger.Logger
-	svc    *services.DatasetService
+	logger      *logger.Logger
+	datasetsSvc *services.DatasetService
+	olapSvc     *services.OlapService
+}
+
+type RouterParams struct {
+	Logger      *logger.Logger
+	DatasetSvc  *services.DatasetService
+	ProjectSvc  *services.ProjectService
+	OlapService *services.OlapService
 }
 
 // Routes - Route configuration for datasets
-func Routes(router fiber.Router, svc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
-	httpHandler := httpHandler{logger, svc}
+func Routes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{logger: params.Logger, datasetsSvc: params.DatasetSvc, olapSvc: params.OlapService}
 
 	// Add project validation middleware to all dataset routes
-	router.Use(middleware.ValidateProjectMiddleware(projectSvc))
+	router.Use(middleware.ValidateProjectMiddleware(params.ProjectSvc))
 
 	router.Get("/", httpHandler.list)
 	router.Get("/:datasetID", httpHandler.details)

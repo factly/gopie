@@ -8,7 +8,7 @@ import (
 
 func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
-	dataset, err := h.svc.Details(datasetID)
+	dataset, err := h.datasetsSvc.Details(datasetID)
 	if err != nil {
 		h.logger.Error("Error fetching dataset details", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
