@@ -7,7 +7,7 @@ import { ChevronRight, HomeIcon, ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useProject } from "@/lib/queries/project/get-project";
-import { useProjects } from "@/lib/queries/project/get-projects";
+import { useProjects } from "@/lib/queries/project/list-projects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme/toggle";
+import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 
 // Add this helper at the top of the file
 const isDatasetId = (segment: string) => segment.startsWith("gp_");
@@ -26,7 +27,7 @@ function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
     <nav
       className={cn(
         "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-3",
-        className,
+        className
       )}
       {...props}
     >
@@ -52,13 +53,18 @@ function Breadcrumb({
   const datasetId = segments[1];
 
   const { data: projects } = useProjects();
+  const { data: datasets } = useDatasets({
+    variables: {
+      projectId,
+    },
+  });
   const { data: project, isLoading: isLoadingProject } = useProject(
     projectId
       ? {
           variables: { projectId },
           enabled: segments.length > 0,
         }
-      : { enabled: false },
+      : { enabled: false }
   );
 
   return (
@@ -112,7 +118,7 @@ function Breadcrumb({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
-                        {projects?.map((p) => (
+                        {projects?.results.map((p) => (
                           <DropdownMenuItem
                             key={p.id}
                             onSelect={() => router.push(`/${p.id}`)}
@@ -155,16 +161,16 @@ function Breadcrumb({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      {project.datasets?.map((dataset) => (
+                      {datasets?.results.map((dataset) => (
                         <DropdownMenuItem
-                          key={dataset}
+                          key={dataset.id}
                           onSelect={() =>
-                            router.push(`/${projectId}/${dataset}`)
+                            router.push(`/${projectId}/${dataset.name}`)
                           }
                           className="min-w-[200px]"
                         >
-                          <span className="truncate">{dataset}</span>
-                          {dataset === datasetId && (
+                          <span className="truncate">{dataset.name}</span>
+                          {dataset.id === datasetId && (
                             <span className="ml-auto text-xs text-muted-foreground">
                               Current
                             </span>
@@ -189,7 +195,7 @@ function Breadcrumb({
                     "text-sm hover:text-foreground leading-none",
                     isLast
                       ? "font-medium text-foreground"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                   aria-current={isLast ? "page" : undefined}
                 >

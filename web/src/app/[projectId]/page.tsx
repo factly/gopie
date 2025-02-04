@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { UploadDatasetDialog } from "@/components/dataset/upload-dataset-dialog";
 import { DatasetCard } from "@/components/dataset/dataset-card";
 import { motion } from "framer-motion";
+import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 
 export default function ProjectPage({
   params,
@@ -20,6 +21,12 @@ export default function ProjectPage({
     isLoading,
     error,
   } = useProject({
+    variables: {
+      projectId,
+    },
+  });
+
+  const { data: datasets } = useDatasets({
     variables: {
       projectId,
     },
@@ -90,13 +97,13 @@ export default function ProjectPage({
           <h2 className="text-2xl font-medium tracking-tight text-foreground/90 flex items-center">
             Datasets
             <Badge variant="secondary" className="ml-2 font-normal">
-              {project.datasets?.length}
+              {datasets?.total || 0}
             </Badge>
           </h2>
           <UploadDatasetDialog projectId={projectId} />
         </div>
 
-        {project.datasets?.length === 0 ? (
+        {datasets?.total === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -114,9 +121,9 @@ export default function ProjectPage({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {project.datasets.map((dataset: string, idx) => (
+            {datasets?.results?.map((dataset, idx) => (
               <motion.div
-                key={dataset}
+                key={dataset.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}

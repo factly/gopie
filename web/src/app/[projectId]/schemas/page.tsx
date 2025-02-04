@@ -14,9 +14,9 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 
 import { useSchemas } from "@/lib/queries/dataset/get-schema";
-import { useProject } from "@/lib/queries/project/get-project";
 import { SchemaNode } from "@/components/schema/schema-node";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 
 const nodeTypes = {
   schema: SchemaNode,
@@ -31,13 +31,15 @@ export default function SchemasPage({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const { data: project, isLoading: isProjectLoading } = useProject({
-    variables: { projectId },
+  const { data: datasets, isLoading: isDatasetsLoading } = useDatasets({
+    variables: {
+      projectId,
+    },
   });
 
   const { data: schemas, isLoading: isSchemasLoading } = useSchemas({
     variables: {
-      datasetIds: project?.datasets ?? [],
+      datasetIds: datasets?.results.map((dataset) => dataset.name) ?? [],
     },
   });
 
@@ -50,33 +52,33 @@ export default function SchemasPage({
             animated: true,
             style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
           },
-          eds,
-        ),
+          eds
+        )
       );
     },
-    [setEdges],
+    [setEdges]
   );
 
   React.useEffect(() => {
     if (!schemas) return;
 
     const newNodes = schemas.map((schema, index) => ({
-      id: project?.datasets[index] ?? "",
+      id: datasets?.results[index]?.name ?? "",
       type: "schema",
       position: {
         x: (index % 3) * 450 + 200,
         y: Math.floor(index / 3) * 350 + 100,
       },
       data: {
-        label: project?.datasets[index] ?? "",
+        label: datasets?.results[index]?.name ?? "",
         schema, // Pass the full column info
       },
     }));
 
     setNodes(newNodes);
-  }, [project?.datasets, schemas, setNodes]);
+  }, [datasets, schemas, setNodes]);
 
-  if (isProjectLoading || isSchemasLoading) {
+  if (isDatasetsLoading || isSchemasLoading) {
     return <Skeleton className="h-screen w-full" />;
   }
 

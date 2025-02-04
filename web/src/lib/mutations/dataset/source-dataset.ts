@@ -10,7 +10,7 @@ interface Response {
 export const useSourceDataset = createMutation({
   mutationKey: ["source-dataset"],
   mutationFn: async ({ datasetUrl }: { datasetUrl: string }) => {
-    const res = await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/source/s3`, {
+    const res = await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/source/s3/upload`, {
       body: JSON.stringify({
         path: datasetUrl,
       }),

@@ -6,7 +6,7 @@ export const useDatasetSql = createMutation({
   mutationKey: ["dataset-sql"],
   mutationFn: async (sql: string) => {
     return (await (
-      await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/api/sql`, {
+      await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/sql`, {
         body: JSON.stringify({
           query: sql,
         }),

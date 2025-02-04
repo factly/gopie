@@ -1,6 +1,6 @@
 "use client";
 
-import { useProjects } from "@/lib/queries/project/get-projects";
+import { useProjects } from "@/lib/queries/project/list-projects";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -39,7 +39,7 @@ export default function Home() {
         <CreateProjectDialog />
       </div>
 
-      {projects?.length === 0 ? (
+      {projects?.results.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[400px] py-16 space-y-4">
           <div className="p-4 rounded-full bg-muted">
             <FolderIcon className="w-8 h-8 text-muted-foreground" />
@@ -58,7 +58,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          {projects?.map((project, index) => (
+          {projects?.results.map((project, index) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 20 }}
@@ -81,7 +81,7 @@ export default function Home() {
                     )}
                     <div className="mt-4 flex items-center text-sm font-medium text-muted-foreground/75">
                       <FolderIcon className="mr-2 h-4 w-4" />
-                      {project.datasets?.length ?? 0} datasets
+                      {project?.datasetCount ?? 0} datasets
                     </div>
                   </div>
                 </div>

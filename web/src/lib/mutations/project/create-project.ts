@@ -1,26 +1,14 @@
 import { createMutation } from "react-query-kit";
-
-import { Project, ProjectInput } from "@/types/project";
-import { STORAGE_KEYS } from "@/lib/constants";
+import { Project, ProjectInput } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 
 async function createProject(project: ProjectInput): Promise<Project> {
   try {
-    const newProject: Project = {
-      ...project,
-      id: crypto.randomUUID(),
-      datasets: [],
-    };
-    const projects = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-    const updatedProjects = projects
-      ? [...JSON.parse(projects), newProject]
-      : [newProject];
+    const response = await apiClient.post("v1/api/projects/", {
+      json: project,
+    });
 
-    localStorage.setItem(
-      STORAGE_KEYS.PROJECTS,
-      JSON.stringify(updatedProjects),
-    );
-
-    return newProject;
+    return response.json();
   } catch (error) {
     console.error("Error creating project:", error);
     throw error;

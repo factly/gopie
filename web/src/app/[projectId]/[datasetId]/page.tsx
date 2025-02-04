@@ -122,7 +122,7 @@ export default function DatasetPage({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-medium">Columns:</span>
-                    <span>{tableSchema?.length}</span>
+                    <span>{tableSchema?.schema.length}</span>
                   </div>
                 </motion.div>
               </div>
@@ -154,7 +154,7 @@ export default function DatasetPage({
               <DataPreview datasetId={datasetId} />
             </TabsContent>
             <TabsContent value="schema" className="space-y-4">
-              <SchemaTable schema={tableSchema || []} />
+              <SchemaTable schema={tableSchema?.schema || []} />
             </TabsContent>
           </Tabs>
         </motion.div>

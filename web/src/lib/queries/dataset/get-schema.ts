@@ -15,8 +15,8 @@ export interface ColumnInfo {
 
 const fetchSchema = async ({ datasetId }: { datasetId: string }) => {
   return (await (
-    await ky.get(`${env.NEXT_PUBLIC_GOPIE_API_URL}/api/schema/${datasetId}`)
-  ).json()) as ColumnInfo[];
+    await ky.get(`${env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/schemas/${datasetId}`)
+  ).json()) as { schema: ColumnInfo[] };
 };
 
 export const useSchema = createQuery({

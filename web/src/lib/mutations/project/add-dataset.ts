@@ -1,6 +1,6 @@
 import { createMutation } from "react-query-kit";
-import { STORAGE_KEYS } from "@/lib/constants";
-import { Project } from "@/types/project";
+import { Project } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 
 export const useAddDatasetToProject = createMutation({
   mutationKey: ["add-dataset-to-project"],
@@ -10,29 +10,13 @@ export const useAddDatasetToProject = createMutation({
   }: {
     projectId: string;
     datasetId: string;
-  }) => {
-    // Fetch the project from the local storage
-    const projects = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.PROJECTS) || "[]",
-    ) as Project[];
-    const project = projects.find((p) => p.id === projectId);
+  }): Promise<Project> => {
+    const response = await apiClient.post(`v1/api/projects/${projectId}/datasets/`, {
+      json: {
+        dataset_id: datasetId,
+      },
+    });
 
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    // Add the dataset to the project
-    project.datasets = [...project.datasets, datasetId];
-
-    // Update the project in the local storage
-    const updatedProjects = projects.map((p) =>
-      p.id === projectId ? project : p,
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.PROJECTS,
-      JSON.stringify(updatedProjects),
-    );
-
-    return project;
+    return response.json();
   },
 });
