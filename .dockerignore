@@ -1,3 +1,8 @@
 data
 tmp
-
+volumes
+.air.toml
+.gitignore
+.dockerignore
+*.log
+main
