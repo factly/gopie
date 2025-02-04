@@ -1,6 +1,9 @@
 package pkg
 
-import "strconv"
+import (
+	"math/rand"
+	"strconv"
+)
 
 func ParseLimitAndPage(limitStr, pageStr string) (int, int) {
 	limit := 10
@@ -20,4 +23,15 @@ func ParseLimitAndPage(limitStr, pageStr string) (int, int) {
 	}
 
 	return limit, page
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func RandomString(length uint) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }

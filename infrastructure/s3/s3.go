@@ -6,13 +6,13 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/factly/gopie/application/repositories"
+	"github.com/factly/gopie/domain/pkg"
 	domainCfg "github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/mitchellh/mapstructure"
@@ -166,8 +166,8 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 	defer obj.Close()
 
 	// Extract the filename from the path for the local file
-	fileName = fmt.Sprintf("/tmp/gp_%d.%s",
-		time.Now().Unix(),
+	fileName = fmt.Sprintf("/tmp/gp_%s.%s",
+		pkg.RandomString(13),
 		format,
 	)
 
