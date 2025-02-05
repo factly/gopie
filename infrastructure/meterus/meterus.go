@@ -17,9 +17,9 @@ func NewMeterusApiKeyValidator(client *meterus_.Client) repositories.ApiKeyRepos
 }
 
 func (a *MeterusApiKeyValidator) Validate(key string) (bool, error) {
-	_, _, _, err := a.service.ValidateApiKey(context.Background(), key, []string{"meterus:gopie"})
+	valid, _, _, err := a.service.ValidateApiKey(context.Background(), key, []string{"meterus:gopie"})
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return valid, nil
 }

@@ -62,7 +62,6 @@ type PostgresConfig struct {
 }
 
 func initializeViper() error {
-	viper.SetEnvPrefix("gopie")
 	viper.SetConfigName("config")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
@@ -74,16 +73,6 @@ func initializeViper() error {
 		return nil
 	}
 	return nil
-}
-
-func setDefaults() {
-	viper.SetDefault("SERVE_HOST", "localhost")
-	viper.SetDefault("SERVE_PORT", "8080")
-	viper.SetDefault("S3_REGION", "us-east-1")
-	viper.SetDefault("LOGGER_LEVEL", "info")
-	viper.SetDefault("LOGGER_FILE", "gopie.log")
-	viper.SetDefault("LOGGER_MODE", "dev")
-	viper.SetDefault("MOTHERDUCK_ACCESS_MODE", "read_only")
 }
 
 func validateConfig(config *GopieConfig) error {
@@ -115,6 +104,16 @@ func validateConfig(config *GopieConfig) error {
 	return nil
 }
 
+func setDefaults() {
+	viper.SetDefault("GOPIE_SERVE_HOST", "localhost")
+	viper.SetDefault("GOPIE_SERVE_PORT", "8080")
+	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
+	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
+	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
+	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
+	viper.SetDefault("GOPIE_MOTHERDUCK_ACCESS_MODE", "read_only")
+}
+
 func LoadConfig() (*GopieConfig, error) {
 	if err := initializeViper(); err != nil {
 		return nil, err
@@ -124,41 +123,41 @@ func LoadConfig() (*GopieConfig, error) {
 
 	config := &GopieConfig{
 		Serve: ServeConfig{
-			Host: viper.GetString("SERVE_HOST"),
-			Port: viper.GetString("SERVE_PORT"),
+			Host: viper.GetString("GOPIE_SERVE_HOST"),
+			Port: viper.GetString("GOPIE_SERVE_PORT"),
 		},
 		S3: S3Config{
-			AccessKey: viper.GetString("S3_ACCESS_KEY"),
-			SecretKey: viper.GetString("S3_SECRET_KEY"),
-			Region:    viper.GetString("S3_REGION"),
-			Endpoint:  viper.GetString("S3_ENDPOINT"),
+			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
+			SecretKey: viper.GetString("GOPIE_S3_SECRET_KEY"),
+			Region:    viper.GetString("GOPIE_S3_REGION"),
+			Endpoint:  viper.GetString("GOPIE_S3_ENDPOINT"),
 		},
 		Logger: LoggerConfig{
-			Level:   viper.GetString("LOGGER_LEVEL"),
-			LogFile: viper.GetString("LOGGER_FILE"),
-			Mode:    viper.GetString("LOGGER_MODE"),
+			Level:   viper.GetString("GOPIE_LOGGER_LEVEL"),
+			LogFile: viper.GetString("GOPIE_LOGGER_FILE"),
+			Mode:    viper.GetString("GOPIE_LOGGER_MODE"),
 		},
 		MotherDuck: MotherDuckConfig{
-			DBName:     viper.GetString("MOTHERDUCK_DB_NAME"),
-			Token:      viper.GetString("MOTHERDUCK_TOKEN"),
-			AccessMode: viper.GetString("MOTHERDUCK_ACCESS_MODE"),
+			DBName:     viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
+			Token:      viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
+			AccessMode: viper.GetString("GOPIE_MOTHERDUCK_ACCESS_MODE"),
 		},
 		PortKey: PortKeyConfig{
-			AIModel:    viper.GetString("PORTKEY_MODEL"),
-			VirtualKey: viper.GetString("PORTKEY_VIRTUALKEY"),
-			Apikey:     viper.GetString("PORTKEY_APIKEY"),
-			BaseUrl:    viper.GetString("PORTKEY_BASEURL"),
+			AIModel:    viper.GetString("GOPIE_PORTKEY_MODEL"),
+			VirtualKey: viper.GetString("GOPIE_PORTKEY_VIRTUALKEY"),
+			Apikey:     viper.GetString("GOPIE_PORTKEY_APIKEY"),
+			BaseUrl:    viper.GetString("GOPIE_PORTKEY_BASEURL"),
 		},
 		Meterus: MeterusConfig{
-			Addr:   viper.GetString("METERUS_ADDR"),
-			ApiKey: viper.GetString("METERUS_APIKEY"),
+			Addr:   viper.GetString("GOPIE_METERUS_ADDR"),
+			ApiKey: viper.GetString("GOPIE_METERUS_APIKEY"),
 		},
 		Postgres: PostgresConfig{
-			Host:     viper.GetString("POSTGRES_HOST"),
-			Port:     viper.GetString("POSTGRES_PORT"),
-			Database: viper.GetString("POSTGRES_DB"),
-			User:     viper.GetString("POSTGRES_USER"),
-			Password: viper.GetString("POSTGRES_PASSWORD"),
+			Host:     viper.GetString("GOPIE_POSTGRES_HOST"),
+			Port:     viper.GetString("GOPIE_POSTGRES_PORT"),
+			Database: viper.GetString("GOPIE_POSTGRES_DB"),
+			User:     viper.GetString("GOPIE_POSTGRES_USER"),
+			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
 		},
 	}
 
