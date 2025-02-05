@@ -7,7 +7,17 @@ import (
 	"go.uber.org/zap"
 )
 
-func (h *httpHandler) schema(ctx *fiber.Ctx) error {
+// @Summary Get table schemas
+// @Description Get the schemas information for a dataset/table
+// @Tags query
+// @Accept json
+// @Produce json
+// @Param tableName path string true "Name of the dataset/table" example:"sales_data"
+// @Success 200 {object} map[string]interface{} "Schema information"
+// @Failure 400 {object} responses.ErrorResponse "Invalid table name"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /v1/api/schemas/{tableName} [get]
+func (h *httpHandler) schemas(ctx *fiber.Ctx) error {
 	tableName := ctx.Params("tableName")
 
 	schema, err := h.driverSvc.GetTableSchema(tableName)

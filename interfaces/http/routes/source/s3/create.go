@@ -10,13 +10,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// uploadRequestBody represents the request body for uploading a file from S3
+// @Description Request body for uploading a file from S3
 type uploadRequestBody struct {
-	FilePath    string `json:"file_path" validate:"required,min=1"`
-	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
-	ProjectID   string `json:"project_id" validate:"required,uuid"`
+	// S3 path of the file to upload
+	FilePath string `json:"file_path" validate:"required,min=1" example:"my-bucket/data/sales.csv"`
+	// Description of the dataset
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Sales data for Q1 2024"`
+	// ID of the project to add the dataset to
+	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
-// upload files to gopie from s3
+// @Summary Upload file from S3
+// @Description Upload a file from S3 and create a new dataset
+// @Tags s3
+// @Accept json
+// @Produce json
+// @Param body body uploadRequestBody true "Upload request parameters"
+// @Success 201 {object} responses.SuccessResponse{data=models.Dataset}
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body or S3 file access error"
+// @Failure 404 {object} responses.ErrorResponse "Project not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /source/s3/upload [post]
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	// Get request body from context
 	body := ctx.Locals("body").(*uploadRequestBody)

@@ -6,11 +6,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// updateProjectBody represents the request body for updating a project
+// @Description Request body for updating an existing project
 type updateProjectBody struct {
-	Name        string `json:"name,omitempty" validate:"required,min=3,max=50"`
-	Description string `json:"description,omitempty" validate:"omitempty,max=500"`
+	// Name of the project
+	Name string `json:"name,omitempty" validate:"required,min=3,max=50" example:"Updated Project Name"`
+	// Description of the project
+	Description string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
 }
 
+// @Summary Update a project
+// @Description Update an existing project's name and/or description
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param projectID path string true "Project ID" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param project body updateProjectBody true "Project object"
+// @Success 200 {object} responses.SuccessResponse{data=models.Project}
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body"
+// @Failure 404 {object} responses.ErrorResponse "Project not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /v1/api/projects/{projectID} [patch]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 
