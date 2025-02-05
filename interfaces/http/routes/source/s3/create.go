@@ -47,6 +47,26 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
+		dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
+			Name:        res.TableName,
+			Description: body.Description,
+			ProjectID:   body.ProjectID,
+			Format:      res.Format,
+			FilePath:    body.FilePath,
+			Size:        res.Size,
+		})
+
+		f, err := h.datasetSvc.CreateFailedUpload(dataset.ID, err.Error())
+		if err != nil {
+			h.logger.Error("Error creating failed upload record", zap.Error(err))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error creating failed upload record",
+				"code":    fiber.StatusInternalServerError,
+				"data":    f,
+			})
+		}
+
 		// For S3 upload failures, return a more specific error
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
