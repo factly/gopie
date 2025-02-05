@@ -47,7 +47,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
-		dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
+		dataset, e := h.datasetSvc.Create(&models.CreateDatasetParams{
 			Name:        res.TableName,
 			Description: body.Description,
 			ProjectID:   body.ProjectID,
@@ -55,15 +55,22 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			FilePath:    body.FilePath,
 			Size:        res.Size,
 		})
+		if e != nil {
+			h.logger.Error("Error creating dataset record", zap.Error(e))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   e.Error(),
+				"message": "Error creating failed dataset record",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
 
-		f, err := h.datasetSvc.CreateFailedUpload(dataset.ID, err.Error())
-		if err != nil {
+		f, e := h.datasetSvc.CreateFailedUpload(dataset.ID, err.Error())
+		if e != nil {
 			h.logger.Error("Error creating failed upload record", zap.Error(err))
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   err.Error(),
+				"error":   e.Error(),
 				"message": "Error creating failed upload record",
 				"code":    fiber.StatusInternalServerError,
-				"data":    f,
 			})
 		}
 
@@ -72,6 +79,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			"error":   err.Error(),
 			"message": "Failed to upload file from S3. Please check if the file exists and you have proper access.",
 			"code":    fiber.StatusBadRequest,
+			"data":    f,
 		})
 	}
 
