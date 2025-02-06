@@ -25,6 +25,7 @@ go.work.sum
 
 # env file
 .env
+companion.env
 /volumes
 requests
 ingestions
