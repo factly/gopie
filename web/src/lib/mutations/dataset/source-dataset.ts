@@ -1,6 +1,5 @@
 import { createMutation } from "react-query-kit";
-import { env } from "@/lib/env";
-import ky from "ky";
+import { apiClient } from "@/lib/api-client";
 
 interface Response {
   message: string;
@@ -9,10 +8,12 @@ interface Response {
 
 export const useSourceDataset = createMutation({
   mutationKey: ["source-dataset"],
-  mutationFn: async ({ datasetUrl }: { datasetUrl: string }) => {
-    const res = await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/source/s3/upload`, {
+  mutationFn: async ({ datasetUrl, projectId }: { datasetUrl: string; projectId: string }) => {
+    const res = await apiClient.post("source/s3/upload", {
       body: JSON.stringify({
-        path: datasetUrl,
+        file_path: datasetUrl,
+        description: "Uploaded from Gopie Web",
+        project_id: projectId,
       }),
     });
 

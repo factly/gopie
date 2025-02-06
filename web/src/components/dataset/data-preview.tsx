@@ -558,7 +558,7 @@ export function DataPreview(props: { datasetId: string }) {
         transition={{ duration: 0.2 }}
         className="shadow-sm border overflow-hidden"
       >
-        {!data || data.rows.length === 0 ? (
+        {!data || data.data.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -590,7 +590,7 @@ export function DataPreview(props: { datasetId: string }) {
             </TableHeader>
             <TableBody>
               <AnimatePresence mode="wait">
-                {data.rows.map((row, idx) => (
+                {data.data.map((row, idx) => (
                   <MotionTableRow
                     key={idx}
                     initial={{ opacity: 0 }}
@@ -642,9 +642,9 @@ export function DataPreview(props: { datasetId: string }) {
             <PaginationItem>
               <PaginationNext
                 onClick={() => setCurrentPage((p) => p + 1)}
-                aria-disabled={!data || data.rows.length < rowsPerPage}
+                aria-disabled={!data || data.data.length < rowsPerPage}
                 className={`cursor-pointer ${
-                  !data || data.rows.length < rowsPerPage
+                  !data || data.data.length < rowsPerPage
                     ? "pointer-events-none opacity-50"
                     : ""
                 }`}

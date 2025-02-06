@@ -1,5 +1,4 @@
-import { env } from "@/lib/env";
-import ky from "ky";
+import { apiClient } from "@/lib/api-client";
 import { createQuery } from "react-query-kit";
 
 export const useGetTable = createQuery({
@@ -26,8 +25,8 @@ export const useGetTable = createQuery({
       operator: "e" | "gt" | "lt";
     }[];
   }) => {
-    const res = await ky.get(
-      `${env.NEXT_PUBLIC_GOPIE_API_URL}/api/tables/${datasetId}`,
+    const res = await apiClient.get(
+      `v1/api/tables/${datasetId}`,
       {
         searchParams: {
           page,
@@ -45,6 +44,9 @@ export const useGetTable = createQuery({
         },
       },
     );
-    return (await res.json()) as Record<string, unknown>[];
+    return (await res.json()) as {
+      data: Record<string, unknown>[];
+      total: number;
+    };
   },
 });

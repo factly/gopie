@@ -81,6 +81,7 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
         : "";
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
+        projectId,
       });
 
       if (!res?.tableName) {
@@ -115,7 +116,7 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
     }
   });
 
-  uppy.on("upload-error", (file, error, response) => {
+  uppy.on("upload-error", (file, error) => {
     toast.error(`Upload failed: ${error.message}`);
   });
 

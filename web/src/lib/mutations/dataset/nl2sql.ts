@@ -1,5 +1,4 @@
-import { env } from "@/lib/env";
-import ky from "ky";
+import { apiClient } from "@/lib/api-client";
 import { createMutation } from "react-query-kit";
 
 export const useNl2Sql = createMutation({
@@ -12,10 +11,10 @@ export const useNl2Sql = createMutation({
     datasetId: string;
   }) => {
     return (await (
-      await ky.post(`${env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/nl2sql`, {
+      await apiClient.post("v1/api/nl2sql", {
         body: JSON.stringify({
           query,
-          table_name: datasetId,
+          table: datasetId,
         }),
       })
     ).json()) as {

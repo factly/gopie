@@ -17,7 +17,7 @@ declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void,
+      callback: (...args: unknown[]) => void
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -46,7 +46,7 @@ export default function SqlPage({
 }) {
   const { datasetId } = React.use(params);
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${datasetId} LIMIT 10`,
+    `SELECT * FROM ${datasetId} LIMIT 10`
   );
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
@@ -57,7 +57,7 @@ export default function SqlPage({
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
 
-  const { data: schema } = useSchema({
+  const { data: schema, isLoading: schemaLoading } = useSchema({
     variables: {
       datasetId,
     },
@@ -73,7 +73,7 @@ export default function SqlPage({
       toast.promise(executeSql.mutateAsync(query), {
         loading: "Executing SQL query...",
         success: (response) => {
-          setResults(response);
+          setResults(response.data);
           return "Query executed successfully";
         },
         error: (err) => `Failed to execute query: ${err.message}`,
@@ -96,7 +96,7 @@ export default function SqlPage({
 
         toast.loading("Executing generated SQL...", { id: promiseId });
         const response = await executeSql.mutateAsync(sqlQuery.sql);
-        setResults(response);
+        setResults(response.data);
 
         toast.success("Query executed successfully", { id: promiseId });
       } catch (error) {
@@ -116,14 +116,21 @@ export default function SqlPage({
     toast.promise(executeSql.mutateAsync(generatedSql), {
       loading: "Executing SQL query...",
       success: (response) => {
-        setResults(response);
+        setResults(response.data);
         return "Query executed successfully";
       },
       error: (err) => `Failed to execute query: ${err.message}`,
     });
   };
 
-  const isLoading = executeSql.isPending || nl2Sql.isPending;
+  const isPending = executeSql.isPending || nl2Sql.isPending;
+
+  if (schemaLoading) {
+    return <div>Loading schema...</div>;
+  }
+  if (!schema) {
+    return <div>No schema found</div>;
+  }
 
   return (
     <motion.div
@@ -160,8 +167,8 @@ export default function SqlPage({
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
-            <Button onClick={handleExecute} disabled={isLoading}>
-              {isLoading ? (
+            <Button onClick={handleExecute} disabled={isPending}>
+              {isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <PlayIcon className="mr-2 h-4 w-4" />
@@ -177,7 +184,7 @@ export default function SqlPage({
                   <SqlEditor
                     value={query}
                     onChange={setQuery}
-                    schema={schema}
+                    schema={schema.schema}
                     datasetId={datasetId}
                   />
                 </motion.div>
@@ -231,7 +238,7 @@ export default function SqlPage({
                             <SqlEditor
                               value={generatedSql}
                               onChange={setGeneratedSql}
-                              schema={schema}
+                              schema={schema.schema}
                               datasetId={datasetId}
                             />
                           </div>

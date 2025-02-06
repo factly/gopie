@@ -30,8 +30,14 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  name: z
+    .string()
+    .min(3, "Name must be at least 3 characters")
+    .max(50, "Name must be less than 50 characters"),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(500, "Description must be less than 500 characters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;

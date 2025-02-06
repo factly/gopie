@@ -1,7 +1,6 @@
 // TODO: remove `any`s from this file
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { env } from "@/lib/env";
-import ky from "ky";
+import { apiClient } from "@/lib/api-client";
 import { createQuery } from "react-query-kit";
 
 export interface ColumnInfo {
@@ -15,7 +14,7 @@ export interface ColumnInfo {
 
 const fetchSchema = async ({ datasetId }: { datasetId: string }) => {
   return (await (
-    await ky.get(`${env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/schemas/${datasetId}`)
+    await apiClient.get(`v1/api/schemas/${datasetId}`)
   ).json()) as { schema: ColumnInfo[] };
 };
 

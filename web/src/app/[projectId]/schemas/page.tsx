@@ -39,7 +39,7 @@ export default function SchemasPage({
 
   const { data: schemas, isLoading: isSchemasLoading } = useSchemas({
     variables: {
-      datasetIds: datasets?.results.map((dataset) => dataset.name) ?? [],
+      datasetIds: (datasets?.results ?? []).map((dataset) => dataset.name),
     },
   });
 
