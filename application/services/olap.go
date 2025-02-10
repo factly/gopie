@@ -32,7 +32,7 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	if tableName == "" {
 		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
 	}
-	// extract file format and table name from s3Path
+	// extract file format from s3Path
 	parts := strings.Split(s3Path, "/")
 	formatParts := strings.Split(parts[len(parts)-1], ".")
 	format := formatParts[len(formatParts)-1]

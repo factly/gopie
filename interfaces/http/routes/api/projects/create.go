@@ -2,6 +2,7 @@ package projects
 
 import (
 	"github.com/factly/gopie/domain/models"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -11,7 +12,33 @@ type createRequestBody struct {
 }
 
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
-	body := ctx.Locals("body").(*createRequestBody)
+	body := createRequestBody{}
+	if err := ctx.BodyParser(&body); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	validate := validator.New()
+
+	if err := validate.Struct(body); err != nil {
+		var errors []models.ValidationError
+		for _, err := range err.(validator.ValidationErrors) {
+			errors = append(errors, models.ValidationError{
+				Field: err.Field(),
+				Tag:   err.Tag(),
+				Value: err.Param(),
+			})
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   errors,
+			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+
+	}
 
 	project, err := h.svc.Create(models.CreateProjectParams{
 		Name:        body.Name,

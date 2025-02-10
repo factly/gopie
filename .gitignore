@@ -31,4 +31,5 @@ ingestions
 ingest.sh
 *.csv
 *.log
+logs
 

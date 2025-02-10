@@ -2,10 +2,10 @@ package s3
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -19,7 +19,33 @@ type uploadRequestBody struct {
 // upload files to gopie from s3
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	// Get request body from context
-	body := ctx.Locals("body").(*uploadRequestBody)
+	var body uploadRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		h.logger.Info("Error parsing request body", zap.Error(err))
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid request body format",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+	validate := validator.New()
+
+	if err := validate.Struct(body); err != nil {
+		var errors []models.ValidationError
+		for _, err := range err.(validator.ValidationErrors) {
+			errors = append(errors, models.ValidationError{
+				Field: err.Field(),
+				Tag:   err.Tag(),
+				Value: err.Param(),
+			})
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   errors,
+			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+
+	}
 
 	// Check if project exists
 	project, err := h.projectSvc.Details(body.ProjectID)
@@ -50,9 +76,9 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		dataset, e := h.datasetSvc.Create(&models.CreateDatasetParams{
 			Name:        res.TableName,
 			Description: body.Description,
-			ProjectID:   body.ProjectID,
+			ProjectID:   project.ID,
 			Format:      res.Format,
-			FilePath:    body.FilePath,
+			FilePath:    res.FilePath,
 			Size:        res.Size,
 		})
 		if e != nil {
@@ -121,10 +147,10 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
 		Name:        res.TableName,
 		Description: body.Description,
-		ProjectID:   body.ProjectID,
+		ProjectID:   project.ID,
 		Columns:     columns,
 		Format:      res.Format,
-		FilePath:    body.FilePath,
+		FilePath:    res.FilePath,
 		RowCount:    int(count),
 		Size:        res.Size,
 	})
@@ -135,15 +161,6 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			"message": "Error creating dataset record",
 			"code":    fiber.StatusInternalServerError,
 		})
-	}
-
-	// Cleanup temporary file
-	if err = os.Remove(res.FilePath); err != nil {
-		h.logger.Error("Error deleting temporary file",
-			zap.Error(err),
-			zap.String("file_path", res.FilePath),
-			zap.String("dataset_id", dataset.ID))
-		// Continue execution as this is not a critical error
 	}
 
 	h.logger.Info("File upload completed successfully",
