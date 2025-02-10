@@ -43,7 +43,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("project_id", project.ID))
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.UploadFile(ctx.Context(), body.FilePath, "")
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "")
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 

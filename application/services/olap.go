@@ -27,7 +27,25 @@ func NewOlapService(olap repositories.OlapRepository, source repositories.Source
 	}
 }
 
-func (d *OlapService) UploadFile(ctx context.Context, filepath string, name string) (*models.UploadDatasetResult, error) {
+func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name string) (*models.UploadDatasetResult, error) {
+	tableName := name
+	if tableName == "" {
+		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
+	}
+	// extract file format and table name from s3Path
+	parts := strings.Split(s3Path, "/")
+	formatParts := strings.Split(parts[len(parts)-1], ".")
+	format := formatParts[len(formatParts)-1]
+	err := d.olap.CreateTableFromS3(s3Path, tableName, format)
+	return &models.UploadDatasetResult{
+		FilePath:  s3Path,
+		Format:    format,
+		Size:      0,
+		TableName: tableName,
+	}, err
+}
+
+func (d *OlapService) IngestFile(ctx context.Context, filepath string, name string) (*models.UploadDatasetResult, error) {
 	// parse filepath to bucketname and path
 	// s3://bucketname/path/to/file
 	bucket, path, err := parseFilepath(filepath)
