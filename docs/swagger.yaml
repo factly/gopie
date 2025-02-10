@@ -1,0 +1,727 @@
+basePath: /
+definitions:
+  api.nl2SqlRequest:
+    description: Request body for converting natural language to SQL
+    properties:
+      query:
+        description: Natural language query to convert to SQL
+        example: show me total sales by region
+        minLength: 3
+        type: string
+      table:
+        description: Name of the dataset/table to query
+        example: sales_data
+        type: string
+    required:
+    - query
+    - table
+    type: object
+  api.sqlRequestBody:
+    description: Request body for executing a SQL query
+    properties:
+      query:
+        description: SQL query to execute (only SELECT statements are allowed)
+        example: SELECT * FROM sales_data WHERE value > 1000
+        minLength: 1
+        type: string
+    required:
+    - query
+    type: object
+  models.Dataset:
+    description: Dataset model
+    properties:
+      columns:
+        description: Column definitions of the dataset
+        items:
+          additionalProperties: {}
+          type: object
+        type: array
+      created_at:
+        description: Creation timestamp
+        example: "2024-02-05T12:00:00Z"
+        type: string
+      description:
+        description: Description of the dataset
+        example: Sales data for Q1 2024
+        type: string
+      file_path:
+        description: File path of the dataset
+        example: /data/sales_data.csv
+        type: string
+      format:
+        description: Format of the dataset (e.g., csv, parquet)
+        example: csv
+        type: string
+      id:
+        description: Unique identifier of the dataset
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        description: Name of the dataset
+        example: sales_data
+        type: string
+      row_count:
+        description: Number of rows in the dataset
+        example: 1000
+        type: integer
+      size:
+        description: Size of the dataset in bytes
+        example: 1048576
+        type: integer
+      updated_at:
+        description: Last update timestamp
+        example: "2024-02-05T12:00:00Z"
+        type: string
+    type: object
+  models.Project:
+    description: Project model
+    properties:
+      createdAt:
+        description: Creation timestamp
+        example: "2024-02-05T12:00:00Z"
+        type: string
+      description:
+        description: Description of the project
+        example: This is a sample project description
+        type: string
+      id:
+        description: Unique identifier of the project
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        description: Name of the project
+        example: My Project
+        type: string
+      updatedAt:
+        description: Last update timestamp
+        example: "2024-02-05T12:00:00Z"
+        type: string
+    type: object
+  projects.createRequestBody:
+    description: Request body for creating a new project
+    properties:
+      description:
+        description: Description of the project
+        example: This is a detailed description of my new project
+        maxLength: 500
+        minLength: 10
+        type: string
+      name:
+        description: Name of the project
+        example: My New Project
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  projects.updateProjectBody:
+    description: Request body for updating an existing project
+    properties:
+      description:
+        description: Description of the project
+        example: Updated project description
+        maxLength: 500
+        type: string
+      name:
+        description: Name of the project
+        example: Updated Project Name
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  responses.ErrorResponse:
+    description: Error response structure
+    properties:
+      code:
+        description: Error code
+        example: 400
+        type: integer
+      error:
+        description: Error details
+        example: Validation failed
+        type: string
+      message:
+        description: Error message
+        example: Invalid request parameters
+        type: string
+    type: object
+  responses.SuccessResponse:
+    description: Success response structure with data
+    properties:
+      data:
+        description: Response data
+    type: object
+  s3.updateRequestBody:
+    description: Request body for updating a dataset from S3
+    properties:
+      dataset:
+        description: Name of the dataset to update
+        example: sales_data_table
+        type: string
+      description:
+        description: Updated description of the dataset (optional)
+        example: Updated sales data for Q1 2024
+        maxLength: 500
+        minLength: 10
+        type: string
+      file_path:
+        description: S3 path of the new file (optional)
+        example: my-bucket/data/updated_sales.csv
+        minLength: 1
+        type: string
+    required:
+    - dataset
+    type: object
+  s3.uploadRequestBody:
+    description: Request body for uploading a file from S3
+    properties:
+      description:
+        description: Description of the dataset
+        example: Sales data for Q1 2024
+        maxLength: 500
+        minLength: 10
+        type: string
+      file_path:
+        description: S3 path of the file to upload
+        example: my-bucket/data/sales.csv
+        minLength: 1
+        type: string
+      project_id:
+        description: ID of the project to add the dataset to
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - file_path
+    - project_id
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: GoPie API documentation
+  title: GoPie API
+  version: "1.0"
+paths:
+  /source/s3/update:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing dataset with a new file from S3
+      parameters:
+      - description: Update request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/s3.updateRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
+        "400":
+          description: Invalid request body or S3 file access error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Update dataset from S3
+      tags:
+      - s3
+  /source/s3/upload:
+    post:
+      consumes:
+      - application/json
+      description: Upload a file from S3 and create a new dataset
+      parameters:
+      - description: Upload request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/s3.uploadRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
+        "400":
+          description: Invalid request body or S3 file access error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Upload file from S3
+      tags:
+      - s3
+  /v1/api/nl2sql:
+    post:
+      consumes:
+      - application/json
+      description: Convert a natural language query to SQL for a specific dataset
+      parameters:
+      - description: Natural language query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.nl2SqlRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Generated SQL query
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or could not generate SQL
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Table not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Convert natural language to SQL
+      tags:
+      - query
+  /v1/api/projects:
+    get:
+      consumes:
+      - application/json
+      description: Get all projects with pagination and search
+      parameters:
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Search query
+        in: query
+        name: query
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Project'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: No projects found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: List all projects
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Create a new project with the given name and description
+      parameters:
+      - description: Project object
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/projects.createRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Project'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Create a new project
+      tags:
+      - projects
+  /v1/api/projects/{projectID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing project
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete a project
+      tags:
+      - projects
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific project
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Project'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get project details
+      tags:
+      - projects
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing project's name and/or description
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Project object
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/projects.updateProjectBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Project'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Update a project
+      tags:
+      - projects
+  /v1/api/projects/{projectID}/datasets:
+    get:
+      consumes:
+      - application/json
+      description: Get all datasets in a project with pagination
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Dataset'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: List project datasets
+      tags:
+      - datasets
+  /v1/api/projects/{projectID}/datasets/{datasetID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a dataset from a project
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete dataset
+      tags:
+      - datasets
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific dataset in a project
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Dataset'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get dataset details
+      tags:
+      - datasets
+  /v1/api/schemas/{tableName}:
+    get:
+      consumes:
+      - application/json
+      description: Get the schemas information for a dataset/table
+      parameters:
+      - description: Name of the dataset/table
+        in: path
+        name: tableName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schema information
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid table name
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get table schemas
+      tags:
+      - query
+  /v1/api/sql:
+    post:
+      consumes:
+      - application/json
+      description: Execute a SQL query on a dataset (only SELECT statements are allowed)
+      parameters:
+      - description: SQL query
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/api.sqlRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Query results
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Invalid SQL query
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "403":
+          description: Non-SELECT statement
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Table not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Execute SQL query
+      tags:
+      - query
+  /v1/api/tables/{tableName}:
+    get:
+      consumes:
+      - application/json
+      description: Query a dataset using REST-style parameters
+      parameters:
+      - description: Name of the dataset/table
+        in: path
+        name: tableName
+        required: true
+        type: string
+      - description: Comma-separated list of columns to return
+        in: query
+        name: columns
+        type: string
+      - description: Sort order (column name with optional -prefix for desc)
+        in: query
+        name: sort
+        type: string
+      - description: Number of records to return
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Query results
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Query dataset using REST API
+      tags:
+      - query
+swagger: "2.0"

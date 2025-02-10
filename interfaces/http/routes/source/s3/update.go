@@ -10,13 +10,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// updateRequestBody represents the request body for updating a dataset from S3
+// @Description Request body for updating a dataset from S3
 type updateRequestBody struct {
-	FilePath    string `json:"file_path,omitempty" validate:"omitempty,min=1"`
-	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
-	Dataset     string `json:"dataset" validate:"required"`
+	// S3 path of the new file (optional)
+	FilePath string `json:"file_path,omitempty" validate:"omitempty,min=1" example:"my-bucket/data/updated_sales.csv"`
+	// Updated description of the dataset (optional)
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Updated sales data for Q1 2024"`
+	// Name of the dataset to update
+	Dataset string `json:"dataset" validate:"required" example:"sales_data_table"`
 }
 
-// upload files to gopie from s3
+// @Summary Update dataset from S3
+// @Description Update an existing dataset with a new file from S3
+// @Tags s3
+// @Accept json
+// @Produce json
+// @Param body body updateRequestBody true "Update request parameters"
+// @Success 200 {object} responses.SuccessResponse{data=models.Dataset}
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body or S3 file access error"
+// @Failure 404 {object} responses.ErrorResponse "Dataset not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /source/s3/update [post]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	// Get request body from context
 	var body updateRequestBody
