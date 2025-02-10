@@ -5,6 +5,7 @@ import (
 
 	"github.com/elliot14A/meterus-go/client"
 	"github.com/factly/gopie/application/services"
+	_ "github.com/factly/gopie/docs" // Import generated Swagger docs
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/meterus"
@@ -21,9 +22,15 @@ import (
 	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
 	"go.uber.org/zap"
 )
 
+// @title GoPie API
+// @version 1.0
+// @description GoPie API documentation
+// @host localhost:8081
+// @BasePath /
 func ServeHttp() error {
 	config, err := config.LoadConfig()
 	if err != nil {
@@ -74,6 +81,9 @@ func ServeHttp() error {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Sugar().Desugar(),
 	}))
+
+	// Swagger route
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Only enable authorization if meterus is configured
 	if config.Meterus.ApiKey == "" || config.Meterus.Addr == "" {

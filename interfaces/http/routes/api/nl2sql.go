@@ -12,42 +12,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// nl2SqlRequest represents the request body for natural language to SQL conversion
+// @Description Request body for converting natural language to SQL
 type nl2SqlRequest struct {
-	Query     string `json:"query" validate:"required,min=3"`
-	TableName string `json:"table" validate:"required"`
+	// Natural language query to convert to SQL
+	Query string `json:"query" validate:"required,min=3" example:"show me total sales by region"`
+	// Name of the dataset/table to query
+	TableName string `json:"table" validate:"required" example:"sales_data"`
 }
 
-func convertSchemaToJson(schema any) string {
-	schemaJson, _ := json.Marshal(schema)
-	return string(schemaJson)
-}
-
-func convertRowsToCSV(rows []map[string]interface{}) string {
-	var buf bytes.Buffer
-	writer := csv.NewWriter(&buf)
-
-	// Write CSV headers (column names)
-	if len(rows) > 0 {
-		headers := make([]string, 0, len(rows[0]))
-		for key := range rows[0] {
-			headers = append(headers, key)
-		}
-		writer.Write(headers)
-
-		// Write CSV data rows
-		for _, row := range rows {
-			record := make([]string, 0, len(row))
-			for _, value := range row {
-				record = append(record, fmt.Sprintf("%v", value))
-			}
-			writer.Write(record)
-		}
-	}
-
-	writer.Flush()
-	return buf.String()
-}
-
+// @Summary Convert natural language to SQL
+// @Description Convert a natural language query to SQL for a specific dataset
+// @Tags query
+// @Accept json
+// @Produce json
+// @Param request body nl2SqlRequest true "Natural language query request"
+// @Success 200 {object} map[string]string "Generated SQL query"
+// @Failure 400 {object} responses.ErrorResponse "Invalid request or could not generate SQL"
+// @Failure 404 {object} responses.ErrorResponse "Table not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /v1/api/nl2sql [post]
 func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	var body nl2SqlRequest
 	if err := ctx.BodyParser(&body); err != nil {
@@ -155,4 +139,35 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"sql": sql,
 	})
+}
+
+func convertSchemaToJson(schema any) string {
+	schemaJson, _ := json.Marshal(schema)
+	return string(schemaJson)
+}
+
+func convertRowsToCSV(rows []map[string]interface{}) string {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	// Write CSV headers (column names)
+	if len(rows) > 0 {
+		headers := make([]string, 0, len(rows[0]))
+		for key := range rows[0] {
+			headers = append(headers, key)
+		}
+		writer.Write(headers)
+
+		// Write CSV data rows
+		for _, row := range rows {
+			record := make([]string, 0, len(row))
+			for _, value := range row {
+				record = append(record, fmt.Sprintf("%v", value))
+			}
+			writer.Write(record)
+		}
+	}
+
+	writer.Flush()
+	return buf.String()
 }

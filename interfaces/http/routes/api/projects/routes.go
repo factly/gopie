@@ -3,7 +3,6 @@ package projects
 import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain/pkg/logger"
-	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api/projects/datasets"
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,9 +25,9 @@ func Routes(router fiber.Router, params RouterParams) {
 		svc:    params.ProjectService,
 	}
 	router.Get("/", httpHandler.list)
-	router.Post("/", middleware.ValidateReqBodyMiddleware(new(createRequestBody)), httpHandler.create)
+	router.Post("/", httpHandler.create)
 	router.Get("/:projectID", httpHandler.details)
-	router.Patch("/:projectID", middleware.ValidateReqBodyMiddleware(new(updateProjectBody)), httpHandler.update)
+	router.Patch("/:projectID", httpHandler.update)
 	router.Delete("/:projectID", httpHandler.delete)
 	datasets.Routes(router.Group("/:projectID/datasets"), datasets.RouterParams{
 		Logger:      params.Logger,
