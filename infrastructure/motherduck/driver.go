@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
@@ -78,6 +79,29 @@ func (m *motherDuckOlapoDriver) CreateTable(filePath, tableName, format string) 
 
 	_, err := m.db.Exec(sql)
 
+	return err
+}
+
+func (m *motherDuckOlapoDriver) CreateTableFromS3(s3Path, tableName, format string) error {
+	// Parse S3 path
+	if !strings.HasPrefix(s3Path, "s3://") {
+		return fmt.Errorf("invalid S3 path: must start with s3://")
+	}
+
+	readSql := ""
+	switch format {
+	case "parquet":
+		readSql = fmt.Sprintf("SELECT * FROM read_parquet('%s')", s3Path)
+	case "csv":
+		readSql = fmt.Sprintf("SELECT * FROM read_csv('%s')", s3Path)
+	case "json":
+		readSql = fmt.Sprintf("SELECT * FROM read_json('%s')", s3Path)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+
+	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
+	_, err := m.db.Exec(sql)
 	return err
 }
 
