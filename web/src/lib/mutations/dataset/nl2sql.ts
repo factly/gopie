@@ -16,6 +16,8 @@ export const useNl2Sql = createMutation({
           query,
           table: datasetId,
         }),
+        timeout: 60000, // 60 seconds timeout
+        retry: 0, // Disable retries for nl2sql
       })
     ).json()) as {
       sql: string;

@@ -2,39 +2,36 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { DownloadIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DataPreview } from "@/components/dataset/data-preview";
-import { useDatasetSql } from "@/lib/queries/dataset/sql";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSchema } from "@/lib/queries/dataset/get-schema";
 import { SchemaTable } from "@/components/dataset/schema-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatasetHeader } from "@/components/dataset/dataset-header";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDataset } from "@/lib/queries/dataset/get-dataset";
 
 export default function DatasetPage({
   params,
 }: {
   params: Promise<{ projectId: string; datasetId: string }>;
 }) {
-  const { datasetId } = React.use(params);
+  const { datasetId, projectId } = React.use(params);
+  const queryClient = useQueryClient();
 
-  const { data: totalRowsData, isLoading: isTotalRowsLoading } = useDatasetSql<
-    Array<{ cnt: number }>
-  >({
-    variables: {
-      sql: `SELECT COUNT(*) as cnt FROM ${datasetId}`,
-    },
-  });
-  const totalRows = totalRowsData?.[0]?.cnt;
-
-  const { data: tableSchema, isLoading: isSchemaLoading } = useSchema({
+  const { data: dataset, isLoading } = useDataset({
     variables: {
       datasetId,
+      projectId,
     },
   });
 
-  const isLoading = isTotalRowsLoading || isSchemaLoading;
+  const tableSchema = dataset?.columns || [];
+
+  const handleUpdate = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["datasets"],
+    });
+  };
 
   if (isLoading) {
     return (
@@ -77,6 +74,10 @@ export default function DatasetPage({
     );
   }
 
+  if (!dataset) {
+    return <div>Dataset not found</div>;
+  }
+
   return (
     <div className="min-h-screen">
       <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
@@ -86,56 +87,7 @@ export default function DatasetPage({
           animate={{ opacity: 1, y: 0 }}
           className="bg-background p-6 rounded-lg shadow-sm border"
         >
-          <div className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <motion.h1
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-                  >
-                    {datasetId}
-                  </motion.h1>
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", delay: 0.3 }}
-                  >
-                    <Badge variant="secondary" className="h-6 font-medium">
-                      CSV
-                    </Badge>
-                  </motion.div>
-                </div>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="flex items-center gap-4 text-muted-foreground"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium">Rows:</span>
-                    <span>
-                      {new Intl.NumberFormat().format(totalRows ?? 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium">Columns:</span>
-                    <span>{tableSchema?.schema.length}</span>
-                  </div>
-                </motion.div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 hover:shadow-md transition-shadow"
-              >
-                <DownloadIcon className="mr-2 h-4 w-4" />
-                Download Dataset
-              </Button>
-            </div>
-          </div>
+          <DatasetHeader dataset={dataset} onUpdate={handleUpdate} />
         </motion.div>
 
         {/* Content Tabs */}
@@ -151,10 +103,10 @@ export default function DatasetPage({
               <TabsTrigger value="schema">Schema</TabsTrigger>
             </TabsList>
             <TabsContent value="preview" className="space-y-4">
-              <DataPreview datasetId={datasetId} />
+              <DataPreview datasetId={dataset.name} />
             </TabsContent>
             <TabsContent value="schema" className="space-y-4">
-              <SchemaTable schema={tableSchema?.schema || []} />
+              <SchemaTable schema={tableSchema || []} />
             </TabsContent>
           </Tabs>
         </motion.div>

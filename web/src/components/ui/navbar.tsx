@@ -20,7 +20,10 @@ import { ThemeToggle } from "@/components/theme/toggle";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 
 // Add this helper at the top of the file
-const isDatasetId = (segment: string) => segment.startsWith("gp_");
+const isDatasetId = (segment: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    segment
+  );
 
 function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -156,7 +159,11 @@ function Breadcrumb({
                         variant="link"
                         className="h-auto p-0 text-sm font-medium text-foreground hover:no-underline flex items-center gap-1"
                       >
-                        {segment}
+                        {
+                          datasets?.results.find(
+                            (dataset) => dataset.id === datasetId
+                          )?.name
+                        }
                         <ChevronDown className="size-3 opacity-50" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -165,7 +172,7 @@ function Breadcrumb({
                         <DropdownMenuItem
                           key={dataset.id}
                           onSelect={() =>
-                            router.push(`/${projectId}/${dataset.name}`)
+                            router.push(`/${projectId}/${dataset.id}`)
                           }
                           className="min-w-[200px]"
                         >

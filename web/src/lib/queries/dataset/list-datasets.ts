@@ -15,6 +15,14 @@ async function fetchDatasets({
     page = 1,
     query,
 }: ListDatasetsParams): Promise<PaginatedResponse<Dataset>> {
+    if (!projectId) {
+        return {
+            results: [],
+            offset: 0,
+            limit: 0,
+            total: 0,
+        };
+    }
     try {
         const searchParams = new URLSearchParams({
             limit: limit.toString(),

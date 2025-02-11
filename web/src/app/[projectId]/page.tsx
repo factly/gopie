@@ -9,6 +9,9 @@ import { UploadDatasetDialog } from "@/components/dataset/upload-dataset-dialog"
 import { DatasetCard } from "@/components/dataset/dataset-card";
 import { motion } from "framer-motion";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
+import { deleteDataset } from "@/lib/mutations/dataset/delete-dataset";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProjectPage({
   params,
@@ -16,6 +19,8 @@ export default function ProjectPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = React.use(params);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     data: project,
     isLoading,
@@ -31,6 +36,26 @@ export default function ProjectPage({
       projectId,
     },
   });
+
+  const handleDeleteDataset = async (datasetId: string) => {
+    try {
+      await deleteDataset(projectId, datasetId);
+      await queryClient.invalidateQueries({
+        queryKey: ["datasets"],
+      });
+      toast({
+        title: "Dataset deleted",
+        description: "The dataset has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Failed to delete dataset. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -128,7 +153,11 @@ export default function ProjectPage({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
               >
-                <DatasetCard dataset={dataset} projectId={projectId} />
+                <DatasetCard
+                  dataset={dataset}
+                  projectId={projectId}
+                  onDelete={handleDeleteDataset}
+                />
               </motion.div>
             ))}
           </motion.div>

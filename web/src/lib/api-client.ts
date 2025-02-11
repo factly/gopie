@@ -1,5 +1,6 @@
 import ky from 'ky';
 import { env } from '@/lib/env';
+import { ColumnInfo } from '@/lib/queries/dataset/get-schema';
 
 export const apiClient = ky.create({
     prefixUrl: env.NEXT_PUBLIC_GOPIE_API_URL,
@@ -28,14 +29,7 @@ export interface Dataset {
     description: string;
     format: string;
     row_count: number;
-    columns: Array<{
-        column_name: string;
-        column_type: string;
-        default: null | string;
-        extra: null | string;
-        key: null | string;
-        null: "YES" | "NO";
-    }>;
+    columns: ColumnInfo[];
     size: number;
     file_path: string;
     created_at: string;

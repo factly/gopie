@@ -556,7 +556,7 @@ export function DataPreview(props: { datasetId: string }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className="shadow-sm border overflow-hidden"
+        className="shadow-sm border relative min-h-[400px]"
       >
         {!data || data.data.length === 0 ? (
           <motion.div
@@ -567,53 +567,55 @@ export function DataPreview(props: { datasetId: string }) {
             No preview data available
           </motion.div>
         ) : viewMode === "table" ? (
-          <Table>
-            <TableHeader className="bg-muted/5">
-              <MotionTableRow
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {columnsToShow.map((column) => (
-                  <TableHead
-                    key={column}
-                    className="font-medium cursor-pointer hover:bg-muted/10 transition-colors"
-                    onClick={() => handleSort(column)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {column}
-                      {getSortIcon(column)}
-                    </div>
-                  </TableHead>
-                ))}
-              </MotionTableRow>
-            </TableHeader>
-            <TableBody>
-              <AnimatePresence mode="wait">
-                {data.data.map((row, idx) => (
-                  <MotionTableRow
-                    key={idx}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.1 }}
-                    className="hover:bg-muted/5 transition-colors"
-                  >
-                    {columnsToShow.map((column) => (
-                      <TableCell key={column}>
-                        {row[column]?.toString() ?? "NULL"}
-                      </TableCell>
-                    ))}
-                  </MotionTableRow>
-                ))}
-              </AnimatePresence>
-            </TableBody>
-          </Table>
+          <div className="h-full overflow-auto">
+            <Table>
+              <TableHeader className="bg-muted/5">
+                <MotionTableRow
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {columnsToShow.map((column) => (
+                    <TableHead
+                      key={column}
+                      className="font-medium cursor-pointer hover:bg-muted/10 transition-colors"
+                      onClick={() => handleSort(column)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {column}
+                        {getSortIcon(column)}
+                      </div>
+                    </TableHead>
+                  ))}
+                </MotionTableRow>
+              </TableHeader>
+              <TableBody>
+                <AnimatePresence mode="wait">
+                  {data.data.map((row, idx) => (
+                    <MotionTableRow
+                      key={idx}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.1 }}
+                      className="hover:bg-muted/5 transition-colors"
+                    >
+                      {columnsToShow.map((column) => (
+                        <TableCell key={column}>
+                          {row[column]?.toString() ?? "NULL"}
+                        </TableCell>
+                      ))}
+                    </MotionTableRow>
+                  ))}
+                </AnimatePresence>
+              </TableBody>
+            </Table>
+          </div>
         ) : (
-          <div className="h-[600px]">
+          <div className="absolute inset-0">
             <SqlPreview
-              value={JSON.stringify(data, null, 2)}
+              value={JSON.stringify(data?.data || [], null, 2)}
               language="json"
-              height="100%"
+              height="400px"
             />
           </div>
         )}

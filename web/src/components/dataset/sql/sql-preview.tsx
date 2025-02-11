@@ -18,7 +18,7 @@ export function SqlPreview({
   const { theme } = useTheme();
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] [&_.monaco-editor]:rounded-[var(--radius)]">
+    <div className="h-full w-full">
       <Editor
         height={height}
         defaultLanguage={language}
@@ -35,7 +35,7 @@ export function SqlPreview({
           folding: false,
           wordWrap: "on",
         }}
-        className="rounded-[var(--radius)]"
+        className="h-full w-full"
       />
     </div>
   );

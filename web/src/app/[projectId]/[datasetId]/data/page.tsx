@@ -10,8 +10,8 @@ import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
-import { useSchema } from "@/lib/queries/dataset/get-schema";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
+import { useDataset } from "@/lib/queries/dataset/get-dataset";
 
 declare global {
   interface Window {
@@ -44,10 +44,7 @@ export default function SqlPage({
 }: {
   params: Promise<{ projectId: string; datasetId: string }>;
 }) {
-  const { datasetId } = React.use(params);
-  const [query, setQuery] = React.useState(
-    `SELECT * FROM ${datasetId} LIMIT 10`
-  );
+  const { datasetId, projectId } = React.use(params);
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
   >(null);
@@ -57,11 +54,20 @@ export default function SqlPage({
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
 
-  const { data: schema, isLoading: schemaLoading } = useSchema({
+  const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
       datasetId,
+      projectId,
     },
   });
+
+  const [query, setQuery] = React.useState(
+    `SELECT * FROM ${dataset?.name} LIMIT 10`
+  );
+
+  React.useEffect(() => {
+    setQuery(`SELECT * FROM ${dataset?.name} LIMIT 10`);
+  }, [dataset]);
 
   const handleExecute = async () => {
     if (queryMode === "sql") {
@@ -90,7 +96,7 @@ export default function SqlPage({
         toast.loading("Converting to SQL...", { id: promiseId });
         const sqlQuery = await nl2Sql.mutateAsync({
           query: naturalQuery,
-          datasetId,
+          datasetId: dataset?.name || "",
         });
         setGeneratedSql(sqlQuery.sql);
 
@@ -125,11 +131,11 @@ export default function SqlPage({
 
   const isPending = executeSql.isPending || nl2Sql.isPending;
 
-  if (schemaLoading) {
-    return <div>Loading schema...</div>;
+  if (datasetLoading) {
+    return <div>Loading dataset...</div>;
   }
-  if (!schema) {
-    return <div>No schema found</div>;
+  if (!dataset) {
+    return <div>No dataset found</div>;
   }
 
   return (
@@ -184,8 +190,8 @@ export default function SqlPage({
                   <SqlEditor
                     value={query}
                     onChange={setQuery}
-                    schema={schema.schema}
-                    datasetId={datasetId}
+                    schema={dataset.columns}
+                    datasetId={dataset.name}
                   />
                 </motion.div>
               ) : (
@@ -238,8 +244,8 @@ export default function SqlPage({
                             <SqlEditor
                               value={generatedSql}
                               onChange={setGeneratedSql}
-                              schema={schema.schema}
-                              datasetId={datasetId}
+                              schema={dataset.columns}
+                              datasetId={dataset.name}
                             />
                           </div>
                         )}
