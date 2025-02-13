@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { TableIcon, CodeIcon, MessageSquareIcon } from "lucide-react";
+import {
+  TableIcon,
+  CodeIcon,
+  MessageSquareIcon,
+  NetworkIcon,
+} from "lucide-react";
 import { Tabs } from "@/components/navigation/tabs";
 
 export default function DatasetLayout({
@@ -29,6 +34,11 @@ export default function DatasetLayout({
       name: "Chat",
       href: `/${projectId}/${datasetId}/chat`,
       icon: MessageSquareIcon,
+    },
+    {
+      name: "Rest API",
+      href: `/${projectId}/${datasetId}/api`,
+      icon: NetworkIcon,
     },
   ];
 
