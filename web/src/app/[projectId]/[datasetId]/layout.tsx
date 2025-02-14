@@ -26,7 +26,7 @@ export default function DatasetLayout({
       exact: true,
     },
     {
-      name: "Data",
+      name: "SQL",
       href: `/${projectId}/${datasetId}/data`,
       icon: CodeIcon,
     },
