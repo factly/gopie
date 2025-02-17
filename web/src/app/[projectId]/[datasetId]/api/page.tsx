@@ -26,7 +26,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, X, Copy, ChevronDown } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  X,
+  Copy,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
@@ -66,7 +73,7 @@ export default function RestApiPage({
   const tableName = dataset?.name;
   const columns = dataset?.columns.map((col) => col.column_name) || [];
 
-  const { data: tableData } = useGetTable({
+  const { data: tableData, isLoading: tableDataLoading } = useGetTable({
     variables: {
       datasetId: tableName || "",
       page: parseInt(page),
@@ -304,61 +311,64 @@ export default function RestApiPage({
                 </div>
               </div>
             </div>
-
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">API URL</div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 gap-2">
-                      <Copy className="h-4 w-4" />
-                      Copy
-                      <ChevronDown className="h-3 w-3 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuItem onClick={() => copyToClipboard("url")}>
-                      Copy URL
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => copyToClipboard("curl-cmd")}
-                    >
-                      Copy as cURL (cmd)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => copyToClipboard("curl-bash")}
-                    >
-                      Copy as cURL (bash)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => copyToClipboard("powershell")}
-                    >
-                      Copy as PowerShell
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => copyToClipboard("fetch")}>
-                      Copy as fetch
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => copyToClipboard("fetch-node")}
-                    >
-                      Copy as fetch (Node.js)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <code className="text-xs mt-2 block break-all">{apiUrl}</code>
-            </div>
           </div>
         </div>
 
         {/* Right Panel - Output */}
         <div className="flex-1">
+          <div className="bg-muted/50 p-4 rounded-lg mb-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">API URL</div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 gap-2">
+                    <Copy className="h-4 w-4" />
+                    Copy
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuItem onClick={() => copyToClipboard("url")}>
+                    Copy URL
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => copyToClipboard("curl-cmd")}>
+                    Copy as cURL (cmd)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => copyToClipboard("curl-bash")}
+                  >
+                    Copy as cURL (bash)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => copyToClipboard("powershell")}
+                  >
+                    Copy as PowerShell
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => copyToClipboard("fetch")}>
+                    Copy as fetch
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => copyToClipboard("fetch-node")}
+                  >
+                    Copy as fetch (Node.js)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <code className="text-xs mt-2 block break-all">{apiUrl}</code>
+          </div>
           <div className="bg-zinc-950">
-            <SqlPreview
-              value={JSON.stringify(tableData?.data || [], null, 2)}
-              language="json"
-              height="calc(100vh - 230px)"
-            />
+            {tableDataLoading ? (
+              <div className="flex items-center justify-center h-[calc(100vh-320px)]">
+                <Loader2 className="animate-spin" />
+              </div>
+            ) : (
+              <SqlPreview
+                value={JSON.stringify(tableData?.data || [], null, 2)}
+                language="json"
+                height="calc(100vh - 320px)"
+              />
+            )}
           </div>
         </div>
       </div>
