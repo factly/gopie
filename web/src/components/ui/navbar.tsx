@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme/toggle";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
+import { CommandSearch } from "@/components/search/command-search";
 
 // Add this helper at the top of the file
 const isDatasetId = (segment: string) =>
@@ -26,6 +27,11 @@ const isDatasetId = (segment: string) =>
   );
 
 function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const projectId = segments[0];
+
   return (
     <nav
       className={cn(
@@ -37,7 +43,10 @@ function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <Breadcrumb />
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <CommandSearch projectId={projectId} onNavigate={router.push} />
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </nav>
