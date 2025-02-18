@@ -287,8 +287,7 @@ func BuildCountQuery(query string) (string, error) {
 
 	// Build count query
 	var queryParts []string
-	queryParts = append(queryParts, "SELECT COUNT(*)")
-	queryParts = append(queryParts, "FROM "+stmt.Table)
+	queryParts = append(queryParts, fmt.Sprintf(`SELECT COUNT(*) FROM "%s"`, stmt.Table))
 
 	if stmt.Where != "" {
 		queryParts = append(queryParts, "WHERE "+stmt.Where)

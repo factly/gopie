@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/google/uuid"
 	"github.com/marcboeker/go-duckdb"
 	_ "github.com/marcboeker/go-duckdb"
 	"go.uber.org/zap"
@@ -106,11 +108,15 @@ func (m *motherDuckOlapoDriver) CreateTableFromS3(s3Path, tableName, format stri
 }
 
 func (m *motherDuckOlapoDriver) Query(query string) (*models.Result, error) {
+	uuid, _ := uuid.NewV7()
+	start := time.Now()
 	rows, err := m.db.Query(query)
 	if err != nil {
 		m.logger.Error("error querying motherduck", zap.Error(err))
 		return nil, parseError(err)
 	}
+	latencyInMs := time.Since(start).Milliseconds()
+	m.logger.Debug("query executed", zap.String("query ID", uuid.String()), zap.String("query", query), zap.Int64("latency in ms", latencyInMs))
 
 	result := models.Result{
 		Rows: rows,
