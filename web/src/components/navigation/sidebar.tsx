@@ -8,7 +8,8 @@ import {
   MessageSquareIcon,
   NetworkIcon,
   ChevronDown,
-  ArrowLeftIcon,
+  PanelLeftIcon,
+  HomeIcon,
 } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,6 +25,8 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +45,7 @@ export function AppSidebar() {
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
+  const { open: isSidebarOpen } = useSidebar();
   const projectId = params?.projectId as string;
   const datasetId = params?.datasetId as string;
 
@@ -78,10 +82,44 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r">
-      <SidebarHeader className="border-b px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <Sidebar collapsible="icon" className="border-r">
+      <SidebarHeader className="border-b px-2 py-3">
+        {isSidebarOpen ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => router.push("/")}
+                title="Back to Home"
+              >
+                <HomeIcon className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold">Gopie</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Toggle Sidebar"
+                onClick={() => {
+                  const trigger = document.querySelector(
+                    '[data-sidebar="trigger"]'
+                  ) as HTMLButtonElement;
+                  if (trigger) {
+                    trigger.click();
+                  }
+                }}
+              >
+                <PanelLeftIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -89,12 +127,27 @@ export function AppSidebar() {
               onClick={() => router.push("/")}
               title="Back to Home"
             >
-              <ArrowLeftIcon className="h-4 w-4" />
+              <HomeIcon className="h-4 w-4" />
             </Button>
-            <span className="font-semibold">Gopie</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="Toggle Sidebar"
+              onClick={() => {
+                const trigger = document.querySelector(
+                  '[data-sidebar="trigger"]'
+                ) as HTMLButtonElement;
+                if (trigger) {
+                  trigger.click();
+                }
+              }}
+            >
+              <PanelLeftIcon className="h-4 w-4" />
+            </Button>
           </div>
-          <ThemeToggle />
-        </div>
+        )}
+        <SidebarTrigger className="hidden" />
       </SidebarHeader>
 
       <SidebarContent>
@@ -110,9 +163,11 @@ export function AppSidebar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-2 text-xs flex items-center gap-1"
+                    className="h-5 px-2 text-xs flex items-center gap-1 group-data-[collapsed=true]:w-8 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:h-8"
                   >
-                    Switch
+                    <span className="group-data-[collapsed=true]:hidden">
+                      Switch
+                    </span>
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -177,9 +232,11 @@ export function AppSidebar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 px-2 text-xs flex items-center gap-1"
+                    className="h-5 px-2 text-xs flex items-center gap-1 group-data-[collapsed=true]:w-8 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:h-8"
                   >
-                    Switch
+                    <span className="group-data-[collapsed=true]:hidden">
+                      Switch
+                    </span>
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -254,9 +311,18 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
-        <CommandSearch projectId={projectId} onNavigate={router.push} />
+      <SidebarFooter className="border-t p-2">
+        <div className="flex flex-col gap-2">
+          {!isSidebarOpen && (
+            <div className="flex justify-center">
+              <ThemeToggle />
+            </div>
+          )}
+          <CommandSearch projectId={projectId} onNavigate={router.push} />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
+export default AppSidebar;
