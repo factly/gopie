@@ -99,7 +99,7 @@ export default function RestApiPage({
           filters.map((f) => [
             `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
             f.value,
-          ])
+          ]),
         )),
     }).toString();
 
@@ -203,7 +203,7 @@ export default function RestApiPage({
                               setSelectedColumns((prev) =>
                                 prev.includes(column)
                                   ? prev.filter((c) => c !== column)
-                                  : [...prev, column]
+                                  : [...prev, column],
                               );
                             }}
                           >
@@ -212,7 +212,7 @@ export default function RestApiPage({
                                 "mr-2 h-4 w-4",
                                 selectedColumns.includes(column)
                                   ? "opacity-100"
-                                  : "opacity-0"
+                                  : "opacity-0",
                               )}
                             />
                             {column}
