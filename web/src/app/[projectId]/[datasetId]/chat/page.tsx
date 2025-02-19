@@ -118,13 +118,13 @@ const MessageCard = ({
       className={cn(
         "flex gap-3 mb-4 transition-opacity duration-300",
         isUser && "flex-row-reverse",
-        isLatest ? "opacity-100" : "opacity-90"
+        isLatest ? "opacity-100" : "opacity-90",
       )}
     >
       <Avatar
         className={cn(
           "h-8 w-8 ring-2",
-          isUser ? "ring-primary/20" : "ring-muted"
+          isUser ? "ring-primary/20" : "ring-muted",
         )}
       >
         <AvatarFallback className={isUser ? "bg-primary/10" : "bg-muted"}>
@@ -134,7 +134,7 @@ const MessageCard = ({
       <div
         className={cn(
           "flex flex-col gap-2 max-w-[80%] w-full",
-          isUser && "items-end"
+          isUser && "items-end",
         )}
       >
         {isUser ? (
@@ -173,7 +173,7 @@ const MessageCard = ({
                             "gap-2 transition-all",
                             runningQueries[response.query]
                               ? "opacity-70"
-                              : "hover:scale-105 hover:shadow-md"
+                              : "hover:scale-105 hover:shadow-md",
                           )}
                         >
                           {runningQueries[response.query] ? (
@@ -342,7 +342,7 @@ export default function ChatPage({
             };
           }
           return msg;
-        })
+        }),
       );
     } catch (error) {
       throw error;

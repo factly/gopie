@@ -25,25 +25,22 @@ export const useGetTable = createQuery({
       operator: "e" | "gt" | "lt";
     }[];
   }) => {
-    const res = await apiClient.get(
-      `v1/api/tables/${datasetId}`,
-      {
-        searchParams: {
-          page,
-          limit,
-          columns: columns.join(","),
-          sort: sort
-            .map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`)
-            .join(","),
-          ...Object.fromEntries(
-            filter.map((f) => [
-              `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
-              f.value,
-            ]),
-          ),
-        },
+    const res = await apiClient.get(`v1/api/tables/${datasetId}`, {
+      searchParams: {
+        page,
+        limit,
+        columns: columns.join(","),
+        sort: sort
+          .map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`)
+          .join(","),
+        ...Object.fromEntries(
+          filter.map((f) => [
+            `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
+            f.value,
+          ]),
+        ),
       },
-    );
+    });
     return (await res.json()) as {
       data: Record<string, unknown>[];
       total: number;

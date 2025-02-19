@@ -20,7 +20,7 @@ export function VisuallyHidden({
     <Comp
       className={cn(
         "absolute h-px w-px p-0 -m-px overflow-hidden whitespace-nowrap border-0",
-        className
+        className,
       )}
       {...props}
     >

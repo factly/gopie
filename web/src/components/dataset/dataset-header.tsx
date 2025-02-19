@@ -20,7 +20,7 @@ export function DatasetHeader({ dataset, onUpdate }: DatasetHeaderProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedName, setEditedName] = useState(dataset.name);
   const [editedDescription, setEditedDescription] = useState(
-    dataset.description || ""
+    dataset.description || "",
   );
 
   const handleUpdate = async () => {

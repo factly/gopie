@@ -11,11 +11,14 @@ export const useAddDatasetToProject = createMutation({
     projectId: string;
     datasetId: string;
   }): Promise<Project> => {
-    const response = await apiClient.post(`v1/api/projects/${projectId}/datasets/`, {
-      json: {
-        dataset_id: datasetId,
+    const response = await apiClient.post(
+      `v1/api/projects/${projectId}/datasets/`,
+      {
+        json: {
+          dataset_id: datasetId,
+        },
       },
-    });
+    );
 
     return response.json();
   },

@@ -38,7 +38,7 @@ interface ProjectCardProps {
   project: Project;
   onUpdate?: (
     projectId: string,
-    data: { name: string; description: string }
+    data: { name: string; description: string },
   ) => Promise<void>;
   onDelete?: (projectId: string) => Promise<void>;
 }
@@ -50,7 +50,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedName, setEditedName] = useState(project.name);
   const [editedDescription, setEditedDescription] = useState(
-    project.description
+    project.description,
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

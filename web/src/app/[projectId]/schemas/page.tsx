@@ -52,11 +52,11 @@ export default function SchemasPage({
             animated: true,
             style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
           },
-          eds
-        )
+          eds,
+        ),
       );
     },
-    [setEdges]
+    [setEdges],
   );
 
   React.useEffect(() => {

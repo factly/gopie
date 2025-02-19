@@ -117,7 +117,7 @@ export function DataPreview(props: { datasetId: string }) {
   // Get all available columns from the schema and maintain their order
   const allColumns = React.useMemo(
     () => schema?.schema.map((col) => col.column_name) ?? [],
-    [schema]
+    [schema],
   );
 
   // Use selected columns in schema order
@@ -126,7 +126,7 @@ export function DataPreview(props: { datasetId: string }) {
       selectedColumns.length > 0
         ? allColumns.filter((col) => selectedColumns.includes(col))
         : allColumns,
-    [selectedColumns, allColumns]
+    [selectedColumns, allColumns],
   );
 
   React.useEffect(() => {
@@ -173,7 +173,7 @@ export function DataPreview(props: { datasetId: string }) {
   // Get the column count for skeleton UI
   const skeletonColumnCount = React.useMemo(
     () => schema?.schema.length || 6,
-    [schema]
+    [schema],
   );
 
   if (isLoading) {
@@ -234,10 +234,10 @@ export function DataPreview(props: { datasetId: string }) {
                           j === 0
                             ? "w-[80px]"
                             : j === 1
-                            ? "w-[150px]"
-                            : j === 2
-                            ? "w-[100px]"
-                            : "w-[120px]"
+                              ? "w-[150px]"
+                              : j === 2
+                                ? "w-[100px]"
+                                : "w-[120px]",
                         )}
                       />
                     </TableCell>
@@ -349,8 +349,8 @@ export function DataPreview(props: { datasetId: string }) {
                                 selectedColumns.includes(column)
                                 ? "font-medium text-primary"
                                 : selectedColumns.includes(column)
-                                ? "text-foreground"
-                                : "text-muted-foreground"
+                                  ? "text-foreground"
+                                  : "text-muted-foreground",
                             )}
                           >
                             {column}
@@ -413,8 +413,8 @@ export function DataPreview(props: { datasetId: string }) {
                                   {filter.operator === "e"
                                     ? "equals"
                                     : filter.operator === "gt"
-                                    ? "greater than or equals"
-                                    : "less than or equals"}
+                                      ? "greater than or equals"
+                                      : "less than or equals"}
                                 </span>
                                 <Badge variant="outline" className="font-mono">
                                   {filter.value}
@@ -425,7 +425,7 @@ export function DataPreview(props: { datasetId: string }) {
                                 size="sm"
                                 onClick={() =>
                                   setFilters((prev) =>
-                                    prev.filter((_, i) => i !== index)
+                                    prev.filter((_, i) => i !== index),
                                   )
                                 }
                                 className="h-auto p-1 opacity-0 group-hover:opacity-100 transition-opacity"

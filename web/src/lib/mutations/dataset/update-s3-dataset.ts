@@ -1,4 +1,4 @@
-import { apiClient, Dataset } from '../../api-client';
+import { apiClient, Dataset } from "../../api-client";
 
 export interface UpdateS3DatasetBody {
   dataset: string;
@@ -6,7 +6,9 @@ export interface UpdateS3DatasetBody {
   file_path?: string;
 }
 
-export const updateS3Dataset = async (body: UpdateS3DatasetBody): Promise<{ data: Dataset }> => {
-  const response = await apiClient.post('source/s3/update', { json: body });
+export const updateS3Dataset = async (
+  body: UpdateS3DatasetBody,
+): Promise<{ data: Dataset }> => {
+  const response = await apiClient.post("source/s3/update", { json: body });
   return response.json();
-}; 
+};
