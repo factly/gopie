@@ -35,8 +35,8 @@ export default function DatasetPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Loading Header */}
           <div className="bg-background p-6 rounded-lg shadow-sm border">
             <div className="space-y-4">
@@ -79,8 +79,8 @@ export default function DatasetPage({
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Dataset Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -23,7 +23,7 @@ import { CommandSearch } from "@/components/search/command-search";
 // Add this helper at the top of the file
 const isDatasetId = (segment: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    segment,
+    segment
   );
 
 function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
@@ -36,7 +36,7 @@ function Navbar({ className, ...props }: React.ComponentProps<"nav">) {
     <nav
       className={cn(
         "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-3",
-        className,
+        className
       )}
       {...props}
     >
@@ -76,7 +76,7 @@ function Breadcrumb({
           variables: { projectId },
           enabled: segments.length > 0,
         }
-      : { enabled: false },
+      : { enabled: false }
   );
 
   return (
@@ -170,7 +170,7 @@ function Breadcrumb({
                       >
                         {
                           datasets?.results.find(
-                            (dataset) => dataset.id === datasetId,
+                            (dataset) => dataset.id === datasetId
                           )?.name
                         }
                         <ChevronDown className="size-3 opacity-50" />
@@ -211,7 +211,7 @@ function Breadcrumb({
                     "text-sm hover:text-foreground leading-none",
                     isLast
                       ? "font-medium text-foreground"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                   aria-current={isLast ? "page" : undefined}
                 >

@@ -105,7 +105,7 @@ export default function ProjectPage({
   if (!project) return null;
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
       <div className="space-y-4">
         <h1 className="text-4xl font-semibold tracking-tight text-foreground/90">
           {project.name}

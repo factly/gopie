@@ -23,7 +23,7 @@ export default function HomePage() {
 
   const handleUpdateProject = async (
     projectId: string,
-    data: { name: string; description: string },
+    data: { name: string; description: string }
   ) => {
     try {
       await updateProject(projectId, data);
@@ -89,7 +89,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="container mx-auto pt-16 py-8 px-4 sm:px-6 lg:px-8 space-y-8">
       <div className="flex items-center justify-between">
         <motion.h1
           initial={{ opacity: 0 }}

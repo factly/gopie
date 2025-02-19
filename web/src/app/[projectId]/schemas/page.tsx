@@ -52,11 +52,11 @@ export default function SchemasPage({
             animated: true,
             style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
           },
-          eds,
-        ),
+          eds
+        )
       );
     },
-    [setEdges],
+    [setEdges]
   );
 
   React.useEffect(() => {
@@ -83,7 +83,7 @@ export default function SchemasPage({
   }
 
   return (
-    <div className="h-[calc(100vh-57px-41px)]">
+    <div className="h-[calc(100vh-50px)]">
       {" "}
       {/* Adjust height to account for navbar and tabs */}
       <ReactFlow
