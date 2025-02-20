@@ -21,7 +21,7 @@ insert into datasets (
     file_path,
     columns
 ) values ($1, $2, $3, $4, $5, $6, $7)
-returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
+returning id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns
 `
 
 type CreateDatasetParams struct {
@@ -53,6 +53,9 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.Size,
 		&i.FilePath,
 		&i.Columns,
@@ -70,7 +73,7 @@ func (q *Queries) DeleteDataset(ctx context.Context, id string) error {
 }
 
 const getDataset = `-- name: GetDataset :one
-select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets where id = $1
+select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns from datasets where id = $1
 `
 
 func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
@@ -84,6 +87,9 @@ func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.Size,
 		&i.FilePath,
 		&i.Columns,
@@ -92,7 +98,7 @@ func (q *Queries) GetDataset(ctx context.Context, id string) (Dataset, error) {
 }
 
 const getDatasetByName = `-- name: GetDatasetByName :one
-select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets where name = $1
+select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns from datasets where name = $1
 `
 
 func (q *Queries) GetDatasetByName(ctx context.Context, name string) (Dataset, error) {
@@ -106,6 +112,9 @@ func (q *Queries) GetDatasetByName(ctx context.Context, name string) (Dataset, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.Size,
 		&i.FilePath,
 		&i.Columns,
@@ -114,7 +123,7 @@ func (q *Queries) GetDatasetByName(ctx context.Context, name string) (Dataset, e
 }
 
 const searchDatasets = `-- name: SearchDatasets :many
-select id, name, description, format, created_at, updated_at, row_count, size, file_path, columns from datasets
+select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns from datasets
 where 
     name ilike concat('%', $1, '%') or
     description ilike concat('%', $1, '%')
@@ -151,6 +160,9 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
 			&i.Size,
 			&i.FilePath,
 			&i.Columns,
@@ -173,9 +185,11 @@ set
     row_count = coalesce($3, row_count),
     size = coalesce($4, size),
     file_path = coalesce($5, file_path),
-    columns = coalesce($6, columns)
-where id = $7
-returning id, name, description, format, created_at, updated_at, row_count, size, file_path, columns
+    columns = coalesce($6, columns),
+    alias = coalesce($7, alias),
+    updated_by = coalesce($8, updated_by)
+where id = $9
+returning id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns
 `
 
 type UpdateDatasetParams struct {
@@ -185,6 +199,8 @@ type UpdateDatasetParams struct {
 	Size        pgtype.Int8 `json:"size"`
 	FilePath    string      `json:"filePath"`
 	Columns     []byte      `json:"columns"`
+	Alias       pgtype.Text `json:"alias"`
+	UpdatedBy   pgtype.Text `json:"updatedBy"`
 	ID          string      `json:"id"`
 }
 
@@ -196,6 +212,8 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		arg.Size,
 		arg.FilePath,
 		arg.Columns,
+		arg.Alias,
+		arg.UpdatedBy,
 		arg.ID,
 	)
 	var i Dataset
@@ -207,6 +225,9 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.Size,
 		&i.FilePath,
 		&i.Columns,

@@ -6,6 +6,9 @@ create table if not exists datasets(
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
     row_count integer,
+    alias text default null,
+    created_by text default null,
+    updated_by text default null,
     -- in bytes
     size bigint,
     file_path text not null,

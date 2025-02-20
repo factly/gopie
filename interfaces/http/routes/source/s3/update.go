@@ -19,6 +19,8 @@ type updateRequestBody struct {
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Updated sales data for Q1 2024"`
 	// Name of the dataset to update
 	Dataset string `json:"dataset" validate:"required" example:"sales_data_table"`
+	// User ID of the updater
+	UpdatedBy string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Update dataset from S3
@@ -143,6 +145,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		RowCount:    int(count),
 		Size:        res.Size,
 		Columns:     columns,
+		UpdatedBy:   body.UpdatedBy,
 	})
 	if err != nil {
 		h.logger.Error("Error updating dataset record", zap.Error(err))

@@ -16,6 +16,9 @@ type Dataset struct {
 	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
 	RowCount    pgtype.Int4        `json:"rowCount"`
+	Alias       pgtype.Text        `json:"alias"`
+	CreatedBy   pgtype.Text        `json:"createdBy"`
+	UpdatedBy   pgtype.Text        `json:"updatedBy"`
 	Size        pgtype.Int8        `json:"size"`
 	FilePath    string             `json:"filePath"`
 	Columns     []byte             `json:"columns"`

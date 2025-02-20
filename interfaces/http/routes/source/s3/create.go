@@ -19,6 +19,10 @@ type uploadRequestBody struct {
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Sales data for Q1 2024"`
 	// ID of the project to add the dataset to
 	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// User ID of the creator
+	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// Alias of the dataset
+	Alias string `json:"alias" validate:"omitempty,min=3" example:"sales_data"`
 }
 
 // @Summary Upload file from S3
@@ -95,6 +99,9 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			Format:      res.Format,
 			FilePath:    res.FilePath,
 			Size:        res.Size,
+			UpdatedBy:   body.CreatedBy,
+			CreatedBy:   body.CreatedBy,
+			Alias:       body.Alias,
 		})
 		if e != nil {
 			h.logger.Error("Error creating dataset record", zap.Error(e))

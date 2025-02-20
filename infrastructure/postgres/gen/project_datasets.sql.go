@@ -87,7 +87,7 @@ func (q *Queries) GetProjectDatasetsCount(ctx context.Context, projectID string)
 
 const listProjectDatasets = `-- name: ListProjectDatasets :many
 select 
-    d.id, d.name, d.description, d.format, d.created_at, d.updated_at, d.row_count, d.size, d.file_path, d.columns,
+    d.id, d.name, d.description, d.format, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.size, d.file_path, d.columns,
     pd.created_at as added_at
 from datasets d
 join project_datasets pd on d.id = pd.dataset_id
@@ -110,6 +110,9 @@ type ListProjectDatasetsRow struct {
 	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
 	RowCount    pgtype.Int4        `json:"rowCount"`
+	Alias       pgtype.Text        `json:"alias"`
+	CreatedBy   pgtype.Text        `json:"createdBy"`
+	UpdatedBy   pgtype.Text        `json:"updatedBy"`
 	Size        pgtype.Int8        `json:"size"`
 	FilePath    string             `json:"filePath"`
 	Columns     []byte             `json:"columns"`
@@ -133,6 +136,9 @@ func (q *Queries) ListProjectDatasets(ctx context.Context, arg ListProjectDatase
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
 			&i.Size,
 			&i.FilePath,
 			&i.Columns,

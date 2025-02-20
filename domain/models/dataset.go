@@ -8,7 +8,9 @@ type Dataset struct {
 	// Unique identifier of the dataset
 	ID string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Name of the dataset
-	Name string `json:"name" example:"sales_data"`
+	Name string `json:"name" example:"gp_Dh790Asdf17kd"`
+	// Alias of the dataset
+	Alias string `json:"alias" example:"sales_data_alias"`
 	// Description of the dataset
 	Description string `json:"description" example:"Sales data for Q1 2024"`
 	// Format of the dataset (e.g., csv, parquet)
@@ -25,6 +27,10 @@ type Dataset struct {
 	CreatedAt time.Time `json:"created_at" example:"2024-02-05T12:00:00Z"`
 	// Last update timestamp
 	UpdatedAt time.Time `json:"updated_at" example:"2024-02-05T12:00:00Z"`
+	// CreatedBy represents the user who created the dataset
+	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// UpdatedBy represents the user who last updated the dataset
+	UpdatedBy string `json:"update_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // ListProjectDatasetsResults represents a dataset in project listing
@@ -33,7 +39,13 @@ type ListProjectDatasetsResults struct {
 	// Unique identifier of the dataset
 	ID string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Name of the dataset
-	Name string `json:"name" example:"sales_data"`
+	Name string `json:"name" example:"gp_Dh790Asdf17kd"`
+	// Alias of the dataset
+	Alias string `json:"alias" example:"sales_data_alias"`
+	// CreatedBy represents the user who created the dataset
+	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// UpdatedBy represents the user who last updated the dataset
+	UpdatedBy string `json:"update_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Description of the dataset
 	Description string `json:"description" example:"Sales data for Q1 2024"`
 	// Creation timestamp
@@ -68,6 +80,12 @@ type UploadDatasetResult struct {
 type CreateDatasetParams struct {
 	// Name of the dataset
 	Name string `json:"name" example:"sales_data"`
+	// Alias of the dataset
+	Alias string `json:"alias" example:"sales_data_alias"`
+	// User ID of the creator
+	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// UpdatedBy represents the user who last updated the dataset
+	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Description of the dataset
 	Description string `json:"description" example:"Sales data for Q1 2024"`
 	// ID of the project this dataset belongs to
@@ -99,6 +117,10 @@ type UpdateDatasetParams struct {
 	Columns []map[string]any `json:"columns"`
 	// Size of the dataset in bytes
 	Size int `json:"size" example:"1048576"`
+	// UpdatedBy represents the user who last updated the dataset
+	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// Alias of the dataset
+	Alias string `json:"alias" example:"sales_data_alias"`
 }
 
 // FailedDatasetUpload represents a failed dataset upload

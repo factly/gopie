@@ -21,8 +21,10 @@ set
     row_count = coalesce($3, row_count),
     size = coalesce($4, size),
     file_path = coalesce($5, file_path),
-    columns = coalesce($6, columns)
-where id = $7
+    columns = coalesce($6, columns),
+    alias = coalesce($7, alias),
+    updated_by = coalesce($8, updated_by)
+where id = $9
 returning *;
 
 -- name: DeleteDataset :exec
