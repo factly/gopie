@@ -1,10 +1,11 @@
 "use client";
 
+import "regenerator-runtime/runtime";
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, Loader2 } from "lucide-react";
+import { PlayIcon, Loader2, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -12,12 +13,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 
 declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void,
+      callback: (...args: unknown[]) => void
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -50,9 +54,18 @@ export default function SqlPage({
   >(null);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
-  const [queryMode, setQueryMode] = React.useState<"sql" | "natural">("sql");
+  const [queryMode, setQueryMode] = React.useState<"sql" | "natural">(
+    "natural"
+  );
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
+
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
 
   const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
@@ -62,12 +75,18 @@ export default function SqlPage({
   });
 
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${dataset?.name} LIMIT 10`,
+    `SELECT * FROM ${dataset?.name} LIMIT 10`
   );
 
   React.useEffect(() => {
     setQuery(`SELECT * FROM ${dataset?.name} LIMIT 10`);
   }, [dataset]);
+
+  React.useEffect(() => {
+    if (transcript) {
+      setNaturalQuery(transcript);
+    }
+  }, [transcript]);
 
   const handleExecute = async () => {
     if (queryMode === "sql") {
@@ -127,6 +146,15 @@ export default function SqlPage({
       },
       error: (err) => `Failed to execute query: ${err.message}`,
     });
+  };
+
+  const toggleListening = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening({ continuous: true });
+    }
   };
 
   const isPending = executeSql.isPending || nl2Sql.isPending;
@@ -207,6 +235,20 @@ export default function SqlPage({
                       onChange={(e) => setNaturalQuery(e.target.value)}
                       className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50"
                     />
+                    {browserSupportsSpeechRecognition && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-2 top-2"
+                        onClick={toggleListening}
+                      >
+                        {listening ? (
+                          <MicOff className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Mic className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                   <AnimatePresence>
                     {(nl2Sql.isPending || generatedSql) && (

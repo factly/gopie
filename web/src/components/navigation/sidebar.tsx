@@ -56,7 +56,7 @@ export function AppSidebar() {
           variables: { projectId },
           enabled: Boolean(projectId),
         }
-      : { enabled: false },
+      : { enabled: false }
   );
   const { data: datasets } = useDatasets({
     variables: {
@@ -107,7 +107,7 @@ export function AppSidebar() {
                 title="Toggle Sidebar"
                 onClick={() => {
                   const trigger = document.querySelector(
-                    '[data-sidebar="trigger"]',
+                    '[data-sidebar="trigger"]'
                   ) as HTMLButtonElement;
                   if (trigger) {
                     trigger.click();
@@ -136,7 +136,7 @@ export function AppSidebar() {
               title="Toggle Sidebar"
               onClick={() => {
                 const trigger = document.querySelector(
-                  '[data-sidebar="trigger"]',
+                  '[data-sidebar="trigger"]'
                 ) as HTMLButtonElement;
                 if (trigger) {
                   trigger.click();
@@ -210,7 +210,7 @@ export function AppSidebar() {
                   >
                     <Link href={`/${projectId}/schemas`}>
                       <DatabaseIcon className="h-4 w-4" />
-                      <span>Schemas</span>
+                      <span>Relationships</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -275,22 +275,22 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive(`/${projectId}/${datasetId}/data`)}
+                    isActive={isActive(`/${projectId}/${datasetId}/chat`)}
                   >
-                    <Link href={`/${projectId}/${datasetId}/data`}>
-                      <CodeIcon className="h-4 w-4" />
-                      <span>Query</span>
+                    <Link href={`/${projectId}/${datasetId}/chat`}>
+                      <MessageSquareIcon className="h-4 w-4" />
+                      <span>Chat</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive(`/${projectId}/${datasetId}/chat`)}
+                    isActive={isActive(`/${projectId}/${datasetId}/data`)}
                   >
-                    <Link href={`/${projectId}/${datasetId}/chat`}>
-                      <MessageSquareIcon className="h-4 w-4" />
-                      <span>Chat</span>
+                    <Link href={`/${projectId}/${datasetId}/data`}>
+                      <CodeIcon className="h-4 w-4" />
+                      <span>Query</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
