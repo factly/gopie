@@ -20,7 +20,9 @@ create table if not exists projects(
     name text not null,
     description text default null,
     created_at timestamp with time zone not null default now(),
-    updated_at timestamp with time zone not null default now()
+    updated_at timestamp with time zone not null default now(),
+    created_by text default null,
+    updated_by text default null
 );
 
 create table if not exists project_datasets(

@@ -31,6 +31,9 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Size:        pgtype.Int8{Int64: int64(params.Size), Valid: true},
 		FilePath:    params.FilePath,
 		Columns:     columns,
+		Alias:       pgtype.Text{String: params.Alias, Valid: true},
+		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
+		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating dataset", zap.Error(err))
@@ -57,6 +60,9 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Size:        int(d.Size.Int64),
 		FilePath:    d.FilePath,
 		Columns:     columnsMap,
+		Alias:       d.Alias.String,
+		CreatedBy:   d.CreatedBy.String,
+		UpdatedBy:   d.UpdatedBy.String,
 	}, nil
 }
 

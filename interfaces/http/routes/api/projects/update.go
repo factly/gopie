@@ -3,7 +3,7 @@ package projects
 import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
-	"github.com/go-playground/validator/v10"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,6 +14,7 @@ type updateProjectBody struct {
 	Name string `json:"name,omitempty" validate:"required,min=3,max=50" example:"Updated Project Name"`
 	// Description of the project
 	Description string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
+	UpdatedBy   string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Update a project
@@ -40,28 +41,19 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	validate := validator.New()
-
-	if err := validate.Struct(body); err != nil {
-		var errors []models.ValidationError
-		for _, err := range err.(validator.ValidationErrors) {
-			errors = append(errors, models.ValidationError{
-				Field: err.Field(),
-				Tag:   err.Tag(),
-				Value: err.Param(),
-			})
-		}
+	err := pkg.ValidateRequest(h.logger, &body)
+	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   errors,
+			"error":   err.Error(),
 			"message": "Invalid request body",
 			"code":    fiber.StatusBadRequest,
 		})
-
 	}
 
 	project, err := h.svc.Update(projectID, &models.UpdateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
+		UpdatedBy:   body.UpdatedBy,
 	})
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

@@ -37,4 +37,6 @@ type Project struct {
 	Description pgtype.Text        `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
+	CreatedBy   pgtype.Text        `json:"createdBy"`
+	UpdatedBy   pgtype.Text        `json:"updatedBy"`
 }

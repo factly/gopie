@@ -1,8 +1,13 @@
 package pkg
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
+
+	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/go-playground/validator/v10"
 )
 
 func ParseLimitAndPage(limitStr, pageStr string) (int, int) {
@@ -34,4 +39,21 @@ func RandomString(length uint) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// parseAndValidateRequest parses and validates the upload request
+func ValidateRequest(logger *logger.Logger, req interface{}) error {
+	if err := validator.New().Struct(req); err != nil {
+		var errors []models.ValidationError
+		for _, err := range err.(validator.ValidationErrors) {
+			errors = append(errors, models.ValidationError{
+				Field: err.Field(),
+				Tag:   err.Tag(),
+				Value: err.Param(),
+			})
+		}
+		return fmt.Errorf("Invalid request body: %v", errors)
+	}
+
+	return nil
 }

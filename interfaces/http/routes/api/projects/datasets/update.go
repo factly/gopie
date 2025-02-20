@@ -3,6 +3,7 @@ package datasets
 import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -38,7 +39,16 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	_, err := h.datasetsSvc.Details(datasetID)
+
+	err := pkg.ValidateRequest(h.logger, &body)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+	_, err = h.datasetsSvc.Details(datasetID)
 	if err != nil {
 		h.logger.Error("Error updating dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

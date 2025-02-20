@@ -19,8 +19,11 @@ insert into datasets (
     row_count,
     size,
     file_path,
-    columns
-) values ($1, $2, $3, $4, $5, $6, $7)
+    columns,
+    alias,
+    created_by,
+    updated_by
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 returning id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns
 `
 
@@ -32,6 +35,9 @@ type CreateDatasetParams struct {
 	Size        pgtype.Int8 `json:"size"`
 	FilePath    string      `json:"filePath"`
 	Columns     []byte      `json:"columns"`
+	Alias       pgtype.Text `json:"alias"`
+	CreatedBy   pgtype.Text `json:"createdBy"`
+	UpdatedBy   pgtype.Text `json:"updatedBy"`
 }
 
 func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (Dataset, error) {
@@ -43,6 +49,9 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		arg.Size,
 		arg.FilePath,
 		arg.Columns,
+		arg.Alias,
+		arg.CreatedBy,
+		arg.UpdatedBy,
 	)
 	var i Dataset
 	err := row.Scan(
@@ -126,12 +135,14 @@ const searchDatasets = `-- name: SearchDatasets :many
 select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns from datasets
 where 
     name ilike concat('%', $1, '%') or
-    description ilike concat('%', $1, '%')
+    description ilike concat('%', $1, '%') or
+    alias ilike concat('%', $1, '%')
 order by 
     case 
-        when name ilike concat($1, '%') then 1
-        when name ilike concat('%', $1, '%') then 2
-        else 3
+        when alias ilike concat($1, '%') then 1
+        when name ilike concat($1, '%') then 2
+        when name ilike concat('%', $1, '%') then 3
+        else 4
     end,
     created_at desc
 limit $2 offset $3

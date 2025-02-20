@@ -6,8 +6,11 @@ insert into datasets (
     row_count,
     size,
     file_path,
-    columns
-) values ($1, $2, $3, $4, $5, $6, $7)
+    columns,
+    alias,
+    created_by,
+    updated_by
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 returning *;
 
 -- name: GetDataset :one
@@ -34,12 +37,14 @@ delete from datasets where id = $1;
 select * from datasets
 where 
     name ilike concat('%', $1, '%') or
-    description ilike concat('%', $1, '%')
+    description ilike concat('%', $1, '%') or
+    alias ilike concat('%', $1, '%')
 order by 
     case 
-        when name ilike concat($1, '%') then 1
-        when name ilike concat('%', $1, '%') then 2
-        else 3
+        when alias ilike concat($1, '%') then 1
+        when name ilike concat($1, '%') then 2
+        when name ilike concat('%', $1, '%') then 3
+        else 4
     end,
     created_at desc
 limit $2 offset $3;
