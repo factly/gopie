@@ -24,6 +24,8 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		Size:        pgtype.Int8{Int64: int64(updateDatasetParams.Size), Valid: true},
 		Columns:     columnsBytes,
 		FilePath:    updateDatasetParams.FilePath,
+		Alias:       pgtype.Text{String: updateDatasetParams.Alias, Valid: true},
+		UpdatedBy:   pgtype.Text{String: updateDatasetParams.UpdatedBy, Valid: true},
 	})
 	columns := make([]map[string]any, 0)
 	_ = json.Unmarshal(columnsBytes, &columns)

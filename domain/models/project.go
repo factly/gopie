@@ -17,6 +17,9 @@ type Project struct {
 	CreatedAt time.Time `json:"createdAt" example:"2024-02-05T12:00:00Z"`
 	// Last update timestamp
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-02-05T12:00:00Z"`
+
+	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // CreateProjectParams represents parameters for creating a project
@@ -26,6 +29,7 @@ type CreateProjectParams struct {
 	Name string `json:"name" validate:"required" example:"My Project"`
 	// Description of the project
 	Description string `json:"description" validate:"required" example:"This is a sample project description"`
+	CreatedBy   string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // UpdateProjectParams represents parameters for updating a project
@@ -35,6 +39,7 @@ type UpdateProjectParams struct {
 	Name string `json:"name,omitempty" example:"Updated Project Name"`
 	// Description of the project
 	Description string `json:"description,omitempty" example:"Updated project description"`
+	UpdatedBy   string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // SearchProjectsResults represents a project with dataset count in search results
@@ -51,5 +56,7 @@ type SearchProjectsResults struct {
 	// Last update timestamp
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-02-05T12:00:00Z"`
 	// Number of datasets in the project
-	DatasetCount int `json:"datasetCount" example:"5"`
+	DatasetCount int    `json:"datasetCount" example:"5"`
+	CreatedBy    string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UpdateBy     string `json:"updateBy" example:"550e8400-e29b-41d4-a716-446655440000"`
 }

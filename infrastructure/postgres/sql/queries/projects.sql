@@ -1,8 +1,10 @@
 -- name: CreateProject :one
 insert into projects (
     name,
-    description
-) values ($1, $2)
+    description,
+    created_by,
+    updated_by
+) values ($1, $2, $3, $4)
 returning *;
 
 -- name: GetProject :one
@@ -19,8 +21,9 @@ group by p.id;
 update projects
 set 
     name = coalesce($1, name),
-    description = coalesce($2, description)
-where id = $3
+    description = coalesce($2, description),
+    updated_by = coalesce($3, updated_by)
+where id = $4
 returning *;
 
 -- name: DeleteProject :exec

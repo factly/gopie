@@ -5,7 +5,7 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
-	"github.com/go-playground/validator/v10"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -19,6 +19,8 @@ type updateRequestBody struct {
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Updated sales data for Q1 2024"`
 	// Name of the dataset to update
 	Dataset string `json:"dataset" validate:"required" example:"sales_data_table"`
+	// User ID of the updater
+	UpdatedBy string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Update dataset from S3
@@ -43,19 +45,10 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	validate := validator.New()
-
-	if err := validate.Struct(body); err != nil {
-		var errors []models.ValidationError
-		for _, err := range err.(validator.ValidationErrors) {
-			errors = append(errors, models.ValidationError{
-				Field: err.Field(),
-				Tag:   err.Tag(),
-				Value: err.Param(),
-			})
-		}
+	err := pkg.ValidateRequest(h.logger, &body)
+	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   errors,
+			"error":   err.Error(),
 			"message": "Invalid request body",
 			"code":    fiber.StatusBadRequest,
 		})
@@ -101,36 +94,11 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Get row count of uploaded table
-	countSql := "select count(*) from " + res.TableName
-	countResult, err := h.olapSvc.ExecuteQuery(countSql)
+	count, columns, err := h.getMetrics(res.TableName)
 	if err != nil {
-		h.logger.Error("Error fetching row count", zap.Error(err), zap.String("table", res.TableName))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": fmt.Sprintf("Error fetching row count for table %s", res.TableName),
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	// Extract count value from result with improved type checking
-	count, ok := countResult[0]["count_star()"].(int64)
-	if !ok {
-		h.logger.Error("Invalid count result type", zap.Any("count_result", countResult[0]["count_star()"]))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Invalid count result type",
-			"message": "Error processing row count",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	// Get column descriptions
-	columns, err := h.olapSvc.ExecuteQuery("desc " + res.TableName)
-	if err != nil {
-		h.logger.Error("Error fetching column descriptions", zap.Error(err), zap.String("table", res.TableName))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": fmt.Sprintf("Error fetching column descriptions for table %s", res.TableName),
+			"message": "Error fetching metrics",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -143,6 +111,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		RowCount:    int(count),
 		Size:        res.Size,
 		Columns:     columns,
+		UpdatedBy:   body.UpdatedBy,
 	})
 	if err != nil {
 		h.logger.Error("Error updating dataset record", zap.Error(err))

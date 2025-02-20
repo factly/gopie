@@ -150,42 +150,101 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		return nil, err
 	}
 
-	countResult, err := d.olap.Query(countSql)
+	queryResult, err := d.getResultsWithCount(countSql, sql)
+
+	return map[string]any{
+		"total": queryResult.Count,
+		"data":  queryResult.Rows,
+	}, nil
+}
+
+type queryResult struct {
+	Rows  *[]map[string]any
+	Count int64
+	Err   error
+}
+
+type asyncResult[T any] struct {
+	data T
+	err  error
+}
+
+func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, error) {
+	countChan := make(chan asyncResult[int64], 1)
+	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
+
+	go d.executeCountQuery(countSql, countChan)
+
+	limitedSql, err := pkg.ImposeLimits(sql, 1000)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to impose limits: %w", err)
+	}
+	go d.executeDataQuery(limitedSql, rowsChan)
+
+	countResult := <-countChan
+	if countResult.err != nil {
+		return nil, fmt.Errorf("count query failed: %w", countResult.err)
+	}
+
+	rowsResult := <-rowsChan
+	if rowsResult.err != nil {
+		return nil, fmt.Errorf("data query failed: %w", rowsResult.err)
+	}
+
+	return &queryResult{
+		Count: countResult.data,
+		Rows:  rowsResult.data,
+	}, nil
+}
+
+func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResult[int64]) {
+	var result asyncResult[int64]
+
+	countResult, err := d.olap.Query(sql)
+	if err != nil {
+		result.err = fmt.Errorf("query execution failed: %w", err)
+		resultChan <- result
+		return
 	}
 
 	countResultMap, err := countResult.RowsToMap()
 	if err != nil {
-		return nil, err
+		result.err = fmt.Errorf("rows to map conversion failed: %w", err)
+		resultChan <- result
+		return
 	}
 
 	count, ok := (*countResultMap)[0]["count_star()"].(int64)
 	if !ok {
-		return nil, fmt.Errorf("invalid count_star() value")
+		result.err = fmt.Errorf("invalid count_star() value type")
+		resultChan <- result
+		return
 	}
 
-	sql, err = pkg.ImposeLimits(sql, 1000)
+	result.data = count
+	resultChan <- result
+}
+
+func (d *OlapService) executeDataQuery(sql string, resultChan chan<- asyncResult[*[]map[string]any]) {
+	var result asyncResult[*[]map[string]any]
+
+	queryResult, err := d.olap.Query(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		result.err = fmt.Errorf("query execution failed: %w", err)
+		resultChan <- result
+		return
 	}
+	defer queryResult.Close()
 
-	result, err := d.olap.Query(sql)
+	resultMap, err := queryResult.RowsToMap()
 	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	resultMap, err := result.RowsToMap()
-	if err != nil {
-		return nil, err
+		result.err = fmt.Errorf("rows to map conversion failed: %w", err)
+		resultChan <- result
+		return
 	}
 
-	return map[string]any{
-		"total": count,
-		"data":  resultMap,
-	}, nil
+	result.data = resultMap
+	resultChan <- result
 }
 
 func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error) {
@@ -199,27 +258,8 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 		return nil, err
 	}
 
-	countResult, err := d.olap.Query(countSql)
-	if err != nil {
-		return nil, err
-	}
-
-	countResultMap, err := countResult.RowsToMap()
-	if err != nil {
-		return nil, err
-	}
-
-	count := (*countResultMap)[0]["count_star()"].(int64)
-
-	sql, err = pkg.ImposeLimits(sql, 1000)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := d.olap.Query(sql)
-
-	resultMap, err := result.RowsToMap()
-	return map[string]any{"total": count, "data": resultMap}, nil
+	result, err := d.getResultsWithCount(countSql, sql)
+	return map[string]any{"total": result.Count, "data": result.Rows}, nil
 }
 
 func (d *OlapService) GetTableSchema(tableName string) ([]map[string]any, error) {
