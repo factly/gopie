@@ -14,6 +14,8 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 	p, err := s.q.CreateProject(ctx, gen.CreateProjectParams{
 		Name:        params.Name,
 		Description: pgtype.Text{String: params.Description, Valid: true},
+		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
+		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating project", zap.Error(err))
@@ -26,5 +28,7 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 		Description: p.Description.String,
 		CreatedAt:   time.Time(p.CreatedAt.Time),
 		UpdatedAt:   time.Time(p.UpdatedAt.Time),
+		CreatedBy:   p.CreatedBy.String,
+		UpdatedBy:   p.UpdatedBy.String,
 	}, nil
 }

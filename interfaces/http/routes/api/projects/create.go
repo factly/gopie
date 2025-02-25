@@ -2,7 +2,7 @@ package projects
 
 import (
 	"github.com/factly/gopie/domain/models"
-	"github.com/go-playground/validator/v10"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -13,6 +13,7 @@ type createRequestBody struct {
 	Name string `json:"name" validate:"required,min=3,max=50" example:"My New Project"`
 	// Description of the project
 	Description string `json:"description" validate:"required,min=10,max=500" example:"This is a detailed description of my new project"`
+	CreatedBy   string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Create a new project
@@ -35,28 +36,19 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	validate := validator.New()
-
-	if err := validate.Struct(body); err != nil {
-		var errors []models.ValidationError
-		for _, err := range err.(validator.ValidationErrors) {
-			errors = append(errors, models.ValidationError{
-				Field: err.Field(),
-				Tag:   err.Tag(),
-				Value: err.Param(),
-			})
-		}
+	err := pkg.ValidateRequest(h.logger, &body)
+	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   errors,
+			"error":   err.Error(),
 			"message": "Invalid request body",
 			"code":    fiber.StatusBadRequest,
 		})
-
 	}
 
 	project, err := h.svc.Create(models.CreateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
+		CreatedBy:   body.CreatedBy,
 	})
 
 	if err != nil {

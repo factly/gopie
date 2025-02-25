@@ -14,18 +14,27 @@ import (
 const createProject = `-- name: CreateProject :one
 insert into projects (
     name,
-    description
-) values ($1, $2)
-returning id, name, description, created_at, updated_at
+    description,
+    created_by,
+    updated_by
+) values ($1, $2, $3, $4)
+returning id, name, description, created_at, updated_at, created_by, updated_by
 `
 
 type CreateProjectParams struct {
 	Name        string      `json:"name"`
 	Description pgtype.Text `json:"description"`
+	CreatedBy   pgtype.Text `json:"createdBy"`
+	UpdatedBy   pgtype.Text `json:"updatedBy"`
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
-	row := q.db.QueryRow(ctx, createProject, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, createProject,
+		arg.Name,
+		arg.Description,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
 	var i Project
 	err := row.Scan(
 		&i.ID,
@@ -33,6 +42,8 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }
@@ -48,7 +59,7 @@ func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 
 const getProject = `-- name: GetProject :one
 select 
-    p.id, p.name, p.description, p.created_at, p.updated_at,
+    p.id, p.name, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
     array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
 from projects p
@@ -63,6 +74,8 @@ type GetProjectRow struct {
 	Description  pgtype.Text        `json:"description"`
 	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
+	CreatedBy    pgtype.Text        `json:"createdBy"`
+	UpdatedBy    pgtype.Text        `json:"updatedBy"`
 	DatasetIds   interface{}        `json:"datasetIds"`
 	DatasetCount int64              `json:"datasetCount"`
 }
@@ -76,6 +89,8 @@ func (q *Queries) GetProject(ctx context.Context, id string) (GetProjectRow, err
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.DatasetIds,
 		&i.DatasetCount,
 	)
@@ -95,7 +110,7 @@ func (q *Queries) GetProjectsCount(ctx context.Context) (int64, error) {
 
 const searchProjects = `-- name: SearchProjects :many
 SELECT 
-    p.id, p.name, p.description, p.created_at, p.updated_at,
+    p.id, p.name, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
     count(pd.dataset_id) as dataset_count
 FROM projects p
 LEFT JOIN project_datasets pd ON p.id = pd.project_id
@@ -125,6 +140,8 @@ type SearchProjectsRow struct {
 	Description  pgtype.Text        `json:"description"`
 	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
+	CreatedBy    pgtype.Text        `json:"createdBy"`
+	UpdatedBy    pgtype.Text        `json:"updatedBy"`
 	DatasetCount int64              `json:"datasetCount"`
 }
 
@@ -143,6 +160,8 @@ func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) 
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
 			&i.DatasetCount,
 		); err != nil {
 			return nil, err
@@ -159,19 +178,26 @@ const updateProject = `-- name: UpdateProject :one
 update projects
 set 
     name = coalesce($1, name),
-    description = coalesce($2, description)
-where id = $3
-returning id, name, description, created_at, updated_at
+    description = coalesce($2, description),
+    updated_by = coalesce($3, updated_by)
+where id = $4
+returning id, name, description, created_at, updated_at, created_by, updated_by
 `
 
 type UpdateProjectParams struct {
 	Name        string      `json:"name"`
 	Description pgtype.Text `json:"description"`
+	UpdatedBy   pgtype.Text `json:"updatedBy"`
 	ID          string      `json:"id"`
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
-	row := q.db.QueryRow(ctx, updateProject, arg.Name, arg.Description, arg.ID)
+	row := q.db.QueryRow(ctx, updateProject,
+		arg.Name,
+		arg.Description,
+		arg.UpdatedBy,
+		arg.ID,
+	)
 	var i Project
 	err := row.Scan(
 		&i.ID,
@@ -179,6 +205,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 	)
 	return i, err
 }

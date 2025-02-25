@@ -14,6 +14,7 @@ func (s *PostgresProjectStore) Update(ctx context.Context, projectID string, par
 		ID:          projectID,
 		Name:        params.Name,
 		Description: pgtype.Text{String: params.Description},
+		UpdatedBy:   pgtype.Text{String: params.UpdatedBy},
 	})
 	if err != nil {
 		s.logger.Error("Error updating project", zap.Error(err))
@@ -26,5 +27,7 @@ func (s *PostgresProjectStore) Update(ctx context.Context, projectID string, par
 		Description: p.Description.String,
 		CreatedAt:   p.CreatedAt.Time,
 		UpdatedAt:   p.UpdatedAt.Time,
+		CreatedBy:   p.CreatedBy.String,
+		UpdatedBy:   p.UpdatedBy.String,
 	}, nil
 }

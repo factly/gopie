@@ -1,37 +1,4 @@
-version: '3.8'
-
 services:
-  #########################################################################
-  #####                        MINIO                                    #####
-  #########################################################################
-  minio:
-    image: bitnami/minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - ./volumes/minio/data:/data
-    environment:
-      - MINIO_ROOT_USER=miniokey
-      - MINIO_ROOT_PASSWORD=miniosecret
-    networks:
-      - gopie_network
-
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      - minio
-    networks:
-      - gopie_network
-    entrypoint: >
-      /bin/sh -c "
-        apk add --no-cache bash;
-        /usr/bin/mc config host add myminio http://minio:9000 miniokey miniosecret;
-        /usr/bin/mc mb myminio/gopie;
-        /usr/bin/mc anonymous set public myminio/gopie;
-        exit 0;
-      "
-
   #########################################################################
   #####                        DATABASE                                 #####
   #########################################################################
@@ -60,33 +27,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - GOPIE_SERVE_HOST=0.0.0.0
-      - GOPIE_SERVE_PORT=8081
-      - GOPIE_S3_ACCESS_KEY=HTSCEFXHEWH2M04G24JS
-      - GOPIE_S3_SECRET_KEY=rp0I4tGzsNWELPTqiwQ1p6DsbqeVcqJHrDtJNcYR
-      - GOPIE_S3_REGION=us-east-1
-      - GOPIE_S3_ENDPOINT=https://s3.eu-central-1.wasabisys.com
-      - GOPIE_LOGGER_LEVEL=info
-      - GOPIE_LOGGER_FILE=gopie.log
-      - GOPIE_LOGGER_MODE=dev
-      - GOPIE_MOTHERDUCK_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6IkxqaUZLbFdCdVVlQkFJSmU3aERFVVBvemVFekhqSlFVTF93bG1GbFdGYVkiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3MzU1MjkwMzV9.nay3ZLTNgZReqdVqyRWRzl5lPqU609Mw-eMr_66Nt6Q
-      - GOPIE_MOTHERDUCK_DB_NAME=dataful
-      - GOPIE_MOTHERDUCK_ACCESS_MODE=read_write
-      - GOPIE_PORTKEY_APIKEY=bRUBnBaNaOg8Qou7B7jVHsuIVsc=
-      - GOPIE_PORTKEY_BASEURL=https://api.portkey.ai/v1
-      - GOPIE_PORTKEY_MODEL=o1-mini
-      - GOPIE_PORTKEY_VIRTUALKEY=openai-cec123
-      - GOPIE_POSTGRES_HOST=postgres
-      - GOPIE_POSTGRES_PORT=5432
-      - GOPIE_POSTGRES_DB=gopie
-      - GOPIE_POSTGRES_USER=postgres
-      - GOPIE_POSTGRES_PASSWORD=postgres
+    env_file: ./config.env
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
     networks:
       - gopie_network
 
@@ -94,33 +38,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - GOPIE_SERVE_HOST=0.0.0.0
-      - GOPIE_SERVE_PORT=8081
-      - GOPIE_S3_ACCESS_KEY=HTSCEFXHEWH2M04G24JS
-      - GOPIE_S3_SECRET_KEY=rp0I4tGzsNWELPTqiwQ1p6DsbqeVcqJHrDtJNcYR
-      - GOPIE_S3_REGION=us-east-1
-      - GOPIE_S3_ENDPOINT=https://s3.eu-central-1.wasabisys.com
-      - GOPIE_LOGGER_LEVEL=info
-      - GOPIE_LOGGER_FILE=gopie.log
-      - GOPIE_LOGGER_MODE=dev
-      - GOPIE_MOTHERDUCK_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6IkxqaUZLbFdCdVVlQkFJSmU3aERFVVBvemVFekhqSlFVTF93bG1GbFdGYVkiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3MzU1MjkwMzV9.nay3ZLTNgZReqdVqyRWRzl5lPqU609Mw-eMr_66Nt6Q
-      - GOPIE_MOTHERDUCK_DB_NAME=dataful
-      - GOPIE_MOTHERDUCK_ACCESS_MODE=read_write
-      - GOPIE_PORTKEY_APIKEY=bRUBnBaNaOg8Qou7B7jVHsuIVsc=
-      - GOPIE_PORTKEY_BASEURL=https://api.portkey.ai/v1
-      - GOPIE_PORTKEY_MODEL=o1-mini
-      - GOPIE_PORTKEY_VIRTUALKEY=openai-cec123
-      - GOPIE_POSTGRES_HOST=postgres
-      - GOPIE_POSTGRES_PORT=5432
-      - GOPIE_POSTGRES_DB=gopie
-      - GOPIE_POSTGRES_USER=postgres
-      - GOPIE_POSTGRES_PASSWORD=postgres
+    env_file: ./config.env
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
     networks:
       - gopie_network
 
@@ -128,33 +49,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - GOPIE_SERVE_HOST=0.0.0.0
-      - GOPIE_SERVE_PORT=8081
-      - GOPIE_S3_ACCESS_KEY=HTSCEFXHEWH2M04G24JS
-      - GOPIE_S3_SECRET_KEY=rp0I4tGzsNWELPTqiwQ1p6DsbqeVcqJHrDtJNcYR
-      - GOPIE_S3_REGION=us-east-1
-      - GOPIE_S3_ENDPOINT=https://s3.eu-central-1.wasabisys.com
-      - GOPIE_LOGGER_LEVEL=info
-      - GOPIE_LOGGER_FILE=gopie.log
-      - GOPIE_LOGGER_MODE=dev
-      - GOPIE_MOTHERDUCK_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6IkxqaUZLbFdCdVVlQkFJSmU3aERFVVBvemVFekhqSlFVTF93bG1GbFdGYVkiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3MzU1MjkwMzV9.nay3ZLTNgZReqdVqyRWRzl5lPqU609Mw-eMr_66Nt6Q
-      - GOPIE_MOTHERDUCK_DB_NAME=dataful
-      - GOPIE_MOTHERDUCK_ACCESS_MODE=read_write
-      - GOPIE_PORTKEY_APIKEY=bRUBnBaNaOg8Qou7B7jVHsuIVsc=
-      - GOPIE_PORTKEY_BASEURL=https://api.portkey.ai/v1
-      - GOPIE_PORTKEY_MODEL=o1-mini
-      - GOPIE_PORTKEY_VIRTUALKEY=openai-cec123
-      - GOPIE_POSTGRES_HOST=postgres
-      - GOPIE_POSTGRES_PORT=5432
-      - GOPIE_POSTGRES_DB=gopie
-      - GOPIE_POSTGRES_USER=postgres
-      - GOPIE_POSTGRES_PASSWORD=postgres
+    env_file: ./config.env
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
     networks:
       - gopie_network
 
