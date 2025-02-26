@@ -83,12 +83,17 @@ func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models
 	}
 
 	// existing chat
+	newUserMessage, err := service.store.AddNewMessage(context.Background(), params.ChatID, messages[len(messages)-2])
+	if err != nil {
+		return nil, fmt.Errorf("Error adding new message to chat: %v", err)
+	}
 	newMessage, err := service.store.AddNewMessage(context.Background(), params.ChatID, messages[len(messages)-1])
 	if err != nil {
 		return nil, fmt.Errorf("Error adding new message to chat: %v", err)
 	}
+	params.Messages = append(params.Messages, *newUserMessage, *newMessage)
 
 	return &models.ChatWithMessages{
-		Messages: append(params.Messages, *newMessage),
+		Messages: params.Messages,
 	}, nil
 }
