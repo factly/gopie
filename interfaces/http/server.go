@@ -15,6 +15,7 @@ import (
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
+	"github.com/factly/gopie/infrastructure/zitadel"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
@@ -46,6 +47,9 @@ func ServeHttp() error {
 		},
 	)
 	logger.Info("logger initialized")
+
+	// zitadel interceptor setup
+	zitadel.SetupZitadelInterceptor(config, logger)
 
 	source := s3.NewS3SourceRepository(&config.S3, logger)
 	olap, err := motherduck.NewMotherDuckOlapoDriver(&config.MotherDuck, logger)
@@ -84,6 +88,9 @@ func ServeHttp() error {
 
 	// Swagger route
 	app.Get("/swagger/*", swagger.HandlerDefault)
+
+	// auth route
+	api.AuthRoutes(app.Group("/v1/oauth"), logger, config)
 
 	// Only enable authorization if meterus is configured
 	if config.Meterus.ApiKey == "" || config.Meterus.Addr == "" {

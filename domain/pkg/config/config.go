@@ -38,6 +38,7 @@ type GopieConfig struct {
 	PortKey    PortKeyConfig
 	Meterus    MeterusConfig
 	Postgres   PostgresConfig
+	Zitadel    ZitadelConfig
 }
 
 type MotherDuckConfig struct {
@@ -59,6 +60,16 @@ type PostgresConfig struct {
 	Database string
 	User     string
 	Password string
+}
+
+type ZitadelConfig struct {
+	Protocol            string
+	Domain              string
+	InsecurePort        string
+	ProjectID           string
+	PersonalAccessToken string
+	ServiceUserID       string
+	LoginURL            string
 }
 
 func initializeViper() error {
@@ -94,6 +105,12 @@ func validateConfig(config *GopieConfig) error {
 		{config.Postgres.Database, "postgres database"},
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
+		{config.Zitadel.Protocol, "zitadel protocol"},
+		{config.Zitadel.Domain, "zitadel domain"},
+		{config.Zitadel.ProjectID, "zitadel project id"},
+		{config.Zitadel.PersonalAccessToken, "zitadel personal access token"},
+		{config.Zitadel.ServiceUserID, "zitadel service user id"},
+		{config.Zitadel.LoginURL, "zitadel app login url"},
 	}
 
 	for _, v := range validations {
@@ -158,6 +175,15 @@ func LoadConfig() (*GopieConfig, error) {
 			Database: viper.GetString("GOPIE_POSTGRES_DB"),
 			User:     viper.GetString("GOPIE_POSTGRES_USER"),
 			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
+		},
+		Zitadel: ZitadelConfig{
+			Protocol:            viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
+			Domain:              viper.GetString("GOPIE_ZITADEL_DOMAIN"),
+			InsecurePort:        viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
+			ProjectID:           viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
+			PersonalAccessToken: viper.GetString("GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN"),
+			ServiceUserID:       viper.GetString("GOPIE_ZITADEL_SERVICE_USER_ID"),
+			LoginURL:            viper.GetString("GOPIE_ZITADEL_APP_LOGIN_URL"),
 		},
 	}
 
