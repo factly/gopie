@@ -8,6 +8,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Chat struct {
+	ID          pgtype.UUID        `json:"id"`
+	Name        string             `json:"name"`
+	Description pgtype.Text        `json:"description"`
+	DatasetID   pgtype.UUID        `json:"datasetId"`
+	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
+	CreatedBy   pgtype.Text        `json:"createdBy"`
+	UpdatedBy   pgtype.Text        `json:"updatedBy"`
+}
+
+type ChatMessage struct {
+	ID        pgtype.UUID        `json:"id"`
+	ChatID    pgtype.UUID        `json:"chatId"`
+	Content   string             `json:"content"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	CreatedBy pgtype.Text        `json:"createdBy"`
+}
+
 type Dataset struct {
 	ID          string             `json:"id"`
 	Name        string             `json:"name"`
