@@ -85,38 +85,41 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b px-2 py-3">
         {isSidebarOpen ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => router.push("/")}
-                title="Back to Home"
-              >
-                <HomeIcon className="h-4 w-4" />
-              </Button>
-              <span className="font-semibold">Gopie</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => router.push("/")}
+                  title="Back to Home"
+                >
+                  <HomeIcon className="h-4 w-4" />
+                </Button>
+                <span className="font-semibold">Gopie</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Toggle Sidebar"
+                  onClick={() => {
+                    const trigger = document.querySelector(
+                      '[data-sidebar="trigger"]'
+                    ) as HTMLButtonElement;
+                    if (trigger) {
+                      trigger.click();
+                    }
+                  }}
+                >
+                  <PanelLeftIcon className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                title="Toggle Sidebar"
-                onClick={() => {
-                  const trigger = document.querySelector(
-                    '[data-sidebar="trigger"]'
-                  ) as HTMLButtonElement;
-                  if (trigger) {
-                    trigger.click();
-                  }
-                }}
-              >
-                <PanelLeftIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            <CommandSearch projectId={projectId} onNavigate={router.push} />
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -145,6 +148,7 @@ export function AppSidebar() {
             >
               <PanelLeftIcon className="h-4 w-4" />
             </Button>
+            <CommandSearch projectId={projectId} onNavigate={router.push} />
           </div>
         )}
         <SidebarTrigger className="hidden" />
@@ -318,7 +322,6 @@ export function AppSidebar() {
               <ThemeToggle />
             </div>
           )}
-          <CommandSearch projectId={projectId} onNavigate={router.push} />
         </div>
       </SidebarFooter>
     </Sidebar>
