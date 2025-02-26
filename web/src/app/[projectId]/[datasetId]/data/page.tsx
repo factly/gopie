@@ -80,7 +80,10 @@ export default function SqlPage({
 
   React.useEffect(() => {
     setQuery(`SELECT * FROM ${dataset?.name} LIMIT 10`);
-  }, [dataset]);
+    if (dataset?.name && queryMode === "sql") {
+      handleExecute();
+    }
+  }, [dataset, queryMode]);
 
   React.useEffect(() => {
     if (transcript) {
