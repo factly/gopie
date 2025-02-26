@@ -30,7 +30,7 @@ type Dataset struct {
 	// CreatedBy represents the user who created the dataset
 	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// UpdatedBy represents the user who last updated the dataset
-	UpdatedBy string `json:"update_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // ListProjectDatasetsResults represents a dataset in project listing
@@ -45,7 +45,7 @@ type ListProjectDatasetsResults struct {
 	// CreatedBy represents the user who created the dataset
 	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// UpdatedBy represents the user who last updated the dataset
-	UpdatedBy string `json:"update_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Description of the dataset
 	Description string `json:"description" example:"Sales data for Q1 2024"`
 	// Creation timestamp

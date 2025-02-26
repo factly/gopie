@@ -57,7 +57,10 @@ export function CreateProjectDialog() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await createProject.mutateAsync(values);
+      await createProject.mutateAsync({
+        ...values,
+        created_by: "gopie-web-ui",
+      });
       queryClient.invalidateQueries({
         queryKey: ["projects"],
       });

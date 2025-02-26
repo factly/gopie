@@ -30,4 +30,5 @@ func Routes(router fiber.Router, params RouterParams) {
 	router.Get("/", httpHandler.list)
 	router.Get("/:datasetID", httpHandler.details)
 	router.Delete("/:datasetID", httpHandler.delete)
+	router.Put("/:datasetID", httpHandler.update)
 }

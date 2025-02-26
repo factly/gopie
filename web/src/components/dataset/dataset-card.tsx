@@ -51,7 +51,7 @@ export function DatasetCard({
         <div className="flex items-start justify-between">
           <Link href={`/${projectId}/${dataset.id}`}>
             <CardTitle className="text-xl font-semibold line-clamp-1">
-              {dataset.name}
+              {dataset.alias || dataset.name}
             </CardTitle>
           </Link>
           <div className="flex items-center gap-2">

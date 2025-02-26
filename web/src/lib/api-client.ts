@@ -13,6 +13,7 @@ export const apiClient = ky.create({
 export interface ProjectInput {
   name: string;
   description: string;
+  created_by: string;
 }
 
 export interface Project extends ProjectInput {
@@ -20,12 +21,15 @@ export interface Project extends ProjectInput {
   createdAt: string;
   updatedAt: string;
   datasetCount: number;
+  createdBy: string;
+  updatedBy: string;
 }
 
 // Dataset Types
 export interface Dataset {
   id: string;
   name: string;
+  alias: string;
   description: string;
   format: string;
   row_count: number;
@@ -34,6 +38,8 @@ export interface Dataset {
   file_path: string;
   created_at: string;
   updated_at: string;
+  created_by: string;
+  updated_by: string;
 }
 
 // API Response Types

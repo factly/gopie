@@ -589,6 +589,76 @@ const docTemplate = `{
                     }
                 }
             },
+            "put": {
+                "description": "Update an existing dataset information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Update dataset",
+                "operationId": "update-dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dataset update parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/datasets.updateDatasetParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Dataset"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Delete a dataset from a project",
                 "consumes": [
@@ -853,10 +923,32 @@ const docTemplate = `{
                 }
             }
         },
+        "datasets.updateDatasetParams": {
+            "type": "object",
+            "required": [
+                "updated_by"
+            ],
+            "properties": {
+                "alias": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Dataset": {
             "description": "Dataset model",
             "type": "object",
             "properties": {
+                "alias": {
+                    "description": "Alias of the dataset",
+                    "type": "string",
+                    "example": "sales_data_alias"
+                },
                 "columns": {
                     "description": "Column definitions of the dataset",
                     "type": "array",
@@ -869,6 +961,11 @@ const docTemplate = `{
                     "description": "Creation timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "created_by": {
+                    "description": "CreatedBy represents the user who created the dataset",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "description": {
                     "description": "Description of the dataset",
@@ -893,7 +990,7 @@ const docTemplate = `{
                 "name": {
                     "description": "Name of the dataset",
                     "type": "string",
-                    "example": "sales_data"
+                    "example": "gp_Dh790Asdf17kd"
                 },
                 "row_count": {
                     "description": "Number of rows in the dataset",
@@ -904,6 +1001,11 @@ const docTemplate = `{
                     "description": "Size of the dataset in bytes",
                     "type": "integer",
                     "example": 1048576
+                },
+                "updated_by": {
+                    "description": "UpdatedBy represents the user who last updated the dataset",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "updated_at": {
                     "description": "Last update timestamp",
@@ -920,6 +1022,10 @@ const docTemplate = `{
                     "description": "Creation timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "created_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "description": {
                     "description": "Description of the project",
@@ -940,6 +1046,10 @@ const docTemplate = `{
                     "description": "Last update timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "updated_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -947,10 +1057,15 @@ const docTemplate = `{
             "description": "Request body for creating a new project",
             "type": "object",
             "required": [
+                "created_by",
                 "description",
                 "name"
             ],
             "properties": {
+                "created_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
@@ -971,7 +1086,8 @@ const docTemplate = `{
             "description": "Request body for updating an existing project",
             "type": "object",
             "required": [
-                "name"
+                "name",
+                "updated_by"
             ],
             "properties": {
                 "description": {
@@ -986,6 +1102,10 @@ const docTemplate = `{
                     "maxLength": 50,
                     "minLength": 3,
                     "example": "Updated Project Name"
+                },
+                "updated_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -1023,7 +1143,8 @@ const docTemplate = `{
             "description": "Request body for updating a dataset from S3",
             "type": "object",
             "required": [
-                "dataset"
+                "dataset",
+                "updated_by"
             ],
             "properties": {
                 "dataset": {
@@ -1043,6 +1164,11 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 1,
                     "example": "my-bucket/data/updated_sales.csv"
+                },
+                "updated_by": {
+                    "description": "User ID of the updater",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -1050,10 +1176,23 @@ const docTemplate = `{
             "description": "Request body for uploading a file from S3",
             "type": "object",
             "required": [
+                "alias",
+                "created_by",
                 "file_path",
                 "project_id"
             ],
             "properties": {
+                "alias": {
+                    "description": "Alias of the dataset",
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "sales_data"
+                },
+                "created_by": {
+                    "description": "User ID of the creator",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",

@@ -10,6 +10,13 @@ import {
   ChevronDown,
   PanelLeftIcon,
   HomeIcon,
+  HashIcon,
+  CalendarIcon,
+  TextIcon,
+  TimerIcon,
+  TypeIcon,
+  ListIcon,
+  CircleDotIcon,
 } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -40,6 +47,8 @@ import { useProject } from "@/lib/queries/project/get-project";
 import { useProjects } from "@/lib/queries/project/list-projects";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { CommandSearch } from "@/components/search/command-search";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export function AppSidebar() {
   const router = useRouter();
@@ -56,7 +65,7 @@ export function AppSidebar() {
           variables: { projectId },
           enabled: Boolean(projectId),
         }
-      : { enabled: false },
+      : { enabled: false }
   );
   const { data: datasets } = useDatasets({
     variables: {
@@ -64,6 +73,8 @@ export function AppSidebar() {
     },
     enabled: Boolean(projectId),
   });
+
+  const schema = datasets?.results.find((d) => d.id === datasetId)?.columns;
 
   // Hide sidebar on home page
   if (pathname === "/") {
@@ -79,6 +90,39 @@ export function AppSidebar() {
       return pathname.startsWith(href);
     }
     return pathname === href;
+  };
+
+  const getColumnIcon = (type: string) => {
+    const iconClass = "h-3.5 w-3.5";
+    type = type.toLowerCase();
+    if (
+      type.includes("int") ||
+      type.includes("decimal") ||
+      type.includes("numeric") ||
+      type.includes("float")
+    ) {
+      return <HashIcon className={iconClass} />;
+    }
+    if (type.includes("date") || type.includes("timestamp")) {
+      return <CalendarIcon className={iconClass} />;
+    }
+    if (type.includes("time")) {
+      return <TimerIcon className={iconClass} />;
+    }
+    if (
+      type.includes("char") ||
+      type.includes("text") ||
+      type.includes("string")
+    ) {
+      return <TextIcon className={iconClass} />;
+    }
+    if (type.includes("bool")) {
+      return <CircleDotIcon className={iconClass} />;
+    }
+    if (type.includes("array") || type.includes("list")) {
+      return <ListIcon className={iconClass} />;
+    }
+    return <TypeIcon className={iconClass} />;
   };
 
   return (
@@ -108,7 +152,7 @@ export function AppSidebar() {
                   title="Toggle Sidebar"
                   onClick={() => {
                     const trigger = document.querySelector(
-                      '[data-sidebar="trigger"]',
+                      '[data-sidebar="trigger"]'
                     ) as HTMLButtonElement;
                     if (trigger) {
                       trigger.click();
@@ -139,7 +183,7 @@ export function AppSidebar() {
               title="Toggle Sidebar"
               onClick={() => {
                 const trigger = document.querySelector(
-                  '[data-sidebar="trigger"]',
+                  '[data-sidebar="trigger"]'
                 ) as HTMLButtonElement;
                 if (trigger) {
                   trigger.click();
@@ -320,6 +364,41 @@ export function AppSidebar() {
           {!isSidebarOpen && (
             <div className="flex justify-center">
               <ThemeToggle />
+            </div>
+          )}
+          {isSidebarOpen && datasetId && schema && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Schema
+                </span>
+                <DatabaseIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <ScrollArea className="h-[200px] pr-2">
+                <div className="space-y-0.5">
+                  {schema.map((column) => (
+                    <div
+                      key={column.column_name}
+                      className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="text-muted-foreground/70 group-hover:text-muted-foreground/90 transition-colors">
+                          {getColumnIcon(column.column_type)}
+                        </div>
+                        <span className="truncate font-medium text-muted-foreground/90 group-hover:text-foreground transition-colors">
+                          {column.column_name}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="bg-muted/30 hover:bg-muted border-muted-foreground/20 text-muted-foreground/70 group-hover:text-muted-foreground/90 transition-colors text-[10px] h-4 font-normal"
+                      >
+                        {column.column_type}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )}
         </div>

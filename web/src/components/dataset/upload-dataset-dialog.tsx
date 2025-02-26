@@ -82,6 +82,8 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
         projectId,
+        alias: (file.name || "dataset").replace(/\.csv$/, ""),
+        createdBy: "system",
       });
 
       if (!res?.tableName) {

@@ -11,15 +11,21 @@ export const useSourceDataset = createMutation({
   mutationFn: async ({
     datasetUrl,
     projectId,
+    alias,
+    createdBy,
   }: {
     datasetUrl: string;
     projectId: string;
+    alias: string;
+    createdBy: string;
   }) => {
     const res = await apiClient.post("source/s3/upload", {
       body: JSON.stringify({
         file_path: datasetUrl,
         description: "Uploaded from Gopie Web",
         project_id: projectId,
+        alias,
+        created_by: createdBy,
       }),
     });
 

@@ -231,26 +231,45 @@ export default function SqlPage({
                   className="p-4 space-y-4"
                   {...fadeInVariants}
                 >
-                  <div className="relative">
-                    <Textarea
-                      placeholder="Ask a question about your data..."
-                      value={naturalQuery}
-                      onChange={(e) => setNaturalQuery(e.target.value)}
-                      className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50"
-                    />
-                    {browserSupportsSpeechRecognition && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="absolute right-2 top-2"
-                        onClick={toggleListening}
+                  <div className="relative flex flex-col gap-2">
+                    <div className="relative flex items-center">
+                      <Textarea
+                        placeholder="Ask a question about your data... (e.g. 'Show me the top 10 users by revenue')"
+                        value={naturalQuery}
+                        onChange={(e) => setNaturalQuery(e.target.value)}
+                        className="min-h-[120px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 pr-12 resize-none rounded-xl shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
+                      />
+                      {browserSupportsSpeechRecognition && (
+                        <div className="absolute right-3 top-3">
+                          <Button
+                            size="sm"
+                            variant={listening ? "destructive" : "secondary"}
+                            className={`rounded-full w-8 h-8 p-0 transition-all duration-200 ${
+                              listening
+                                ? "animate-pulse shadow-md shadow-red-500/20"
+                                : "hover:shadow-sm"
+                            }`}
+                            onClick={toggleListening}
+                          >
+                            {listening ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    {listening && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-sm text-muted-foreground flex items-center gap-2"
                       >
-                        {listening ? (
-                          <MicOff className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <Mic className="h-4 w-4" />
-                        )}
-                      </Button>
+                        <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        Listening... Click the mic button again to stop
+                      </motion.div>
                     )}
                   </div>
                   <AnimatePresence>

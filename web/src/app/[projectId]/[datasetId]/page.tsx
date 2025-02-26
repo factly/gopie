@@ -38,36 +38,57 @@ export default function DatasetPage({
       <div className="">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Loading Header */}
-          <div className="bg-background p-6 rounded-lg shadow-sm border">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-12 w-[300px]" />
-                    <Skeleton className="h-6 w-16" />
+          <div className="bg-background p-8 rounded-xl shadow-sm border">
+            <div className="grid grid-cols-[400px,1fr] gap-8">
+              {/* Left Column */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-9 w-9 rounded-lg" />
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-7 w-48" />
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-5 w-12" />
+                    </div>
+                    <Skeleton className="h-4 w-64" />
+                    <div className="flex items-center gap-3 mt-6">
+                      <Skeleton className="h-9 w-9" />
+                      <Skeleton className="h-9 w-9" />
+                      <Skeleton className="h-9 w-9" />
+                    </div>
                   </div>
-                  <Skeleton className="h-6 w-[200px]" />
                 </div>
-                <Skeleton className="h-9 w-[150px]" />
               </div>
-
-              <div className="flex items-center gap-8 pt-4 mt-4 border-t border-border/40">
-                <div className="flex flex-col gap-0.5">
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-8 w-24" />
+              {/* Right Column */}
+              <div className="pt-3 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <Skeleton className="h-[52px] rounded-lg" />
+                  <Skeleton className="h-[52px] rounded-lg" />
+                  <Skeleton className="h-[52px] rounded-lg" />
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-8 w-24" />
+                <div className="grid grid-cols-4 gap-3">
+                  <Skeleton className="h-[52px] rounded-lg" />
+                  <Skeleton className="h-[52px] rounded-lg" />
+                  <Skeleton className="h-[52px] rounded-lg" />
+                  <Skeleton className="h-[52px] rounded-lg" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Loading Content */}
-          <div className="bg-background rounded-lg shadow-sm border p-6">
-            <Skeleton className="h-10 w-[200px] mb-6" />
-            <Skeleton className="h-[400px] w-full" />
+          <div className="bg-background rounded-xl shadow-sm border overflow-hidden">
+            <div className="px-6 pt-6">
+              <Skeleton className="h-9 w-[400px]" />
+            </div>
+            <div className="p-6 pt-4">
+              <Skeleton className="h-[400px] w-full" />
+            </div>
           </div>
         </div>
       </div>
@@ -79,33 +100,43 @@ export default function DatasetPage({
   }
 
   return (
-    <div className="">
+    <div className="min-h-screen bg-background/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Dataset Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-background p-6 rounded-lg shadow-sm border"
+          className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/50 p-8 rounded-xl shadow-sm border"
         >
-          <DatasetHeader dataset={dataset} onUpdate={handleUpdate} />
+          <DatasetHeader
+            dataset={dataset}
+            projectId={projectId}
+            onUpdate={handleUpdate}
+          />
         </motion.div>
 
         {/* Content Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-background rounded-lg shadow-sm border p-6"
+          transition={{ delay: 0.3 }}
+          className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/50 rounded-xl shadow-sm border overflow-hidden"
         >
-          <Tabs defaultValue="preview" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="preview">Data Preview</TabsTrigger>
-              <TabsTrigger value="schema">Schema</TabsTrigger>
-            </TabsList>
-            <TabsContent value="preview" className="space-y-4">
+          <Tabs defaultValue="preview" className="h-full">
+            <div className="px-6 pt-6">
+              <TabsList className="w-full max-w-[400px] grid grid-cols-2">
+                <TabsTrigger value="preview" className="flex-1">
+                  Data Preview
+                </TabsTrigger>
+                <TabsTrigger value="schema" className="flex-1">
+                  Schema
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="preview" className="p-6 pt-4">
               <DataPreview datasetId={dataset.name} />
             </TabsContent>
-            <TabsContent value="schema" className="space-y-4">
+            <TabsContent value="schema" className="p-6 pt-4">
               <SchemaTable schema={tableSchema || []} />
             </TabsContent>
           </Tabs>
