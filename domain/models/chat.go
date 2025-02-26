@@ -19,6 +19,12 @@ type ChatWithMessages struct {
 	Messages  []ChatMessage `json:"messages"`
 }
 
+type ChatWithAiParams struct {
+	ChatID    string        `json:"id,omitempty"`
+	DatasetID string        `json:"dataset_id,omitempty"`
+	UserID    string        `json:"user_id,omitempty"`
+	Messages  []ChatMessage `json:"messages"`
+}
 type ChatMessage struct {
 	ID        string    `json:"id"`
 	Content   string    `json:"content"`

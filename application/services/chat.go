@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/factly/gopie/application/repositories"
@@ -15,20 +16,6 @@ type ChatService struct {
 
 func NewChatService(store repositories.ChatStoreRepository, ai repositories.AiChatRepository) *ChatService {
 	return &ChatService{store, ai}
-}
-
-func (service *ChatService) CreateChat(params *models.CreateChatParams) (*models.ChatWithMessages, error) {
-	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Messages[0].Content)
-	if err != nil {
-		return nil, err
-	}
-	params.Messages = append(params.Messages, models.ChatMessage{
-		Content:   aiResponse.Response,
-		Role:      "assistant",
-		CreatedAt: time.Now(),
-	})
-
-	return service.store.CreateChat(context.Background(), params)
 }
 
 func (service *ChatService) DeleteChat(id string) error {
@@ -62,4 +49,47 @@ func (service *ChatService) AddNewMessage(chatID string, message models.ChatMess
 
 func (service *ChatService) DeleteMessage(chatID string, messageID string) error {
 	return service.store.DeleteMessage(context.Background(), chatID, messageID)
+}
+
+func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models.ChatWithMessages, error) {
+	messages := params.Messages
+
+	latestMessage := messages[len(messages)-1]
+
+	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), latestMessage.Content)
+	if err != nil {
+		return nil, fmt.Errorf("Error generating chat response from ai: %v", err)
+	}
+	messages = append(messages, models.ChatMessage{
+		Content:   aiResponse.Response,
+		Role:      "assistant",
+		CreatedAt: time.Now(),
+	})
+	// new chat
+	if params.ChatID == "" {
+
+		title, err := service.ai.GenerateTitle(context.Background(), messages[len(messages)-1].Content)
+		if err != nil {
+			return nil, fmt.Errorf("Error generating title from ai: %v", err)
+		}
+
+		chat, err := service.store.CreateChat(context.Background(), &models.CreateChatParams{
+			Messages:  messages,
+			Name:      title.Response,
+			CreatedBy: params.UserID,
+			DatasetID: params.DatasetID,
+		})
+
+		return chat, err
+	}
+
+	// existing chat
+	newMessage, err := service.store.AddNewMessage(context.Background(), params.ChatID, messages[len(messages)-1])
+	if err != nil {
+		return nil, fmt.Errorf("Error adding new message to chat: %v", err)
+	}
+
+	return &models.ChatWithMessages{
+		Messages: append(params.Messages, *newMessage),
+	}, nil
 }

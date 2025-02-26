@@ -60,7 +60,7 @@ func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) repositor
 	return &PortkeyClient{client, model, logger}
 }
 
-func (c *PortkeyClient) GenerateSql(content string) (string, error) {
+func (c *PortkeyClient) GenerateResponse(content string) (string, error) {
 	c.logger.Debug("generating sql from portkey")
 	msgs := openai.ChatCompletionMessage{
 		Role:    "user",
@@ -85,8 +85,28 @@ func (c *PortkeyClient) GenerateSql(content string) (string, error) {
 	return res.Choices[0].Message.Content, nil
 }
 
+func (c *PortkeyClient) GenerateSql(content string) (string, error) {
+	return c.GenerateResponse(content)
+}
+
 func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string) (*models.AiChatResponse, error) {
-	resp, err := c.GenerateSql(userMessage)
+	resp, err := c.GenerateResponse(userMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.AiChatResponse{
+		Response: resp,
+	}, nil
+}
+
+func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*models.AiChatResponse, error) {
+	systemPrompt := `
+	!! IMPORTANT: In the response only provide the title of the content. Do not provide any other information. !!
+		Generate a title for the following content:
+	` + content
+
+	resp, err := c.GenerateResponse(systemPrompt)
 	if err != nil {
 		return nil, err
 	}

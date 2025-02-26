@@ -12,4 +12,5 @@ type AiRepository interface {
 
 type AiChatRepository interface {
 	GenerateChatResponse(ctx context.Context, userMessage string) (*models.AiChatResponse, error)
+	GenerateTitle(ctx context.Context, userMessage string) (*models.AiChatResponse, error)
 }

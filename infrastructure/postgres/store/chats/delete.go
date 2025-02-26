@@ -2,9 +2,12 @@ package chats
 
 import (
 	"context"
+	"errors"
 
+	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
@@ -26,6 +29,9 @@ func (s *PostgresChatStore) DeleteMessage(ctx context.Context, chatID string, me
 	})
 	if err != nil {
 		s.logger.Error("Error deleting chat message", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrRecordNotFound
+		}
 		return err
 	}
 
