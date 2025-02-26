@@ -8,35 +8,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Chat struct {
+	ID        pgtype.UUID
+	Name      string
+	DatasetID pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	CreatedBy pgtype.Text
+}
+
+type ChatMessage struct {
+	ID        pgtype.UUID
+	ChatID    pgtype.UUID
+	Content   string
+	Role      string
+	CreatedAt pgtype.Timestamptz
+}
+
 type Dataset struct {
-	ID          string             `json:"id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	Format      string             `json:"format"`
-	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
-	RowCount    pgtype.Int4        `json:"rowCount"`
-	Alias       pgtype.Text        `json:"alias"`
-	CreatedBy   pgtype.Text        `json:"createdBy"`
-	UpdatedBy   pgtype.Text        `json:"updatedBy"`
-	Size        pgtype.Int8        `json:"size"`
-	FilePath    string             `json:"filePath"`
-	Columns     []byte             `json:"columns"`
+	ID          string
+	Name        string
+	Description pgtype.Text
+	Format      string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	RowCount    pgtype.Int4
+	Alias       pgtype.Text
+	CreatedBy   pgtype.Text
+	UpdatedBy   pgtype.Text
+	Size        pgtype.Int8
+	FilePath    string
+	Columns     []byte
 }
 
 type FailedDatasetUpload struct {
-	ID        string             `json:"id"`
-	DatasetID string             `json:"datasetId"`
-	Error     string             `json:"error"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	ID        string
+	DatasetID string
+	Error     string
+	CreatedAt pgtype.Timestamptz
 }
 
 type Project struct {
-	ID          string             `json:"id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy   pgtype.Text        `json:"createdBy"`
-	UpdatedBy   pgtype.Text        `json:"updatedBy"`
+	ID          string
+	Name        string
+	Description pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	CreatedBy   pgtype.Text
+	UpdatedBy   pgtype.Text
 }

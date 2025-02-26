@@ -12,11 +12,13 @@ import (
 	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
+	"github.com/factly/gopie/infrastructure/postgres/store/chats"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
+	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
@@ -64,11 +66,13 @@ func ServeHttp() error {
 	}
 	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
 	datasetStore := datasets.NewPostgresDatasetStore(store.GetDB(), logger)
+	chatStore := chats.NewChatStoreRepository(store.GetDB(), logger)
 
 	olapService := services.NewOlapService(olap, source, logger)
 	aiService := services.NewAiDriver(porkeyClient)
 	projectService := services.NewProjectService(projectStore)
 	datasetService := services.NewDatasetService(datasetStore)
+	chatService := services.NewChatService(chatStore, porkeyClient)
 
 	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
 
@@ -116,6 +120,12 @@ func ServeHttp() error {
 	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
 		Logger:         logger,
 		ProjectService: projectService,
+		DatasetService: datasetService,
+		OlapService:    olapService,
+	})
+	chatApi.Routes(app.Group("/v1/api/chats"), chatApi.RouterParams{
+		Logger:         logger,
+		ChatService:    chatService,
 		DatasetService: datasetService,
 		OlapService:    olapService,
 	})
