@@ -84,7 +84,7 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
         </span>
       ) : (
         part
-      )
+      ),
     );
   };
 

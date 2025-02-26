@@ -24,7 +24,7 @@ export default function HomePage() {
 
   const handleUpdateProject = async (
     projectId: string,
-    data: { name: string; description: string }
+    data: { name: string; description: string },
   ) => {
     try {
       await updateProject(projectId, data);
