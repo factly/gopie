@@ -24,18 +24,19 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 	}
 
 	errChan := make(chan error)
-	for _, message := range params.Messsages {
+	for _, message := range params.Messages {
 		go func(msg models.ChatMessage) {
 			_, err := s.q.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-				ChatID:  c.ID,
-				Content: msg.Content,
-				Role:    msg.Role,
+				ChatID:    c.ID,
+				Content:   msg.Content,
+				Role:      msg.Role,
+				CreatedAt: pgtype.Timestamptz{Valid: true, Time: msg.CreatedAt},
 			})
 			errChan <- err
 		}(message)
 	}
 
-	for range params.Messsages {
+	for range params.Messages {
 		if err := <-errChan; err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))
 			return nil, err
@@ -48,6 +49,6 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 		CreatedAt: c.CreatedAt.Time,
 		UpdatedAt: c.UpdatedAt.Time,
 		CreatedBy: c.CreatedBy.String,
-		Messages:  params.Messsages,
+		Messages:  params.Messages,
 	}, nil
 }

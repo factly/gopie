@@ -29,7 +29,7 @@ type ChatMessage struct {
 type CreateChatParams struct {
 	Name      string        `json:"name"`
 	CreatedBy string        `json:"created_by"`
-	Messsages []ChatMessage `json:"messages"`
+	Messages  []ChatMessage `json:"messages"`
 	DatasetID string        `json:"dataset_id"`
 }
 

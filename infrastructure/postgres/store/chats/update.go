@@ -31,6 +31,10 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 		ChatID:  pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
 		Content: message.Content,
 		Role:    message.Role,
+		CreatedAt: pgtype.Timestamptz{
+			Valid: true,
+			Time:  message.CreatedAt,
+		},
 	})
 	if err != nil {
 		return nil, err
