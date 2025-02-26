@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
@@ -34,7 +33,7 @@ func (t *defaultHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 }
 
 // Create new portkey client from config
-func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) repositories.AiRepository {
+func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) *PortkeyClient {
 
 	// set portkey config in for request
 	header := http.Header{}

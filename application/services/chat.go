@@ -54,12 +54,11 @@ func (service *ChatService) DeleteMessage(chatID string, messageID string) error
 func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models.ChatWithMessages, error) {
 	messages := params.Messages
 
-	latestMessage := messages[len(messages)-1]
-
-	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), latestMessage.Content)
+	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt)
 	if err != nil {
 		return nil, fmt.Errorf("Error generating chat response from ai: %v", err)
 	}
+	messages[len(messages)-1].CreatedAt = time.Now()
 	messages = append(messages, models.ChatMessage{
 		Content:   aiResponse.Response,
 		Role:      "assistant",
@@ -76,7 +75,7 @@ func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models
 		chat, err := service.store.CreateChat(context.Background(), &models.CreateChatParams{
 			Messages:  messages,
 			Name:      title.Response,
-			CreatedBy: params.UserID,
+			CreatedBy: params.CreatedBy,
 			DatasetID: params.DatasetID,
 		})
 

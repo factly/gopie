@@ -25,7 +25,7 @@ func (s *PostgresChatStore) GetChatMessages(ctx context.Context, chatID string, 
 		return nil, err
 	}
 
-	chatMessages := make([]*models.ChatMessage, len(messages))
+	chatMessages := make([]*models.ChatMessage, 0, len(messages))
 
 	for _, m := range messages {
 		chatMessages = append(chatMessages, &models.ChatMessage{
@@ -78,7 +78,7 @@ func (s *PostgresChatStore) GetChatsByDatasetID(ctx context.Context, datasetID s
 		return nil, err
 	}
 
-	chats := make([]*models.Chat, len(res))
+	chats := make([]*models.Chat, 0, len(res))
 	for _, c := range res {
 		chats = append(chats, &models.Chat{
 			ID:        c.ID.String(),
