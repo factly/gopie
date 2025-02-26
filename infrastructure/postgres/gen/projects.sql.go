@@ -22,10 +22,10 @@ returning id, name, description, created_at, updated_at, created_by, updated_by
 `
 
 type CreateProjectParams struct {
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
-	CreatedBy   pgtype.Text `json:"createdBy"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
+	Name        string
+	Description pgtype.Text
+	CreatedBy   pgtype.Text
+	UpdatedBy   pgtype.Text
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -69,15 +69,15 @@ group by p.id
 `
 
 type GetProjectRow struct {
-	ID           string             `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	DatasetIds   interface{}        `json:"datasetIds"`
-	DatasetCount int64              `json:"datasetCount"`
+	ID           string
+	Name         string
+	Description  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	DatasetIds   interface{}
+	DatasetCount int64
 }
 
 func (q *Queries) GetProject(ctx context.Context, id string) (GetProjectRow, error) {
@@ -129,20 +129,20 @@ LIMIT $2 OFFSET $3
 `
 
 type SearchProjectsParams struct {
-	Column1 string `json:"column1"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Column1 string
+	Limit   int32
+	Offset  int32
 }
 
 type SearchProjectsRow struct {
-	ID           string             `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	DatasetCount int64              `json:"datasetCount"`
+	ID           string
+	Name         string
+	Description  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	DatasetCount int64
 }
 
 func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error) {
@@ -185,10 +185,10 @@ returning id, name, description, created_at, updated_at, created_by, updated_by
 `
 
 type UpdateProjectParams struct {
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
-	ID          string      `json:"id"`
+	Name        string
+	Description pgtype.Text
+	UpdatedBy   pgtype.Text
+	ID          string
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {

@@ -14,40 +14,29 @@ import (
 const createChat = `-- name: CreateChat :one
 insert into chats (
     name,
-    description,
     dataset_id,
-    created_by,
-    updated_by
-) values ($1, $2, $3, $4, $5)
-returning id, name, description, dataset_id, created_at, updated_at, created_by, updated_by
+    created_by
+) values ($1, $2, $3)
+returning id, name, dataset_id, created_at, updated_at, created_by
 `
 
 type CreateChatParams struct {
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
-	DatasetID   pgtype.UUID `json:"datasetId"`
-	CreatedBy   pgtype.Text `json:"createdBy"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
+	Name      string
+	DatasetID pgtype.UUID
+	CreatedBy pgtype.Text
 }
 
+// Chat Operations
 func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, createChat,
-		arg.Name,
-		arg.Description,
-		arg.DatasetID,
-		arg.CreatedBy,
-		arg.UpdatedBy,
-	)
+	row := q.db.QueryRow(ctx, createChat, arg.Name, arg.DatasetID, arg.CreatedBy)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Description,
 		&i.DatasetID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
-		&i.UpdatedBy,
 	)
 	return i, err
 }
@@ -57,16 +46,16 @@ insert into chat_messages (
     chat_id,
     content,
     role,
-    created_by
+    created_at
 ) values ($1, $2, $3, $4)
-returning id, chat_id, content, role, created_at, created_by
+returning id, chat_id, content, role, created_at
 `
 
 type CreateChatMessageParams struct {
-	ChatID    pgtype.UUID `json:"chatId"`
-	Content   string      `json:"content"`
-	Role      string      `json:"role"`
-	CreatedBy pgtype.Text `json:"createdBy"`
+	ChatID    pgtype.UUID
+	Content   string
+	Role      string
+	CreatedAt pgtype.Timestamptz
 }
 
 // Chat Messages Operations
@@ -75,7 +64,7 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 		arg.ChatID,
 		arg.Content,
 		arg.Role,
-		arg.CreatedBy,
+		arg.CreatedAt,
 	)
 	var i ChatMessage
 	err := row.Scan(
@@ -84,18 +73,8 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 		&i.Content,
 		&i.Role,
 		&i.CreatedAt,
-		&i.CreatedBy,
 	)
 	return i, err
-}
-
-const deleteAllChatMessages = `-- name: DeleteAllChatMessages :exec
-delete from chat_messages where chat_id = $1
-`
-
-func (q *Queries) DeleteAllChatMessages(ctx context.Context, chatID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteAllChatMessages, chatID)
-	return err
 }
 
 const deleteChat = `-- name: DeleteChat :exec
@@ -108,17 +87,23 @@ func (q *Queries) DeleteChat(ctx context.Context, id pgtype.UUID) error {
 }
 
 const deleteChatMessage = `-- name: DeleteChatMessage :exec
-delete from chat_messages where id = $1
+delete from chat_messages 
+where id = $1 and chat_id = $2
 `
 
-func (q *Queries) DeleteChatMessage(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteChatMessage, id)
+type DeleteChatMessageParams struct {
+	ID     pgtype.UUID
+	ChatID pgtype.UUID
+}
+
+func (q *Queries) DeleteChatMessage(ctx context.Context, arg DeleteChatMessageParams) error {
+	_, err := q.db.Exec(ctx, deleteChatMessage, arg.ID, arg.ChatID)
 	return err
 }
 
 const getChat = `-- name: GetChat :one
 select 
-    c.id, c.name, c.description, c.dataset_id, c.created_at, c.updated_at, c.created_by, c.updated_by,
+    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
     d.name as dataset_name,
     (select count(*) from chat_messages where chat_id = c.id) as message_count
 from chats c
@@ -127,16 +112,14 @@ where c.id = $1
 `
 
 type GetChatRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	DatasetID    pgtype.UUID        `json:"datasetId"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	DatasetName  string             `json:"datasetName"`
-	MessageCount int64              `json:"messageCount"`
+	ID           pgtype.UUID
+	Name         string
+	DatasetID    pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	DatasetName  string
+	MessageCount int64
 }
 
 func (q *Queries) GetChat(ctx context.Context, id pgtype.UUID) (GetChatRow, error) {
@@ -145,32 +128,12 @@ func (q *Queries) GetChat(ctx context.Context, id pgtype.UUID) (GetChatRow, erro
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Description,
 		&i.DatasetID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
-		&i.UpdatedBy,
 		&i.DatasetName,
 		&i.MessageCount,
-	)
-	return i, err
-}
-
-const getChatMessage = `-- name: GetChatMessage :one
-select id, chat_id, content, role, created_at, created_by from chat_messages where id = $1
-`
-
-func (q *Queries) GetChatMessage(ctx context.Context, id pgtype.UUID) (ChatMessage, error) {
-	row := q.db.QueryRow(ctx, getChatMessage, id)
-	var i ChatMessage
-	err := row.Scan(
-		&i.ID,
-		&i.ChatID,
-		&i.Content,
-		&i.Role,
-		&i.CreatedAt,
-		&i.CreatedBy,
 	)
 	return i, err
 }
@@ -201,89 +164,6 @@ func (q *Queries) GetDatasetChatsCount(ctx context.Context, datasetID pgtype.UUI
 	return count, err
 }
 
-const getLatestChatMessage = `-- name: GetLatestChatMessage :one
-select id, chat_id, content, role, created_at, created_by from chat_messages
-where chat_id = $1
-order by created_at desc
-limit 1
-`
-
-func (q *Queries) GetLatestChatMessage(ctx context.Context, chatID pgtype.UUID) (ChatMessage, error) {
-	row := q.db.QueryRow(ctx, getLatestChatMessage, chatID)
-	var i ChatMessage
-	err := row.Scan(
-		&i.ID,
-		&i.ChatID,
-		&i.Content,
-		&i.Role,
-		&i.CreatedAt,
-		&i.CreatedBy,
-	)
-	return i, err
-}
-
-const getUserChats = `-- name: GetUserChats :many
-select 
-    c.id, c.name, c.description, c.dataset_id, c.created_at, c.updated_at, c.created_by, c.updated_by,
-    d.name as dataset_name,
-    (select count(*) from chat_messages where chat_id = c.id) as message_count
-from chats c
-join datasets d on c.dataset_id = d.id
-where c.created_by = $1
-order by c.updated_at desc
-limit $2 offset $3
-`
-
-type GetUserChatsParams struct {
-	CreatedBy pgtype.Text `json:"createdBy"`
-	Limit     int32       `json:"limit"`
-	Offset    int32       `json:"offset"`
-}
-
-type GetUserChatsRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	DatasetID    pgtype.UUID        `json:"datasetId"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	DatasetName  string             `json:"datasetName"`
-	MessageCount int64              `json:"messageCount"`
-}
-
-func (q *Queries) GetUserChats(ctx context.Context, arg GetUserChatsParams) ([]GetUserChatsRow, error) {
-	rows, err := q.db.Query(ctx, getUserChats, arg.CreatedBy, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetUserChatsRow
-	for rows.Next() {
-		var i GetUserChatsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.DatasetID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.CreatedBy,
-			&i.UpdatedBy,
-			&i.DatasetName,
-			&i.MessageCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getUserChatsCount = `-- name: GetUserChatsCount :one
 select count(*) 
 from chats
@@ -298,16 +178,16 @@ func (q *Queries) GetUserChatsCount(ctx context.Context, createdBy pgtype.Text) 
 }
 
 const listChatMessages = `-- name: ListChatMessages :many
-select id, chat_id, content, role, created_at, created_by from chat_messages
+select id, chat_id, content, role, created_at from chat_messages
 where chat_id = $1
 order by created_at asc
 limit $2 offset $3
 `
 
 type ListChatMessagesParams struct {
-	ChatID pgtype.UUID `json:"chatId"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
+	ChatID pgtype.UUID
+	Limit  int32
+	Offset int32
 }
 
 func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesParams) ([]ChatMessage, error) {
@@ -325,7 +205,6 @@ func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesPara
 			&i.Content,
 			&i.Role,
 			&i.CreatedAt,
-			&i.CreatedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -339,7 +218,7 @@ func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesPara
 
 const listDatasetChats = `-- name: ListDatasetChats :many
 select 
-    c.id, c.name, c.description, c.dataset_id, c.created_at, c.updated_at, c.created_by, c.updated_by,
+    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
     (select count(*) from chat_messages where chat_id = c.id) as message_count
 from chats c
 where c.dataset_id = $1
@@ -348,21 +227,19 @@ limit $2 offset $3
 `
 
 type ListDatasetChatsParams struct {
-	DatasetID pgtype.UUID `json:"datasetId"`
-	Limit     int32       `json:"limit"`
-	Offset    int32       `json:"offset"`
+	DatasetID pgtype.UUID
+	Limit     int32
+	Offset    int32
 }
 
 type ListDatasetChatsRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	DatasetID    pgtype.UUID        `json:"datasetId"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	MessageCount int64              `json:"messageCount"`
+	ID           pgtype.UUID
+	Name         string
+	DatasetID    pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	MessageCount int64
 }
 
 func (q *Queries) ListDatasetChats(ctx context.Context, arg ListDatasetChatsParams) ([]ListDatasetChatsRow, error) {
@@ -377,12 +254,10 @@ func (q *Queries) ListDatasetChats(ctx context.Context, arg ListDatasetChatsPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Description,
 			&i.DatasetID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
-			&i.UpdatedBy,
 			&i.MessageCount,
 		); err != nil {
 			return nil, err
@@ -395,63 +270,51 @@ func (q *Queries) ListDatasetChats(ctx context.Context, arg ListDatasetChatsPara
 	return items, nil
 }
 
-const searchChats = `-- name: SearchChats :many
+const listUserChats = `-- name: ListUserChats :many
 select 
-    c.id, c.name, c.description, c.dataset_id, c.created_at, c.updated_at, c.created_by, c.updated_by,
+    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
     d.name as dataset_name,
     (select count(*) from chat_messages where chat_id = c.id) as message_count
 from chats c
 join datasets d on c.dataset_id = d.id
-where 
-    c.name ilike concat('%', $1, '%') or
-    c.description ilike concat('%', $1, '%')
-order by 
-    case 
-        when c.name ilike concat($1, '%') then 1
-        when c.name ilike concat('%', $1, '%') then 2
-        else 3
-    end,
-    c.updated_at desc
+where c.created_by = $1
+order by c.updated_at desc
 limit $2 offset $3
 `
 
-type SearchChatsParams struct {
-	Concat interface{} `json:"concat"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
+type ListUserChatsParams struct {
+	CreatedBy pgtype.Text
+	Limit     int32
+	Offset    int32
 }
 
-type SearchChatsRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	DatasetID    pgtype.UUID        `json:"datasetId"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-	CreatedBy    pgtype.Text        `json:"createdBy"`
-	UpdatedBy    pgtype.Text        `json:"updatedBy"`
-	DatasetName  string             `json:"datasetName"`
-	MessageCount int64              `json:"messageCount"`
+type ListUserChatsRow struct {
+	ID           pgtype.UUID
+	Name         string
+	DatasetID    pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	DatasetName  string
+	MessageCount int64
 }
 
-func (q *Queries) SearchChats(ctx context.Context, arg SearchChatsParams) ([]SearchChatsRow, error) {
-	rows, err := q.db.Query(ctx, searchChats, arg.Concat, arg.Limit, arg.Offset)
+func (q *Queries) ListUserChats(ctx context.Context, arg ListUserChatsParams) ([]ListUserChatsRow, error) {
+	rows, err := q.db.Query(ctx, listUserChats, arg.CreatedBy, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchChatsRow
+	var items []ListUserChatsRow
 	for rows.Next() {
-		var i SearchChatsRow
+		var i ListUserChatsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Description,
 			&i.DatasetID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
-			&i.UpdatedBy,
 			&i.DatasetName,
 			&i.MessageCount,
 		); err != nil {
@@ -468,37 +331,26 @@ func (q *Queries) SearchChats(ctx context.Context, arg SearchChatsParams) ([]Sea
 const updateChat = `-- name: UpdateChat :one
 update chats
 set 
-    name = coalesce($1, name),
-    description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by)
-where id = $4
-returning id, name, description, dataset_id, created_at, updated_at, created_by, updated_by
+    name = coalesce($1, name)
+where id = $2
+returning id, name, dataset_id, created_at, updated_at, created_by
 `
 
 type UpdateChatParams struct {
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
-	ID          pgtype.UUID `json:"id"`
+	Name string
+	ID   pgtype.UUID
 }
 
 func (q *Queries) UpdateChat(ctx context.Context, arg UpdateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, updateChat,
-		arg.Name,
-		arg.Description,
-		arg.UpdatedBy,
-		arg.ID,
-	)
+	row := q.db.QueryRow(ctx, updateChat, arg.Name, arg.ID)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Description,
 		&i.DatasetID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
-		&i.UpdatedBy,
 	)
 	return i, err
 }

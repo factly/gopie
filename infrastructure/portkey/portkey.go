@@ -6,6 +6,7 @@ import (
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/sashabaranov/go-openai"
@@ -82,4 +83,15 @@ func (c *PortkeyClient) GenerateSql(content string) (string, error) {
 	}
 	c.logger.Debug("generated sql from portkey", zap.String("sql", res.Choices[0].Message.Content))
 	return res.Choices[0].Message.Content, nil
+}
+
+func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string) (*models.AiChatResponse, error) {
+	resp, err := c.GenerateSql(userMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.AiChatResponse{
+		Response: resp,
+	}, nil
 }

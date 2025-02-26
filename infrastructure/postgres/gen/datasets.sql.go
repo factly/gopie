@@ -28,16 +28,16 @@ returning id, name, description, format, created_at, updated_at, row_count, alia
 `
 
 type CreateDatasetParams struct {
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
-	Format      string      `json:"format"`
-	RowCount    pgtype.Int4 `json:"rowCount"`
-	Size        pgtype.Int8 `json:"size"`
-	FilePath    string      `json:"filePath"`
-	Columns     []byte      `json:"columns"`
-	Alias       pgtype.Text `json:"alias"`
-	CreatedBy   pgtype.Text `json:"createdBy"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
+	Name        string
+	Description pgtype.Text
+	Format      string
+	RowCount    pgtype.Int4
+	Size        pgtype.Int8
+	FilePath    string
+	Columns     []byte
+	Alias       pgtype.Text
+	CreatedBy   pgtype.Text
+	UpdatedBy   pgtype.Text
 }
 
 func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (Dataset, error) {
@@ -149,9 +149,9 @@ limit $2 offset $3
 `
 
 type SearchDatasetsParams struct {
-	Concat interface{} `json:"concat"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
+	Concat interface{}
+	Limit  int32
+	Offset int32
 }
 
 func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error) {
@@ -204,15 +204,15 @@ returning id, name, description, format, created_at, updated_at, row_count, alia
 `
 
 type UpdateDatasetParams struct {
-	Description pgtype.Text `json:"description"`
-	Format      string      `json:"format"`
-	RowCount    pgtype.Int4 `json:"rowCount"`
-	Size        pgtype.Int8 `json:"size"`
-	FilePath    string      `json:"filePath"`
-	Columns     []byte      `json:"columns"`
-	Alias       pgtype.Text `json:"alias"`
-	UpdatedBy   pgtype.Text `json:"updatedBy"`
-	ID          string      `json:"id"`
+	Description pgtype.Text
+	Format      string
+	RowCount    pgtype.Int4
+	Size        pgtype.Int8
+	FilePath    string
+	Columns     []byte
+	Alias       pgtype.Text
+	UpdatedBy   pgtype.Text
+	ID          string
 }
 
 func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error) {

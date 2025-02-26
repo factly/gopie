@@ -18,8 +18,8 @@ on conflict do nothing
 `
 
 type AddDatasetToProjectParams struct {
-	ProjectID string `json:"projectId"`
-	DatasetID string `json:"datasetId"`
+	ProjectID string
+	DatasetID string
 }
 
 func (q *Queries) AddDatasetToProject(ctx context.Context, arg AddDatasetToProjectParams) error {
@@ -34,8 +34,8 @@ on conflict do nothing
 `
 
 type BatchAddDatasetsToProjectParams struct {
-	ProjectID string        `json:"projectId"`
-	Column2   []pgtype.UUID `json:"column2"`
+	ProjectID string
+	Column2   []pgtype.UUID
 }
 
 // Batch Operations
@@ -50,8 +50,8 @@ where project_id = $1 and dataset_id = any($2::uuid[])
 `
 
 type BatchRemoveDatasetsFromProjectParams struct {
-	ProjectID string        `json:"projectId"`
-	Column2   []pgtype.UUID `json:"column2"`
+	ProjectID string
+	Column2   []pgtype.UUID
 }
 
 func (q *Queries) BatchRemoveDatasetsFromProject(ctx context.Context, arg BatchRemoveDatasetsFromProjectParams) error {
@@ -97,26 +97,26 @@ limit $2 offset $3
 `
 
 type ListProjectDatasetsParams struct {
-	ProjectID string `json:"projectId"`
-	Limit     int32  `json:"limit"`
-	Offset    int32  `json:"offset"`
+	ProjectID string
+	Limit     int32
+	Offset    int32
 }
 
 type ListProjectDatasetsRow struct {
-	ID          string             `json:"id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	Format      string             `json:"format"`
-	CreatedAt   pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt   pgtype.Timestamptz `json:"updatedAt"`
-	RowCount    pgtype.Int4        `json:"rowCount"`
-	Alias       pgtype.Text        `json:"alias"`
-	CreatedBy   pgtype.Text        `json:"createdBy"`
-	UpdatedBy   pgtype.Text        `json:"updatedBy"`
-	Size        pgtype.Int8        `json:"size"`
-	FilePath    string             `json:"filePath"`
-	Columns     []byte             `json:"columns"`
-	AddedAt     pgtype.Timestamptz `json:"addedAt"`
+	ID          string
+	Name        string
+	Description pgtype.Text
+	Format      string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	RowCount    pgtype.Int4
+	Alias       pgtype.Text
+	CreatedBy   pgtype.Text
+	UpdatedBy   pgtype.Text
+	Size        pgtype.Int8
+	FilePath    string
+	Columns     []byte
+	AddedAt     pgtype.Timestamptz
 }
 
 func (q *Queries) ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error) {
@@ -160,8 +160,8 @@ where project_id = $1 and dataset_id = $2
 `
 
 type RemoveDatasetFromProjectParams struct {
-	ProjectID string `json:"projectId"`
-	DatasetID string `json:"datasetId"`
+	ProjectID string
+	DatasetID string
 }
 
 func (q *Queries) RemoveDatasetFromProject(ctx context.Context, arg RemoveDatasetFromProjectParams) error {
