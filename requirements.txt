@@ -1,0 +1,11 @@
+langchain
+langchain-community
+langchain[groq]
+langgraph
+python-dotenv
+pydantic
+rich
+portkey_ai
+langchain_openai
+pandas
+duckdb
