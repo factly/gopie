@@ -111,17 +111,19 @@ def extract_error_content(message: Union[ErrorMessage, IntermediateStep, str]) -
     Returns:
         Extracted error content as string
     """
+    parser = JsonOutputParser()
+
     if isinstance(message, str):
         return message
     elif hasattr(message, 'content'):
         content = message.content
         if isinstance(content, str):
             try:
-                parsed = json.loads(content)
+                parsed = parser.parse(content)
                 if isinstance(parsed, dict) and "result" in parsed and "error" in parsed.get("result", "").lower():
                     return parsed.get("result", "")
                 return content
-            except json.JSONDecodeError:
+            except Exception:
                 return content
         if isinstance(content, list) or not isinstance(content, str):
             return json.dumps(content)
@@ -164,8 +166,8 @@ def plan_query(state: State) -> dict:
         sample_data = state.get("sample_data", {})
         error_detected = False
         error_message = ""
+        parser = JsonOutputParser()
 
-        # Check for error in previous messages
         if state['messages']:
             for message in reversed(state['messages']):
                 if isinstance(message, ErrorMessage):
@@ -174,14 +176,13 @@ def plan_query(state: State) -> dict:
                     break
                 elif isinstance(message, IntermediateStep):
                     try:
-                        # Ensure content is a string before parsing
                         if isinstance(message.content, str):
-                            content = json.loads(message.content)
+                            content = parser.parse(message.content)
                             if "result" in content and "error" in content.get("result", "").lower():
                                 error_detected = True
                                 error_message = content.get("result", "")
                                 break
-                    except (json.JSONDecodeError, AttributeError):
+                    except Exception:
                         pass
 
         if error_detected:
@@ -193,7 +194,7 @@ def plan_query(state: State) -> dict:
         response_content = str(response.content) if hasattr(response, 'content') else str(response)
 
         try:
-            parsed_response = json.loads(response_content)
+            parsed_response = parser.parse(response_content)
 
             if error_detected and not parsed_response.get("can_fix", False):
                 cannot_plan_message = create_cannot_plan_message(
@@ -210,7 +211,7 @@ def plan_query(state: State) -> dict:
                 "messages": [IntermediateStep.from_text(json.dumps(parsed_response))]
             }
 
-        except json.JSONDecodeError as je:
+        except Exception as je:
             reason = f"Error parsing {'error analysis' if error_detected else 'planning'} response: {str(je)}"
             cannot_plan_message = create_cannot_plan_message(reason, error_message if error_detected else "")
             return {

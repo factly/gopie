@@ -1,4 +1,5 @@
 import json
+from langchain_core.output_parsers import JsonOutputParser
 import os
 import re
 import duckdb
@@ -48,10 +49,17 @@ def execute_query(state: State) -> dict:
     """Execute the planned query"""
     con = None
     try:
-        # Parse the last message for query plan
+        # Parse the last message for query plan using JSONOutputParser
         last_message = state['messages'][-1]
         content = last_message.content if isinstance(last_message.content, str) else json.dumps(last_message.content)
-        query_plan = json.loads(content)
+
+        # Use LangChain's JsonOutputParser instead of manual parsing
+        parser = JsonOutputParser()
+        try:
+            query_plan = parser.parse(content)
+        except Exception:
+            # Fallback to manual parsing if JSONOutputParser fails
+            query_plan = json.loads(content)
 
         # If no selected_dataset but tables_used exists, use the first table
         if not query_plan.get('selected_dataset') and query_plan.get('tables_used'):
@@ -126,13 +134,15 @@ def execute_query(state: State) -> dict:
         for col in result.select_dtypes(include=['float64', 'int64']).columns:
             result[col] = result[col].fillna(0)
 
+        result_dict = {
+            "result": "Query executed successfully",
+            "query_executed": sql_query,
+            "data": result.to_dict('records')
+        }
+
         return {
             "query_result": result.to_dict('records'),
-            "messages": [IntermediateStep.from_text(json.dumps({
-                "result": "Query executed successfully",
-                "query": sql_query,
-                "data": result.to_dict('records')
-            }))]
+            "messages": [IntermediateStep.from_text(json.dumps(result_dict))]
         }
 
     except Exception as e:

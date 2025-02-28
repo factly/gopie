@@ -1,4 +1,5 @@
 import json
+from langchain_core.output_parsers import JsonOutputParser
 from lib.graph.types import AIMessage, ErrorMessage, State, IntermediateStep
 from lib.langchain_config import lc
 from rich.console import Console
@@ -10,30 +11,25 @@ def generate_result(state: State) -> dict:
     Aggregate results of the executed query
     """
     try:
-        # Check if we have a "cannot plan further" message
         cannot_plan_further = False
         planning_failure_reason = "Unknown planning failure"
+        parser = JsonOutputParser()
 
-        # Check state for cannot_plan_further flag
         if state.get("cannot_plan_further", False):
             cannot_plan_further = True
 
-            # Try to extract reason from the last message
             if state['messages'] and isinstance(state['messages'][-1], IntermediateStep):
                 try:
-                    # Ensure content is a string before parsing
                     last_message_content = state['messages'][-1].content
                     if isinstance(last_message_content, str):
-                        content = json.loads(last_message_content)
+                        content = parser.parse(last_message_content)
                         if isinstance(content, dict):
                             planning_failure_reason = content.get("reason", planning_failure_reason)
                     elif isinstance(last_message_content, dict):
-                        # If content is already a dictionary, use it directly
                         planning_failure_reason = last_message_content.get("reason", planning_failure_reason)
-                except (json.JSONDecodeError, AttributeError):
+                except Exception:
                     pass
 
-        # If planning failed, create a user-friendly response
         if cannot_plan_further:
             explanation_prompt = f"""
                 I encountered a problem while trying to answer your query.
@@ -51,54 +47,46 @@ def generate_result(state: State) -> dict:
                 "messages": [AIMessage(content=str(response.content))]
             }
 
-        # If we have query results, proceed with normal aggregation
         query_result = state.get("query_result", [])
         last_message = state['messages'][-1]
 
-        # Default response if we can't extract information
         general_response = "I've analyzed your query, but I don't have enough information to provide a detailed answer."
 
         if not query_result:
             if isinstance(last_message, IntermediateStep):
                 try:
-                    # Ensure content is a string before parsing
                     message_content = last_message.content
                     if isinstance(message_content, str):
-                        content = json.loads(message_content)
+                        content = parser.parse(message_content)
                     elif isinstance(message_content, dict):
-                        # If content is already a dictionary, use it directly
                         content = message_content
                     else:
                         content = {}
 
                     if content.get("result") == "Query executed successfully but returned no results":
                         general_response = f"I executed your query successfully, but it returned no results. This might mean that there's no data matching your criteria in the dataset."
-                except (json.JSONDecodeError, AttributeError):
+                except Exception:
                     pass
 
             return {
                 "messages": [AIMessage(content=general_response)]
             }
 
-        # Process query results if available
         query_executed = ""
         if isinstance(last_message, IntermediateStep):
             try:
-                # Ensure content is a string before parsing
                 message_content = last_message.content
                 if isinstance(message_content, str):
-                    content = json.loads(message_content)
+                    content = parser.parse(message_content)
                 elif isinstance(message_content, dict):
-                    # If content is already a dictionary, use it directly
                     content = message_content
                 else:
                     content = {}
 
                 query_executed = content.get("query_executed", "")
-            except (json.JSONDecodeError, AttributeError):
+            except Exception:
                 pass
 
-        # Construct prompt for aggregating results
         user_query = state.get("user_query", "")
 
         prompt = f"""

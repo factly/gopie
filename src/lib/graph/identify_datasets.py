@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 import os
 import json
 from lib.langchain_config import lc
+from langchain_core.output_parsers import JsonOutputParser
 from rich.console import Console
 console = Console()
 
@@ -61,10 +62,17 @@ def identify_datasets(state: State):
 
         response = lc.llm.invoke(llm_prompt)
 
+        parser = JsonOutputParser()
+        try:
+            parsed_response = parser.parse(str(response.content))
+            response_content = json.dumps(parsed_response)
+        except Exception:
+            response_content = str(response.content)
+
         return {
             "datasets": datasets_metadata,
             "user_query": user_input,
-            "messages": [IntermediateStep.from_text(str(response.content))],
+            "messages": [IntermediateStep.from_text(response_content)],
         }
 
     except Exception as e:
