@@ -117,7 +117,7 @@ export function ChatHistory({ datasetId }: ChatHistoryProps) {
                       key={chat.id}
                       className={cn(
                         "group relative flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer gap-2",
-                        selectedChatId === chat.id && "bg-muted"
+                        selectedChatId === chat.id && "bg-muted",
                       )}
                       onClick={() => setSelectedChatId(chat.id)}
                     >

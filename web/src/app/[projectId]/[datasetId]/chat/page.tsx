@@ -112,14 +112,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         fetchNextPage();
       }
     },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
   );
 
   // Scroll to bottom whenever new messages are added (but not when loading previous messages)
   useLayoutEffect(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
+        "[data-radix-scroll-area-viewport]",
       );
       if (viewport) {
         // Only auto-scroll if we're already near the bottom

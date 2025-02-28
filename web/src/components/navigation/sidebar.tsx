@@ -65,7 +65,7 @@ export function AppSidebar() {
           variables: { projectId },
           enabled: Boolean(projectId),
         }
-      : { enabled: false }
+      : { enabled: false },
   );
   const { data: datasets } = useDatasets({
     variables: {
@@ -152,7 +152,7 @@ export function AppSidebar() {
                   title="Toggle Sidebar"
                   onClick={() => {
                     const trigger = document.querySelector(
-                      '[data-sidebar="trigger"]'
+                      '[data-sidebar="trigger"]',
                     ) as HTMLButtonElement;
                     if (trigger) {
                       trigger.click();
@@ -183,7 +183,7 @@ export function AppSidebar() {
               title="Toggle Sidebar"
               onClick={() => {
                 const trigger = document.querySelector(
-                  '[data-sidebar="trigger"]'
+                  '[data-sidebar="trigger"]',
                 ) as HTMLButtonElement;
                 if (trigger) {
                   trigger.click();

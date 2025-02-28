@@ -62,7 +62,7 @@ export function SqlResults() {
                         key={i}
                         className={cn(
                           "border-b last:border-b-0",
-                          i % 2 === 0 ? "bg-background" : "bg-muted/30"
+                          i % 2 === 0 ? "bg-background" : "bg-muted/30",
                         )}
                       >
                         {Object.values(row).map((value, j) => (

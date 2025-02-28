@@ -21,7 +21,7 @@ declare global {
   interface Window {
     require: ((
       deps: string[],
-      callback: (...args: unknown[]) => void
+      callback: (...args: unknown[]) => void,
     ) => void) & {
       config: (config: { paths: Record<string, string> }) => void;
     };
@@ -55,7 +55,7 @@ export default function SqlPage({
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
   const [queryMode, setQueryMode] = React.useState<"sql" | "natural">(
-    "natural"
+    "natural",
   );
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
@@ -75,7 +75,7 @@ export default function SqlPage({
   });
 
   const [query, setQuery] = React.useState(
-    `SELECT * FROM ${dataset?.name} LIMIT 10`
+    `SELECT * FROM ${dataset?.name} LIMIT 10`,
   );
 
   React.useEffect(() => {

@@ -9,11 +9,11 @@ export interface UpdateDatasetBody {
 export const updateDataset = async (
   projectId: string,
   datasetId: string,
-  body: UpdateDatasetBody
+  body: UpdateDatasetBody,
 ): Promise<{ data: Dataset }> => {
   const response = await apiClient.put(
     `v1/api/projects/${projectId}/datasets/${datasetId}`,
-    { json: body }
+    { json: body },
   );
   return response.json();
 };

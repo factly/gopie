@@ -39,7 +39,7 @@ export function DatasetHeader({
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedAlias, setEditedAlias] = useState(dataset.alias || "");
   const [editedDescription, setEditedDescription] = useState(
-    dataset.description || ""
+    dataset.description || "",
   );
 
   const handleUpdate = async () => {

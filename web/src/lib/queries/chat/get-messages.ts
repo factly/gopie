@@ -10,7 +10,7 @@ interface GetMessagesVariables {
 
 async function fetchMessages(
   { chatId, limit }: GetMessagesVariables,
-  context: { pageParam: number }
+  context: { pageParam: number },
 ): Promise<{ data: PaginatedResponse<ChatMessage> }> {
   try {
     const searchParams = new URLSearchParams({
@@ -19,7 +19,7 @@ async function fetchMessages(
     });
 
     const response = await apiClient.get(
-      `v1/api/chats/${chatId}/messages?${searchParams}`
+      `v1/api/chats/${chatId}/messages?${searchParams}`,
     );
     return response.json();
   } catch (error) {
@@ -38,7 +38,7 @@ export const useChatMessages = createInfiniteQuery<
   initialPageParam: 1,
   getNextPageParam: (lastPage, allPages) => {
     const totalPages = Math.ceil(
-      lastPage.data.total / (lastPage.data.limit || 20)
+      lastPage.data.total / (lastPage.data.limit || 20),
     );
     const nextPage = allPages.length + 1;
     return nextPage <= totalPages ? nextPage : undefined;

@@ -8,7 +8,7 @@ export interface UpdateS3DatasetBody {
 }
 
 export const updateS3Dataset = async (
-  body: UpdateS3DatasetBody
+  body: UpdateS3DatasetBody,
 ): Promise<{ data: Dataset }> => {
   const response = await apiClient.post("source/s3/update", { json: body });
   return response.json();
