@@ -47,14 +47,14 @@ export function ResultsTable({ results }: ResultsTableProps) {
     if (!results.length) return;
     downloadCsv(
       results,
-      `results_${new Date().toISOString().split("T")[0]}.csv`
+      `results_${new Date().toISOString().split("T")[0]}.csv`,
     );
   };
 
   const totalPages = Math.ceil(results.length / rowsPerPage);
   const paginatedResults = results.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
   const columns = results.length > 0 ? Object.keys(results[0]) : [];
 

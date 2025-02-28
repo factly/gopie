@@ -23,7 +23,7 @@ export function downloadCsv(data: DataRow[], filename?: string) {
             ? `"${value.replace(/"/g, '""')}"`
             : value;
         })
-        .join(",")
+        .join(","),
     ),
   ].join("\n");
 
