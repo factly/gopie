@@ -13,7 +13,7 @@ export default function ProjectLayout({
 
   return (
     <>
-      <main className="flex-1 p-6 min-w-0">{children}</main>
+      <main className="flex-1 min-w-0">{children}</main>
     </>
   );
 }

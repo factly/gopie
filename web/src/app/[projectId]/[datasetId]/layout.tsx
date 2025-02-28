@@ -11,5 +11,5 @@ export default function DatasetLayout({
 }>) {
   React.use(params);
 
-  return <main className="flex-1 p-6 min-w-0">{children}</main>;
+  return <main className="flex-1 min-w-0">{children}</main>;
 }

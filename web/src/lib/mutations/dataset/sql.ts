@@ -10,6 +10,6 @@ export const useDatasetSql = createMutation({
           query: sql,
         }),
       })
-    ).json()) as { data: Record<string, unknown>[]; total: number };
+    ).json()) as { data: Record<string, unknown>[] | null; total: number };
   },
 });

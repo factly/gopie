@@ -35,7 +35,7 @@ export default function DatasetPage({
 
   if (isLoading) {
     return (
-      <div className="">
+      <div className="py-10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Loading Header */}
           <div className="bg-background p-8 rounded-xl shadow-sm border">
@@ -100,7 +100,7 @@ export default function DatasetPage({
   }
 
   return (
-    <div className="min-h-screen bg-background/50">
+    <div className="min-h-screen bg-background/50 py-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Dataset Header */}
         <motion.div

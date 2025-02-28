@@ -7,6 +7,9 @@ export const apiClient = ky.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: false, // Disable timeout
+  // Or if you want a very long timeout instead of disabling:
+  // timeout: 300000, // 5 minutes in milliseconds
 });
 
 // Project Types
@@ -40,6 +43,26 @@ export interface Dataset {
   updated_at: string;
   created_by: string;
   updated_by: string;
+}
+
+// Chat Types
+export interface ChatMessage {
+  id: string;
+  content: string;
+  role: "user" | "assistant";
+  created_at: string;
+}
+
+export interface Chat {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatWithMessages extends Chat {
+  messages: ChatMessage[];
 }
 
 // API Response Types

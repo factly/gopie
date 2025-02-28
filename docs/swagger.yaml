@@ -13,8 +13,8 @@ definitions:
         example: sales_data
         type: string
     required:
-      - query
-      - table
+    - query
+    - table
     type: object
   api.sqlRequestBody:
     description: Request body for executing a SQL query
@@ -25,7 +25,42 @@ definitions:
         minLength: 1
         type: string
     required:
-      - query
+    - query
+    type: object
+  chats.chatRequeryBody:
+    description: Request body for creating or continuing a chat conversation
+    properties:
+      chat_id:
+        description: Unique identifier of an existing chat (optional for new chats)
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      created_by:
+        description: User ID of the creator
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      dataset_id:
+        description: ID of the dataset to analyze
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      messages:
+        description: Array of chat messages
+        items:
+          properties:
+            content:
+              description: Message content
+              example: Show me the total sales by region
+              type: string
+            role:
+              description: Message role (user/assistant)
+              example: user
+              type: string
+          required:
+          - content
+          - role
+          type: object
+        type: array
+    required:
+    - messages
     type: object
   datasets.updateDatasetParams:
     properties:
@@ -36,7 +71,48 @@ definitions:
       updated_by:
         type: string
     required:
-      - updated_by
+    - updated_by
+    type: object
+  models.Chat:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ChatMessage:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  models.ChatWithMessages:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/models.ChatMessage'
+        type: array
+      name:
+        type: string
+      updated_at:
+        type: string
     type: object
   models.Dataset:
     description: Dataset model
@@ -87,13 +163,13 @@ definitions:
         description: Size of the dataset in bytes
         example: 1048576
         type: integer
-      updated_by:
-        description: UpdatedBy represents the user who last updated the dataset
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
       updated_at:
         description: Last update timestamp
         example: "2024-02-05T12:00:00Z"
+        type: string
+      updated_by:
+        description: UpdatedBy represents the user who last updated the dataset
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
   models.Project:
@@ -145,9 +221,9 @@ definitions:
         minLength: 3
         type: string
     required:
-      - created_by
-      - description
-      - name
+    - created_by
+    - description
+    - name
     type: object
   projects.updateProjectBody:
     description: Request body for updating an existing project
@@ -167,8 +243,8 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
-      - name
-      - updated_by
+    - name
+    - updated_by
     type: object
   responses.ErrorResponse:
     description: Error response structure
@@ -215,8 +291,8 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
-      - dataset
-      - updated_by
+    - dataset
+    - updated_by
     type: object
   s3.uploadRequestBody:
     description: Request body for uploading a file from S3
@@ -246,10 +322,10 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
-      - alias
-      - created_by
-      - file_path
-      - project_id
+    - alias
+    - created_by
+    - file_path
+    - project_id
     type: object
 host: localhost:8081
 info:
@@ -261,95 +337,281 @@ paths:
   /source/s3/update:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Update an existing dataset with a new file from S3
       parameters:
-        - description: Update request parameters
-          in: body
-          name: body
-          required: true
-          schema:
-            $ref: "#/definitions/s3.updateRequestBody"
+      - description: Update request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/s3.updateRequestBody'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             allOf:
-              - $ref: "#/definitions/responses.SuccessResponse"
-              - properties:
-                  data:
-                    $ref: "#/definitions/models.Dataset"
-                type: object
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
         "400":
           description: Invalid request body or S3 file access error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Dataset not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Update dataset from S3
       tags:
-        - s3
+      - s3
   /source/s3/upload:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Upload a file from S3 and create a new dataset
       parameters:
-        - description: Upload request parameters
-          in: body
-          name: body
-          required: true
-          schema:
-            $ref: "#/definitions/s3.uploadRequestBody"
+      - description: Upload request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/s3.uploadRequestBody'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Created
           schema:
             allOf:
-              - $ref: "#/definitions/responses.SuccessResponse"
-              - properties:
-                  data:
-                    $ref: "#/definitions/models.Dataset"
-                type: object
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
         "400":
           description: Invalid request body or S3 file access error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Project not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Upload file from S3
       tags:
-        - s3
+      - s3
+  /v1/api/chats:
+    get:
+      consumes:
+      - application/json
+      description: Get all chats associated with a specific dataset with pagination
+      parameters:
+      - description: Dataset ID
+        in: query
+        name: dataset_id
+        required: true
+        type: string
+      - default: 10
+        description: Number of chats per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset chats retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Chat'
+                  type: array
+              type: object
+        "400":
+          description: Dataset ID is required
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: List dataset chats
+      tags:
+      - chats
+    post:
+      consumes:
+      - application/json
+      description: Create a new chat or continue an existing chat conversation with
+        AI about a dataset
+      parameters:
+      - description: Chat request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/chats.chatRequeryBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Chat created/continued successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.ChatWithMessages'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Create or continue chat
+      tags:
+      - chats
+  /v1/api/chats/{chatID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an entire chat and all its messages
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Chat deleted successfully
+        "404":
+          description: Chat not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete chat
+      tags:
+      - chats
+  /v1/api/chats/{chatID}/messages:
+    get:
+      consumes:
+      - application/json
+      description: Get all messages from a specific chat with pagination
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - default: 10
+        description: Number of messages per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat messages retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ChatMessage'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get chat messages
+      tags:
+      - chats
+  /v1/api/chats/{chatID}/messages/{messageID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific message from a chat
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - description: Message ID
+        in: path
+        name: messageID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Message deleted successfully
+        "404":
+          description: Message not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete chat message
+      tags:
+      - chats
   /v1/api/nl2sql:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Convert a natural language query to SQL for a specific dataset
       parameters:
-        - description: Natural language query request
-          in: body
-          name: request
-          required: true
-          schema:
-            $ref: "#/definitions/api.nl2SqlRequest"
+      - description: Natural language query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.nl2SqlRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Generated SQL query
@@ -360,361 +622,361 @@ paths:
         "400":
           description: Invalid request or could not generate SQL
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Table not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Convert natural language to SQL
       tags:
-        - query
+      - query
   /v1/api/projects:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Get all projects with pagination and search
       parameters:
-        - default: 10
-          description: Number of items per page
-          in: query
-          name: limit
-          type: integer
-        - default: 1
-          description: Page number
-          in: query
-          name: page
-          type: integer
-        - description: Search query
-          in: query
-          name: query
-          type: string
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Search query
+        in: query
+        name: query
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             items:
-              $ref: "#/definitions/models.Project"
+              $ref: '#/definitions/models.Project'
             type: array
         "400":
           description: Invalid query parameters
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: No projects found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: List all projects
       tags:
-        - projects
+      - projects
     post:
       consumes:
-        - application/json
+      - application/json
       description: Create a new project with the given name and description
       parameters:
-        - description: Project object
-          in: body
-          name: project
-          required: true
-          schema:
-            $ref: "#/definitions/projects.createRequestBody"
+      - description: Project object
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/projects.createRequestBody'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Created
           schema:
             allOf:
-              - $ref: "#/definitions/responses.SuccessResponse"
-              - properties:
-                  data:
-                    $ref: "#/definitions/models.Project"
-                type: object
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Project'
+              type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Create a new project
       tags:
-        - projects
+      - projects
   /v1/api/projects/{projectID}:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Delete an existing project
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "204":
           description: No Content
         "404":
           description: Project not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Delete a project
       tags:
-        - projects
+      - projects
     get:
       consumes:
-        - application/json
+      - application/json
       description: Get details of a specific project
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/models.Project"
+            $ref: '#/definitions/models.Project'
         "404":
           description: Project not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Get project details
       tags:
-        - projects
+      - projects
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Update an existing project's name and/or description
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
-        - description: Project object
-          in: body
-          name: project
-          required: true
-          schema:
-            $ref: "#/definitions/projects.updateProjectBody"
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Project object
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/projects.updateProjectBody'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             allOf:
-              - $ref: "#/definitions/responses.SuccessResponse"
-              - properties:
-                  data:
-                    $ref: "#/definitions/models.Project"
-                type: object
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Project'
+              type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Project not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Update a project
       tags:
-        - projects
+      - projects
   /v1/api/projects/{projectID}/datasets:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Get all datasets in a project with pagination
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
-        - default: 10
-          description: Number of items per page
-          in: query
-          name: limit
-          type: integer
-        - default: 1
-          description: Page number
-          in: query
-          name: page
-          type: integer
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             items:
-              $ref: "#/definitions/models.Dataset"
+              $ref: '#/definitions/models.Dataset'
             type: array
         "400":
           description: Invalid query parameters
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Project not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: List project datasets
       tags:
-        - datasets
+      - datasets
   /v1/api/projects/{projectID}/datasets/{datasetID}:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Delete a dataset from a project
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
-        - description: Dataset ID
-          in: path
-          name: datasetID
-          required: true
-          type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "204":
           description: No Content
         "404":
           description: Dataset not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Delete dataset
       tags:
-        - datasets
+      - datasets
     get:
       consumes:
-        - application/json
+      - application/json
       description: Get details of a specific dataset in a project
       parameters:
-        - description: Project ID
-          in: path
-          name: projectID
-          required: true
-          type: string
-        - description: Dataset ID
-          in: path
-          name: datasetID
-          required: true
-          type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/models.Dataset"
+            $ref: '#/definitions/models.Dataset'
         "404":
           description: Dataset not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Get dataset details
       tags:
-        - datasets
+      - datasets
     put:
       consumes:
-        - application/json
+      - application/json
       description: Update an existing dataset information
       operationId: update-dataset
       parameters:
-        - description: Dataset ID
-          in: path
-          name: datasetID
-          required: true
-          type: string
-        - description: Dataset update parameters
-          in: body
-          name: body
-          required: true
-          schema:
-            $ref: "#/definitions/datasets.updateDatasetParams"
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      - description: Dataset update parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/datasets.updateDatasetParams'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             allOf:
-              - $ref: "#/definitions/responses.SuccessResponse"
-              - properties:
-                  data:
-                    $ref: "#/definitions/models.Dataset"
-                type: object
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Dataset not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Update dataset
       tags:
-        - datasets
+      - datasets
   /v1/api/schemas/{tableName}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Get the schemas information for a dataset/table
       parameters:
-        - description: Name of the dataset/table
-          in: path
-          name: tableName
-          required: true
-          type: string
+      - description: Name of the dataset/table
+        in: path
+        name: tableName
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Schema information
@@ -724,28 +986,28 @@ paths:
         "400":
           description: Invalid table name
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Get table schemas
       tags:
-        - query
+      - query
   /v1/api/sql:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Execute a SQL query on a dataset (only SELECT statements are allowed)
       parameters:
-        - description: SQL query
-          in: body
-          name: query
-          required: true
-          schema:
-            $ref: "#/definitions/api.sqlRequestBody"
+      - description: SQL query
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/api.sqlRequestBody'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Query results
@@ -757,51 +1019,51 @@ paths:
         "400":
           description: Invalid SQL query
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "403":
           description: Non-SELECT statement
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "404":
           description: Table not found
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Execute SQL query
       tags:
-        - query
+      - query
   /v1/api/tables/{tableName}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Query a dataset using REST-style parameters
       parameters:
-        - description: Name of the dataset/table
-          in: path
-          name: tableName
-          required: true
-          type: string
-        - description: Comma-separated list of columns to return
-          in: query
-          name: columns
-          type: string
-        - description: Sort order (column name with optional -prefix for desc)
-          in: query
-          name: sort
-          type: string
-        - description: Number of records to return
-          in: query
-          name: limit
-          type: integer
-        - description: Page number
-          in: query
-          name: page
-          type: integer
+      - description: Name of the dataset/table
+        in: path
+        name: tableName
+        required: true
+        type: string
+      - description: Comma-separated list of columns to return
+        in: query
+        name: columns
+        type: string
+      - description: Sort order (column name with optional -prefix for desc)
+        in: query
+        name: sort
+        type: string
+      - description: Number of records to return
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Query results
@@ -813,12 +1075,12 @@ paths:
         "400":
           description: Invalid query parameters
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: "#/definitions/responses.ErrorResponse"
+            $ref: '#/definitions/responses.ErrorResponse'
       summary: Query dataset using REST API
       tags:
-        - query
+      - query
 swagger: "2.0"

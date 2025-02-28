@@ -14,16 +14,35 @@ import (
 	"go.uber.org/zap"
 )
 
+// chatRequeryBody represents the request body for chat interaction
+// @Description Request body for creating or continuing a chat conversation
 type chatRequeryBody struct {
-	ChatID    string `json:"chat_id" validate:"omitempty,uuid"`
-	DatasetID string `json:"dataset_id" validate:"omitempty,uuid"`
-	CreatedBy string `json:"created_by" validate:"omitempty"`
-	Messages  []struct {
-		Content string `json:"content" validate:"required"`
-		Role    string `json:"role" validate:"required"`
+	// Unique identifier of an existing chat (optional for new chats)
+	ChatID string `json:"chat_id" validate:"omitempty,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// ID of the dataset to analyze
+	DatasetID string `json:"dataset_id" validate:"omitempty,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// User ID of the creator
+	CreatedBy string `json:"created_by" validate:"omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// Array of chat messages
+	Messages []struct {
+		// Message content
+		Content string `json:"content" validate:"required" example:"Show me the total sales by region"`
+		// Message role (user/assistant)
+		Role string `json:"role" validate:"required" example:"user"`
 	} `json:"messages" validate:"required"`
 }
 
+// @Summary Create or continue chat
+// @Description Create a new chat or continue an existing chat conversation with AI about a dataset
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Param body body chatRequeryBody true "Chat request parameters"
+// @Success 201 {object} responses.SuccessResponse{data=models.ChatWithMessages} "Chat created/continued successfully"
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body"
+// @Failure 404 {object} responses.ErrorResponse "Dataset not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /v1/api/chats [post]
 func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	body := chatRequeryBody{}
 	if err := ctx.BodyParser(&body); err != nil {

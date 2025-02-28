@@ -1,424 +1,379 @@
 "use client";
 
-import { use, useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Send, User, Bot, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { SqlPreview } from "@/components/dataset/sql/sql-preview";
-import { useDatasetSql } from "@/lib/mutations/dataset/sql";
-import { ResultsTable } from "@/components/dataset/sql/results-table";
-import { PlayIcon } from "lucide-react";
-import { toast } from "sonner";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  useEffect,
+  useRef,
+  useState,
+  useLayoutEffect,
+  useCallback,
+  useMemo,
+  use,
+} from "react";
+import { useChatMessages } from "@/lib/queries/chat";
+import { useCreateChat } from "@/lib/mutations/chat";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { Send, MessageSquarePlus, Table2 } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChatMessage } from "@/components/chat/message";
+import { SqlResults } from "@/components/chat/sql-results";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { useSqlStore } from "@/lib/stores/sql-store";
+import { ChatHistory } from "@/components/chat/chat-history";
+import { useChatStore } from "@/lib/stores/chat-store";
 
-interface BaseMessage {
+interface ChatPageProps {
+  params: Promise<{
+    projectId: string;
+    datasetId: string;
+  }>;
+}
+
+interface OptimisticMessage {
+  id: string;
+  content: string;
   role: "user" | "assistant";
+  created_at: string;
+  isLoading?: boolean;
 }
 
-interface TextMessage extends BaseMessage {
-  type: "text";
-  content: string;
-}
+export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
+  const params = use(paramsPromise);
+  const { setOpen } = useSidebar();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { selectedChatId, setSelectedChatId } = useChatStore();
+  const [isSending, setIsSending] = useState(false);
+  const [optimisticMessages, setOptimisticMessages] = useState<
+    OptimisticMessage[]
+  >([]);
+  const { isOpen, results, setIsOpen } = useSqlStore();
 
-interface SqlMessage extends BaseMessage {
-  type: "sql";
-  query: string;
-  results?: Record<string, unknown>[];
-}
-
-interface UserMessage {
-  role: "user";
-  content: string;
-}
-
-interface AssistantMessage {
-  role: "assistant";
-  responses: (TextMessage | SqlMessage)[];
-}
-
-type Message = UserMessage | AssistantMessage;
-
-interface StreamingState {
-  isStreaming: boolean;
-  streamedContent: string;
-}
-
-const MessageCard = ({
-  message,
-  onRunQuery,
-  isLatest,
-}: {
-  message: Message;
-  onRunQuery: (query: string) => Promise<void>;
-  isLatest: boolean;
-}) => {
-  const isUser = message.role === "user";
-  const [runningQueries, setRunningQueries] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [streamingStates, setStreamingStates] = useState<{
-    [key: number]: StreamingState;
-  }>({});
-
+  // Close sidebar only on initial mount
   useEffect(() => {
-    if (!isLatest || isUser) return;
-    const assistantMessage = message as AssistantMessage;
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array means it only runs once on mount
 
-    assistantMessage.responses.forEach((response, idx) => {
-      if (response.type === "text") {
-        setStreamingStates((prev) => ({
-          ...prev,
-          [idx]: { isStreaming: true, streamedContent: "" },
-        }));
+  // Queries
+  const {
+    data: messagesData,
+    isLoading: isLoadingMessages,
+    refetch: refetchMessages,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useChatMessages({
+    variables: {
+      chatId: selectedChatId || "",
+      limit: 20,
+    },
+    enabled: !!selectedChatId,
+  });
 
-        let currentContent = "";
-        const words = response.content.split(" ");
+  // Combine all pages of messages
+  const allMessages = useMemo(() => {
+    const messages =
+      messagesData?.pages.flatMap((page) => page.data.results) ?? [];
+    return messages.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      if (timeA === timeB) {
+        // If timestamps are equal, show user message first
+        return a.role === "user" ? -1 : 1;
+      }
+      return timeA - timeB;
+    });
+  }, [messagesData?.pages]);
 
-        words.forEach((word, wordIdx) => {
-          setTimeout(() => {
-            currentContent += (wordIdx === 0 ? "" : " ") + word;
-            setStreamingStates((prev) => ({
-              ...prev,
-              [idx]: {
-                isStreaming: wordIdx < words.length - 1,
-                streamedContent: currentContent,
-              },
-            }));
-          }, wordIdx * 100);
+  // Mutations
+  const createChat = useCreateChat();
+
+  // Reset optimistic messages when changing chats
+  useEffect(() => {
+    setOptimisticMessages([]);
+  }, [selectedChatId]);
+
+  // Handle scroll to load more
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      const viewport = event.currentTarget;
+      const isNearTop = viewport.scrollTop < 100;
+
+      if (isNearTop && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  // Scroll to bottom whenever new messages are added (but not when loading previous messages)
+  useLayoutEffect(() => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      );
+      if (viewport) {
+        // Only auto-scroll if we're already near the bottom
+        const isNearBottom =
+          viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
+          100;
+
+        if (isNearBottom || !isFetchingNextPage) {
+          requestAnimationFrame(() => {
+            viewport.scrollTop = viewport.scrollHeight;
+          });
+        }
+      }
+    }
+  }, [allMessages, optimisticMessages, isFetchingNextPage]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputRef.current?.value || isSending) return;
+
+    const message = inputRef.current.value;
+    setIsSending(true);
+
+    // Add optimistic user message
+    const optimisticUserMessage: OptimisticMessage = {
+      id: Date.now().toString(),
+      content: message,
+      role: "user",
+      created_at: new Date().toISOString(),
+    };
+    setOptimisticMessages((prev) => [...prev, optimisticUserMessage]);
+
+    // Add optimistic loading message for assistant
+    const optimisticLoadingMessage: OptimisticMessage = {
+      id: Date.now().toString() + "-loading",
+      content: "",
+      role: "assistant",
+      created_at: new Date().toISOString(),
+      isLoading: true,
+    };
+    setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
+
+    // Clear input immediately
+    inputRef.current.value = "";
+
+    try {
+      if (!selectedChatId) {
+        const result = await createChat.mutateAsync({
+          datasetId: params.datasetId,
+          messages: [{ role: "user", content: message }],
+        });
+        setSelectedChatId(result.data.id);
+      } else {
+        await createChat.mutateAsync({
+          chatId: selectedChatId,
+          datasetId: params.datasetId,
+          messages: [{ role: "user", content: message }],
         });
       }
-    });
-  }, [isLatest, isUser, message, message.responses, message.role]);
-
-  const handleRunQuery = async (query: string) => {
-    setRunningQueries((prev) => ({ ...prev, [query]: true }));
-    try {
-      await onRunQuery(query);
-      toast.success("Query executed successfully");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to execute query";
-      toast.error(errorMessage);
+      // Clear optimistic messages after successful response
+      setOptimisticMessages([]);
+      await refetchMessages();
+    } catch {
+      toast.error("Failed to send message");
+      // Remove the loading message on error
+      setOptimisticMessages((prev) => prev.slice(0, -1));
     } finally {
-      setRunningQueries((prev) => ({ ...prev, [query]: false }));
+      setIsSending(false);
     }
   };
 
-  return (
-    <div
-      className={cn(
-        "flex gap-3 mb-4 transition-opacity duration-300",
-        isUser && "flex-row-reverse",
-        isLatest ? "opacity-100" : "opacity-90",
-      )}
-    >
-      <Avatar
-        className={cn(
-          "h-8 w-8 ring-2",
-          isUser ? "ring-primary/20" : "ring-muted",
-        )}
-      >
-        <AvatarFallback className={isUser ? "bg-primary/10" : "bg-muted"}>
-          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-        </AvatarFallback>
-      </Avatar>
-      <div
-        className={cn(
-          "flex flex-col gap-2 max-w-[80%] w-full",
-          isUser && "items-end",
-        )}
-      >
-        {isUser ? (
-          <Card className="p-3 shadow-sm bg-primary/10 hover:bg-primary/15 transition-colors">
-            <p>{message.content}</p>
-          </Card>
+  const handleStartNewChat = () => {
+    setSelectedChatId(null);
+  };
+
+  // Sort optimistic messages by time
+  const sortedOptimisticMessages = useMemo(() => {
+    return optimisticMessages.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      if (timeA === timeB) {
+        return a.role === "user" ? -1 : 1;
+      }
+      return timeA - timeB;
+    });
+  }, [optimisticMessages]);
+
+  const isEmpty = !allMessages.length && !optimisticMessages.length;
+
+  const ChatInput = () => (
+    <form onSubmit={handleSendMessage} className="flex gap-2">
+      <Input
+        ref={inputRef}
+        placeholder="Type your message..."
+        className="flex-1"
+        disabled={isSending}
+      />
+      <ChatHistory datasetId={params.datasetId} />
+      <Button type="submit" disabled={isSending} size="icon">
+        {isSending ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
         ) : (
-          (message as AssistantMessage).responses.map((response, idx) => (
-            <div key={idx} className="w-full space-y-2">
-              {response.type === "text" ? (
-                <Card className="p-3 shadow-sm bg-muted hover:bg-muted/90 transition-colors">
-                  <p>
-                    {streamingStates[idx]?.streamedContent || response.content}
-                    {streamingStates[idx]?.isStreaming && (
-                      <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse" />
-                    )}
-                  </p>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="query" className="border rounded-lg">
-                      <div className="flex items-center justify-between p-2">
-                        <AccordionTrigger className="hover:no-underline flex-1 py-0">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="h-2 w-2 rounded-full bg-primary/50" />
-                            SQL Query
-                          </div>
-                        </AccordionTrigger>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleRunQuery(response.query)}
-                          disabled={runningQueries[response.query]}
-                          className={cn(
-                            "gap-2 transition-all",
-                            runningQueries[response.query]
-                              ? "opacity-70"
-                              : "hover:scale-105 hover:shadow-md",
-                          )}
-                        >
-                          {runningQueries[response.query] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <PlayIcon className="h-4 w-4" />
-                          )}
-                          {runningQueries[response.query]
-                            ? "Running..."
-                            : "Run Query"}
-                        </Button>
-                      </div>
-                      <AccordionContent>
-                        <div className="p-2">
-                          <SqlPreview value={response.query} height="100px" />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                  {response.results && (
-                    <Card className="border shadow-sm">
-                      <div className="p-3 border-b bg-muted/50">
-                        <div className="text-sm font-medium">Query Results</div>
-                      </div>
-                      <div className="p-4">
-                        <ResultsTable results={response.results} />
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </div>
-          ))
+          <Send className="h-4 w-4" />
         )}
-      </div>
-    </div>
+      </Button>
+    </form>
   );
-};
-
-const getMockResponses = (datasetId: string): Message[] => [
-  {
-    role: "assistant",
-    responses: [
-      {
-        type: "text",
-        role: "assistant",
-        content:
-          "Let me analyze the distribution of Iris species measurements:",
-      },
-      {
-        type: "sql",
-        role: "assistant",
-        query: `SELECT
-  "Species",
-  ROUND(AVG("SepalLengthCm"), 2) as "Avg Sepal Length",
-  ROUND(AVG("PetalLengthCm"), 2) as "Avg Petal Length",
-  COUNT(*) as "Count"
-FROM "${datasetId}"
-GROUP BY "Species"
-ORDER BY "Count" DESC;`,
-      },
-    ],
-  },
-  {
-    role: "assistant",
-    responses: [
-      {
-        type: "text",
-        role: "assistant",
-        content:
-          "Here's a comparison of petal sizes across different Iris species:",
-      },
-      {
-        type: "sql",
-        role: "assistant",
-        query: `select "Species", avg("PetalLengthCm") as "average_petal_length", avg("PetalWidthCm") as "average_petal_width" from "gp_6nitjnH9KTGZ" group by "Species"`,
-      },
-    ],
-  },
-  {
-    role: "assistant",
-    responses: [
-      {
-        type: "text",
-        role: "assistant",
-        content:
-          "Let's look at the relationship between sepal and petal measurements:",
-      },
-      {
-        type: "sql",
-        role: "assistant",
-        query: `select "SepalLengthCm", "SepalWidthCm", "PetalLengthCm", "PetalWidthCm", "Species" from "gp_6nitjnH9KTGZ"`,
-      },
-    ],
-  },
-  {
-    role: "assistant",
-    responses: [
-      {
-        type: "text",
-        role: "assistant",
-        content:
-          "Here are the Iris specimens with the largest overall dimensions:",
-      },
-      {
-        type: "sql",
-        role: "assistant",
-        query: `select "Id", "SepalLengthCm", "SepalWidthCm", "PetalLengthCm", "PetalWidthCm", "Species" from "gp_6nitjnH9KTGZ" order by ("SepalLengthCm" + "SepalWidthCm" + "PetalLengthCm" + "PetalWidthCm") desc limit 10`,
-      },
-    ],
-  },
-];
-
-export default function ChatPage({
-  params,
-}: {
-  params: Promise<{ projectId: string; datasetId: string }>;
-}) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { datasetId } = use(params);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const { mutateAsync: executeSql } = useDatasetSql();
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const mockStreamingResponse = async (question: string) => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const mockResponses = getMockResponses(datasetId);
-    const randomResponse =
-      mockResponses[Math.floor(Math.random() * mockResponses.length)];
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: question },
-      randomResponse,
-    ]);
-    setIsLoading(false);
-  };
-
-  const handleRunQuery = async (query: string) => {
-    try {
-      const results = await executeSql(query);
-
-      setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.role === "assistant") {
-            return {
-              ...msg,
-              responses: msg.responses.map((response) => {
-                if (response.type === "sql" && response.query === query) {
-                  return { ...response, results };
-                }
-                return response;
-              }),
-            };
-          }
-          return msg;
-        }),
-      );
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const question = input.trim();
-    setInput("");
-    await mockStreamingResponse(question);
-  };
 
   return (
-    <div className="container mx-auto p-4 h-[calc(100vh-4rem)]">
-      <div className="flex flex-col h-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border shadow-sm">
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            {messages.map((message, index) => (
-              <MessageCard
-                key={index}
-                message={message}
-                onRunQuery={handleRunQuery}
-                isLatest={index === messages.length - 1}
-              />
-            ))}
-            {isLoading && (
-              <div className="flex gap-3">
-                <Avatar className="h-8 w-8 ring-2 ring-muted">
-                  <AvatarFallback className="bg-muted">
-                    <Bot className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <Card className="p-3 bg-muted w-fit">
-                  <div className="flex gap-1">
-                    <div
-                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <div
-                      className="w-2 h-2 rounded-full bg-muted-foreground/30 animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
-                  </div>
-                </Card>
+    <div className="flex h-screen bg-background">
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel defaultSize={isOpen ? 40 : 100} minSize={30}>
+          <div className="flex h-full flex-col">
+            {/* Header */}
+            <div className="border-b bg-background p-4 flex items-center justify-between">
+              <h2 className="font-semibold">Chat</h2>
+              <div className="flex items-center gap-2">
+                {!isOpen && results && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsOpen(true)}
+                    className="gap-2"
+                  >
+                    <Table2 className="h-4 w-4" />
+                    Show Results
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStartNewChat}
+                  className="gap-2"
+                >
+                  <MessageSquarePlus className="h-4 w-4" />
+                  New Chat
+                </Button>
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+            </div>
 
-        <form onSubmit={handleSubmit} className="p-4 border-t bg-background/95">
-          <div className="flex gap-2 items-center">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your data..."
-              disabled={isLoading}
-              className="flex-1 bg-background"
-            />
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="transition-transform hover:scale-105"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="relative flex-1">
+              <AnimatePresence mode="wait">
+                {isEmpty ? (
+                  <motion.div
+                    className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <div className="text-center space-y-2 mb-4">
+                      <h1 className="text-2xl font-semibold">
+                        Welcome to Gopie Chat
+                      </h1>
+                      <p className="text-muted-foreground">
+                        Start a conversation by typing a message below
+                      </p>
+                    </div>
+                    <div className="w-full max-w-2xl">
+                      <ChatInput />
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    className="absolute inset-0 flex flex-col"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {/* Messages */}
+                    <ScrollArea
+                      ref={scrollRef}
+                      className="flex-1 p-4"
+                      onScroll={handleScroll}
+                    >
+                      {isLoadingMessages && !isFetchingNextPage ? (
+                        <div className="space-y-4">
+                          {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-20 w-full" />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Loading more indicator */}
+                          {isFetchingNextPage && (
+                            <div className="flex justify-center py-2">
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            </div>
+                          )}
+
+                          {/* Real messages */}
+                          {allMessages.map((message, index) => (
+                            <ChatMessage
+                              key={message.id}
+                              id={message.id}
+                              content={message.content}
+                              role={message.role}
+                              createdAt={message.created_at}
+                              chatId={selectedChatId || undefined}
+                              isLatest={
+                                index === allMessages.length - 1 &&
+                                !sortedOptimisticMessages.length
+                              }
+                            />
+                          ))}
+
+                          {/* Optimistic messages */}
+                          {sortedOptimisticMessages.map((message, index) => (
+                            <ChatMessage
+                              key={message.id}
+                              id={message.id}
+                              content={message.content}
+                              role={message.role}
+                              createdAt={message.created_at}
+                              isLoading={message.isLoading}
+                              isLatest={
+                                index === sortedOptimisticMessages.length - 1 &&
+                                !message.isLoading
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+
+                    {/* Input Area */}
+                    <motion.div
+                      className="border-t bg-background p-4"
+                      initial={{ y: 100 }}
+                      animate={{ y: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 20,
+                      }}
+                    >
+                      <ChatInput />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </form>
-      </div>
+        </ResizablePanel>
+        {isOpen && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={60} minSize={40}>
+              <SqlResults />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 }

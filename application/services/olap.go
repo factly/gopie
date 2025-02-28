@@ -122,11 +122,20 @@ func parseFilepath(filepath string) (string, string, error) {
 }
 
 func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
+	// Check for truly empty identifiers (not just quoted ones)
+	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
+		parts := strings.Split(sql, `"`)
+		for i := 0; i < len(parts)-1; i++ {
+			if parts[i] == "" && i+1 < len(parts) && parts[i+1] == "" {
+				return nil, fmt.Errorf("invalid SQL: query contains empty identifiers")
+			}
+		}
+	}
 
 	hasMultiple, err := pkg.HasMultipleStatements(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
 
 	if hasMultiple {
@@ -136,8 +145,8 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 
 	isSelect, err := pkg.IsSelectStatement(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to validate query type: %w", err)
 	}
 	if !isSelect {
 		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
@@ -146,11 +155,19 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 
 	countSql, err := pkg.BuildCountQuery(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to build count query: %w", err)
 	}
 
 	queryResult, err := d.getResultsWithCount(countSql, sql)
+	if err != nil {
+		d.logger.Error("Query execution failed", zap.Error(err))
+		return nil, err
+	}
+
+	if queryResult == nil {
+		return nil, fmt.Errorf("query execution returned no results")
+	}
 
 	return map[string]any{
 		"total": queryResult.Count,
