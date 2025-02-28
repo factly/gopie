@@ -24,9 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TableIcon, Code2Icon } from "lucide-react";
+import { TableIcon, Code2Icon, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SqlPreview } from "./sql-preview";
+import { downloadCsv } from "@/lib/utils";
 
 interface ResultsTableProps {
   results: Record<string, unknown>[];
@@ -42,10 +43,18 @@ export function ResultsTable({ results }: ResultsTableProps) {
     setCurrentPage(1);
   };
 
+  const handleDownload = () => {
+    if (!results.length) return;
+    downloadCsv(
+      results,
+      `results_${new Date().toISOString().split("T")[0]}.csv`
+    );
+  };
+
   const totalPages = Math.ceil(results.length / rowsPerPage);
   const paginatedResults = results.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage,
+    currentPage * rowsPerPage
   );
   const columns = results.length > 0 ? Object.keys(results[0]) : [];
 
@@ -54,25 +63,38 @@ export function ResultsTable({ results }: ResultsTableProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Results</h3>
         <div className="flex items-center gap-4">
-          <div className="flex items-center border rounded-md shadow-sm">
-            <Button
-              variant={viewMode === "table" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="gap-2"
-            >
-              <TableIcon className="h-4 w-4" />
-              Table
-            </Button>
-            <Button
-              variant={viewMode === "json" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("json")}
-              className="gap-2"
-            >
-              <Code2Icon className="h-4 w-4" />
-              JSON
-            </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border rounded-md shadow-sm">
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="gap-2"
+              >
+                <TableIcon className="h-4 w-4" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "json" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("json")}
+                className="gap-2"
+              >
+                <Code2Icon className="h-4 w-4" />
+                JSON
+              </Button>
+            </div>
+            {results.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download CSV
+              </Button>
+            )}
           </div>
           {viewMode === "table" && (
             <>

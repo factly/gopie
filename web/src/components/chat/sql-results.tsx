@@ -1,11 +1,19 @@
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Database } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { X, Database, Download } from "lucide-react";
+import { cn, downloadCsv } from "@/lib/utils";
 
 export function SqlResults() {
   const { results, isOpen, setIsOpen } = useSqlStore();
+
+  const handleDownload = () => {
+    if (!results?.data?.length) return;
+    downloadCsv(
+      results.data,
+      `sql_results_${new Date().toISOString().split("T")[0]}.csv`
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -22,14 +30,27 @@ export function SqlResults() {
             </span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setIsOpen(false)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          {results?.data && results.data.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleDownload}
+              title="Download as CSV"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="flex h-full min-h-screen items-center justify-center">
@@ -62,7 +83,7 @@ export function SqlResults() {
                         key={i}
                         className={cn(
                           "border-b last:border-b-0",
-                          i % 2 === 0 ? "bg-background" : "bg-muted/30",
+                          i % 2 === 0 ? "bg-background" : "bg-muted/30"
                         )}
                       >
                         {Object.values(row).map((value, j) => (
