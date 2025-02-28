@@ -54,9 +54,7 @@ export default function SqlPage({
   >(null);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
-  const [queryMode, setQueryMode] = React.useState<"sql" | "natural">(
-    "natural",
-  );
+  const [queryMode, setQueryMode] = React.useState<"sql" | "natural">("sql");
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [generatedSql, setGeneratedSql] = React.useState<string>("");
 

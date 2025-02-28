@@ -92,7 +92,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                Download CSV
+                Download
               </Button>
             )}
           </div>
