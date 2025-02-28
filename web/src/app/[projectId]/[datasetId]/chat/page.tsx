@@ -237,7 +237,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
             <div className="border-b bg-background p-4 flex items-center justify-between">
               <h2 className="font-semibold">Chat</h2>
               <div className="flex items-center gap-2">
-                {!isOpen && results && (
+                {!isOpen && results && selectedChatId && (
                   <Button
                     variant="outline"
                     size="sm"

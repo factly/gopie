@@ -5,6 +5,7 @@ interface SqlResult {
   total: number;
   error?: string;
   query: string;
+  chatId?: string;
 }
 
 interface SqlStore {

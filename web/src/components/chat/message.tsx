@@ -79,6 +79,7 @@ export function ChatMessage({
         data: result.data ?? [],
         total: result.data?.length ?? 0,
         query,
+        chatId,
       });
       setIsOpen(true);
     } catch (error) {
@@ -88,6 +89,7 @@ export function ChatMessage({
         error:
           error instanceof Error ? error.message : "Failed to execute query",
         query,
+        chatId,
       });
       setIsOpen(true);
     } finally {
