@@ -1,3 +1,4 @@
+from asyncio import selector_events
 import json
 from langchain_core.output_parsers import JsonOutputParser
 from typing import Dict, Any, Union, List
@@ -7,7 +8,7 @@ from rich.console import Console
 
 console = Console()
 
-def create_query_prompt(user_query: str, datasets_metadata: Union[Dict[str, Any], List, Any], error_message: str = "", attempt: int = 1) -> str:
+def create_query_prompt(user_query: str, selected_dataset: List[str], error_message: str = "", attempt: int = 1) -> str:
     """Create a prompt for the LLM to generate a SQL query"""
     error_context = ""
     if error_message and attempt > 1:
@@ -23,9 +24,9 @@ def create_query_prompt(user_query: str, datasets_metadata: Union[Dict[str, Any]
 
         User Query: "{user_query}"
 
-        Available Dataset Information:
-        {json.dumps(datasets_metadata, indent=2)}
-        {error_context}
+        Available Dataset Information: {selected_dataset}
+
+        Error Context: {error_context}
 
         IMPORTANT GUIDELINES:
         1. Use the EXACT dataset name provided in the metadata (without file extensions)
@@ -50,34 +51,14 @@ def plan_query(state: State) -> dict:
     Uses the selected dataset if available, otherwise uses all datasets.
     """
     try:
-        datasets_metadata = state.get("datasets", {})
+        selected_dataset = state.get("datasets", [])
         user_query = state.get("user_query", "")
         retry_count = state.get("retry_count", 0)
-
-        # Get the selected dataset from the previous step
-        selected_dataset = None
-        if state.get("messages", []):
-            try:
-                # Try to parse the last step's output to get the selected dataset
-                last_step_message = state.get("messages", [])[-1]
-                if hasattr(last_step_message, 'content'):
-                    parser = JsonOutputParser()
-                    parsed_content = parser.parse(last_step_message.content)
-                    selected_dataset = parsed_content.get("selected_dataset", "")
-            except Exception:
-                # If parsing fails, we'll use all datasets
-                pass
-
-        # Filter the datasets to only include the selected one if available
-        if selected_dataset and selected_dataset in datasets_metadata:
-            filtered_datasets = {selected_dataset: datasets_metadata[selected_dataset]}
-        else:
-            filtered_datasets = datasets_metadata
 
         last_message = state.get("messages", [])[-1]
         last_error = str(last_message.content) if isinstance(last_message, ErrorMessage) else ""
 
-        llm_prompt = create_query_prompt(user_query, filtered_datasets, last_error, retry_count + 1)
+        llm_prompt = create_query_prompt(user_query, selected_dataset, last_error, retry_count + 1)
 
         response = lc.llm.invoke(llm_prompt)
         response_content = str(response.content) if hasattr(response, 'content') else str(response)

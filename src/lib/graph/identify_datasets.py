@@ -79,7 +79,7 @@ def identify_datasets(state: State):
 
         # Ensure we always return the raw JSON string for consistency
         return {
-            "datasets": datasets_metadata,
+            "datasets": parser.parse(response_content).get("selected_dataset", ""),
             "user_query": user_input,
             "conversational": not parser.parse(response_content).get("is_data_query", False),
             "messages": [IntermediateStep.from_text(response_content)],
