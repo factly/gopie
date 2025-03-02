@@ -128,22 +128,40 @@ def execute_query(state: State) -> dict:
 
         if result.empty:
             return {
-                "messages": [ErrorMessage.from_text("Query returned no results")]
+                "messages": [IntermediateStep.from_text(json.dumps({
+                    "result": "Query executed successfully but returned no results",
+                    "query_executed": sql_query
+                }))]
             }
 
         for col in result.select_dtypes(include=['float64', 'int64']).columns:
             result[col] = result[col].fillna(0)
 
+        numeric_cols = result.select_dtypes(include=['float64', 'int64']).columns
+        formatted_result = result.copy()
+        for col in numeric_cols:
+            if any(keyword in col.lower() for keyword in ['amount', 'cost', 'value', 'spent', 'outlay']):
+                # Format as currency with commas for large numbers
+                formatted_result[f"{col}_formatted"] = formatted_result[col].apply(
+                    lambda x: f"₹{x:,.2f}" if x >= 1 else f"₹{x:.2f}"
+                )
+
+        result_records = result.to_dict('records')
+        formatted_records = formatted_result.to_dict('records')
+
         result_dict = {
             "result": "Query executed successfully",
             "query_executed": sql_query,
-            "data": result.to_dict('records')
+            "data": result_records,
+            "formatted_data": formatted_records
         }
 
-        return {
-            "query_result": result.to_dict('records'),
+        result_message = {
+            "query_result": result_records,
             "messages": [IntermediateStep.from_text(json.dumps(result_dict))]
         }
+
+        return result_message
 
     except Exception as e:
         error_msg = f"Query execution error: {str(e)}"
@@ -154,7 +172,6 @@ def execute_query(state: State) -> dict:
     finally:
         if con:
             con.close()
-
 def route_query_replan(state: State) -> str:
     """
     Enhanced routing logic with better error handling
@@ -162,10 +179,7 @@ def route_query_replan(state: State) -> str:
     last_message = state['messages'][-1]
     retry_count = state.get('retry_count', 0)
 
-    if retry_count >= 3:
-        return "identify"
-
-    if isinstance(last_message, ErrorMessage):
+    if isinstance(last_message, ErrorMessage) and retry_count < 3:
         state['retry_count'] = retry_count + 1
         return "replan"
 

@@ -4,7 +4,6 @@ from langchain_openai import ChatOpenAI
 
 from .config import Config, config
 
-
 class LangchainConfig:
     def __init__(self, config: Config):
         self.config = config

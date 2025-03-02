@@ -33,18 +33,21 @@ def get_dataset_metadata(selected_datasets: Optional[List[str]]) -> Dict[str, An
 def create_llm_prompt(user_query: str, datasets_metadata: Dict[str, Any]) -> str:
     """Create a prompt for the LLM to identify the relevant dataset"""
     return f"""
-        Given the following user query and available datasets, identify the most relevant dataset to answer the query. Dont modify the dataset name.
+        Given the following user query and available datasets, analyze whether the query is requesting data analysis from the available datasets.
 
         User Query: "{user_query}"
 
         Available Datasets:
         {json.dumps(datasets_metadata, indent=2)}
 
+        IMPORTANT: Only identify a dataset if the user is clearly asking for data analysis related to the available datasets.
+        If the user is just greeting, chatting, asking general questions not related to data analysis, or their query cannot be answered with these datasets, DO NOT select any dataset.
+
         Analyze the query and respond in JSON format:
         {{
-            "selected_dataset": "name of the most relevant dataset with the exact name provided in the metadata without the extension",
-            "reasoning": "brief explanation of why this dataset is relevant",
-            "query_intent": "what the user is trying to do with the data"
+            "selected_dataset": "name of the most relevant dataset with the exact name provided in the metadata without the extension, or empty string if no dataset is relevant",
+            "reasoning": "brief explanation of why this dataset is relevant or why no dataset was selected",
+            "is_data_query": true/false (whether this is a data-related query or just conversation)
         }}
     """
 
@@ -61,17 +64,21 @@ def identify_datasets(state: State):
         llm_prompt = create_llm_prompt(user_input, datasets_metadata)
 
         response = lc.llm.invoke(llm_prompt)
-
         parser = JsonOutputParser()
+
+        response_content = str(response.content)
+
         try:
-            parsed_response = parser.parse(str(response.content))
-            response_content = json.dumps(parsed_response)
+            parsed_response = parser.parse(response_content)
+            is_data_query = parsed_response.get("is_data_query", False)
+            conversational = not is_data_query
         except Exception:
-            response_content = str(response.content)
+            conversational = False
 
         return {
             "datasets": datasets_metadata,
             "user_query": user_input,
+            "conversational": conversational,
             "messages": [IntermediateStep.from_text(response_content)],
         }
 
@@ -80,5 +87,28 @@ def identify_datasets(state: State):
         return {
             "datasets": None,
             "user_query": user_input,
+            "conversational": False,
             "messages": [IntermediateStep.from_text(error_message)],
         }
+
+def is_conversational_input(state: State) -> str:
+    """
+    If no dataset was selected, generate a response.
+    If a dataset was selected, plan the query execution.
+    """
+    parser = JsonOutputParser()
+
+    try:
+
+        response_content = state["messages"][-1].content
+        parsed_response = parser.parse(response_content)
+
+        is_data_query = parsed_response.get("is_data_query", False)
+        has_dataset = "selected_dataset" in parsed_response and parsed_response["selected_dataset"]
+
+        if is_data_query and has_dataset:
+            return "plan_query"
+        else:
+            return "generate_response"
+    except Exception as e:
+        return "generate_response"
