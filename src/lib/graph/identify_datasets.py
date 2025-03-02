@@ -51,44 +51,57 @@ def create_llm_prompt(user_query: str, datasets_metadata: Dict[str, Any]) -> str
         }}
     """
 
+def format_response_as_json(data: Dict[str, Any]) -> str:
+    """Format a dictionary as a JSON string for consistent messaging"""
+    return json.dumps(data, indent=2)
+
 def identify_datasets(state: State):
     """
     Use LLM to identify relevant dataset based on natural language query.
     """
+    parser = JsonOutputParser()
+    user_input = state['messages'][0].content if state['messages'] else ''
+
     try:
-        user_input = state['messages'][0].content if state['messages'] else ''
         if not user_input:
-            raise ValueError("No user query provided")
+            error_data = {
+                "error": "No user query provided",
+                "is_data_query": False
+            }
+            return {
+                "datasets": None,
+                "user_query": user_input,
+                "conversational": False,
+                "messages": [IntermediateStep.from_text(format_response_as_json(error_data))],
+            }
 
         datasets_metadata = get_dataset_metadata(None)
         llm_prompt = create_llm_prompt(user_input, datasets_metadata)
 
         response = lc.llm.invoke(llm_prompt)
-        parser = JsonOutputParser()
-
         response_content = str(response.content)
 
-        try:
-            parsed_response = parser.parse(response_content)
-            is_data_query = parsed_response.get("is_data_query", False)
-            conversational = not is_data_query
-        except Exception:
-            conversational = False
-
+        # Ensure we always return the raw JSON string for consistency
         return {
             "datasets": datasets_metadata,
             "user_query": user_input,
-            "conversational": conversational,
+            "conversational": not parser.parse(response_content).get("is_data_query", False),
             "messages": [IntermediateStep.from_text(response_content)],
         }
 
     except Exception as e:
-        error_message = f"Error processing query: {str(e)}"
+        error_data = {
+            "error": f"Error processing query: {str(e)}",
+            "is_data_query": False,
+            "selected_dataset": "",
+            "reasoning": f"Failed to process the query due to: {str(e)}"
+        }
+
         return {
             "datasets": None,
             "user_query": user_input,
             "conversational": False,
-            "messages": [IntermediateStep.from_text(error_message)],
+            "messages": [IntermediateStep.from_text(format_response_as_json(error_data))],
         }
 
 def is_conversational_input(state: State) -> str:
@@ -99,7 +112,6 @@ def is_conversational_input(state: State) -> str:
     parser = JsonOutputParser()
 
     try:
-
         response_content = state["messages"][-1].content
         parsed_response = parser.parse(response_content)
 
@@ -111,4 +123,12 @@ def is_conversational_input(state: State) -> str:
         else:
             return "generate_response"
     except Exception as e:
+        error_data = {
+            "error": f"Error determining input type: {str(e)}",
+            "is_data_query": False,
+            "selected_dataset": "",
+            "reasoning": "Failed to parse the previous response"
+        }
+
+        state["messages"][-1] = IntermediateStep.from_text(format_response_as_json(error_data))
         return "generate_response"

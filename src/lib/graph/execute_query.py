@@ -12,6 +12,17 @@ def get_data_directory() -> str:
 def normalize_name(name: str) -> str:
     return re.sub(r'[^a-zA-Z0-9_]', '_', os.path.splitext(name)[0]).lower()
 
+def format_error_as_json(error_message: str) -> str:
+    """Format an error message as JSON for consistent messaging"""
+    error_data = {
+        "error": error_message,
+        "result": "Error",
+        "query_executed": "",
+        "data": [],
+        "formatted_data": []
+    }
+    return json.dumps(error_data, indent=2)
+
 def validate_and_fix_query(query: str) -> str:
     """
     Validate and fix common SQL query issues
@@ -127,11 +138,14 @@ def execute_query(state: State) -> dict:
             result = con.execute(fixed_query).fetchdf()
 
         if result.empty:
+            no_results_data = {
+                "result": "Query executed successfully but returned no results",
+                "query_executed": sql_query,
+                "data": [],
+                "formatted_data": []
+            }
             return {
-                "messages": [IntermediateStep.from_text(json.dumps({
-                    "result": "Query executed successfully but returned no results",
-                    "query_executed": sql_query
-                }))]
+                "messages": [IntermediateStep.from_text(json.dumps(no_results_data, indent=2))]
             }
 
         for col in result.select_dtypes(include=['float64', 'int64']).columns:
@@ -158,7 +172,7 @@ def execute_query(state: State) -> dict:
 
         result_message = {
             "query_result": result_records,
-            "messages": [IntermediateStep.from_text(json.dumps(result_dict))]
+            "messages": [IntermediateStep.from_text(json.dumps(result_dict, indent=2))]
         }
 
         return result_message
@@ -166,20 +180,30 @@ def execute_query(state: State) -> dict:
     except Exception as e:
         error_msg = f"Query execution error: {str(e)}"
         return {
-            "messages": [ErrorMessage.from_text(error_msg)]
+            "messages": [IntermediateStep.from_text(format_error_as_json(error_msg))]
         }
 
     finally:
         if con:
             con.close()
+
 def route_query_replan(state: State) -> str:
     """
     Enhanced routing logic with better error handling
     """
     last_message = state['messages'][-1]
+    content = last_message.content if isinstance(last_message.content, str) else ""
+
+    # Check if content is JSON and has an error field
+    try:
+        parsed_content = json.loads(content)
+        has_error = "error" in parsed_content and parsed_content["error"]
+    except:
+        has_error = False
+
     retry_count = state.get('retry_count', 0)
 
-    if isinstance(last_message, ErrorMessage) and retry_count < 3:
+    if (has_error or isinstance(last_message, ErrorMessage)) and retry_count < 3:
         state['retry_count'] = retry_count + 1
         return "replan"
 

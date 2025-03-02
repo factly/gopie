@@ -2,10 +2,6 @@ import json
 from langchain_core.output_parsers import JsonOutputParser
 from lib.graph.types import AIMessage, ErrorMessage, State, IntermediateStep
 from lib.langchain_config import lc
-from rich.console import Console
-from typing import List, Optional, Type, Any
-
-console = Console()
 
 def generate_result(state: State) -> dict:
     """
@@ -33,14 +29,28 @@ def generate_result(state: State) -> dict:
         message = state["messages"][-1]
         user_query = state.get("user_query", "")
 
-        last_error_message = message if isinstance(message, ErrorMessage) else None
+        # Check if the message content is in JSON format and contains error information
+        is_error = False
+        error_content = ""
+
+        if hasattr(message, 'content'):
+            try:
+                if isinstance(message.content, str):
+                    parsed_content = json.loads(message.content)
+                    if "error" in parsed_content and parsed_content["error"]:
+                        is_error = True
+                        error_content = parsed_content["error"]
+            except:
+                # Not JSON or no error field
+                pass
+
+        last_error_message = message if (isinstance(message, ErrorMessage) or is_error) else None
 
         retry_count = state.get("retry_count", 0)
 
         # Case 1: Query planning/execution failed even after retries
         if last_error_message and retry_count >= 3:
-            error_content = last_error_message.content
-            console.print(f"[bold red]Query failed after {retry_count} attempts. Error: {error_content}[/bold red]")
+            error_content = error_content or (last_error_message.content if hasattr(last_error_message, 'content') else "Unknown error")
 
             explanation_prompt = f"""
                 I tried several times to process your query but encountered issues.
@@ -95,7 +105,9 @@ def generate_result(state: State) -> dict:
                             "messages": [AIMessage(content=str(response.content))]
                         }
                 except Exception as e:
-                    console.print(f"[bold yellow]Warning: Error processing intermediate step: {str(e)}[/bold yellow]")
+                    return {
+                        "messages": [IntermediateStep.from_text(json.dumps(f"Error processing results: {str(e)}"))]
+                    }
 
             # Fallback for no results case
             return {
@@ -117,7 +129,9 @@ def generate_result(state: State) -> dict:
 
                 query_executed = content.get("query_executed", "")
             except Exception as e:
-                console.print(f"[bold yellow]Warning: Could not extract executed query: {str(e)}[/bold yellow]")
+                return {
+                    "messages": [IntermediateStep.from_text(json.dumps(f"Could not process query results: {str(e)}"))]
+                }
 
         # Generate a response based on the query results
         prompt = f"""
@@ -139,7 +153,6 @@ def generate_result(state: State) -> dict:
         }
 
     except Exception as e:
-        console.print(f"[bold red]Critical error in generate_result: {str(e)}[/bold red]")
         return {
-            "messages": [AIMessage(content=f"I encountered an issue while processing your query results. Error: {str(e)}")]
+            "messages": [IntermediateStep.from_text(json.dumps(f"Critical error: {str(e)}"))]
         }

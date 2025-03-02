@@ -7,6 +7,18 @@ from rich.console import Console
 
 console = Console()
 
+def format_error_as_json(error_message: str) -> str:
+    """Format an error message as JSON for consistent messaging"""
+    error_data = {
+        "error": error_message,
+        "sql_query": "",
+        "explanation": f"Error: {error_message}",
+        "tables_used": [],
+        "joins_required": [],
+        "expected_result": "Error occurred, no results expected"
+    }
+    return json.dumps(error_data, indent=2)
+
 def create_query_prompt(user_query: str, datasets_metadata: Union[Dict[str, Any], List, Any], error_message: str = "", attempt: int = 1) -> str:
     """Create a prompt for the LLM to generate a SQL query"""
     error_context = ""
@@ -56,8 +68,6 @@ def plan_query(state: State) -> dict:
         last_message = state.get("messages", [])[-1]
         last_error = str(last_message.content) if isinstance(last_message, ErrorMessage) else ""
 
-        console.print(f"[bold yellow]Last error: {last_error}[/bold yellow]")
-
         llm_prompt = create_query_prompt(user_query, datasets_metadata, last_error, retry_count + 1)
 
         response = lc.llm.invoke(llm_prompt)
@@ -73,7 +83,7 @@ def plan_query(state: State) -> dict:
             if missing_fields:
                 error_msg = f"Missing required fields in LLM response: {', '.join(missing_fields)}"
                 return {
-                    "messages": [ErrorMessage.from_text(error_msg)]
+                    "messages": [IntermediateStep.from_text(format_error_as_json(error_msg))]
                 }
 
             sql_query = parsed_response.get("sql_query", "")
@@ -81,22 +91,22 @@ def plan_query(state: State) -> dict:
             if not sql_query:
                 error_msg = "LLM returned empty SQL query"
                 return {
-                    "messages": [ErrorMessage.from_text(error_msg)]
+                    "messages": [IntermediateStep.from_text(format_error_as_json(error_msg))]
                 }
 
             return {
                 "query": sql_query,
-                "messages": [IntermediateStep.from_text(json.dumps(parsed_response))]
+                "messages": [IntermediateStep.from_text(json.dumps(parsed_response, indent=2))]
             }
 
         except Exception as parse_error:
             error_msg = f"Failed to parse LLM response: {str(parse_error)}"
             return {
-                "messages": [ErrorMessage.from_text(error_msg)]
+                "messages": [IntermediateStep.from_text(format_error_as_json(error_msg))]
             }
 
     except Exception as e:
         error_msg = f"Unexpected error in query planning: {str(e)}"
         return {
-            "messages": [ErrorMessage.from_text(error_msg)]
+            "messages": [IntermediateStep.from_text(format_error_as_json(error_msg))]
         }
