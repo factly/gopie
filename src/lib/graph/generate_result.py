@@ -106,7 +106,7 @@ def generate_result(state: State) -> dict:
                         }
                 except Exception as e:
                     return {
-                        "messages": [IntermediateStep.from_text(json.dumps(f"Error processing results: {str(e)}"))]
+                        "messages": [ErrorMessage.from_text(json.dumps(f"Error processing results: {str(e)}"))]
                     }
 
             # Fallback for no results case
@@ -130,7 +130,7 @@ def generate_result(state: State) -> dict:
                 query_executed = content.get("query_executed", "")
             except Exception as e:
                 return {
-                    "messages": [IntermediateStep.from_text(json.dumps(f"Could not process query results: {str(e)}"))]
+                    "messages": [ErrorMessage.from_text(json.dumps(f"Could not process query results: {str(e)}"))]
                 }
 
         # Generate a response based on the query results
@@ -154,5 +154,5 @@ def generate_result(state: State) -> dict:
 
     except Exception as e:
         return {
-            "messages": [IntermediateStep.from_text(json.dumps(f"Critical error: {str(e)}"))]
+            "messages": [ErrorMessage.from_text(json.dumps(f"Critical error: {str(e)}"))]
         }

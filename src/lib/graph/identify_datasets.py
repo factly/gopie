@@ -1,4 +1,4 @@
-from lib.graph.types import IntermediateStep, State
+from lib.graph.types import IntermediateStep, ErrorMessage, State
 import pandas as pd
 from typing import Dict, Any, List, Optional
 import os
@@ -51,10 +51,6 @@ def create_llm_prompt(user_query: str, datasets_metadata: Dict[str, Any]) -> str
         }}
     """
 
-def format_response_as_json(data: Dict[str, Any]) -> str:
-    """Format a dictionary as a JSON string for consistent messaging"""
-    return json.dumps(data, indent=2)
-
 def identify_datasets(state: State):
     """
     Use LLM to identify relevant dataset based on natural language query.
@@ -72,7 +68,7 @@ def identify_datasets(state: State):
                 "datasets": None,
                 "user_query": user_input,
                 "conversational": False,
-                "messages": [IntermediateStep.from_text(format_response_as_json(error_data))],
+                "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
 
         datasets_metadata = get_dataset_metadata(None)
@@ -90,18 +86,12 @@ def identify_datasets(state: State):
         }
 
     except Exception as e:
-        error_data = {
-            "error": f"Error processing query: {str(e)}",
-            "is_data_query": False,
-            "selected_dataset": "",
-            "reasoning": f"Failed to process the query due to: {str(e)}"
-        }
-
+        error_msg = f"Error identifying datasets: {str(e)}"
         return {
             "datasets": None,
             "user_query": user_input,
             "conversational": False,
-            "messages": [IntermediateStep.from_text(format_response_as_json(error_data))],
+            "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
         }
 
 def is_conversational_input(state: State) -> str:
@@ -130,5 +120,5 @@ def is_conversational_input(state: State) -> str:
             "reasoning": "Failed to parse the previous response"
         }
 
-        state["messages"][-1] = IntermediateStep.from_text(format_response_as_json(error_data))
+        state["messages"][-1] = ErrorMessage.from_text(json.dumps(error_data, indent=2))
         return "generate_response"

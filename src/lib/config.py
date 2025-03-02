@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
 
     def __init__(self):
-        self.model = "gpt-4o-mini"
+        self.model = "gpt-4o"
 
         portkey_api_key = os.getenv("PORTKEY_API_KEY")
         virtual_key = os.getenv("VIRTUAL_KEY")
