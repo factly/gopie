@@ -7,10 +7,6 @@ from .config import Config, config
 class LangchainConfig:
     def __init__(self, config: Config):
         self.config = config
-        # model = init_chat_model(
-        #     config.model,
-        #     model_provider="groq",
-        # )
 
         model = ChatOpenAI(
             api_key="X",

@@ -1,30 +1,20 @@
 from lib.graph.types import IntermediateStep, ErrorMessage, State
-import pandas as pd
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import os
 import json
-from lib.langchain_config import lc
+from lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
-from rich.console import Console
-console = Console()
+from utils.dataset_info import get_dataset_preview
 
-def get_dataset_metadata(selected_datasets: Optional[List[str]]) -> Dict[str, Any]:
+def get_dataset_metadata() -> Dict[str, Any]:
     """Get metadata for all available datasets"""
     datasets = {}
     data_dir = "./data"
 
     for file in os.listdir(data_dir):
         if file.endswith('.csv'):
-            if selected_datasets and file not in selected_datasets:
-                continue
             try:
-                df = pd.read_csv(os.path.join(data_dir, file))
-                datasets[file] = {
-                    "name": file,
-                    "columns": list(df.columns),
-                    "rows": len(df),
-                    "description": f"Dataset containing {len(df)} records with columns: {', '.join(df.columns[:5])}..."
-                }
+                datasets[file] = get_dataset_preview(file)
             except Exception:
                 continue
 
@@ -45,7 +35,7 @@ def create_llm_prompt(user_query: str, datasets_metadata: Dict[str, Any]) -> str
 
         Analyze the query and respond in JSON format:
         {{
-            "selected_dataset": "name of the most relevant dataset with the exact name provided in the metadata without the extension, or empty string if no dataset is relevant",
+            "selected_dataset": ["list of dataset names that are most relevant to the user query"],
             "reasoning": "brief explanation of why this dataset is relevant or why no dataset was selected",
             "is_data_query": true/false (whether this is a data-related query or just conversation)
         }}
@@ -71,18 +61,19 @@ def identify_datasets(state: State):
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
 
-        datasets_metadata = get_dataset_metadata(None)
+        datasets_metadata = get_dataset_metadata()
         llm_prompt = create_llm_prompt(user_input, datasets_metadata)
 
         response = lc.llm.invoke(llm_prompt)
         response_content = str(response.content)
 
-        # Ensure we always return the raw JSON string for consistency
+        parsed_content = parser.parse(response_content)
+
         return {
-            "datasets": parser.parse(response_content).get("selected_dataset", ""),
+            "datasets": parsed_content.get("selected_dataset", []),
             "user_query": user_input,
-            "conversational": not parser.parse(response_content).get("is_data_query", False),
-            "messages": [IntermediateStep.from_text(response_content)],
+            "conversational": not parsed_content.get("is_data_query", False),
+            "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],
         }
 
     except Exception as e:

@@ -12,14 +12,14 @@ graph_builder.add_node("execute_query", execute_query)
 graph_builder.add_node("generate_result", generate_result)
 
 graph_builder.add_conditional_edges(
+    "execute_query",
+    route_query_replan,
+    {"generate_result": "generate_result", "replan": "plan_query", "reidentify_datasets": "identify_datasets"},
+)
+graph_builder.add_conditional_edges(
     "identify_datasets",
     is_conversational_input,
     {"plan_query": "plan_query", "generate_response": "generate_result"},
-)
-graph_builder.add_conditional_edges(
-    "execute_query",
-    route_query_replan,
-    {"generate_result": "generate_result", "replan": "plan_query"},
 )
 
 graph_builder.add_edge("plan_query", "execute_query")

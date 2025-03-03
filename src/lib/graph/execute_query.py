@@ -6,6 +6,7 @@ import duckdb
 import pandas as pd
 from lib.graph.types import ErrorMessage, State, IntermediateStep
 from typing import Dict, Any
+from lib.config.langchain_config import lc
 
 MAX_RETRY_COUNT = 3
 
@@ -51,12 +52,8 @@ def execute_query(state: State) -> dict:
         last_message = state['messages'][-1]
         content = last_message.content if isinstance(last_message.content, str) else json.dumps(last_message.content)
 
-        query_plan = None
-        try:
-            parser = JsonOutputParser()
-            query_plan = parser.parse(content)
-        except Exception:
-            query_plan = safe_json_parse(content)
+        parser = JsonOutputParser()
+        query_plan = parser.parse(content)
 
         if not query_plan:
             raise ValueError("Failed to parse query plan from message")
@@ -172,6 +169,18 @@ def route_query_replan(state: State) -> str:
     retry_count = state.get('retry_count', 0)
 
     if isinstance(last_message, ErrorMessage) and retry_count < MAX_RETRY_COUNT:
-        return "replan"
+        response = lc.llm.invoke(
+            f"""
+                I got an error when executing the query: "{last_message.content}"
+
+                Can you please tell whether this error can be solved by replanning the query? or it's need to reidentify the datasets?
+
+                If it's need to reidentify the datasets, please return "reidentify_datasets"
+                If it's need to replan the query, please return "replan"
+                If it's no problem, please return "generate_result"
+            """
+        )
+
+        return JsonOutputParser().parse(str(response.content))
 
     return "generate_result"
