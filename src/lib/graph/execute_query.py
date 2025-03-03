@@ -7,6 +7,9 @@ import pandas as pd
 from lib.graph.types import ErrorMessage, State, IntermediateStep
 from typing import Dict, Any
 from lib.config.langchain_config import lc
+from rich.console import Console
+
+console = Console()
 
 MAX_RETRY_COUNT = 3
 
@@ -15,27 +18,6 @@ def get_data_directory() -> str:
 
 def normalize_name(name: str) -> str:
     return re.sub(r'[^a-zA-Z0-9_]', '_', os.path.splitext(name)[0]).lower()
-
-def safe_json_parse(content: str) -> Dict[str, Any]:
-    """
-    Safely parse JSON content with error handling
-
-    Args:
-        content: JSON string to parse
-
-    Returns:
-        Parsed JSON as a dictionary
-    """
-    try:
-        return json.loads(content)
-    except json.JSONDecodeError:
-        json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
-        if json_match:
-            try:
-                return json.loads(json_match.group(1))
-            except json.JSONDecodeError:
-                pass
-        return {}
 
 def execute_query(state: State) -> dict:
     """
@@ -58,55 +40,65 @@ def execute_query(state: State) -> dict:
         if not query_plan:
             raise ValueError("Failed to parse query plan from message")
 
-        if not query_plan.get('selected_dataset') and query_plan.get('tables_used'):
-            query_plan['selected_dataset'] = query_plan['tables_used'][0]
-
         con = duckdb.connect(database=':memory:')
         data_dir = get_data_directory()
 
-        dataset_name = query_plan.get('selected_dataset', '')
-        if not dataset_name:
+        dataset_names = query_plan.get('tables_used', [])
+        if not dataset_names:
             sql_query = query_plan.get('sql_query', '')
             if 'FROM' in sql_query.upper():
-                match = re.search(r'FROM\s+([^\s,;()]+)', sql_query, re.IGNORECASE)
-                if match:
-                    dataset_name = match.group(1).strip('"\'')
-                    dataset_name = dataset_name.split('WHERE')[0].strip() if 'WHERE' in dataset_name else dataset_name
+                matches = re.finditer(r'FROM\s+([^\s,;()]+)|JOIN\s+([^\s,;()]+)', sql_query, re.IGNORECASE)
+                dataset_names = []
+                for match in matches:
+                    table = match.group(1) or match.group(2)
+                    if table:
+                        table = table.strip('"\'')
+                        table = table.split('WHERE')[0].strip()
+                        dataset_names.append(table)
 
-        if not dataset_name:
-            raise ValueError("No dataset specified in query plan")
+        if not dataset_names:
+            raise ValueError("No datasets specified in query plan")
 
-        dataset_name = dataset_name.replace('.csv', '')
-        matching_files = [f for f in os.listdir(data_dir)
-                        if f.endswith('.csv') and dataset_name.lower() in f.lower()]
+        if isinstance(dataset_names, str):
+            dataset_names = [dataset_names]
 
-        if not matching_files:
-            raise FileNotFoundError(f"Dataset not found: {dataset_name}")
+        table_mappings = {}
 
-        file_path = os.path.join(data_dir, matching_files[0])
-        table_name = normalize_name(matching_files[0])
+        for dataset_name in dataset_names:
+            dataset_name = dataset_name.replace('.csv', '')
+            matching_files = [f for f in os.listdir(data_dir)
+                            if f.endswith('.csv') and dataset_name.lower() in f.lower()]
 
-        df = pd.read_csv(file_path)
+            if not matching_files:
+                raise FileNotFoundError(f"Dataset not found: {dataset_name}")
 
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                df[f"{col.lower()}_lower"] = df[col].str.lower()
+            file_path = os.path.join(data_dir, matching_files[0])
+            table_name = normalize_name(matching_files[0])
+            table_mappings[dataset_name] = table_name
 
-        original_cols = df.columns
-        clean_cols = {col: col.lower().strip().replace(' ', '_') for col in original_cols}
-        df.rename(columns=clean_cols, inplace=True)
+            df = pd.read_csv(file_path)
+            console.log(f"Loading dataset: {matching_files[0]} as table: {table_name}")
 
-        try:
-            con.execute(f"DROP TABLE IF EXISTS \"{table_name}\"")
-            con.execute(f"CREATE TABLE \"{table_name}\" AS SELECT * FROM df")
-        except Exception as e:
-            raise ValueError(f"Failed to create table in DuckDB: {str(e)}")
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    df[f"{col.lower()}_lower"] = df[col].str.lower()
+
+            original_cols = df.columns
+            clean_cols = {col: col.lower().strip().replace(' ', '_') for col in original_cols}
+            df.rename(columns=clean_cols, inplace=True)
+
+            try:
+                con.execute(f"DROP TABLE IF EXISTS \"{table_name}\"")
+                con.execute(f"CREATE TABLE \"{table_name}\" AS SELECT * FROM df")
+            except Exception as e:
+                raise ValueError(f"Failed to create table {table_name} in DuckDB: {str(e)}")
 
         sql_query = query_plan.get('sql_query') or query_plan.get('sample_query')
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
-        sql_query = sql_query.replace(dataset_name, f'"{table_name}"')
+        for dataset_name, table_name in table_mappings.items():
+            sql_query = sql_query.replace(dataset_name, f'"{table_name}"')
 
         result = None
         try:
