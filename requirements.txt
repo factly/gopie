@@ -7,3 +7,4 @@ portkey_ai
 langchain_openai
 duckdb
 fastapi[standard]
+logging
