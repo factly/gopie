@@ -8,12 +8,11 @@ from src.lib.graph.types import ErrorMessage, State, IntermediateStep
 from src.lib.config.langchain_config import lc
 from rich.console import Console
 
+from src.tools.list_tables import get_data_directory
+
 console = Console()
 
 MAX_RETRY_COUNT = 3
-
-def get_data_directory() -> str:
-    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'data')
 
 def normalize_name(name: str) -> str:
     return re.sub(r'[^a-zA-Z0-9_]', '_', os.path.splitext(name)[0]).lower()

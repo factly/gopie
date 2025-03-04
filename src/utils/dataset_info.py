@@ -2,8 +2,7 @@ import os
 from typing import Any, Dict
 
 import pandas as pd
-from src.lib.graph.execute_query import get_data_directory
-
+from src.tools.list_tables import get_data_directory
 
 def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
     """

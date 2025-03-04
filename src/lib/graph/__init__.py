@@ -21,7 +21,7 @@ graph_builder.add_conditional_edges(
 graph_builder.add_conditional_edges(
     "identify_datasets",
     is_conversational_input,
-    {"analyze_dataset": "analyze_dataset", "generate_response": "generate_result"},
+    {"analyze_dataset": "analyze_dataset", "basic_conversation": "generate_result"},
 )
 
 graph_builder.add_edge("analyze_dataset", "plan_query")
@@ -31,10 +31,15 @@ graph_builder.add_edge("generate_result", END)
 
 graph = graph_builder.compile()
 
-def stream_graph_updates(user_input: str):
+async def stream_graph_updates(user_input: str):
     """Stream graph updates for user input."""
+    event_types = ["generate subqueries", "identify_datasets", "analyze_dataset", "plan_query", "execute_query", "generate_result"]
+
     for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
-        yield event
+        for event_type in event_types:
+            if event_type in event:
+                if "messages" in event[event_type]:
+                    yield str(event[event_type]["messages"][-1].content) + "\n\n"
 
 def visualize_graph():
     try:

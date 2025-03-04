@@ -102,7 +102,7 @@ def is_conversational_input(state: State) -> str:
         if is_data_query and has_dataset:
             return "analyze_dataset"
         else:
-            return "generate_response"
+            return "basic_conversation"
     except Exception as e:
         error_data = {
             "error": f"Error determining input type: {str(e)}",
@@ -112,4 +112,4 @@ def is_conversational_input(state: State) -> str:
         }
 
         state["messages"][-1] = ErrorMessage.from_text(json.dumps(error_data, indent=2))
-        return "generate_response"
+        return "basic_conversation"
