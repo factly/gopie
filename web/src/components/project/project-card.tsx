@@ -38,7 +38,7 @@ interface ProjectCardProps {
   project: Project;
   onUpdate?: (
     projectId: string,
-    data: { name: string; description: string },
+    data: { updated_by: string; name: string; description: string },
   ) => Promise<void>;
   onDelete?: (projectId: string) => Promise<void>;
 }
@@ -107,6 +107,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
       await onUpdate(project.id, {
         name: editedName,
         description: editedDescription,
+        updated_by: "admin",
       });
       setIsEditing(false);
       toast({

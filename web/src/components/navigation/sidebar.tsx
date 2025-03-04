@@ -74,7 +74,7 @@ export function AppSidebar() {
     enabled: Boolean(projectId),
   });
 
-  const schema = datasets?.results.find((d) => d.id === datasetId)?.columns;
+  const schema = datasets?.results?.find((d) => d.id === datasetId)?.columns;
 
   // Hide sidebar on home page
   if (pathname === "/") {
@@ -272,7 +272,8 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel className="flex items-center justify-between">
               <span className="truncate font-medium">
-                {datasets.results.find((d) => d.id === datasetId)?.name ||
+                {datasets.results.find((d) => d.id === datasetId)?.alias ||
+                  datasets.results.find((d) => d.id === datasetId)?.name ||
                   "Select Dataset"}
               </span>
               <DropdownMenu>
@@ -296,7 +297,9 @@ export function AppSidebar() {
                         router.push(`/${projectId}/${dataset.id}`)
                       }
                     >
-                      <span className="truncate">{dataset.name}</span>
+                      <span className="truncate">
+                        {dataset.alias || dataset.name}
+                      </span>
                       {dataset.id === datasetId && (
                         <span className="ml-auto text-xs text-muted-foreground">
                           Current

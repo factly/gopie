@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEffect, useRef, useState } from "react";
+import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
 
 interface MessageContent {
   type: "text" | "sql";
@@ -132,23 +133,16 @@ export function ChatMessage({
         <div className="flex-1 min-w-0">
           {isLoading ? (
             <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-foreground/25"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-foreground/25"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="h-2 w-2 animate-bounce rounded-full bg-foreground/25"
-                  style={{ animationDelay: "300ms" }}
-                />
-              </div>
-              <span className="text-sm text-foreground/50">
+              <TextShimmerWave
+                className="text-sm [--base-color:#71717a] [--base-gradient-color:#a1a1aa] dark:[--base-color:#a1a1aa] dark:[--base-gradient-color:#e4e4e7]"
+                duration={1}
+                spread={1}
+                zDistance={1}
+                scaleDistance={1.1}
+                rotateYDistance={20}
+              >
                 AI is thinking...
-              </span>
+              </TextShimmerWave>
             </div>
           ) : (
             <>

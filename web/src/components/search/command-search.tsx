@@ -158,13 +158,15 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
               {datasets.results.map((dataset) => (
                 <CommandItem
                   key={dataset.id}
-                  value={`${dataset.name} ${dataset.description || ""}`}
+                  value={`${dataset.alias || dataset.name} ${
+                    dataset.description || ""
+                  }`}
                   onSelect={() => handleSelect(`/${projectId}/${dataset.id}`)}
                   className="group"
                 >
                   <Database className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   <div className="flex flex-col gap-1">
-                    <div>{highlightMatch(dataset.name)}</div>
+                    <div>{highlightMatch(dataset.alias || dataset.name)}</div>
                     {dataset.description && (
                       <div className="text-xs text-muted-foreground line-clamp-1">
                         {highlightMatch(dataset.description)}

@@ -3,6 +3,7 @@ import { apiClient, Project } from "../../api-client";
 export interface UpdateProjectBody {
   name: string;
   description?: string;
+  updated_by: string;
 }
 
 export const updateProject = async (
