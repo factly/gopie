@@ -3,7 +3,7 @@ langchain-community
 langgraph
 python-dotenv
 pydantic
-rich
 portkey_ai
 langchain_openai
 duckdb
+fastapi[standard]

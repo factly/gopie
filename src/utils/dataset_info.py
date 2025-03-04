@@ -2,10 +2,10 @@ import os
 from typing import Any, Dict
 
 import pandas as pd
-from lib.graph.execute_query import get_data_directory
+from src.lib.graph.execute_query import get_data_directory
 
 
-def get_dataset_preview(dataset_name: str, sample_rows: int = 5) -> Dict[str, Any]:
+def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
     """
     Get metadata and sample data from a dataset.
 

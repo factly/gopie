@@ -1,10 +1,10 @@
-from lib.graph.types import IntermediateStep, ErrorMessage, State
+from src.lib.graph.types import IntermediateStep, ErrorMessage, State
 from typing import Dict, Any
 import os
 import json
-from lib.config.langchain_config import lc
+from src.lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
-from utils.dataset_info import get_dataset_preview
+from src.utils.dataset_info import get_dataset_preview
 
 def get_dataset_metadata() -> Dict[str, Any]:
     """Get metadata for all available datasets"""
@@ -100,7 +100,7 @@ def is_conversational_input(state: State) -> str:
         has_dataset = "selected_dataset" in parsed_response and parsed_response["selected_dataset"]
 
         if is_data_query and has_dataset:
-            return "plan_query"
+            return "analyze_dataset"
         else:
             return "generate_response"
     except Exception as e:

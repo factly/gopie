@@ -1,10 +1,10 @@
 import json
 from langchain_core.output_parsers import JsonOutputParser
 from typing import Dict, Any, List
-from lib.graph.types import ErrorMessage, State, IntermediateStep
-from lib.config.langchain_config import lc
+from src.lib.graph.types import ErrorMessage, State, IntermediateStep
+from src.lib.config.langchain_config import lc
 from rich.console import Console
-from utils.dataset_info import get_dataset_preview
+from src.utils.dataset_info import get_dataset_preview
 
 console = Console()
 
@@ -95,6 +95,7 @@ def plan_query(state: State) -> dict:
         user_query = state.get("user_query", "")
         retry_count = state.get("retry_count", 0)
 
+        # This error message might be from execute_query node or analyze_dataset node
         last_message = state.get("messages", [])[-1]
         last_error = str(last_message.content) if isinstance(last_message, ErrorMessage) else ""
 

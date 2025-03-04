@@ -4,6 +4,7 @@ from langgraph.graph.message import add_messages
 
 class State(TypedDict):
     datasets: list[str]
+    dataset_metadata: dict
     conversational: bool
     query: str
     retry_count: int

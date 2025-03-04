@@ -1,7 +1,7 @@
 import json
 from langchain_core.output_parsers import JsonOutputParser
-from lib.graph.types import AIMessage, ErrorMessage, State
-from lib.config.langchain_config import lc
+from src.lib.graph.types import AIMessage, ErrorMessage, State
+from src.lib.config.langchain_config import lc
 
 def generate_result(state: State) -> dict:
     """
