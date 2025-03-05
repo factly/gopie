@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-# visualize_graph()
+visualize_graph()
 
 @app.get("/")
 def read_root():

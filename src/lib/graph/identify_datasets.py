@@ -61,8 +61,6 @@ def identify_datasets(state: State):
     user_input = state['messages'][0].content if state['messages'] else ''
     ToolResult = state.get('tool_results', [])
 
-    print("Result: ",ToolResult)
-
     try:
         if not user_input:
             error_data = {

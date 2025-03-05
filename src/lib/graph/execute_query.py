@@ -1,4 +1,5 @@
 import json
+import logging
 from langchain_core.output_parsers import JsonOutputParser
 import os
 import re
@@ -6,10 +7,7 @@ import duckdb
 import pandas as pd
 from src.lib.graph.types import ErrorMessage, State, IntermediateStep
 from src.lib.config.langchain_config import lc
-from rich.console import Console
 from src.utils.dataset_info import data_dir
-
-console = Console()
 
 MAX_RETRY_COUNT = 3
 
@@ -73,7 +71,7 @@ def execute_query(state: State) -> dict:
             table_mappings[dataset_name] = table_name
 
             df = pd.read_csv(file_path)
-            console.log(f"Loading dataset: {matching_files[0]} as table: {table_name}")
+            logging.info(f"Loading dataset: {matching_files[0]} as table: {table_name}")
 
             for col in df.columns:
                 if df[col].dtype == 'object':
@@ -165,10 +163,10 @@ def route_query_replan(state: State) -> str:
 
                 If it's need to reidentify the datasets, please return "reidentify_datasets"
                 If it's need to replan the query, please return "replan"
-                If it's no problem, please return "generate_result"
+                If it's no problem, please return "response_router"
             """
         )
 
         return JsonOutputParser().parse(str(response.content))
 
-    return "generate_result"
+    return "response_router"

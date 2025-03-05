@@ -3,10 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from typing import Dict, Any, List
 from src.lib.graph.types import ErrorMessage, State, IntermediateStep
 from src.lib.config.langchain_config import lc
-from rich.console import Console
 from src.utils.dataset_info import get_dataset_preview
-
-console = Console()
 
 def create_query_prompt(user_query: str, datasets_info: List[Dict[str, Any]], error_message: str = "", attempt: int = 1) -> str:
     """Create a prompt for the LLM to generate a SQL query"""
@@ -111,7 +108,7 @@ def plan_query(state: State) -> dict:
                 dataset_info = get_dataset_preview(dataset_name)
                 datasets_info.append(dataset_info)
             except Exception as e:
-                console.print(f"[yellow]Warning: Could not get preview for dataset {dataset_name}: {str(e)}[/yellow]")
+                raise e
 
         if not datasets_info:
             error_msg = "Could not get preview information for any of the selected datasets"
