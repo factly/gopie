@@ -5,33 +5,40 @@ import json
 from src.lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
 
-def create_llm_prompt(user_query: str, ToolResult: List[Dict[str, Any]]) -> str:
+def create_llm_prompt(user_query: str, tool_results: List[Dict[str, Any]]) -> str:
     """Create a prompt for the LLM to identify the relevant dataset"""
     return f"""
-        You are an AI assistant helping with data analysis. You have access to various tools that can help you gather information about available datasets.
+        You are an AI assistant specialized in data analysis. Your role is to help users analyze data by identifying relevant datasets and tools.
 
-        User Query: {user_query}
+        USER QUERY:
+        "{user_query}"
 
-        Tool Results: {ToolResult}
+        TOOL RESULTS:
+        {tool_results}
 
-        First, determine if this query is related to data analysis. If it is, you should use tools to:
-        1. Discover what datasets are available
-        2. Explore the datasets to understand their structure and content
-        3. Determine which datasets are most relevant to the user's query and the information you have gathered from using tools
+        INSTRUCTIONS:
+        1. First, determine if this is a data analysis query or a conversational query.
 
-        You should NOT make assumptions about what datasets are available. Instead, use tools to gather this information.
+        2. For data analysis queries:
+           - Use tools to discover available datasets
+           - Explore dataset structures and content
+           - Determine which datasets best match the user's needs
+           - Do NOT assume what datasets are available - use tools to verify
 
-        If the user is just greeting, chatting, or asking general questions or directly asking for information that just require tool calls and no working like generating and executing sql query and not related to data analysis, for that you don't need to use tools or select datasets.
+        3. For conversational queries:
+           - If the query is a general question, greeting, or casual conversation, handle it without tools
+           - No dataset selection is needed for conversational queries
 
-        Respond in one of two ways:
+        4. For tool-only queries:
+           - If the query can be answered directly with tool calls without dataset analysis, make those tool calls
+           - Mark these as non-data queries in your response
 
-        1. If this is a data-related query, use tool calls to gather information about available datasets.
-
-        2. After you have gathered required information that is sufficient for the user query than Analyze the query and respond in JSON format:
+        RESPONSE FORMAT:
+        After gathering sufficient information, respond in this JSON format:
         {{
-            "selected_dataset": ["list of dataset names that are most relevant to the user query"],
-            "reasoning": "brief explanation of why this dataset is relevant or why no dataset was selected",
-            "is_data_query": true/false (whether this is a data-related query or just conversation)
+            "selected_dataset": ["dataset_name1", "dataset_name2"], // List of relevant datasets (empty if none)
+            "reasoning": "Clear explanation of why these datasets were selected or why no datasets are relevant",
+            "is_data_query": true/false // Whether this requires data analysis (true) or is conversational (false)
         }}
         """
 
@@ -78,6 +85,7 @@ def identify_datasets(state: State):
                 "user_query": user_input,
                 "conversational": False,
                 "messages": [response if isinstance(response, AIMessage) else AIMessage(content=str(response))],
+                "current_node": "identify_datasets"
             }
 
         response_content = str(response.content)

@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict, List, Dict, Any
+from typing import Annotated, TypedDict, List, Dict, Any, Optional
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
 
@@ -12,6 +12,7 @@ class State(TypedDict):
     query_result: dict
     tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
+    current_node: Optional[str]
 
 class IntermediateStep(AIMessage):
     """Represents an intermediate step in the processing pipeline"""

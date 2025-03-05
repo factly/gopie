@@ -6,7 +6,7 @@ from src.lib.graph.types import State
 from src.lib.graph.identify_datasets import identify_datasets, is_conversational_input
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.tools import TOOLS
-from src.tools.tool_node import ToolNode
+from src.tools.tool_node import ToolNode, route_from_tools
 
 graph_builder = StateGraph(State)
 graph_builder.add_node("identify_datasets", identify_datasets)
@@ -27,7 +27,12 @@ graph_builder.add_conditional_edges(
     {"analyze_dataset": "analyze_dataset", "basic_conversation": "generate_result", "tools": "tools"},
 )
 
-graph_builder.add_edge("tools", "identify_datasets")
+graph_builder.add_conditional_edges(
+    "tools",
+    route_from_tools,
+    {"identify_datasets": "identify_datasets", "analyze_dataset": "analyze_dataset"},
+)
+
 graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge(START, "identify_datasets")

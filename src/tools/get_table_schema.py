@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 import pandas as pd
 import os
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 @tool
 def get_table_schema(table_name: str) -> Dict[str, Any]:
@@ -14,7 +14,6 @@ def get_table_schema(table_name: str) -> Dict[str, Any]:
     Returns:
         A dictionary with column names and their data types
     """
-    # Ensure the table name has .csv extension
     if not table_name.endswith('.csv'):
         table_name += '.csv'
 
@@ -25,10 +24,8 @@ def get_table_schema(table_name: str) -> Dict[str, Any]:
         return {"error": f"Table '{table_name}' not found in the data directory"}
 
     try:
-        # Read just enough rows to determine schema
         df = pd.read_csv(file_path, nrows=5)
 
-        # Get column names and their data types
         schema = {}
         for column in df.columns:
             schema[column] = str(df[column].dtype)
@@ -37,7 +34,7 @@ def get_table_schema(table_name: str) -> Dict[str, Any]:
             "table_name": table_name,
             "columns": list(df.columns),
             "schema": schema,
-            "row_count": len(pd.read_csv(file_path, usecols=[0])),  # Efficiently count rows
+            "row_count": len(pd.read_csv(file_path, usecols=[0])),
         }
     except Exception as e:
         return {"error": f"Error reading table schema: {str(e)}"}

@@ -10,9 +10,11 @@ def generate_result(state: State) -> dict:
     try:
         if state.get("conversational", False):
             user_query = state.get("user_query", "")
+            Tool_result = state.get("tool_results", [])
 
             conversational_prompt = f"""
                 The user has sent a message: "{user_query}"
+                Information that can help you answer the user query in a better way and can actually get them the correct answer, use this infromation to answer the user query, If the information is crucial than don't alternate it and show it as it is in a better way: {json.dumps(Tool_result, indent=2)}
 
                 This appears to be a general conversation rather than a data analysis request.
                 Please respond naturally to this message as a helpful assistant.
@@ -29,7 +31,6 @@ def generate_result(state: State) -> dict:
         message = state["messages"][-1]
         user_query = state.get("user_query", "")
 
-        # Check if the message content is in JSON format and contains error information
         is_error = False
         error_content = ""
 
@@ -41,7 +42,6 @@ def generate_result(state: State) -> dict:
                         is_error = True
                         error_content = parsed_content["error"]
             except:
-                # Not JSON or no error field
                 pass
 
         last_error_message = message if (isinstance(message, ErrorMessage) or is_error) else None
