@@ -7,8 +7,7 @@ import pandas as pd
 from src.lib.graph.types import ErrorMessage, State, IntermediateStep
 from src.lib.config.langchain_config import lc
 from rich.console import Console
-
-from src.tools.list_tables import get_data_directory
+from src.utils.dataset_info import data_dir
 
 console = Console()
 
@@ -39,7 +38,6 @@ def execute_query(state: State) -> dict:
             raise ValueError("Failed to parse query plan from message")
 
         con = duckdb.connect(database=':memory:')
-        data_dir = get_data_directory()
 
         dataset_names = query_plan.get('tables_used', [])
         if not dataset_names:

@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict, Union, Dict, List, Any
+from typing import Annotated, TypedDict, List, Dict, Any
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
 
@@ -10,6 +10,7 @@ class State(TypedDict):
     retry_count: int
     user_query: str
     query_result: dict
+    tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
 
 class IntermediateStep(AIMessage):

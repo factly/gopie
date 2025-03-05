@@ -1,52 +1,60 @@
 from src.lib.graph.types import IntermediateStep, ErrorMessage, State
-from typing import Dict, Any
-import os
+from langchain_core.messages import AIMessage
+from typing import Dict, Any, List
 import json
 from src.lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
-from src.utils.dataset_info import get_dataset_preview
 
-def get_dataset_metadata() -> Dict[str, Any]:
-    """Get metadata for all available datasets"""
-    datasets = {}
-    data_dir = "./data"
-
-    for file in os.listdir(data_dir):
-        if file.endswith('.csv'):
-            try:
-                datasets[file] = get_dataset_preview(file)
-            except Exception:
-                continue
-
-    return datasets
-
-def create_llm_prompt(user_query: str, datasets_metadata: Dict[str, Any]) -> str:
+def create_llm_prompt(user_query: str, ToolResult: List[Dict[str, Any]]) -> str:
     """Create a prompt for the LLM to identify the relevant dataset"""
     return f"""
-        Given the following user query and available datasets, analyze whether the query is requesting data analysis from the available datasets.
+        You are an AI assistant helping with data analysis. You have access to various tools that can help you gather information about available datasets.
 
-        User Query: "{user_query}"
+        User Query: {user_query}
 
-        Available Datasets:
-        {json.dumps(datasets_metadata, indent=2)}
+        Tool Results: {ToolResult}
 
-        IMPORTANT: Only identify a dataset if the user is clearly asking for data analysis related to the available datasets.
-        If the user is just greeting, chatting, asking general questions not related to data analysis, or their query cannot be answered with these datasets, DO NOT select any dataset.
+        First, determine if this query is related to data analysis. If it is, you should use tools to:
+        1. Discover what datasets are available
+        2. Explore the datasets to understand their structure and content
+        3. Determine which datasets are most relevant to the user's query and the information you have gathered from using tools
 
-        Analyze the query and respond in JSON format:
+        You should NOT make assumptions about what datasets are available. Instead, use tools to gather this information.
+
+        If the user is just greeting, chatting, or asking general questions or directly asking for information that just require tool calls and no working like generating and executing sql query and not related to data analysis, for that you don't need to use tools or select datasets.
+
+        Respond in one of two ways:
+
+        1. If this is a data-related query, use tool calls to gather information about available datasets.
+
+        2. After you have gathered required information that is sufficient for the user query than Analyze the query and respond in JSON format:
         {{
             "selected_dataset": ["list of dataset names that are most relevant to the user query"],
             "reasoning": "brief explanation of why this dataset is relevant or why no dataset was selected",
             "is_data_query": true/false (whether this is a data-related query or just conversation)
         }}
-    """
+        """
+
+def has_tool_calls(message):
+    """Helper function to check if a message has tool calls"""
+    if hasattr(message, 'tool_calls') and message.tool_calls:
+        return True
+
+    if hasattr(message, 'additional_kwargs') and 'tool_calls' in message.additional_kwargs:
+        return True
+
+    return False
 
 def identify_datasets(state: State):
     """
     Use LLM to identify relevant dataset based on natural language query.
+    This function can also generate tool calls if needed.
     """
     parser = JsonOutputParser()
     user_input = state['messages'][0].content if state['messages'] else ''
+    ToolResult = state.get('tool_results', [])
+
+    print("Result: ",ToolResult)
 
     try:
         if not user_input:
@@ -61,12 +69,18 @@ def identify_datasets(state: State):
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
 
-        datasets_metadata = get_dataset_metadata()
-        llm_prompt = create_llm_prompt(user_input, datasets_metadata)
 
-        response = lc.llm.invoke(llm_prompt)
+        prompt = create_llm_prompt(user_input, ToolResult)
+        response: Any = lc.llm.invoke(prompt)
+
+        if has_tool_calls(response):
+            return {
+                "user_query": user_input,
+                "conversational": False,
+                "messages": [response if isinstance(response, AIMessage) else AIMessage(content=str(response))],
+            }
+
         response_content = str(response.content)
-
         parsed_content = parser.parse(response_content)
 
         return {
@@ -89,11 +103,17 @@ def is_conversational_input(state: State) -> str:
     """
     If no dataset was selected, generate a response.
     If a dataset was selected, plan the query execution.
+    If tool calls were generated, route to tools.
     """
+
+    last_message = state["messages"][-1]
+    if has_tool_calls(last_message):
+        return "tools"
+
     parser = JsonOutputParser()
 
     try:
-        response_content = state["messages"][-1].content
+        response_content = last_message.content
         parsed_response = parser.parse(response_content)
 
         is_data_query = parsed_response.get("is_data_query", False)

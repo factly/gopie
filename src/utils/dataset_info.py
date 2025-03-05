@@ -2,7 +2,8 @@ import os
 from typing import Any, Dict
 
 import pandas as pd
-from src.tools.list_tables import get_data_directory
+
+data_dir = "./data"
 
 def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
     """
@@ -16,7 +17,6 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, An
         Dictionary containing dataset metadata and sample data
     """
     try:
-        data_dir = get_data_directory()
         matching_files = [f for f in os.listdir(data_dir)
                         if f.endswith('.csv') and dataset_name.lower() in f.lower()]
 

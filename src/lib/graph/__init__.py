@@ -5,6 +5,8 @@ from src.lib.graph.plan_query import plan_query
 from src.lib.graph.types import State
 from src.lib.graph.identify_datasets import identify_datasets, is_conversational_input
 from src.lib.graph.analyze_dataset import analyze_dataset
+from src.tools import TOOLS
+from src.tools.tool_node import ToolNode
 
 graph_builder = StateGraph(State)
 graph_builder.add_node("identify_datasets", identify_datasets)
@@ -12,6 +14,7 @@ graph_builder.add_node("plan_query", plan_query)
 graph_builder.add_node("execute_query", execute_query)
 graph_builder.add_node("generate_result", generate_result)
 graph_builder.add_node("analyze_dataset", analyze_dataset)
+graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
 
 graph_builder.add_conditional_edges(
     "execute_query",
@@ -21,9 +24,10 @@ graph_builder.add_conditional_edges(
 graph_builder.add_conditional_edges(
     "identify_datasets",
     is_conversational_input,
-    {"analyze_dataset": "analyze_dataset", "basic_conversation": "generate_result"},
+    {"analyze_dataset": "analyze_dataset", "basic_conversation": "generate_result", "tools": "tools"},
 )
 
+graph_builder.add_edge("tools", "identify_datasets")
 graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge(START, "identify_datasets")
@@ -38,7 +42,7 @@ async def stream_graph_updates(user_input: str):
     for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
         for event_type in event_types:
             if event_type in event:
-                if "messages" in event[event_type]:
+                if event[event_type] and "messages" in event[event_type]:
                     yield str(event[event_type]["messages"][-1].content) + "\n\n"
 
 def visualize_graph():
