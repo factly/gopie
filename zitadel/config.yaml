@@ -7,7 +7,7 @@ ExternalSecure: false
 
 Port: 4455
 ExternalPort: 4455
-ExternalDomain: "localhost"
+# ExternalDomain: "localhost"
 
 # If not using the docker compose example, adjust these values for connecting ZITADEL to your PostgreSQL
 Database:
