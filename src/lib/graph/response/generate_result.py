@@ -1,84 +1,143 @@
 import json
+from typing import Dict, Any, List, Optional, Union
 from langchain_core.output_parsers import JsonOutputParser
 from src.lib.graph.types import AIMessage, ErrorMessage, State
 from src.lib.config.langchain_config import lc
 
-def generate_result(state: State) -> dict:
+
+def generate_result(state: State) -> Dict[str, List[Any]]:
     """
-    Generate results of the executed query for successful cases
+    Generate results of the executed query for successful cases.
+    Returns:
+        Dictionary with messages containing the generated response
     """
     try:
         query_type = state.get("query_type", "")
 
         if query_type == "conversational" or query_type == "tool_only":
-            user_query = state.get("user_query", "")
-            Tool_result = state.get("tool_results", [])
+            return _handle_conversational_query(state)
 
-            conversational_prompt = f"""
-                The user has sent a message: "{user_query}"
-                Information that can help you answer the user query in a better way and can actually get them the correct answer, use this infromation to answer the user query, If the information is crucial than don't alter it and show it as it is in a better way: {json.dumps(Tool_result, indent=2)}
-
-                This appears to be a general conversation rather than a data analysis request.
-                Please respond naturally to this message as a helpful assistant.
-                If it's a greeting, respond with a friendly greeting.
-                If it's a question about capabilities, explain what you can do to help with data analysis.
-                Keep your response concise and friendly.
-            """
-
-            response = lc.llm.invoke(conversational_prompt)
-            return {
-                "messages": [AIMessage(content=str(response.content))]
-            }
-
-        message = state["messages"][-1]
-        user_query = state.get("user_query", "")
-        query_result = state.get("query_result", [])
-
-        # fallback result
-        if not query_result:
-            return {
-                "messages": [AIMessage(content="I processed your query, but couldn't find any matching data in the available datasets. You might want to try rephrasing your question or asking about different data points.")]
-            }
-
-        # Handle successful query with results
-        query_executed = ""
-        if message:
-            try:
-                message_content = message.content
-                if isinstance(message_content, str):
-                    parser = JsonOutputParser()
-                    content = parser.parse(message_content)
-                elif isinstance(message_content, dict):
-                    content = message_content
-                else:
-                    content = {}
-
-                query_executed = content.get("query_executed", "")
-            except Exception as e:
-                return {
-                    "messages": [ErrorMessage.from_text(json.dumps(f"Could not process query results: {str(e)}"))]
-                }
-
-        # Generate a response based on the query results
-        prompt = f"""
-            Given the following:
-            - Original user query: "{user_query}"
-            - SQL query that was executed: "{query_executed}"
-            - Query results: {json.dumps(query_result, indent=2)}
-
-            Please provide a concise, clear response that answers the original user query based on these results.
-            Include relevant numbers and insights from the query results. Format large numbers with commas for readability.
-            If the results show financial data, present it clearly with the currency symbol if appropriate.
-
-            IMPORTANT: Make sure to use the exact data from the query results in your response. Do not state that you don't have information when it's present in the query results.
-        """
-
-        response = lc.llm.invoke(prompt)
-        return {
-            "messages": [AIMessage(content=str(response.content))]
-        }
+        return _handle_data_query(state)
 
     except Exception as e:
         return {
-            "messages": [ErrorMessage.from_text(json.dumps(f"Critical error: {str(e)}"))]
+            "messages": [ErrorMessage.from_text(json.dumps({
+                "error": "Critical error in result generation",
+                "details": str(e)
+            }))]
+        }
+
+
+def _handle_conversational_query(state: State) -> Dict[str, List[Any]]:
+    """Handle conversational or tool-only queries"""
+    user_query = state.get("user_query", "")
+    tool_results = state.get("tool_results", [])
+
+    conversational_prompt = f"""
+    # User Query Analysis
+
+    ## User Message
+    "{user_query}"
+
+    ## Available Context Information
+    {json.dumps(tool_results, indent=2) if tool_results else "No additional context available."}
+
+    ## Instructions
+        - This is a conversational query rather than a data analysis request.
+        - If the tool results provide relevant information, incorporate it naturally into your response.
+        - Preserve any crucial information from the tool results but present it in a clear, user-friendly way.
+        - If answering a greeting, respond warmly and professionally.
+        - If the user asks about capabilities, explain your data analysis features briefly.
+        - Maintain a helpful, informative tone throughout.
+        - Keep your response concise (3-5 sentences if possible) unless detailed explanation is needed.
+    """
+
+    response = lc.llm.invoke(conversational_prompt)
+    return {
+        "messages": [AIMessage(content=str(response.content))]
+    }
+
+
+def _handle_data_query(state: State) -> Dict[str, List[Any]]:
+    """Handle data analysis queries with query results"""
+    message = state["messages"][-1] if state.get("messages") else None
+    user_query = state.get("user_query", "")
+    query_result = state.get("query_result", [])
+
+    if not query_result:
+        return _handle_empty_results()
+
+    query_executed = state.get("sql_query", _extract_executed_query(message))
+
+    if isinstance(query_executed, dict) and "error" in query_executed:
+        return {"messages": [ErrorMessage.from_text(json.dumps(query_executed))]}
+
+    analysis_prompt = f"""
+    # Data Analysis Response Generation
+
+    ## Context
+        - Original user query: "{user_query}"
+        - Executed query: "{query_executed}"
+        - Query results: {json.dumps(query_result, indent=2)}
+
+    ## Response Instructions
+        1. Provide a direct, concise answer addressing the user's specific question.
+        2. Structure your response with key insights first, followed by supporting details.
+        3. Include precise numerical data from the results with proper formatting:
+        - Format large numbers with commas (e.g., 1,000,000)
+        - Include currency symbols where appropriate (₹, $, etc.)
+        - Use consistent decimal precision
+        4. If presenting financial or statistical data, provide brief context about trends or patterns.
+        5. If comparing multiple items, consider using clear comparative language.
+        6. CRITICAL: Only use facts directly supported by the data in the query results.
+        7. Do not apologize for or mention limitations of your analysis.
+
+        Respond in a professional, authoritative tone appropriate for data analysis.
+    """
+
+    response = lc.llm.invoke(analysis_prompt)
+    return {
+        "messages": [AIMessage(content=str(response.content))]
+    }
+
+
+def _handle_empty_results() -> Dict[str, List[Any]]:
+    """Handle the case of empty query results"""
+    return {
+        "messages": [AIMessage(content=(
+            "I analyzed your query but couldn't find matching data in the available datasets. "
+            "This could be because:\n"
+            "- The data you're looking for isn't in our current datasets\n"
+            "- Your query might need to be rephrased\n"
+            "- There might be specific filters that are excluding all results\n\n"
+            "Could you try rephrasing your question or asking about a different aspect of the data?"
+        ))]
+    }
+
+def _extract_executed_query(message: Optional[Any]) -> Union[str, Dict[str, str]]:
+    """
+    Extract the executed query from the message content
+
+    Returns:
+        Either the query string or an error dictionary
+    """
+    if not message:
+        return ""
+
+    try:
+        message_content = message.content
+
+        if isinstance(message_content, str):
+            parser = JsonOutputParser()
+            content = parser.parse(message_content)
+        elif isinstance(message_content, dict):
+            content = message_content
+        else:
+            content = {}
+
+        return content.get("query_executed", "")
+    except Exception as e:
+        return {
+            "error": "Could not process query results",
+            "details": str(e)
         }

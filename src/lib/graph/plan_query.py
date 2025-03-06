@@ -88,9 +88,14 @@ def plan_query(state: State) -> dict:
     """
     try:
         selected_datasets = state.get("datasets", [])
-
         user_query = state.get("user_query", "")
         retry_count = state.get("retry_count", 0)
+
+        if not selected_datasets:
+            error_msg = "No dataset selected for query planning"
+            return {
+                "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
+            }
 
         # This error message might be from execute_query node or analyze_dataset node
         last_message = state.get("messages", [])[-1]

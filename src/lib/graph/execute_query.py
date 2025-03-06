@@ -167,6 +167,13 @@ def route_query_replan(state: State) -> str:
             """
         )
 
-        return JsonOutputParser().parse(str(response.content))
+        response_text = str(response.content).lower()
+
+        if "reidentify_datasets" in response_text:
+            return "reidentify_datasets"
+        elif "replan" in response_text:
+            return "replan"
+        else:
+            return "response_router"
 
     return "response_router"

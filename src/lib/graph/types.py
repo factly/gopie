@@ -6,7 +6,7 @@ class State(TypedDict):
     datasets: list[str]
     dataset_metadata: dict
     query_type: str
-    query: str
+    sql_query: str
     retry_count: int
     user_query: str
     query_result: dict

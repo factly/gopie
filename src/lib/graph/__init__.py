@@ -6,7 +6,7 @@ from src.lib.graph.response.max_iterations import max_iterations_reached
 from src.lib.graph.response.no_result import no_results_handler
 from src.lib.graph.response.response_handler import route_response_handler
 from src.lib.graph.types import State
-from src.lib.graph.identify_datasets import identify_datasets, is_conversational_input
+from src.lib.graph.identify_datasets import identify_datasets
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
 from src.tools import TOOLS
@@ -83,6 +83,7 @@ async def stream_graph_updates(user_input: str):
         for event_type in event_types:
             if event_type in event:
                 if event[event_type] and "messages" in event[event_type]:
+                    print(str(event[event_type]["messages"][-1].content) + "\n\n")
                     yield str(event[event_type]["messages"][-1].content) + "\n\n"
 
 def visualize_graph():
