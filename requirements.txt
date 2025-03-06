@@ -8,3 +8,5 @@ langchain_openai
 duckdb
 fastapi[standard]
 logging
+langchain-google-genai
+pandas

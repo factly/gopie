@@ -4,7 +4,7 @@ from langgraph.graph.message import add_messages
 
 class State(TypedDict):
     datasets: list[str]
-    dataset_metadata: dict
+    dataset_info: dict
     query_type: str
     sql_query: str
     retry_count: int
