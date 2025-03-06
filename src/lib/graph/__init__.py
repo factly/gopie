@@ -7,7 +7,7 @@ from src.lib.graph.response.no_result import no_results_handler
 from src.lib.graph.response.response_handler import route_response_handler
 from src.lib.graph.types import State
 from src.lib.graph.identify_datasets import identify_datasets
-from src.lib.graph.analyze_dataset import analyze_dataset
+from src.lib.graph.analyze_dataset import analyze_dataset, route_from_dataset_analysis
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
 from src.tools import TOOLS
 from src.tools.tool_node import ToolNode
@@ -22,6 +22,7 @@ graph_builder.add_node("max_iterations_reached", max_iterations_reached)
 graph_builder.add_node("no_results_handler", no_results_handler)
 graph_builder.add_node("analyze_dataset", analyze_dataset)
 graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
+graph_builder.add_node("analytic_tools", ToolNode(tools=list(TOOLS.values())))
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(
@@ -54,10 +55,19 @@ graph_builder.add_conditional_edges(
     },
 )
 
+graph_builder.add_conditional_edges(
+    "analyze_dataset",
+    route_from_dataset_analysis,
+    {
+        "analytic_tools": "analytic_tools",
+        "plan_query": "plan_query"
+    }
+)
+
+graph_builder.add_edge("analytic_tools", "analyze_dataset")
 graph_builder.add_edge("tools", "analyze_query")
 graph_builder.add_edge(START, "analyze_query")
 graph_builder.add_edge("identify_datasets", "analyze_dataset")
-graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge("generate_result", END)
 graph_builder.add_edge("max_iterations_reached", END)
@@ -83,6 +93,7 @@ async def stream_graph_updates(user_input: str):
         for event_type in event_types:
             if event_type in event:
                 if event[event_type] and "messages" in event[event_type]:
+                    print(event_type)
                     print(str(event[event_type]["messages"][-1].content) + "\n\n")
                     yield str(event[event_type]["messages"][-1].content) + "\n\n"
 

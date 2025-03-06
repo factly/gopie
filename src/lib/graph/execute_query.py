@@ -27,6 +27,9 @@ def execute_query(state: State) -> dict:
     con = None
     try:
         last_message = state['messages'][-1]
+        if isinstance(last_message, ErrorMessage):
+            pass
+
         content = last_message.content if isinstance(last_message.content, str) else json.dumps(last_message.content)
 
         parser = JsonOutputParser()
