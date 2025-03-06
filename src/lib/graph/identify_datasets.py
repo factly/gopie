@@ -5,6 +5,8 @@ import json
 from src.lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
 
+from src.tools.tool_node import has_tool_calls
+
 def create_llm_prompt(user_query: str, tool_results: List[Dict[str, Any]]) -> str:
     """Create a prompt for the LLM to identify the relevant dataset"""
     return f"""
@@ -42,20 +44,10 @@ def create_llm_prompt(user_query: str, tool_results: List[Dict[str, Any]]) -> st
         }}
         """
 
-def has_tool_calls(message):
-    """Helper function to check if a message has tool calls"""
-    if hasattr(message, 'tool_calls') and message.tool_calls:
-        return True
-
-    if hasattr(message, 'additional_kwargs') and 'tool_calls' in message.additional_kwargs:
-        return True
-
-    return False
-
 def identify_datasets(state: State):
     """
-    Use LLM to identify relevant dataset based on natural language query.
-    This function can also generate tool calls if needed.
+        Use LLM to identify relevant dataset based on natural language query.
+        This function can also generate tool calls if needed.
     """
     parser = JsonOutputParser()
     user_input = state['messages'][0].content if state['messages'] else ''

@@ -5,14 +5,13 @@ from langgraph.graph.message import add_messages
 class State(TypedDict):
     datasets: list[str]
     dataset_metadata: dict
-    conversational: bool
+    query_type: str
     query: str
     retry_count: int
     user_query: str
     query_result: dict
     tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
-    current_node: Optional[str]
 
 class IntermediateStep(AIMessage):
     """Represents an intermediate step in the processing pipeline"""

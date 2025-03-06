@@ -8,11 +8,13 @@ from src.lib.graph.response.response_handler import route_response_handler
 from src.lib.graph.types import State
 from src.lib.graph.identify_datasets import identify_datasets, is_conversational_input
 from src.lib.graph.analyze_dataset import analyze_dataset
+from src.lib.graph.analyze_query import analyze_query, route_from_analysis
 from src.tools import TOOLS
-from src.tools.tool_node import ToolNode, route_from_tools
+from src.tools.tool_node import ToolNode
 
 graph_builder = StateGraph(State)
 graph_builder.add_node("identify_datasets", identify_datasets)
+graph_builder.add_node("analyze_query", analyze_query)
 graph_builder.add_node("plan_query", plan_query)
 graph_builder.add_node("execute_query", execute_query)
 graph_builder.add_node("generate_result", generate_result)
@@ -33,21 +35,12 @@ graph_builder.add_conditional_edges(
 )
 
 graph_builder.add_conditional_edges(
-    "identify_datasets",
-    is_conversational_input,
-    {
-        "analyze_dataset": "analyze_dataset",
-        "basic_conversation": "generate_result",
-        "tools": "tools"
-    },
-)
-
-graph_builder.add_conditional_edges(
-    "tools",
-    route_from_tools,
+    "analyze_query",
+    route_from_analysis,
     {
         "identify_datasets": "identify_datasets",
-        "analyze_dataset": "analyze_dataset"
+        "basic_conversation": "generate_result",
+        "tools": "tools"
     },
 )
 
@@ -61,9 +54,11 @@ graph_builder.add_conditional_edges(
     },
 )
 
+graph_builder.add_edge("tools", "analyze_query")
+graph_builder.add_edge(START, "analyze_query")
+graph_builder.add_edge("identify_datasets", "analyze_dataset")
 graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("plan_query", "execute_query")
-graph_builder.add_edge(START, "identify_datasets")
 graph_builder.add_edge("generate_result", END)
 graph_builder.add_edge("max_iterations_reached", END)
 graph_builder.add_edge("no_results_handler", END)
@@ -75,6 +70,7 @@ async def stream_graph_updates(user_input: str):
     event_types = [
         "generate subqueries",
         "identify_datasets",
+        "analyze_query",
         "analyze_dataset",
         "plan_query",
         "execute_query",

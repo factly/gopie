@@ -8,7 +8,9 @@ def generate_result(state: State) -> dict:
     Generate results of the executed query for successful cases
     """
     try:
-        if state.get("conversational", False):
+        query_type = state.get("query_type", "")
+
+        if query_type == "conversational" or query_type == "tool_only":
             user_query = state.get("user_query", "")
             Tool_result = state.get("tool_results", [])
 

@@ -1,8 +1,6 @@
 import json
 from langchain_core.messages import ToolMessage
 
-from src.lib.graph.types import State
-
 class ToolNode:
   """A node that runs the tools requested in the last AIMessage and returns to the calling node"""
 
@@ -14,8 +12,6 @@ class ToolNode:
         message = messages[-1]
     else:
         raise ValueError("No message found in input")
-
-    calling_node = state.get("current_node", None)
 
     outputs = []
     all_tool_results = state.get("tool_results", [])
@@ -43,10 +39,14 @@ class ToolNode:
     return {
        'tool_results': all_tool_results,
        "messages": outputs,
-       "next": calling_node
     }
 
-def route_from_tools(state: State) -> str:
-    """Route from tools back to the node that called it"""
-    calling_node = state.get("current_node")
-    return calling_node if calling_node else "identify_datasets"
+def has_tool_calls(message):
+    """Helper function to check if a message has tool calls"""
+    if hasattr(message, 'tool_calls') and message.tool_calls:
+        return True
+
+    if hasattr(message, 'additional_kwargs') and 'tool_calls' in message.additional_kwargs:
+        return True
+
+    return False
