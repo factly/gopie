@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from typing import Dict, List
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from src.lib.config.langchain_config import lc
 
 def get_dataset_schemas() -> Dict[str, List[str]]:
     """Get schemas for all CSV files in the data directory."""
@@ -16,7 +16,7 @@ def get_dataset_schemas() -> Dict[str, List[str]]:
 
     return schemas
 
-def main():
+def generate_embeddings():
     schemas = get_dataset_schemas()
 
     for filename, columns in schemas.items():
@@ -26,14 +26,10 @@ def main():
         schema_text = f"Dataset {filename} contains columns: {', '.join(columns)}"
 
         try:
-            embedding = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-            vector = embedding.embed_query(schema_text)
+            vector = lc.embedding_model.embed_query(schema_text)
             vector[:5]
 
             print(f"Embedding shape: {len(vector)}")
             print("First few values:", vector[:5])
         except Exception as e:
             print(f"Error generating embedding: {e}")
-
-if __name__ == "__main__":
-    main()

@@ -3,6 +3,8 @@ from portkey_ai import PORTKEY_GATEWAY_URL
 from langchain_openai import ChatOpenAI
 from src.tools import TOOLS
 from .config import Config, config
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from pydantic import SecretStr
 
 class LangchainConfig:
     def __init__(self, config: Config):
@@ -15,6 +17,10 @@ class LangchainConfig:
             model=config.model,
         )
 
+        self.embedding_model = GoogleGenerativeAIEmbeddings (
+            model="models/text-embedding-004",
+            google_api_key=SecretStr(config.gemini_api_key or ""),
+        )
         self.llm = model.bind_tools(list(TOOLS.values()))
 
 lc = LangchainConfig(config)
