@@ -25,10 +25,13 @@ def execute_query(state: State) -> dict:
         Updated state with query results or error messages
     """
     con = None
+    query_result = state.get("query_result", None)
+    query_index = state.get("subquery_index", 0)
+
     try:
-        last_message = state['messages'][-1]
-        if isinstance(last_message, ErrorMessage):
-            pass
+        last_message = state.get('messages', [])[-1] if state.get('messages') else None
+        if not last_message or isinstance(last_message, ErrorMessage):
+            raise ValueError("No valid query plan found in messages")
 
         content = last_message.content if isinstance(last_message.content, str) else json.dumps(last_message.content)
 
@@ -112,9 +115,12 @@ def execute_query(state: State) -> dict:
                 "result": "Query executed successfully but returned no results",
                 "query_executed": sql_query,
             }
+
+            query_result.subqueries[query_index].query_result = []
+
             return {
-                "messages": [ErrorMessage.from_text(json.dumps(no_results_data, indent=2))],
-                "retry_count": state.get('retry_count', 0) + 1
+                "query_result": query_result,
+                "messages": [IntermediateStep.from_text(json.dumps(no_results_data, indent=2))],
             }
 
         for col in result.select_dtypes(include=['float64', 'int64']).columns:
@@ -128,16 +134,22 @@ def execute_query(state: State) -> dict:
             "data": result_records,
         }
 
+        query_result.subqueries[query_index].sql_query_used = sql_query
+        query_result.subqueries[query_index].query_result = result_records
+
         return {
-            "query_result": [result_records],
+            "query_result": query_result,
             "messages": [IntermediateStep.from_text(json.dumps(result_dict, indent=2))]
         }
 
     except Exception as e:
         error_msg = f"Query execution error: {str(e)}"
+        query_result.add_error_message(error_msg, "Query execution")
+
         return {
+            "query_result": query_result,
             "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))],
-            "retry_count": state.get('retry_count', 0) + 1
+            "retry_count": state.get('retry_count', 0) + 1,
         }
 
     finally:

@@ -90,24 +90,19 @@ def plan_query(state: State) -> dict:
         selected_datasets = state.get("datasets", [])
         query_index = state.get("subquery_index", 0)
         user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+        query_result = state.get("query_result", {})
 
         retry_count = state.get("retry_count", 0)
 
         if not selected_datasets:
-            error_msg = "No dataset selected for query planning"
-            return {
-                "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-            }
+            raise Exception("No dataset selected for query planning")
 
         # This error message might be from execute_query node or analyze_dataset node
         last_message = state.get("messages", [])[-1]
         last_error = str(last_message.content) if isinstance(last_message, ErrorMessage) else ""
 
         if not selected_datasets:
-            error_msg = "No dataset selected for query planning"
-            return {
-                "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-            }
+            raise Exception("No dataset selected for query planning")
 
         datasets_info = []
         for dataset_name in selected_datasets:
@@ -118,10 +113,7 @@ def plan_query(state: State) -> dict:
                 raise e
 
         if not datasets_info:
-            error_msg = "Could not get preview information for any of the selected datasets"
-            return {
-                "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-            }
+            raise Exception("Could not get preview information for any of the selected datasets")
 
         llm_prompt = create_query_prompt(user_query, datasets_info, last_error, retry_count + 1)
 
@@ -136,32 +128,28 @@ def plan_query(state: State) -> dict:
             missing_fields = [field for field in required_fields if field not in parsed_response]
 
             if missing_fields:
-                error_msg = f"Missing required fields in LLM response: {', '.join(missing_fields)}"
-                return {
-                    "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-                }
+                raise Exception(f"Missing required fields in LLM response: {', '.join(missing_fields)}")
 
             sql_query = parsed_response.get("sql_query", "")
 
             if not sql_query:
-                error_msg = "LLM returned empty SQL query"
-                return {
-                    "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-                }
+                raise Exception("Failed in parsing SQL query")
+
+            query_result.subqueries[query_index].sql_query_used = sql_query
 
             return {
+                "query_result": query_result,
                 "query": sql_query,
                 "messages": [IntermediateStep.from_text(json.dumps(parsed_response, indent=2))]
             }
 
         except Exception as parse_error:
-            error_msg = f"Failed to parse LLM response: {str(parse_error)}"
-            return {
-                "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
-            }
+            raise Exception(f"Failed to parse LLM response: {str(parse_error)}")
 
     except Exception as e:
+        query_result.add_error_message(str(e), "Error in query planning")
         error_msg = f"Unexpected error in query planning: {str(e)}"
         return {
+            "query_result": query_result,
             "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
         }

@@ -1,8 +1,7 @@
-from typing import Annotated, TypedDict, List, Dict, Any, Optional
+from typing import Annotated, TypedDict, List, Dict, Any
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
-
-from src.utils.result_handler import add_result
+from src.lib.graph.query_result.query_type import QueryResult
 
 class State(TypedDict):
     datasets: list[str]
@@ -13,9 +12,9 @@ class State(TypedDict):
     sql_query: str
     retry_count: int
     user_query: str
-    query_result: Annotated[list[dict], add_result]
     tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
+    query_result: QueryResult
 
 class IntermediateStep(AIMessage):
     """Represents an intermediate step in the processing pipeline"""

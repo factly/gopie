@@ -65,13 +65,26 @@ def analyze_query(state: State) -> dict:
     user_input = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
     tool_results = state.get("tool_results", [])
 
+    query_result = state.get("query_result")
+
+    query_result.add_subquery(
+        query_text=user_input,
+        sql_query_used="",
+        tables_used=None,
+        query_type=None,
+        query_result=None,
+        tool_used_result=None,
+    )
+
     try:
         if not user_input:
+            query_result.add_error_message("No user query provided", "analyze_query")
             error_data = {
                 "error": "No user query provided",
                 "is_data_query": False
             }
             return {
+                "query_result": query_result,
                 "user_query": user_input,
                 "query_type": "conversational",
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
@@ -92,16 +105,23 @@ def analyze_query(state: State) -> dict:
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)
 
+        query_type = parsed_content.get("query_type", "conversational")
+
+        query_result.subqueries[query_index].query_type = query_type
+
         return {
+            "query_result": query_result,
             "subquery_index": query_index,
             "user_query": user_input,
-            "query_type": parsed_content.get("query_type", "conversational"),
+            "query_type": query_type,
             "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],
         }
 
     except Exception as e:
-        error_msg = f"Error identifying datasets: {str(e)}"
+        error_msg = f"Error analyzing query: {str(e)}"
+        query_result.add_error_message(str(e), "Error analyzing query")
         return {
+            "query_result": query_result,
             "user_query": user_input,
             "query_type": "conversational",
             "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]

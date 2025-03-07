@@ -1,5 +1,7 @@
 import json
-from src.lib.graph.types import State
+from datetime import datetime
+from src.lib.graph.query_result.query_type import QueryResult
+from src.lib.graph.types import ErrorMessage, State
 from src.lib.config.langchain_config import lc
 from langchain_core.output_parsers import JsonOutputParser
 from src.lib.graph.types import IntermediateStep
@@ -11,31 +13,53 @@ def generate_subqueries(state: State):
   prompt = f"""
       User Query: {user_input}
 
-       Given a complex user query, generate the minimal number of essential sub-queries required to retrieve relevant information. Ensure that:
+      Analyze the user query and divide it into logical sub-steps if necessary. Follow these guidelines:
 
-      - Given a complex user query, generate the minimum number of essential sub-queries required to retrieve relevant information. Follow these rules:
-      - Ensure at least two sub-queries if the question involves multiple aspects. Avoid returning just one broad query unless it is truly sufficient.
-      - Avoid redundancy—group related entities (like multiple locations, companies, or categories) into a single query.
-      - Each sub-query must be distinct and cover a different aspect of the main query.
-      - If no breakdown is required, return a refined version of the query in the list format.
-
-      - Add subqueries in the list in such a way that first add queries which require data_analysis to the list and then the queries that will need information from the previous queries to answer the later query.
+      - Break down complex queries that would be difficult to handle in a single SQL query
+      - Only create sub-queries when they're genuinely needed (for different data aspects or computational steps)
+      - If the query is simple enough to handle with one SQL query, return an empty list
+      - Order sub-queries logically: place data retrieval/analysis queries first, followed by queries that depend on previous results
+      - Avoid redundancy by grouping related entities (locations, companies, categories) in the same sub-query
+      - Ensure each sub-query addresses a distinct aspect of the main question
 
       RESPONSE FORMAT:
-        {{
-          "subqueries": ["subquery1", "subquery2"]
-        }}
-      (If no breakdown is required, return the refined user query in the list instead.)
+      {{
+        "subqueries": ["subquery1", "subquery2"]
+      }}
+
+      (Return an empty list if the query doesn't need to be divided)
     """
 
   response = lc.llm.invoke(prompt)
+  query_result_object = QueryResult(
+    original_user_query=user_input,
+    timestamp=datetime.now(),
+    error_message=None,
+    execution_time=0,
+    subqueries=[]
+  )
 
-  parser = JsonOutputParser()
-  parsed_content = parser.parse(str(response.content))
+  try:
+    parser = JsonOutputParser()
+    parsed_content = parser.parse(str(response.content))
 
-  return {
-    "user_query": user_input,
-    "subquery_index": -1,
-    "subqueries": parsed_content.get("subqueries", [user_input]),
-    "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))]
-  }
+    subqueries = parsed_content.get("subqueries")
+
+    if not subqueries:
+      subqueries = [user_input]
+
+    return {
+      "user_query": user_input,
+      "subquery_index": -1,
+      "subqueries": subqueries,
+      "query_result": query_result_object,
+      "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))]
+    }
+  except Exception as e:
+    query_result_object.add_error_message(str(e), "Error parsing subqueries in generate_subqueries")
+    error_msg = f"Error parsing subqueries: {str(e)}"
+
+    return {
+      "query_result": query_result_object,
+      "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))],
+    }

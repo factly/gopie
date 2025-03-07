@@ -2,19 +2,22 @@ import json
 from src.lib.graph.types import State
 from langchain_core.output_parsers import JsonOutputParser
 
-def analyze_dataset(state: State):
+def analyze_dataset(state: State) -> dict:
     """Analyze the dataset structure and prepare for query planning"""
+    try:
+        last_message = state["messages"][-1].content
+        parsed_content = JsonOutputParser().parse(last_message)
 
-    query_index = state.get("subquery_index", 0)
-    user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+        return {
+            "column_requirements": parsed_content.get("column_requirements", []),
+            "messages": state.get("messages", [])
+        }
+    except Exception as e:
+        return {
+            "error": f"Dataset analysis failed: {str(e)}",
+            "messages": state.get("messages", [])
+        }
 
-    parser = JsonOutputParser()
-
-    last_message = state["messages"][-1].content
-    parsed_content = parser.parse(last_message)
-
-    print(json.dumps(parsed_content.get("column_requirements", "not found"), indent=2))
-
-def route_from_dataset_analysis(state: State):
-    """Route to the next node based on the results of dataset analysis"""
+def route_from_dataset_analysis(state: State) -> str:
+    """Route to the next node based on analysis results"""
     return "plan_query"

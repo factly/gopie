@@ -59,6 +59,7 @@ def identify_datasets(state: State):
     parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
     user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+    query_result = state.get("query_result", {})
 
     datasets_info = []
 
@@ -74,14 +75,20 @@ def identify_datasets(state: State):
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)
 
+        selected_datasets = parsed_content.get("selected_dataset", [])
+        query_result.subqueries[query_index].tables_used = selected_datasets
+
         return {
-            "datasets": parsed_content.get("selected_dataset", []),
+            "query_result": query_result,
+            "datasets": selected_datasets,
             "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],
         }
 
     except Exception as e:
         error_msg = f"Error identifying datasets: {str(e)}"
+        query_result.add_error_message(str(e), "Error identifying datasets")
         return {
+            "query_result": query_result,
             "datasets": None,
             "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
         }

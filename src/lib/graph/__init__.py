@@ -28,22 +28,22 @@ graph_builder.add_node("analytic_tools", ToolNode(tools=list(TOOLS.values())))
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(
+    "analyze_query",
+    route_from_analysis,
+    {
+        "identify_datasets": "identify_datasets",
+        "basic_conversation": "response_router",
+        "tools": "tools"
+    },
+)
+
+graph_builder.add_conditional_edges(
     "execute_query",
     route_query_replan,
     {
         "response_router": "response_router",
         "replan": "plan_query",
         "reidentify_datasets": "identify_datasets"
-    },
-)
-
-graph_builder.add_conditional_edges(
-    "analyze_query",
-    route_from_analysis,
-    {
-        "identify_datasets": "identify_datasets",
-        "basic_conversation": "generate_result",
-        "tools": "tools"
     },
 )
 
@@ -107,4 +107,4 @@ def visualize_graph():
         with open("graph/graph.png", "wb") as f:
             f.write(graph.get_graph().draw_mermaid_png())
     except Exception as e:
-            print("Error in visualizing graph")
+            raise e
