@@ -2,15 +2,18 @@ from typing import Annotated, TypedDict, List, Dict, Any, Optional
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
 
+from src.utils.result_handler import add_result
+
 class State(TypedDict):
     datasets: list[str]
     subqueries: list[str]
+    subquery_index: int
     dataset_info: dict
     query_type: str
     sql_query: str
     retry_count: int
     user_query: str
-    query_result: dict
+    query_result: Annotated[list[dict], add_result]
     tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
 

@@ -7,9 +7,9 @@ from langchain_core.output_parsers import JsonOutputParser
 from src.utils.dataset_info import get_dataset_preview
 
 def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:
-    """Create a prompt for the LLM to identify the relevant dataset"""
+    """Create a prompt for the LLM to identify the relevant dataset and required columns"""
     return f"""
-        You are an AI assistant specialized in data analysis. Your role is to help users analyze data by identifying relevant datasets.
+        You are an AI assistant specialized in data analysis. Your role is to help users analyze data by identifying relevant datasets and column values.
 
         USER QUERY:
         "{user_query}"
@@ -25,13 +25,30 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
            - You may select multiple datasets if the query spans multiple datasets
            - If no dataset is suitable, provide clear reasoning why
 
+        3. For each selected dataset, identify:
+           - The specific columns that will be needed for the analysis
+           - Expected values or value ranges that might be relevant to the query
+           - Any potential filters or conditions that would be applied
+
         RESPONSE FORMAT:
         Respond in this JSON format:
         {{
-            "selected_dataset": ["dataset_name1", "dataset_name2"], // List of relevant datasets (empty if none)
+            "selected_dataset": ["dataset_name1", "dataset_name2"],
             "reasoning": "Clear explanation of why these datasets were selected",
+            "column_requirements": [
+                {{
+                    "dataset": "dataset_name1",
+                    "columns": [
+                        {{
+                            "name": "column_name",
+                            "expected_values": ["value1", "value2"] or "range: min-max",
+                            "filter_condition": "equals/greater than/less than/between/etc"
+                        }}
+                    ]
+                }}
+            ]
         }}
-        """
+    """
 
 def identify_datasets(state: State):
     """
@@ -40,7 +57,8 @@ def identify_datasets(state: State):
     without making tool calls.
     """
     parser = JsonOutputParser()
-    user_query = state.get("user_query")
+    query_index = state.get("subquery_index", 0)
+    user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
 
     datasets_info = []
 

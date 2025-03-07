@@ -88,7 +88,9 @@ def plan_query(state: State) -> dict:
     """
     try:
         selected_datasets = state.get("datasets", [])
-        user_query = state.get("user_query", "")
+        query_index = state.get("subquery_index", 0)
+        user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+
         retry_count = state.get("retry_count", 0)
 
         if not selected_datasets:

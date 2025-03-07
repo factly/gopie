@@ -8,12 +8,18 @@ def route_response_handler(state: State) -> str:
     message = state["messages"][-1]
     query_result = state.get("query_result", [])
 
+    subqueries = state.get("subqueries")
+    query_index = state.get("subquery_index")
+
+    print(state.get("query_result"))
+
     if isinstance(message, ErrorMessage) and retry_count >= 3:
         return "max_iterations_reached"
 
-    # Check for no results case
+    if len(subqueries) - 1 < query_index:
+        return "next_sub_query"
+
     if not query_result:
         return "no_results"
 
-    # Default to normal result generation
     return "generate_result"

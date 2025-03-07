@@ -8,7 +8,6 @@ from src.tools.tool_node import has_tool_calls
 
 def create_llm_prompt(user_query: str, tool_results: list):
     """Create a prompt for the LLM to identify the query type"""
-
     return f"""
         You are an AI assistant specialized in data analysis. Your role is to help users analyze data by determining query types.
 
@@ -62,7 +61,8 @@ def analyze_query(state: State) -> dict:
     Returns:
         Query type and call tools if needed to answer user query or identify datasets if it is a data query
     """
-    user_input = state['messages'][0].content if state['messages'] else ''
+    query_index = state.get("subquery_index", -1) + 1
+    user_input = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
     tool_results = state.get("tool_results", [])
 
     try:
@@ -93,6 +93,7 @@ def analyze_query(state: State) -> dict:
         parsed_content = parser.parse(response_content)
 
         return {
+            "subquery_index": query_index,
             "user_query": user_input,
             "query_type": parsed_content.get("query_type", "conversational"),
             "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],

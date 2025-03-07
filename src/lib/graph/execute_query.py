@@ -129,7 +129,7 @@ def execute_query(state: State) -> dict:
         }
 
         return {
-            "query_result": result_records,
+            "query_result": [result_records],
             "messages": [IntermediateStep.from_text(json.dumps(result_dict, indent=2))]
         }
 

@@ -41,7 +41,7 @@ graph_builder.add_conditional_edges(
     "analyze_query",
     route_from_analysis,
     {
-        "generate_subqueries": "generate_subqueries",
+        "identify_datasets": "identify_datasets",
         "basic_conversation": "generate_result",
         "tools": "tools"
     },
@@ -51,6 +51,7 @@ graph_builder.add_conditional_edges(
     "response_router",
     route_response_handler,
     {
+        "next_sub_query": "analyze_query",
         "generate_result": "generate_result",
         "max_iterations_reached": "max_iterations_reached",
         "no_results": "no_results_handler"
@@ -66,9 +67,8 @@ graph_builder.add_conditional_edges(
     }
 )
 
-graph_builder.add_edge(START, "analyze_query")
-graph_builder.add_edge("analyze_query", "generate_subqueries")
-graph_builder.add_edge("generate_subqueries", "identify_datasets")
+graph_builder.add_edge(START, "generate_subqueries")
+graph_builder.add_edge("generate_subqueries", "analyze_query")
 graph_builder.add_edge("analytic_tools", "analyze_dataset")
 graph_builder.add_edge("tools", "analyze_query")
 graph_builder.add_edge("identify_datasets", "analyze_dataset")
@@ -107,4 +107,4 @@ def visualize_graph():
         with open("graph/graph.png", "wb") as f:
             f.write(graph.get_graph().draw_mermaid_png())
     except Exception as e:
-            raise e
+            print("Error in visualizing graph")
