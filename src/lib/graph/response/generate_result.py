@@ -3,16 +3,26 @@ from typing import Dict, Any, List, Optional, Union
 from langchain_core.output_parsers import JsonOutputParser
 from src.lib.graph.types import AIMessage, ErrorMessage, State
 from src.lib.config.langchain_config import lc
+from src.lib.graph.query_result.query_type import QueryResult
 
 def generate_result(state: State) -> Dict[str, List[Any]]:
     """Generate results of the executed query."""
-    print("aggregated result", state.get("query_result"))
+    query_result = state.get("query_result")
+    print("aggregated result", query_result)
 
     try:
+        if not isinstance(query_result, QueryResult):
+            return {
+                "messages": [ErrorMessage.from_text(json.dumps({
+                    "error": "Invalid query result format",
+                    "details": "Expected QueryResult object"
+                }))]
+            }
+
         query_type = state.get("query_type", "")
-        return (_handle_conversational_query(state)
+        return (_handle_conversational_query(state, query_result)
                 if query_type in ("conversational", "tool_only")
-                else _handle_data_query(state))
+                else _handle_data_query(state, query_result))
     except Exception as e:
         return {
             "messages": [ErrorMessage.from_text(json.dumps({
@@ -21,10 +31,15 @@ def generate_result(state: State) -> Dict[str, List[Any]]:
             }))]
         }
 
-def _handle_conversational_query(state: State) -> Dict[str, List[Any]]:
+def _handle_conversational_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle conversational or tool-only queries"""
-    user_query = state.get("subqueries", [])
-    tool_results = state.get("tool_results", [])
+    user_query = query_result.original_user_query
+    tool_results = []
+
+    if query_result.has_subqueries():
+        for subquery in query_result.subqueries:
+            if subquery.tool_used_result:
+                tool_results.append(subquery.tool_used_result)
 
     prompt = f"""
     User Query: "{user_query}"
@@ -42,24 +57,30 @@ def _handle_conversational_query(state: State) -> Dict[str, List[Any]]:
         "messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]
     }
 
-def _handle_data_query(state: State) -> Dict[str, List[Any]]:
+def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
-    message = state["messages"][-1] if state.get("messages") else None
-    user_query = state.get("subqueries", [])
-    query_result = state.get("query_result", [])
+    if query_result.has_error():
+        return {"messages": [ErrorMessage.from_text(json.dumps({"error": query_result.error_message}))]}
 
-    if not query_result:
+    user_query = query_result.original_user_query
+    results = []
+    sql_queries = []
+
+    if query_result.has_subqueries():
+        for subquery in query_result.subqueries:
+            if subquery.query_result:
+                results.append(subquery.query_result)
+            if subquery.sql_query_used:
+                sql_queries.append(subquery.sql_query_used)
+
+    if not results:
         return _handle_empty_results()
-
-    query_executed = state.get("sql_query", _extract_executed_query(message))
-    if isinstance(query_executed, dict) and "error" in query_executed:
-        return {"messages": [ErrorMessage.from_text(json.dumps(query_executed))]}
 
     prompt = f"""
     Context:
     - Query: "{user_query}"
-    - SQL: "{query_executed}"
-    - Results: {json.dumps(query_result, indent=2)}
+    - SQL: "{'; '.join(sql_queries)}"
+    - Results: {json.dumps(results, indent=2)}
 
     Instructions:
         1. Provide direct, concise answers
