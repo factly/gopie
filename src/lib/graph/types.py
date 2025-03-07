@@ -4,6 +4,7 @@ from langgraph.graph.message import add_messages
 
 class State(TypedDict):
     datasets: list[str]
+    subqueries: list[str]
     dataset_info: dict
     query_type: str
     sql_query: str

@@ -1,5 +1,6 @@
 ﻿from langgraph.graph import END, START, StateGraph
 from src.lib.graph.execute_query import execute_query, route_query_replan
+from src.lib.graph.generate_subqueries import generate_subqueries
 from src.lib.graph.plan_query import plan_query
 from src.lib.graph.response.generate_result import generate_result
 from src.lib.graph.response.max_iterations import max_iterations_reached
@@ -13,6 +14,7 @@ from src.tools import TOOLS
 from src.tools.tool_node import ToolNode
 
 graph_builder = StateGraph(State)
+graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("identify_datasets", identify_datasets)
 graph_builder.add_node("analyze_query", analyze_query)
 graph_builder.add_node("plan_query", plan_query)
@@ -39,7 +41,7 @@ graph_builder.add_conditional_edges(
     "analyze_query",
     route_from_analysis,
     {
-        "identify_datasets": "identify_datasets",
+        "generate_subqueries": "generate_subqueries",
         "basic_conversation": "generate_result",
         "tools": "tools"
     },
@@ -64,9 +66,11 @@ graph_builder.add_conditional_edges(
     }
 )
 
+graph_builder.add_edge(START, "analyze_query")
+graph_builder.add_edge("analyze_query", "generate_subqueries")
+graph_builder.add_edge("generate_subqueries", "identify_datasets")
 graph_builder.add_edge("analytic_tools", "analyze_dataset")
 graph_builder.add_edge("tools", "analyze_query")
-graph_builder.add_edge(START, "analyze_query")
 graph_builder.add_edge("identify_datasets", "analyze_dataset")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge("generate_result", END)
@@ -81,6 +85,7 @@ async def stream_graph_updates(user_input: str):
         "generate subqueries",
         "identify_datasets",
         "analyze_query",
+        "generate_subqueries",
         "analyze_dataset",
         "plan_query",
         "execute_query",

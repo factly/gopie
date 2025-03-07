@@ -6,8 +6,8 @@ from src.utils.dataset_rag import generate_embeddings
 
 app = FastAPI()
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-# visualize_graph()
-generate_embeddings()
+visualize_graph()
+# generate_embeddings()
 
 @app.get("/")
 def read_root():
