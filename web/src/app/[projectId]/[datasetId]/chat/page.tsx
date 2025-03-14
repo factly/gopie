@@ -29,6 +29,7 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { ChatHistory } from "@/components/chat/chat-history";
 import { useChatStore } from "@/lib/stores/chat-store";
+import { AudioInput } from "@/components/chat/audio-input";
 
 interface ChatPageProps {
   params: Promise<{
@@ -56,6 +57,8 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     OptimisticMessage[]
   >([]);
   const { isOpen, results, setIsOpen } = useSqlStore();
+
+  const [inputValue, setInputValue] = useState("");
 
   // Close sidebar only on initial mount
   useEffect(() => {
@@ -112,14 +115,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         fetchNextPage();
       }
     },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
   );
 
   // Scroll to bottom whenever new messages are added (but not when loading previous messages)
   useLayoutEffect(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]",
+        "[data-radix-scroll-area-viewport]"
       );
       if (viewport) {
         // Only auto-scroll if we're already near the bottom
@@ -209,24 +212,32 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const isEmpty = !allMessages.length && !optimisticMessages.length;
 
-  const ChatInput = () => (
-    <form onSubmit={handleSendMessage} className="flex gap-2">
-      <Input
-        ref={inputRef}
-        placeholder="Type your message..."
-        className="flex-1"
-        disabled={isSending}
-      />
-      <ChatHistory datasetId={params.datasetId} />
-      <Button type="submit" disabled={isSending} size="icon">
-        {isSending ? (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-      </Button>
-    </form>
-  );
+  const ChatInput = () => {
+    return (
+      <form onSubmit={handleSendMessage} className="flex gap-2">
+        <Input
+          ref={inputRef}
+          placeholder="Type your message..."
+          className="flex-1"
+          disabled={isSending}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+        <AudioInput
+          onTranscriptionReceived={setInputValue}
+          datasetId={params.datasetId}
+        />
+        <ChatHistory datasetId={params.datasetId} />
+        <Button type="submit" disabled={isSending} size="icon">
+          {isSending ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </form>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-background">

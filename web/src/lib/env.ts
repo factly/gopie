@@ -2,15 +2,23 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
-  server: {},
+  server: {
+    LIVEKIT_API_KEY: z.string().min(1),
+    LIVEKIT_API_SECRET: z.string().min(1),
+  },
   client: {
     NEXT_PUBLIC_COMPANION_URL: z.string().min(1),
     NEXT_PUBLIC_GOPIE_API_URL: z.string().min(1),
+    NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
   },
   // If you're using Next.js < 13.4.4, you'll need to specify the runtimeEnv manually
   runtimeEnv: {
     NEXT_PUBLIC_COMPANION_URL: process.env.NEXT_PUBLIC_COMPANION_URL,
     NEXT_PUBLIC_GOPIE_API_URL: process.env.NEXT_PUBLIC_GOPIE_API_URL,
+    NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
+
+    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+    LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
   },
   // For Next.js >= 13.4.4, you only need to destructure client variables:
   // experimental__runtimeEnv: {

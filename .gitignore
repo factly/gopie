@@ -34,3 +34,5 @@ ingest.sh
 *.log
 logs
 
+zitadel_key.json
+
