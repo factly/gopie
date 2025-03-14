@@ -1,9 +1,12 @@
 import json
-from typing import Dict, Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+
 from langchain_core.output_parsers import JsonOutputParser
-from src.lib.graph.types import AIMessage, ErrorMessage, State
+
 from src.lib.config.langchain_config import lc
 from src.lib.graph.query_result.query_type import QueryResult
+from src.lib.graph.types import AIMessage, ErrorMessage, State
+
 
 def generate_result(state: State) -> Dict[str, List[Any]]:
     """Generate results of the executed query."""
@@ -13,25 +16,42 @@ def generate_result(state: State) -> Dict[str, List[Any]]:
     try:
         if not isinstance(query_result, QueryResult):
             return {
-                "messages": [ErrorMessage.from_text(json.dumps({
-                    "error": "Invalid query result format",
-                    "details": "Expected QueryResult object"
-                }))]
+                "messages": [
+                    ErrorMessage.from_text(
+                        json.dumps(
+                            {
+                                "error": "Invalid query result format",
+                                "details": "Expected QueryResult object",
+                            }
+                        )
+                    )
+                ]
             }
 
         query_type = state.get("query_type", "")
-        return (_handle_conversational_query(state, query_result)
-                if query_type in ("conversational", "tool_only")
-                else _handle_data_query(state, query_result))
+        return (
+            _handle_conversational_query(state, query_result)
+            if query_type in ("conversational", "tool_only")
+            else _handle_data_query(state, query_result)
+        )
     except Exception as e:
         return {
-            "messages": [ErrorMessage.from_text(json.dumps({
-                "error": "Critical error in result generation",
-                "details": str(e)
-            }))]
+            "messages": [
+                ErrorMessage.from_text(
+                    json.dumps(
+                        {
+                            "error": "Critical error in result generation",
+                            "details": str(e),
+                        }
+                    )
+                )
+            ]
         }
 
-def _handle_conversational_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
+
+def _handle_conversational_query(
+    state: State, query_result: QueryResult
+) -> Dict[str, List[Any]]:
     """Handle conversational or tool-only queries"""
     user_query = query_result.original_user_query
     tool_results = []
@@ -53,14 +73,19 @@ def _handle_conversational_query(state: State, query_result: QueryResult) -> Dic
     - Focus on direct, helpful answers
     """
 
-    return {
-        "messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]
-    }
+    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
+
 
 def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
     if query_result.has_error():
-        return {"messages": [ErrorMessage.from_text(json.dumps({"error": query_result.error_message}))]}
+        return {
+            "messages": [
+                ErrorMessage.from_text(
+                    json.dumps({"error": query_result.error_message})
+                )
+            ]
+        }
 
     user_query = query_result.original_user_query
     results = []
@@ -79,7 +104,7 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
     prompt = f"""
     Context:
     - Query: "{user_query}"
-    - SQL: "{'; '.join(sql_queries)}"
+    - SQL: "{"; ".join(sql_queries)}"
     - Results: {json.dumps(results, indent=2)}
 
     Instructions:
@@ -91,21 +116,25 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
         6. Only use facts from query results
     """
 
-    return {
-        "messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]
-    }
+    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
+
 
 def _handle_empty_results() -> Dict[str, List[Any]]:
     """Handle empty query results"""
     return {
-        "messages": [AIMessage(content=(
-            "I analyzed your query but couldn't find matching data. This could be because:\n"
-            "- The data isn't in our current datasets\n"
-            "- The query needs rephrasing\n"
-            "- Specific filters might be excluding all results\n\n"
-            "Could you try rephrasing your question or asking about a different aspect?"
-        ))]
+        "messages": [
+            AIMessage(
+                content=(
+                    "I analyzed your query but couldn't find matching data. This could be because:\n"
+                    "- The data isn't in our current datasets\n"
+                    "- The query needs rephrasing\n"
+                    "- Specific filters might be excluding all results\n\n"
+                    "Could you try rephrasing your question or asking about a different aspect?"
+                )
+            )
+        ]
     }
+
 
 def _extract_executed_query(message: Optional[Any]) -> Union[str, Dict[str, str]]:
     """Extract executed query from message content"""
@@ -120,7 +149,4 @@ def _extract_executed_query(message: Optional[Any]) -> Union[str, Dict[str, str]
             return content.get("query_executed", "")
         return ""
     except Exception as e:
-        return {
-            "error": "Could not process query results",
-            "details": str(e)
-        }
+        return {"error": "Could not process query results", "details": str(e)}

@@ -1,18 +1,22 @@
 import json
 import logging
-from langchain_core.output_parsers import JsonOutputParser
 import os
 import re
+
 import duckdb
 import pandas as pd
-from src.lib.graph.types import ErrorMessage, State, IntermediateStep
+from langchain_core.output_parsers import JsonOutputParser
+
 from src.lib.config.langchain_config import lc
+from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 from src.utils.dataset_info import data_dir
 
 MAX_RETRY_COUNT = 3
 
+
 def normalize_name(name: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9_]', '_', os.path.splitext(name)[0]).lower()
+    return re.sub(r"[^a-zA-Z0-9_]", "_", os.path.splitext(name)[0]).lower()
+
 
 def execute_query(state: State) -> dict:
     """
@@ -29,11 +33,15 @@ def execute_query(state: State) -> dict:
     query_index = state.get("subquery_index", 0)
 
     try:
-        last_message = state.get('messages', [])[-1] if state.get('messages') else None
+        last_message = state.get("messages", [])[-1] if state.get("messages") else None
         if not last_message or isinstance(last_message, ErrorMessage):
             raise ValueError("No valid query plan found in messages")
 
-        content = last_message.content if isinstance(last_message.content, str) else json.dumps(last_message.content)
+        content = (
+            last_message.content
+            if isinstance(last_message.content, str)
+            else json.dumps(last_message.content)
+        )
 
         parser = JsonOutputParser()
         query_plan = parser.parse(content)
@@ -41,19 +49,21 @@ def execute_query(state: State) -> dict:
         if not query_plan:
             raise ValueError("Failed to parse query plan from message")
 
-        con = duckdb.connect(database=':memory:')
+        con = duckdb.connect(database=":memory:")
 
-        dataset_names = query_plan.get('tables_used', [])
+        dataset_names = query_plan.get("tables_used", [])
         if not dataset_names:
-            sql_query = query_plan.get('sql_query', '')
-            if 'FROM' in sql_query.upper():
-                matches = re.finditer(r'FROM\s+([^\s,;()]+)|JOIN\s+([^\s,;()]+)', sql_query, re.IGNORECASE)
+            sql_query = query_plan.get("sql_query", "")
+            if "FROM" in sql_query.upper():
+                matches = re.finditer(
+                    r"FROM\s+([^\s,;()]+)|JOIN\s+([^\s,;()]+)", sql_query, re.IGNORECASE
+                )
                 dataset_names = []
                 for match in matches:
                     table = match.group(1) or match.group(2)
                     if table:
-                        table = table.strip('"\'')
-                        table = table.split('WHERE')[0].strip()
+                        table = table.strip("\"'")
+                        table = table.split("WHERE")[0].strip()
                         dataset_names.append(table)
 
         if not dataset_names:
@@ -65,9 +75,12 @@ def execute_query(state: State) -> dict:
         table_mappings = {}
 
         for dataset_name in dataset_names:
-            dataset_name = dataset_name.replace('.csv', '')
-            matching_files = [f for f in os.listdir(data_dir)
-                            if f.endswith('.csv') and dataset_name.lower() in f.lower()]
+            dataset_name = dataset_name.replace(".csv", "")
+            matching_files = [
+                f
+                for f in os.listdir(data_dir)
+                if f.endswith(".csv") and dataset_name.lower() in f.lower()
+            ]
 
             if not matching_files:
                 raise FileNotFoundError(f"Dataset not found: {dataset_name}")
@@ -80,20 +93,24 @@ def execute_query(state: State) -> dict:
             logging.info(f"Loading dataset: {matching_files[0]} as table: {table_name}")
 
             for col in df.columns:
-                if df[col].dtype == 'object':
+                if df[col].dtype == "object":
                     df[f"{col.lower()}_lower"] = df[col].str.lower()
 
             original_cols = df.columns
-            clean_cols = {col: col.lower().strip().replace(' ', '_') for col in original_cols}
+            clean_cols = {
+                col: col.lower().strip().replace(" ", "_") for col in original_cols
+            }
             df.rename(columns=clean_cols, inplace=True)
 
             try:
-                con.execute(f"DROP TABLE IF EXISTS \"{table_name}\"")
-                con.execute(f"CREATE TABLE \"{table_name}\" AS SELECT * FROM df")
+                con.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+                con.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM df')
             except Exception as e:
-                raise ValueError(f"Failed to create table {table_name} in DuckDB: {str(e)}")
+                raise ValueError(
+                    f"Failed to create table {table_name} in DuckDB: {str(e)}"
+                )
 
-        sql_query = query_plan.get('sql_query') or query_plan.get('sample_query')
+        sql_query = query_plan.get("sql_query") or query_plan.get("sample_query")
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
@@ -107,8 +124,10 @@ def execute_query(state: State) -> dict:
             try:
                 result = con.execute(sql_query).fetchdf()
             except Exception as fixed_error:
-                raise ValueError(f"Query execution failed. Original error: {str(original_error)}. "
-                                f"After fixing: {str(fixed_error)}")
+                raise ValueError(
+                    f"Query execution failed. Original error: {str(original_error)}. "
+                    f"After fixing: {str(fixed_error)}"
+                )
 
         if result.empty:
             no_results_data = {
@@ -120,13 +139,15 @@ def execute_query(state: State) -> dict:
 
             return {
                 "query_result": query_result,
-                "messages": [IntermediateStep.from_text(json.dumps(no_results_data, indent=2))],
+                "messages": [
+                    IntermediateStep.from_text(json.dumps(no_results_data, indent=2))
+                ],
             }
 
-        for col in result.select_dtypes(include=['float64', 'int64']).columns:
+        for col in result.select_dtypes(include=["float64", "int64"]).columns:
             result[col] = result[col].fillna(0)
 
-        result_records = result.to_dict('records')
+        result_records = result.to_dict("records")
 
         result_dict = {
             "result": "Query executed successfully",
@@ -139,7 +160,7 @@ def execute_query(state: State) -> dict:
 
         return {
             "query_result": query_result,
-            "messages": [IntermediateStep.from_text(json.dumps(result_dict, indent=2))]
+            "messages": [IntermediateStep.from_text(json.dumps(result_dict, indent=2))],
         }
 
     except Exception as e:
@@ -148,13 +169,16 @@ def execute_query(state: State) -> dict:
 
         return {
             "query_result": query_result,
-            "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))],
-            "retry_count": state.get('retry_count', 0) + 1,
+            "messages": [
+                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+            ],
+            "retry_count": state.get("retry_count", 0) + 1,
         }
 
     finally:
         if con:
             con.close()
+
 
 def route_query_replan(state: State) -> str:
     """
@@ -166,8 +190,8 @@ def route_query_replan(state: State) -> str:
     Returns:
         Routing decision: "replan" or "generate_result"
     """
-    last_message = state['messages'][-1]
-    retry_count = state.get('retry_count', 0)
+    last_message = state["messages"][-1]
+    retry_count = state.get("retry_count", 0)
 
     if isinstance(last_message, ErrorMessage) and retry_count < MAX_RETRY_COUNT:
         response = lc.llm.invoke(

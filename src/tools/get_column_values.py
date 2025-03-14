@@ -1,10 +1,14 @@
-from langchain_core.tools import tool
-import pandas as pd
 import os
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pandas as pd
+from langchain_core.tools import tool
+
 
 @tool
-def get_column_values(table_name: str, column_name: str, unique_only: bool = True, limit: int = 100) -> Dict[str, Any]:
+def get_column_values(
+    table_name: str, column_name: str, unique_only: bool = True, limit: int = 100
+) -> Dict[str, Any]:
     """
     Get values from a specific column in a table, useful for filtering
 
@@ -17,8 +21,8 @@ def get_column_values(table_name: str, column_name: str, unique_only: bool = Tru
     Returns:
         Dictionary with column values and metadata
     """
-    if not table_name.endswith('.csv'):
-        table_name += '.csv'
+    if not table_name.endswith(".csv"):
+        table_name += ".csv"
 
     data_dir = "./data"
     file_path = os.path.join(data_dir, table_name)
@@ -30,7 +34,9 @@ def get_column_values(table_name: str, column_name: str, unique_only: bool = Tru
         df = pd.read_csv(file_path)
 
         if column_name not in df.columns:
-            return {"error": f"Column '{column_name}' not found in table '{table_name}'"}
+            return {
+                "error": f"Column '{column_name}' not found in table '{table_name}'"
+            }
 
         if unique_only:
             values = df[column_name].dropna().unique().tolist()
@@ -46,7 +52,7 @@ def get_column_values(table_name: str, column_name: str, unique_only: bool = Tru
                 "min": float(df[column_name].min()),
                 "max": float(df[column_name].max()),
                 "mean": float(df[column_name].mean()),
-                "median": float(df[column_name].median())
+                "median": float(df[column_name].median()),
             }
 
         return {
@@ -58,9 +64,10 @@ def get_column_values(table_name: str, column_name: str, unique_only: bool = Tru
             "total_count": len(df[column_name].dropna()),
             "has_null": bool(df[column_name].isna().sum() > 0),
             "null_count": int(df[column_name].isna().sum()),
-            "statistics": stats
+            "statistics": stats,
         }
     except Exception as e:
         return {"error": f"Error getting column values: {str(e)}"}
+
 
 __tool__ = get_column_values

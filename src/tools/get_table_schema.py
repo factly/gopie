@@ -1,7 +1,9 @@
-from langchain_core.tools import tool
-import pandas as pd
 import os
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pandas as pd
+from langchain_core.tools import tool
+
 
 @tool
 def get_table_schema(table_name: str) -> Dict[str, Any]:
@@ -14,8 +16,8 @@ def get_table_schema(table_name: str) -> Dict[str, Any]:
     Returns:
         A dictionary with column names and their data types
     """
-    if not table_name.endswith('.csv'):
-        table_name += '.csv'
+    if not table_name.endswith(".csv"):
+        table_name += ".csv"
 
     data_dir = "./data"
     file_path = os.path.join(data_dir, table_name)
@@ -38,5 +40,6 @@ def get_table_schema(table_name: str) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"error": f"Error reading table schema: {str(e)}"}
+
 
 __tool__ = get_table_schema

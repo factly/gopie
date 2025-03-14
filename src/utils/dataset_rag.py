@@ -1,7 +1,10 @@
 import os
-import pandas as pd
 from typing import Dict, List
+
+import pandas as pd
+
 from src.lib.config.langchain_config import lc
+
 
 def get_dataset_schemas() -> Dict[str, List[str]]:
     """Get schemas for all CSV files in the data directory."""
@@ -9,12 +12,13 @@ def get_dataset_schemas() -> Dict[str, List[str]]:
     schemas = {}
 
     for file in os.listdir(data_dir):
-        if file.endswith('.csv'):
+        if file.endswith(".csv"):
             file_path = os.path.join(data_dir, file)
             df = pd.read_csv(file_path)
             schemas[file] = list(df.columns)
 
     return schemas
+
 
 def generate_embeddings():
     schemas = get_dataset_schemas()

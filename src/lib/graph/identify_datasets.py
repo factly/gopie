@@ -1,10 +1,13 @@
-import os
-from src.lib.graph.types import IntermediateStep, ErrorMessage, State
-from typing import Dict, Any, List
 import json
-from src.lib.config.langchain_config import lc
+import os
+from typing import Any, Dict, List
+
 from langchain_core.output_parsers import JsonOutputParser
+
+from src.lib.config.langchain_config import lc
+from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 from src.utils.dataset_info import get_dataset_preview
+
 
 def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:
     """Create a prompt for the LLM to identify the relevant dataset and required columns"""
@@ -50,6 +53,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
         }}
     """
 
+
 def identify_datasets(state: State):
     """
     Identify relevant dataset based on natural language query.
@@ -58,7 +62,9 @@ def identify_datasets(state: State):
     """
     parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
-    user_query = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+    user_query = (
+        state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
+    )
     query_result = state.get("query_result", {})
 
     datasets_info = []
@@ -81,7 +87,9 @@ def identify_datasets(state: State):
         return {
             "query_result": query_result,
             "datasets": selected_datasets,
-            "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],
+            "messages": [
+                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+            ],
         }
 
     except Exception as e:
@@ -90,5 +98,7 @@ def identify_datasets(state: State):
         return {
             "query_result": query_result,
             "datasets": None,
-            "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
+            "messages": [
+                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+            ],
         }

@@ -1,6 +1,8 @@
 import json
-from src.lib.graph.types import AIMessage, ErrorMessage, State
+
 from src.lib.config.langchain_config import lc
+from src.lib.graph.types import AIMessage, ErrorMessage, State
+
 
 def max_iterations_reached(state: State) -> dict:
     """
@@ -14,7 +16,11 @@ def max_iterations_reached(state: State) -> dict:
             if isinstance(message, ErrorMessage):
                 error_content.append(message.content)
 
-        error_summary = "\n".join(error_content) if error_content else "An unknown error occurred while processing your query."
+        error_summary = (
+            "\n".join(error_content)
+            if error_content
+            else "An unknown error occurred while processing your query."
+        )
 
         explanation_prompt = f"""
         You're responding to a user whose query has exceeded maximum retry attempts.
@@ -33,10 +39,12 @@ def max_iterations_reached(state: State) -> dict:
         """
 
         response = lc.llm.invoke(explanation_prompt)
-        return {
-            "messages": [AIMessage(content=str(response.content))]
-        }
+        return {"messages": [AIMessage(content=str(response.content))]}
     except Exception as e:
         return {
-            "messages": [ErrorMessage.from_text(json.dumps(f"Error in max iterations handler: {str(e)}"))]
+            "messages": [
+                ErrorMessage.from_text(
+                    json.dumps(f"Error in max iterations handler: {str(e)}")
+                )
+            ]
         }

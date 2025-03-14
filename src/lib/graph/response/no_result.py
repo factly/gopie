@@ -1,6 +1,8 @@
 import json
-from src.lib.graph.types import AIMessage, ErrorMessage, IntermediateStep, State
+
 from src.lib.config.langchain_config import lc
+from src.lib.graph.types import AIMessage, ErrorMessage, IntermediateStep, State
+
 
 def no_results_handler(state: State) -> dict:
     """
@@ -11,10 +13,16 @@ def no_results_handler(state: State) -> dict:
 
         process_info = []
         for message in state["messages"]:
-            if isinstance(message, ErrorMessage) or isinstance(message, IntermediateStep):
+            if isinstance(message, ErrorMessage) or isinstance(
+                message, IntermediateStep
+            ):
                 process_info.append(message.content)
 
-        process_info_text = "\n".join(process_info) if process_info else "No additional process information available."
+        process_info_text = (
+            "\n".join(process_info)
+            if process_info
+            else "No additional process information available."
+        )
 
         empty_result_prompt = f"""
             User query: "{user_query}"
@@ -38,10 +46,12 @@ def no_results_handler(state: State) -> dict:
         """
 
         response = lc.llm.invoke(empty_result_prompt)
-        return {
-            "messages": [AIMessage(content=str(response.content))]
-        }
+        return {"messages": [AIMessage(content=str(response.content))]}
     except Exception as e:
         return {
-            "messages": [ErrorMessage.from_text(json.dumps(f"Error in no results handler: {str(e)}"))]
+            "messages": [
+                ErrorMessage.from_text(
+                    json.dumps(f"Error in no results handler: {str(e)}")
+                )
+            ]
         }

@@ -1,10 +1,13 @@
-from typing import Any
-from src.lib.graph.types import State, IntermediateStep, ErrorMessage
 import json
+from typing import Any
+
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+
 from src.lib.config.langchain_config import lc
+from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 from src.tools.tool_node import has_tool_calls
+
 
 def create_llm_prompt(user_query: str, tool_results: list):
     """Create a prompt for the LLM to identify the query type"""
@@ -48,6 +51,7 @@ def create_llm_prompt(user_query: str, tool_results: list):
         }}
         """
 
+
 def analyze_query(state: State) -> dict:
     """
     Analyze the user query and the identified datasets to determine:
@@ -62,7 +66,9 @@ def analyze_query(state: State) -> dict:
         Query type and call tools if needed to answer user query or identify datasets if it is a data query
     """
     query_index = state.get("subquery_index", -1) + 1
-    user_input = state.get("subqueries")[query_index] if state.get("subqueries") else 'No input'
+    user_input = (
+        state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
+    )
     tool_results = state.get("tool_results", [])
 
     query_result = state.get("query_result")
@@ -79,17 +85,13 @@ def analyze_query(state: State) -> dict:
     try:
         if not user_input:
             query_result.add_error_message("No user query provided", "analyze_query")
-            error_data = {
-                "error": "No user query provided",
-                "is_data_query": False
-            }
+            error_data = {"error": "No user query provided", "is_data_query": False}
             return {
                 "query_result": query_result,
                 "user_query": user_input,
                 "query_type": "conversational",
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
-
 
         prompt = create_llm_prompt(user_input, tool_results)
         response: Any = lc.llm.invoke(prompt)
@@ -99,7 +101,11 @@ def analyze_query(state: State) -> dict:
             return {
                 "user_query": user_input,
                 "query_type": "tool_only",
-                "messages": [response if isinstance(response, AIMessage) else AIMessage(content=str(response))],
+                "messages": [
+                    response
+                    if isinstance(response, AIMessage)
+                    else AIMessage(content=str(response))
+                ],
             }
 
         response_content = str(response.content)
@@ -114,7 +120,9 @@ def analyze_query(state: State) -> dict:
             "subquery_index": query_index,
             "user_query": user_input,
             "query_type": query_type,
-            "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))],
+            "messages": [
+                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+            ],
         }
 
     except Exception as e:
@@ -124,8 +132,11 @@ def analyze_query(state: State) -> dict:
             "query_result": query_result,
             "user_query": user_input,
             "query_type": "conversational",
-            "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))]
+            "messages": [
+                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+            ],
         }
+
 
 def route_from_analysis(state: State) -> str:
     """

@@ -5,6 +5,7 @@ import pandas as pd
 
 data_dir = "./data"
 
+
 def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
     """
     Get metadata and sample data from a dataset.
@@ -17,8 +18,11 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, An
         Dictionary containing dataset metadata and sample data
     """
     try:
-        matching_files = [f for f in os.listdir(data_dir)
-                        if f.endswith('.csv') and dataset_name.lower() in f.lower()]
+        matching_files = [
+            f
+            for f in os.listdir(data_dir)
+            if f.endswith(".csv") and dataset_name.lower() in f.lower()
+        ]
 
         if not matching_files:
             raise FileNotFoundError(f"Dataset not found: {dataset_name}")
@@ -33,16 +37,15 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, An
             "columns": list(df.columns),
             "column_types": {col: str(df[col].dtype) for col in df.columns},
             "non_null_counts": {col: int(df[col].count()) for col in df.columns},
-            "sample_values": {col: list(df[col].dropna().unique()[:5]) for col in df.columns}
+            "sample_values": {
+                col: list(df[col].dropna().unique()[:5]) for col in df.columns
+            },
         }
 
         # Get sample rows
-        sample_data = df.head(sample_rows).to_dict('records')
+        sample_data = df.head(sample_rows).to_dict("records")
 
-        return {
-            "metadata": metadata,
-            "sample_data": sample_data
-        }
+        return {"metadata": metadata, "sample_data": sample_data}
 
     except Exception as e:
         raise ValueError(f"Error getting dataset preview: {str(e)}")

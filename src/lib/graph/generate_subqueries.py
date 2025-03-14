@@ -1,16 +1,18 @@
 import json
 from datetime import datetime
-from src.lib.graph.query_result.query_type import QueryResult
-from src.lib.graph.types import ErrorMessage, State
-from src.lib.config.langchain_config import lc
+
 from langchain_core.output_parsers import JsonOutputParser
-from src.lib.graph.types import IntermediateStep
+
+from src.lib.config.langchain_config import lc
+from src.lib.graph.query_result.query_type import QueryResult
+from src.lib.graph.types import ErrorMessage, IntermediateStep, State
+
 
 def generate_subqueries(state: State):
-  """Generate subqueries that would require separate SQL queries"""
-  user_input = state['messages'][0].content if state['messages'] else ''
+    """Generate subqueries that would require separate SQL queries"""
+    user_input = state["messages"][0].content if state["messages"] else ""
 
-  prompt = f"""
+    prompt = f"""
       User Query: {user_input}
 
       Analyze the user query and divide it into logical sub-steps if necessary. Follow these guidelines:
@@ -30,36 +32,42 @@ def generate_subqueries(state: State):
       (Return an empty list if the query doesn't need to be divided)
     """
 
-  response = lc.llm.invoke(prompt)
-  query_result_object = QueryResult(
-    original_user_query=user_input,
-    timestamp=datetime.now(),
-    error_message=None,
-    execution_time=0,
-    subqueries=[]
-  )
+    response = lc.llm.invoke(prompt)
+    query_result_object = QueryResult(
+        original_user_query=user_input,
+        timestamp=datetime.now(),
+        error_message=None,
+        execution_time=0,
+        subqueries=[],
+    )
 
-  try:
-    parser = JsonOutputParser()
-    parsed_content = parser.parse(str(response.content))
+    try:
+        parser = JsonOutputParser()
+        parsed_content = parser.parse(str(response.content))
 
-    subqueries = parsed_content.get("subqueries")
+        subqueries = parsed_content.get("subqueries")
 
-    if not subqueries:
-      subqueries = [user_input]
+        if not subqueries:
+            subqueries = [user_input]
 
-    return {
-      "user_query": user_input,
-      "subquery_index": -1,
-      "subqueries": subqueries,
-      "query_result": query_result_object,
-      "messages": [IntermediateStep.from_text(json.dumps(parsed_content, indent=2))]
-    }
-  except Exception as e:
-    query_result_object.add_error_message(str(e), "Error parsing subqueries in generate_subqueries")
-    error_msg = f"Error parsing subqueries: {str(e)}"
+        return {
+            "user_query": user_input,
+            "subquery_index": -1,
+            "subqueries": subqueries,
+            "query_result": query_result_object,
+            "messages": [
+                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+            ],
+        }
+    except Exception as e:
+        query_result_object.add_error_message(
+            str(e), "Error parsing subqueries in generate_subqueries"
+        )
+        error_msg = f"Error parsing subqueries: {str(e)}"
 
-    return {
-      "query_result": query_result_object,
-      "messages": [ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))],
-    }
+        return {
+            "query_result": query_result_object,
+            "messages": [
+                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+            ],
+        }

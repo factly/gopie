@@ -1,12 +1,14 @@
-from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class SubQueryInfo:
     """
     A class to represent information about a subquery
     """
+
     query_text: str
     sql_query_used: str
     tables_used: Optional[str] = None
@@ -24,11 +26,13 @@ class SubQueryInfo:
             "tool_used_result": self.tool_used_result,
         }
 
+
 @dataclass
 class QueryResult:
     """
-      A class to represent the result of a query execution along with its metadata
+    A class to represent the result of a query execution along with its metadata
     """
+
     original_user_query: str
     execution_time: float
     timestamp: datetime
@@ -36,20 +40,21 @@ class QueryResult:
     subqueries: List[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
-        if not hasattr(self, 'timestamp'):
+        if not hasattr(self, "timestamp"):
             self.timestamp = datetime.now()
 
     def has_error(self) -> bool:
         return self.error_message is not None and len(self.error_message) > 0
 
-    def add_subquery(self,
-                    query_text: str,
-                    sql_query_used: str,
-                    tables_used: Optional[str] = None,
-                    query_type: Optional[str] = None,
-                    query_result: Any = None,
-                    tool_used_result: Any = None,
-    ) :
+    def add_subquery(
+        self,
+        query_text: str,
+        sql_query_used: str,
+        tables_used: Optional[str] = None,
+        query_type: Optional[str] = None,
+        query_result: Any = None,
+        tool_used_result: Any = None,
+    ):
         """
         Add a subquery with detailed information
         """
@@ -81,5 +86,5 @@ class QueryResult:
             "execution_time": self.execution_time,
             "timestamp": self.timestamp.isoformat(),
             "error_message": self.error_message,
-            "subqueries": [sq.to_dict() for sq in self.subqueries]
+            "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
