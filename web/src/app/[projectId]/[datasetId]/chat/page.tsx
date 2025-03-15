@@ -224,11 +224,27 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           onChange={(e) => setInputValue(e.target.value)}
         />
         <AudioInput
-          onTranscriptionReceived={setInputValue}
+          onTranscriptionReceived={(text) => {
+            setInputValue(text);
+            setTimeout(() => {
+              const sendButton = document.getElementById(
+                "send-message-button"
+              ) as HTMLButtonElement;
+              if (sendButton) {
+                sendButton.click();
+                setInputValue("");
+              }
+            }, 100);
+          }}
           datasetId={params.datasetId}
         />
         <ChatHistory datasetId={params.datasetId} />
-        <Button type="submit" disabled={isSending} size="icon">
+        <Button
+          id="send-message-button"
+          type="submit"
+          disabled={isSending}
+          size="icon"
+        >
           {isSending ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
           ) : (
@@ -335,6 +351,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                 index === allMessages.length - 1 &&
                                 !sortedOptimisticMessages.length
                               }
+                              datasetId={params.datasetId}
                             />
                           ))}
 
@@ -351,6 +368,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                 index === sortedOptimisticMessages.length - 1 &&
                                 !message.isLoading
                               }
+                              datasetId={params.datasetId}
                             />
                           ))}
                         </div>

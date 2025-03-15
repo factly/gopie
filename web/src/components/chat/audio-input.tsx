@@ -78,6 +78,7 @@ export function AudioInput({
         size="icon"
         onClick={handleStartRecording}
         disabled={isConnecting}
+        id="start-recording-button"
       >
         <Mic className="h-4 w-4" />
       </Button>
