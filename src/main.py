@@ -3,12 +3,13 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from src.lib.graph import stream_graph_updates, visualize_graph
+from src.lib.graph import stream_graph_updates
+from src.utils.qdrant_client import test_embeddings
 
 app = FastAPI()
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-visualize_graph()
-# generate_embeddings()
+# visualize_graph()
+test_embeddings()
 
 
 @app.get("/")

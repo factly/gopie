@@ -1,7 +1,5 @@
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL
-from pydantic import SecretStr
 
 from src.tools import TOOLS
 
@@ -19,9 +17,11 @@ class LangchainConfig:
             model=config.model,
         )
 
-        self.embedding_model = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004",
-            google_api_key=SecretStr(config.gemini_api_key or ""),
+        self.embeddings_model = OpenAIEmbeddings(
+            api_key="X",  # type: ignore
+            base_url=PORTKEY_GATEWAY_URL,
+            default_headers=config.portkey_headers,
+            model=config.embeddings_model,
         )
         self.llm = model.bind_tools(list(TOOLS.values()))
 

@@ -9,6 +9,7 @@ load_dotenv()
 class Config:
     def __init__(self):
         self.model = "gpt-4o"
+        self.embeddings_model = "text-embedding-3-large"
 
         portkey_api_key = os.getenv("PORTKEY_API_KEY")
         virtual_key = os.getenv("VIRTUAL_KEY")
