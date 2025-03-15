@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Dict, List, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
@@ -15,7 +15,6 @@ class State(TypedDict):
     sql_query: str
     retry_count: int
     user_query: str
-    tool_results: List[Dict[str, Any]]
     messages: Annotated[list, add_messages]
     query_result: QueryResult
 

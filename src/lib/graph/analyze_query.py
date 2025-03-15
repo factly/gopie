@@ -70,14 +70,13 @@ def analyze_query(state: State) -> dict:
         state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
     )
     tool_results = state.get("tool_results", [])
-
     query_result = state.get("query_result")
 
     query_result.add_subquery(
         query_text=user_input,
         sql_query_used="",
         tables_used=None,
-        query_type=None,
+        query_type="conversational",
         query_result=None,
         tool_used_result=None,
     )
@@ -98,9 +97,12 @@ def analyze_query(state: State) -> dict:
         parser = JsonOutputParser()
 
         if has_tool_calls(response):
+            query_result.subqueries[query_index].query_type = "tool_only"
+
             return {
+                "query_result": query_result,
+                "subquery_index": query_index,
                 "user_query": user_input,
-                "query_type": "tool_only",
                 "messages": [
                     response
                     if isinstance(response, AIMessage)
@@ -112,14 +114,12 @@ def analyze_query(state: State) -> dict:
         parsed_content = parser.parse(response_content)
 
         query_type = parsed_content.get("query_type", "conversational")
-
         query_result.subqueries[query_index].query_type = query_type
 
         return {
             "query_result": query_result,
             "subquery_index": query_index,
             "user_query": user_input,
-            "query_type": query_type,
             "messages": [
                 IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
             ],
@@ -128,10 +128,12 @@ def analyze_query(state: State) -> dict:
     except Exception as e:
         error_msg = f"Error analyzing query: {str(e)}"
         query_result.add_error_message(str(e), "Error analyzing query")
+        query_result.subqueries[query_index].query_type = "conversational"
+
         return {
             "query_result": query_result,
+            "subquery_index": query_index,
             "user_query": user_input,
-            "query_type": "conversational",
             "messages": [
                 ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
             ],
@@ -153,7 +155,10 @@ def route_from_analysis(state: State) -> str:
     if has_tool_calls(last_message):
         return "tools"
 
-    query_type = state.get("query_type", "conversational")
+    query_result = state.get("query_result")
+    query_index = state.get("subquery_index", -1)
+
+    query_type = query_result.subqueries[query_index].query_type
 
     if query_type == "conversational" or query_type == "tool_only":
         return "basic_conversation"

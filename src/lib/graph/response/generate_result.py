@@ -1,7 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional, Union
-
-from langchain_core.output_parsers import JsonOutputParser
+from typing import Any, Dict, List
 
 from src.lib.config.langchain_config import lc
 from src.lib.graph.query_result.query_type import QueryResult
@@ -11,7 +9,26 @@ from src.lib.graph.types import AIMessage, ErrorMessage, State
 def generate_result(state: State) -> Dict[str, List[Any]]:
     """Generate results of the executed query."""
     query_result = state.get("query_result")
-    print("aggregated result", query_result)
+    if query_result:
+        print("\n" + "=" * 50)
+        print("AGGREGATED QUERY RESULT")
+        print("=" * 50)
+        print(
+            json.dumps(
+                query_result.to_dict()
+                if hasattr(query_result, "to_dict")
+                else query_result,
+                indent=2,
+            )
+        )
+        print("=" * 50 + "\n")
+
+    any_data_query = False
+    if isinstance(query_result, QueryResult) and query_result.has_subqueries():
+        for subquery in query_result.subqueries:
+            if subquery.query_type == "data_query" and subquery.query_result:
+                any_data_query = True
+                break
 
     try:
         if not isinstance(query_result, QueryResult):
@@ -28,11 +45,10 @@ def generate_result(state: State) -> Dict[str, List[Any]]:
                 ]
             }
 
-        query_type = state.get("query_type", "")
         return (
-            _handle_conversational_query(state, query_result)
-            if query_type in ("conversational", "tool_only")
-            else _handle_data_query(state, query_result)
+            _handle_data_query(state, query_result)
+            if any_data_query
+            else _handle_conversational_query(state, query_result)
         )
     except Exception as e:
         return {
@@ -79,26 +95,32 @@ def _handle_conversational_query(
 def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
     if query_result.has_error():
+        error_details = (
+            json.dumps(query_result.error_message)
+            if query_result.error_message
+            else "Unknown error"
+        )
         return {
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": query_result.error_message})
-                )
-            ]
+            "messages": [ErrorMessage.from_text(json.dumps({"error": error_details}))]
         }
 
     user_query = query_result.original_user_query
     results = []
+    tool_used_results = []
     sql_queries = []
 
     if query_result.has_subqueries():
         for subquery in query_result.subqueries:
             if subquery.query_result:
                 results.append(subquery.query_result)
+
+            if subquery.tool_used_result:
+                tool_used_results.append(subquery.tool_used_result)
+
             if subquery.sql_query_used:
                 sql_queries.append(subquery.sql_query_used)
 
-    if not results:
+    if not results and not tool_used_results:
         return _handle_empty_results()
 
     prompt = f"""
@@ -106,6 +128,7 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
     - Query: "{user_query}"
     - SQL: "{"; ".join(sql_queries)}"
     - Results: {json.dumps(results, indent=2)}
+    - Tool Results: {json.dumps(tool_used_results, indent=2) if tool_used_results else "No additional context available."}
 
     Instructions:
         1. Provide direct, concise answers
@@ -134,19 +157,3 @@ def _handle_empty_results() -> Dict[str, List[Any]]:
             )
         ]
     }
-
-
-def _extract_executed_query(message: Optional[Any]) -> Union[str, Dict[str, str]]:
-    """Extract executed query from message content"""
-    if not message:
-        return ""
-
-    try:
-        content = message.content
-        if isinstance(content, str):
-            return JsonOutputParser().parse(content).get("query_executed", "")
-        elif isinstance(content, dict):
-            return content.get("query_executed", "")
-        return ""
-    except Exception as e:
-        return {"error": "Could not process query results", "details": str(e)}

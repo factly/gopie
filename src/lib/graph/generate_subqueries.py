@@ -21,8 +21,15 @@ def generate_subqueries(state: State):
       - Only create sub-queries when they're genuinely needed (for different data aspects or computational steps)
       - If the query is simple enough to handle with one SQL query, return an empty list
       - Order sub-queries logically: place data retrieval/analysis queries first, followed by queries that depend on previous results
-      - Avoid redundancy by grouping related entities (locations, companies, categories) in the same sub-query
+      - Focus only on the specific entities mentioned in the query (e.g., only the specified districts, not all districts)
       - Ensure each sub-query addresses a distinct aspect of the main question
+
+      For example, for a query like "Is it a fact that no CSR funds were spent in the five backward districts of Telangana?",
+      you could divide it into this sub-query:
+      "Check if the specified backward districts of Telangana (Jagtial, Peddapalli, Jayashankar Bhupalpally, Nagarkurnool and Jogulamba) have zero CSR funds"
+
+      CAUTION: Do not write subqueries that would retrieve the whole tuples of the tables or process entities not explicitly mentioned in the query.
+      Instead, write subqueries that would retrieve only the required values for the specific entities mentioned.
 
       RESPONSE FORMAT:
       {{
@@ -33,6 +40,9 @@ def generate_subqueries(state: State):
     """
 
     response = lc.llm.invoke(prompt)
+
+    print("response: ", response)
+
     query_result_object = QueryResult(
         original_user_query=user_input,
         timestamp=datetime.now(),
@@ -45,7 +55,7 @@ def generate_subqueries(state: State):
         parser = JsonOutputParser()
         parsed_content = parser.parse(str(response.content))
 
-        subqueries = parsed_content.get("subqueries")
+        subqueries = None
 
         if not subqueries:
             subqueries = [user_input]
