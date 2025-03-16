@@ -24,9 +24,7 @@ def perform_similarity_search(vector_store, query, top_k=1):
     return vector_store.similarity_search(query, k=top_k)
 
 
-def vectorize_datasets(
-    vector_store=None, directory_path: str = DATA_DIR, force_vectorize: bool = False
-):
+def vectorize_datasets(vector_store=None, directory_path: str = DATA_DIR):
     """
     Process and vectorize all datasets in the given directory.
     """
@@ -38,15 +36,14 @@ def vectorize_datasets(
     else:
         client = vector_store._client
 
-    # Check if documents are already vectorized
     has_documents = check_collection_has_documents(client, "dataset_collection")
 
-    if has_documents and not force_vectorize:
+    documents, ids = process_csv_directory(directory_path)
+
+    if has_documents:
         print("Documents are already vectorized. Skipping vectorization.")
         return vector_store
 
-    # Proceed with vectorization
-    documents, ids = process_csv_directory(directory_path)
     if documents:
         add_documents_to_vector_store(vector_store, documents, ids)
         print(f"Vectorized {len(documents)} dataset(s) from {directory_path}")
@@ -54,12 +51,3 @@ def vectorize_datasets(
         print(f"No CSV files found in {directory_path}")
 
     return vector_store
-
-
-def force_revectorize_datasets(directory_path: str = DATA_DIR):
-    """Force re-vectorization of all datasets in the directory."""
-    client = initialize_qdrant_client()
-    vector_store = setup_vector_store(client)
-
-    # Force re-vectorization
-    return vectorize_datasets(vector_store, directory_path, force_vectorize=True)

@@ -3,34 +3,26 @@ from typing import Any, Dict
 
 import pandas as pd
 
-data_dir = "./data"
+DATA_DIR = "./data"
 
 
 def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
     """
     Get metadata and sample data from a dataset.
-
-    Args:
-        dataset_name: Name of the dataset (without .csv extension)
-        sample_rows: Number of sample rows to return (default: 5)
-
-    Returns:
-        Dictionary containing dataset metadata and sample data
     """
     try:
         matching_files = [
             f
-            for f in os.listdir(data_dir)
+            for f in os.listdir(DATA_DIR)
             if f.endswith(".csv") and dataset_name.lower() in f.lower()
         ]
 
         if not matching_files:
             raise FileNotFoundError(f"Dataset not found: {dataset_name}")
 
-        file_path = os.path.join(data_dir, matching_files[0])
+        file_path = os.path.join(DATA_DIR, matching_files[0])
         df = pd.read_csv(file_path)
 
-        # Get metadata
         metadata = {
             "name": matching_files[0],
             "total_rows": len(df),
@@ -42,9 +34,7 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, An
             },
         }
 
-        # Get sample rows
         sample_data = df.head(sample_rows).to_dict("records")
-
         return {"metadata": metadata, "sample_data": sample_data}
 
     except Exception as e:

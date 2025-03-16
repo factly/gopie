@@ -1,4 +1,4 @@
-from src.utils.qdrant.csv_processing import get_dataset_preview
+from src.utils.dataset_info import get_dataset_preview
 from src.utils.qdrant.qdrant_setup import initialize_qdrant_client, setup_vector_store
 from src.utils.qdrant.vector_store import perform_similarity_search, vectorize_datasets
 
@@ -10,8 +10,8 @@ def filter_csv_documents(results):
     filtered_results = []
     for doc in results:
         if (
-            "file_name" in doc.metadata
-            and doc.metadata["file_name"].endswith(".csv")
+            "dataset_name" in doc.metadata
+            and doc.metadata["dataset_name"].endswith(".csv")
             and "source" in doc.metadata
             and doc.metadata["source"].endswith(".csv")
         ):
@@ -32,7 +32,6 @@ def find_relevant_datasets(vector_store, query: str, top_k: int = 3):
         results = perform_similarity_search(vector_store, query, top_k=search_k)
         filtered_results = filter_csv_documents(results)
 
-    # Return up to top_k results
     return filtered_results[:top_k]
 
 
@@ -49,15 +48,15 @@ def find_and_preview_dataset(
 
     previews = []
     for result in results:
-        if "file_name" not in result.metadata or not result.metadata[
-            "file_name"
+        if "dataset_name" not in result.metadata or not result.metadata[
+            "dataset_name"
         ].endswith(".csv"):
             print(
                 f"Skipping document without proper CSV metadata: {result.metadata.get('source', 'Unknown')}"
             )
             continue
 
-        dataset_name = result.metadata["file_name"].replace(".csv", "")
+        dataset_name = result.metadata["dataset_name"].replace(".csv", "")
         try:
             preview_data = get_dataset_preview(dataset_name)
             previews.append(
@@ -80,7 +79,7 @@ def format_dataset_preview(result):
     dataset = result["relevance_info"]
     output = []
 
-    output.append(f"Dataset: {dataset.metadata.get('file_name', 'Unknown')}")
+    output.append(f"Dataset: {dataset.metadata.get('dataset_name', 'Unknown')}")
     output.append(f"Rows: {dataset.metadata.get('row_count', 'Unknown')}")
 
     if "error" in result:

@@ -9,7 +9,7 @@ from langchain_core.output_parsers import JsonOutputParser
 
 from src.lib.config.langchain_config import lc
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
-from src.utils.dataset_info import data_dir
+from src.utils.dataset_info import DATA_DIR
 
 MAX_RETRY_COUNT = 3
 
@@ -78,14 +78,14 @@ def execute_query(state: State) -> dict:
             dataset_name = dataset_name.replace(".csv", "")
             matching_files = [
                 f
-                for f in os.listdir(data_dir)
+                for f in os.listdir(DATA_DIR)
                 if f.endswith(".csv") and dataset_name.lower() in f.lower()
             ]
 
             if not matching_files:
                 raise FileNotFoundError(f"Dataset not found: {dataset_name}")
 
-            file_path = os.path.join(data_dir, matching_files[0])
+            file_path = os.path.join(DATA_DIR, matching_files[0])
             table_name = normalize_name(matching_files[0])
             table_mappings[dataset_name] = table_name
 

@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 
 from src.lib.config.langchain_config import lc
@@ -65,21 +65,27 @@ def analyze_query(state: State) -> dict:
     Returns:
         Query type and call tools if needed to answer user query or identify datasets if it is a data query
     """
-    query_index = state.get("subquery_index", -1) + 1
+    last_message = state["messages"][-1]
+    query_index = -1
+    query_result = state.get("query_result")
     user_input = (
         state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
     )
-    tool_results = state.get("tool_results", [])
-    query_result = state.get("query_result")
 
-    query_result.add_subquery(
-        query_text=user_input,
-        sql_query_used="",
-        tables_used=None,
-        query_type="conversational",
-        query_result=None,
-        tool_used_result=None,
-    )
+    if isinstance(last_message, ToolMessage):
+        query_index = state.get("subquery_index", -1)
+    else:
+        query_index = state.get("subquery_index", -1) + 1
+        query_result.add_subquery(
+            query_text=user_input,
+            sql_query_used="",
+            tables_used=None,
+            query_type="conversational",
+            query_result=None,
+            tool_used_result=None,
+        )
+
+    tools_results = query_result.subqueries[query_index].tool_used_result
 
     try:
         if not user_input:
@@ -92,7 +98,7 @@ def analyze_query(state: State) -> dict:
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
 
-        prompt = create_llm_prompt(user_input, tool_results)
+        prompt = create_llm_prompt(user_input, tools_results)
         response: Any = lc.llm.invoke(prompt)
         parser = JsonOutputParser()
 
@@ -156,7 +162,7 @@ def route_from_analysis(state: State) -> str:
         return "tools"
 
     query_result = state.get("query_result")
-    query_index = state.get("subquery_index", -1)
+    query_index = state.get("subquery_index")
 
     query_type = query_result.subqueries[query_index].query_type
 

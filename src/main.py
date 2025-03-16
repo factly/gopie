@@ -4,11 +4,9 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from src.lib.graph import stream_graph_updates
-from src.utils.qdrant.dataset_search import find_and_preview_dataset
 
 app = FastAPI()
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-find_and_preview_dataset("How much CSR amount was spent in the year 2018?")
 
 
 @app.get("/")

@@ -41,8 +41,6 @@ def generate_subqueries(state: State):
 
     response = lc.llm.invoke(prompt)
 
-    print("response: ", response)
-
     query_result_object = QueryResult(
         original_user_query=user_input,
         timestamp=datetime.now(),
@@ -56,6 +54,7 @@ def generate_subqueries(state: State):
         parsed_content = parser.parse(str(response.content))
 
         subqueries = None
+        print(parsed_content.get("subqueries"))
 
         if not subqueries:
             subqueries = [user_input]

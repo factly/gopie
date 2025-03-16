@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 from uuid import uuid4
 
 import pandas as pd
@@ -14,7 +14,7 @@ def extract_csv_metadata(file_path: str) -> Dict:
         df = pd.read_csv(file_path)
 
         file_name = os.path.basename(file_path)
-        file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
+        file_size = os.path.getsize(file_path) / (1024 * 1024)
         row_count = len(df)
         column_count = len(df.columns)
 
@@ -48,14 +48,12 @@ def extract_csv_metadata(file_path: str) -> Dict:
 
 def csv_metadata_to_document(metadata: Dict) -> Document:
     """Convert CSV metadata to a Document object for vectorization."""
-    # Create a formatted string with the metadata
     content_parts = [
         f"Dataset: {metadata['file_name']}",
         f"Rows: {metadata.get('row_count', 'Unknown')}",
         f"Columns: {metadata.get('column_count', 'Unknown')}",
     ]
 
-    # Add column information
     if "columns" in metadata:
         content_parts.append("Columns:")
         for col in metadata["columns"]:
@@ -74,50 +72,12 @@ def csv_metadata_to_document(metadata: Dict) -> Document:
         page_content=page_content,
         metadata={
             "source": metadata["file_path"],
-            "file_name": metadata["file_name"],
-            "file_size_mb": metadata.get("file_size_mb", "Unknown"),
+            "dataset_name": metadata["file_name"],
+            "dataset_size_mb": metadata.get("file_size_mb", "Unknown"),
             "row_count": metadata.get("row_count", "Unknown"),
             "column_count": metadata.get("column_count", "Unknown"),
         },
     )
-
-
-def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, Any]:
-    """
-    Get metadata and sample data from a dataset.
-    """
-    try:
-        matching_files = [
-            f
-            for f in os.listdir(DATA_DIR)
-            if f.endswith(".csv") and dataset_name.lower() in f.lower()
-        ]
-
-        if not matching_files:
-            raise FileNotFoundError(f"Dataset not found: {dataset_name}")
-
-        file_path = os.path.join(DATA_DIR, matching_files[0])
-        df = pd.read_csv(file_path)
-
-        # Get metadata
-        metadata = {
-            "name": matching_files[0],
-            "total_rows": len(df),
-            "columns": list(df.columns),
-            "column_types": {col: str(df[col].dtype) for col in df.columns},
-            "non_null_counts": {col: int(df[col].count()) for col in df.columns},
-            "sample_values": {
-                col: list(df[col].dropna().unique()[:5]) for col in df.columns
-            },
-        }
-
-        # Get sample rows
-        sample_data = df.head(sample_rows).to_dict("records")
-
-        return {"metadata": metadata, "sample_data": sample_data}
-
-    except Exception as e:
-        raise ValueError(f"Error getting dataset preview: {str(e)}")
 
 
 def process_csv_directory(

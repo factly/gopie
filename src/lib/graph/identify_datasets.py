@@ -7,6 +7,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from src.lib.config.langchain_config import lc
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 from src.utils.dataset_info import get_dataset_preview
+from src.utils.qdrant_client import find_and_preview_dataset
 
 
 def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:
@@ -17,15 +18,17 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
         USER QUERY:
         "{user_query}"
 
-        AVAILABLE DATASETS:
+        PRE-FILTERED DATASETS (ordered by relevance):
         {json.dumps(available_datasets, indent=2)}
 
         INSTRUCTIONS:
-        1. This is a data analysis query that needs dataset analysis.
+        1. The datasets above have been pre-filtered using semantic search based on relevance to the user query.
 
-        2. Based on the user query, determine which of the available datasets best matches the user's needs.
+        2. Based on the user query, confirm which of these pre-filtered datasets best matches the user's needs.
            - Consider the content, columns, and structure of each dataset
+           - The datasets are already ranked by relevance, but you should still critically evaluate them
            - You may select multiple datasets if the query spans multiple datasets
+           - You can override the vector search ranking if you have strong reasons
            - If no dataset is suitable, provide clear reasoning why
 
         3. For each selected dataset, identify:
@@ -57,8 +60,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
 def identify_datasets(state: State):
     """
     Identify relevant dataset based on natural language query.
-    Since we already know this is a data query, we directly identify the datasets
-    without making tool calls.
+    Uses Qdrant vector search to find the most relevant datasets first.
     """
     parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
@@ -67,14 +69,32 @@ def identify_datasets(state: State):
     )
     query_result = state.get("query_result", {})
 
-    datasets_info = []
-
-    for file in os.listdir("./data"):
-        if file.endswith(".csv"):
-            info = get_dataset_preview(file)
-            datasets_info.append(info)
-
     try:
+        datasets_info = []
+        try:
+            relevant_datasets = find_and_preview_dataset(user_query, top_k=5)
+            print(relevant_datasets)
+
+            for dataset in relevant_datasets:
+                if "error" not in dataset:
+                    dataset_name = dataset["relevance_info"].metadata.get(
+                        "dataset_name", ""
+                    )
+                    if dataset_name.endswith(".csv"):
+                        file_name = os.path.basename(dataset_name)
+                        info = get_dataset_preview(file_name)
+                        datasets_info.append(info)
+        except Exception as e:
+            print(
+                f"Vector search error: {str(e)}. Falling back to listing all datasets."
+            )
+
+        if not datasets_info:
+            for file in os.listdir("./data"):
+                if file.endswith(".csv"):
+                    info = get_dataset_preview(file)
+                    datasets_info.append(info)
+
         prompt = create_llm_prompt(user_query, datasets_info)
         response: Any = lc.llm.invoke(prompt)
 
