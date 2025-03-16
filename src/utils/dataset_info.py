@@ -29,9 +29,10 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> Dict[str, An
             "columns": list(df.columns),
             "column_types": {col: str(df[col].dtype) for col in df.columns},
             "non_null_counts": {col: int(df[col].count()) for col in df.columns},
-            "sample_values": {
-                col: list(df[col].dropna().unique()[:5]) for col in df.columns
-            },
+            # removed for testing the analyze dataset node.
+            # "sample_values": {
+            #     col: list(df[col].dropna().unique()[:5]) for col in df.columns
+            # },
         }
 
         sample_data = df.head(sample_rows).to_dict("records")

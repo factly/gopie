@@ -75,6 +75,7 @@ def generate_subqueries(state: State):
         error_msg = f"Error parsing subqueries: {str(e)}"
 
         return {
+            "user_query": user_input,
             "query_result": query_result_object,
             "messages": [
                 ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))

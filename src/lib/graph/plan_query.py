@@ -1,16 +1,14 @@
 import json
-from typing import Any, Dict, List
 
 from langchain_core.output_parsers import JsonOutputParser
 
 from src.lib.config.langchain_config import lc
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
-from src.utils.dataset_info import get_dataset_preview
 
 
 def create_query_prompt(
     user_query: str,
-    datasets_info: List[Dict[str, Any]],
+    datasets_info: dict,
     error_message: str = "",
     attempt: int = 1,
 ) -> str:
@@ -23,39 +21,13 @@ def create_query_prompt(
 
         Please fix the issues in the query and try again. This is attempt {attempt} of 3.
         """
-
-    datasets_context = []
-    for dataset_info in datasets_info:
-        metadata = dataset_info.get("metadata", {})
-        sample_data = dataset_info.get("sample_data", [])
-
-        dataset_context = f"""
-        Dataset: {metadata.get("name", "")}
-        Total Rows: {metadata.get("total_rows", 0)}
-
-        Columns:
-        {json.dumps(metadata.get("columns", []), indent=2)}
-
-        Column Types:
-        {json.dumps(metadata.get("column_types", {}), indent=2)}
-
-        Sample Values for Each Column:
-        {json.dumps(metadata.get("sample_values", {}), indent=2)}
-
-        Sample Rows:
-        {json.dumps(sample_data, indent=2)}
-        """
-        datasets_context.append(dataset_context)
-
-    all_datasets_context = "\n\n=== NEXT DATASET ===\n\n".join(datasets_context)
-
     return f"""
         Given the following natural language query and detailed information about multiple datasets, create an appropriate SQL query.
 
         User Query: "{user_query}"
 
-        Available Datasets:
-        {all_datasets_context}
+        Selected Datasets Information:
+        {json.dumps(datasets_info, indent=2)}
 
         Error Context: {error_context}
 
@@ -104,6 +76,7 @@ def plan_query(state: State) -> dict:
             else "No input"
         )
         query_result = state.get("query_result", {})
+        datasets_info = state.get("dataset_info", {})
 
         retry_count = state.get("retry_count", 0)
 
@@ -118,14 +91,6 @@ def plan_query(state: State) -> dict:
 
         if not selected_datasets:
             raise Exception("No dataset selected for query planning")
-
-        datasets_info = []
-        for dataset_name in selected_datasets:
-            try:
-                dataset_info = get_dataset_preview(dataset_name)
-                datasets_info.append(dataset_info)
-            except Exception as e:
-                raise e
 
         if not datasets_info:
             raise Exception(

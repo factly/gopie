@@ -1,25 +1,120 @@
+import json
+
+from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 
-from src.lib.graph.types import State
+from src.lib.config.langchain_config import lc
+from src.lib.graph.types import ErrorMessage, IntermediateStep, State
+from src.tools.tool_node import has_tool_calls
+
+
+def create_analysis_prompt(
+    user_query: str, column_requirements: list, tools_results: dict
+) -> str:
+    """Create a prompt for the LLM to analyze the column requirements and plan data gathering"""
+    return f"""
+    You are an experienced data analyst tasked with gathering the necessary information to create an accurate SQL query.
+
+    USER QUERY:
+    "{user_query}"
+
+    PRELIMINARY COLUMN REQUIREMENTS (these are initial assumptions and may not be correct):
+    {column_requirements}
+
+    TOOLS RESULTS (Analyze this and decide whether to use the tools to gather more information or not):
+    {json.dumps(tools_results)}
+
+    Important: The column requirements above were identified by a preliminary analysis and should be treated as hypotheses, not facts. They might be incomplete, inaccurate, or misaligned with the actual data structure.
+
+    As a human analyst would do, please:
+     - Analyze the preliminary column requirements critically
+     - Identify what specific information you need to verify or correct these assumptions
+     - Plan how to gather and validate this information systematically
+     - use the appropriate tools to gather the necessary information about the column values
+
+    If there is a need of calling a tool to answer the query, please call the tool(s) and dont return in the requested format and directly make a tool call
+
+    Respond in this JSON format:
+    {{
+        "analysis": "Your critical evaluation of the preliminary column requirements, highlighting potential inaccuracies",
+        "data_gathering_plan": "Your plan to gather the necessary information to verify or correct the column requirements",
+        "correct_column_requirements": [
+            {{
+                "dataset": "dataset_name",
+                "column_values_that_can_be_used_for_query_generation": ["column1", "column2"],
+            }}
+        ]
+    }}
+    """
 
 
 def analyze_dataset(state: State) -> dict:
-    """Analyze the dataset structure and prepare for query planning"""
+    """
+    Analyze the dataset structure and prepare for query planning.
+    This function mimics how a human analyst would approach the problem:
+        - Critically analyze the requirements
+        - Gather the information systematically using appropriate tools
+    """
     try:
-        last_message = state["messages"][-1].content
-        parsed_content = JsonOutputParser().parse(last_message)
+        query_index = state.get("subquery_index", 0)
+        user_query = (
+            state.get("subqueries")[query_index] if "subqueries" in state else ""
+        )
+        query_result = state.get("query_result", {})
+        tools_results = query_result.subqueries[query_index].tool_used_result
+
+        column_requirements = state.get("dataset_info", {}).get(
+            "column_requirements", []
+        )
+
+        analysis_prompt = create_analysis_prompt(
+            user_query, column_requirements, tools_results
+        )
+        response = lc.llm.invoke(analysis_prompt)
+
+        if has_tool_calls(response):
+            return {
+                "messages": [
+                    response
+                    if isinstance(response, AIMessage)
+                    else AIMessage(content=str(response))
+                ],
+            }
+
+        response_content = str(response.content)
+        parsed_content = JsonOutputParser().parse(response_content)
+
+        datasets_info = {
+            "column_values_that_can_be_used_for_query_generation": parsed_content.get(
+                "correct_column_requirements", []
+            ),
+            "schema": state.get("dataset_info", {}).get("schema", []),
+        }
 
         return {
-            "column_requirements": parsed_content.get("column_requirements", []),
-            "messages": state.get("messages", []),
+            "dataset_info": datasets_info,
+            "messages": [
+                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+            ],
         }
     except Exception as e:
+        error_msg = f"Dataset analysis failed: {str(e)}"
+
+        query_result = state.get("query_result", {})
+        if hasattr(query_result, "add_error_message"):
+            query_result.add_error_message(str(e), "Dataset analysis failed")
+
         return {
-            "error": f"Dataset analysis failed: {str(e)}",
-            "messages": state.get("messages", []),
+            "messages": [ErrorMessage.from_text(json.dumps(error_msg, indent=2))],
+            "query_result": query_result,
         }
 
 
 def route_from_dataset_analysis(state: State) -> str:
     """Route to the next node based on analysis results"""
+    last_message = state["messages"][-1]
+
+    if has_tool_calls(last_message):
+        return "analytic_tools"
+
     return "plan_query"

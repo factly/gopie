@@ -103,9 +103,16 @@ def identify_datasets(state: State):
 
         selected_datasets = parsed_content.get("selected_dataset", [])
         query_result.subqueries[query_index].tables_used = selected_datasets
+        column_assumptions = parsed_content.get("column_requirements", [])
+
+        dataset_info = {
+            "column_assumptions": column_assumptions,
+            "schema": datasets_info,
+        }
 
         return {
             "query_result": query_result,
+            "dataset_info": dataset_info,
             "datasets": selected_datasets,
             "messages": [
                 IntermediateStep.from_text(json.dumps(parsed_content, indent=2))

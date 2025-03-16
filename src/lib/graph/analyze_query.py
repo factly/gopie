@@ -93,7 +93,6 @@ def analyze_query(state: State) -> dict:
             error_data = {"error": "No user query provided", "is_data_query": False}
             return {
                 "query_result": query_result,
-                "user_query": user_input,
                 "query_type": "conversational",
                 "messages": [ErrorMessage.from_text(json.dumps(error_data, indent=2))],
             }
@@ -108,7 +107,6 @@ def analyze_query(state: State) -> dict:
             return {
                 "query_result": query_result,
                 "subquery_index": query_index,
-                "user_query": user_input,
                 "messages": [
                     response
                     if isinstance(response, AIMessage)
@@ -125,7 +123,6 @@ def analyze_query(state: State) -> dict:
         return {
             "query_result": query_result,
             "subquery_index": query_index,
-            "user_query": user_input,
             "messages": [
                 IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
             ],
@@ -139,7 +136,6 @@ def analyze_query(state: State) -> dict:
         return {
             "query_result": query_result,
             "subquery_index": query_index,
-            "user_query": user_input,
             "messages": [
                 ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
             ],
