@@ -73,7 +73,7 @@ def identify_datasets(state: State):
         datasets_info = []
         try:
             relevant_datasets = find_and_preview_dataset(user_query, top_k=5)
-            print(relevant_datasets)
+            print(json.dumps(str(relevant_datasets), indent=2))
 
             for dataset in relevant_datasets:
                 if "error" not in dataset:

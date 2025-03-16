@@ -72,8 +72,8 @@ def csv_metadata_to_document(metadata: Dict) -> Document:
         page_content=page_content,
         metadata={
             "source": metadata["file_path"],
-            "dataset_name": metadata["file_name"],
-            "dataset_size_mb": metadata.get("file_size_mb", "Unknown"),
+            "file_name": metadata["file_name"],
+            "file_size_mb": metadata.get("file_size_mb", "Unknown"),
             "row_count": metadata.get("row_count", "Unknown"),
             "column_count": metadata.get("column_count", "Unknown"),
         },
