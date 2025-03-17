@@ -124,11 +124,15 @@ def plan_query(state: State) -> dict:
                 )
 
             sql_query = parsed_response.get("sql_query", "")
+            sql_query_explanation = parsed_response.get("explanation", "")
 
             if not sql_query:
                 raise Exception("Failed in parsing SQL query")
 
             query_result.subqueries[query_index].sql_query_used = sql_query
+            query_result.subqueries[
+                query_index
+            ].sql_query_explanation = sql_query_explanation
 
             return {
                 "query_result": query_result,

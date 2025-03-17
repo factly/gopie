@@ -1,11 +1,23 @@
+import os
 from typing import Any, Dict, List
 
 import pandas as pd
 
+DATA_DIRECTORY = "./data"
+DEFAULT_MAX_DISTANCE = 2
+MAX_UNIQUE_VALUES_TO_RETURN = 20
 
-def levenshtein_distance(str1, str2):
+
+def levenshtein_distance(str1: str, str2: str) -> int:
     """
     Calculate the Levenshtein distance between two strings using a memory-efficient approach.
+
+    Args:
+        str1: First string to compare
+        str2: Second string to compare
+
+    Returns:
+        The edit distance between the two strings
     """
     m = len(str1)
     n = len(str2)
@@ -31,7 +43,9 @@ def levenshtein_distance(str1, str2):
     return curr_row[n]
 
 
-def find_closest_column_names(column_name, df_columns, max_distance=2):
+def find_closest_column_names(
+    column_name: str, df_columns: List[str], max_distance: int = DEFAULT_MAX_DISTANCE
+) -> List[str]:
     """
     Find closest matches for a column name in the dataframe columns using Levenshtein distance.
 
@@ -54,10 +68,14 @@ def find_closest_column_names(column_name, df_columns, max_distance=2):
     return suggestions
 
 
-def find_similar_values(expected_value, actual_values, max_distance=2):
+def find_similar_values(
+    expected_value: Any,
+    actual_values: List[Any],
+    max_distance: int = DEFAULT_MAX_DISTANCE,
+) -> List[str]:
     """
     Find similar values to the expected value in the actual values using Levenshtein distance
-    and substring matching.
+    and substring matching. Words separated by spaces are joined before comparison.
 
     Args:
         expected_value: The value to match
@@ -80,19 +98,15 @@ def find_similar_values(expected_value, actual_values, max_distance=2):
 
         val_lower = val.lower()
 
-        # Check for substring match first
         if expected_lower in val_lower or val_lower in expected_lower:
-            # Give a low distance for substring matches
             distance = 0.5
         else:
-            # Fall back to Levenshtein distance
             distance = levenshtein_distance(expected_lower, val_lower)
 
         distance_map[val] = distance
 
-    # Get values within the maximum distance
     similar_values = [val for val, dist in distance_map.items() if dist <= max_distance]
-    similar_values.sort(key=lambda x: distance_map[x])  # Sort by similarity
+    similar_values.sort(key=lambda x: distance_map[x])
 
     return similar_values
 
@@ -120,8 +134,6 @@ def correct_column_values(
     Returns:
         Dict[str, Any]: Column mappings with the correct values that exist in the dataset
     """
-    import os
-
     column_mappings = []
 
     for dataset_info in column_assumption:
@@ -133,8 +145,7 @@ def correct_column_values(
         if not dataset_name.endswith(".csv"):
             dataset_name += ".csv"
 
-        data_dir = "./data"
-        file_path = os.path.join(data_dir, dataset_name)
+        file_path = os.path.join(DATA_DIRECTORY, dataset_name)
 
         if not os.path.exists(file_path):
             column_mappings.append(
@@ -158,29 +169,54 @@ def correct_column_values(
 
                 if column_name in df.columns:
                     column_result["name"] = column_name
+                    mapped_expected_values = {}
 
                     unique_values = (
                         df[column_name].fillna("NA").astype(str).unique().tolist()
                     )
-                    column_result["unique_values"] = unique_values[:20]
+
+                    mapped_expected_values = {}
+                    for value in expected_values:
+                        new_value = value.replace(" ", "_")
+                        mapped_expected_values[new_value] = value
+
+                    mapped_unique_dict = {}
+                    for value in unique_values:
+                        new_value = value.replace(" ", "_")
+                        mapped_unique_dict[new_value] = value
+
+                    mapped_unique_values = list(mapped_unique_dict.keys())
+
+                    column_result["unique_values"] = unique_values[
+                        :MAX_UNIQUE_VALUES_TO_RETURN
+                    ]
                     column_result["total_unique_values"] = len(unique_values)
 
                     correct_column_values = []
 
                     for value in expected_values:
-                        if value not in unique_values:
-                            similar_vals = find_similar_values(value, unique_values)
-                            if similar_vals:
+                        new_value = value.replace(" ", "_")
+                        if new_value in mapped_unique_values:
+                            correct_column_values.append(mapped_unique_dict[new_value])
+                        else:
+                            similar_mapped_vals = find_similar_values(
+                                new_value, mapped_unique_values
+                            )
+                            if similar_mapped_vals:
+                                similar_original_vals = [
+                                    mapped_unique_dict[val]
+                                    for val in similar_mapped_vals
+                                ]
+
                                 column_result.setdefault("similar_values", {})[
                                     value
-                                ] = similar_vals[:20]
-                                correct_column_values.append(similar_vals[0])
+                                ] = similar_original_vals[:MAX_UNIQUE_VALUES_TO_RETURN]
+
+                                correct_column_values.append(similar_original_vals[0])
                             else:
                                 column_result.setdefault("not_found_values", []).append(
                                     value
                                 )
-                        else:
-                            correct_column_values.append(value)
 
                     column_result["correct_values"] = correct_column_values
                 else:

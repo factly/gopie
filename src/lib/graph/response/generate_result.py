@@ -97,7 +97,7 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
     user_query = query_result.original_user_query
     results = []
     tool_used_results = []
-    sql_queries = []
+    sql_with_explanations = []
     errors = query_result.error_message
 
     if query_result.has_subqueries():
@@ -109,7 +109,15 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
                 tool_used_results.append(subquery.tool_used_result)
 
             if subquery.sql_query_used:
-                sql_queries.append(subquery.sql_query_used)
+                explanation = (
+                    subquery.sql_query_explanation
+                    if hasattr(subquery, "sql_query_explanation")
+                    and subquery.sql_query_explanation
+                    else "No explanation provided"
+                )
+                sql_with_explanations.append(
+                    f"SQL: {subquery.sql_query_used}\nExplanation: {explanation}"
+                )
 
     if not results and not tool_used_results:
         return _handle_empty_results()
@@ -117,13 +125,16 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
     prompt = f"""
     Context:
     - Originial User Query: "{user_query}"
-    - SQL: "{"; ".join(sql_queries)}"
+    - SQL Queries with Explanations:
+      {"\n\n".join(sql_with_explanations) if sql_with_explanations else "No SQL queries were executed."}
     - Results: {json.dumps(results, indent=2)}
     - Tool Results: {json.dumps(tool_used_results, indent=2) if tool_used_results else "No additional context available."}
     - Errors encountered: {json.dumps(errors, indent=2) if errors else "No errors encountered."}
 
+    - Analyze the SQL query explanation and it's results to answer the user query effectively.
+
     Instructions:
-        1. Provide direct, concise answers based on the available data
+        1. Provide direct, concise answers based on the available data, but don't mention like i got from the SQL query result. You should directly answer the original user query.
         2. Present key insights first
         3. Format numbers properly (1,000,000, ₹, etc.)
         4. Include trends and patterns for financial/statistical data

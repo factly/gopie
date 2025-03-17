@@ -33,7 +33,8 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
 
         3. For each selected dataset, identify:
            - The specific columns that will be needed for the analysis
-           - For string columns in , list the specific string column values that might be relevant to the query
+           - For string columns in datasets list the specific string column values that might be relevant to the query
+           - Don't include the column names that are numeric type
 
         RESPONSE FORMAT:
         Respond in this JSON format:

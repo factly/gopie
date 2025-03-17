@@ -11,6 +11,7 @@ class SubQueryInfo:
 
     query_text: str
     sql_query_used: str
+    sql_query_explanation: Optional[str] = None
     tables_used: Optional[str] = None
     query_type: Optional[str] = None
     query_result: Any = None
@@ -20,6 +21,7 @@ class SubQueryInfo:
         return {
             "query_text": self.query_text,
             "sql_query_used": self.sql_query_used,
+            "sql_query_explanation": self.sql_query_explanation,
             "tables_used": self.tables_used,
             "query_type": self.query_type,
             "query_result": self.query_result,

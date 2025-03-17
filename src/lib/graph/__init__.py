@@ -1,6 +1,6 @@
 ﻿from langgraph.graph import END, START, StateGraph
 
-from src.lib.graph.analyze_dataset import analyze_dataset, route_from_dataset_analysis
+from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
 from src.lib.graph.execute_query import execute_query, route_query_replan
 from src.lib.graph.generate_subqueries import generate_subqueries
@@ -56,15 +56,17 @@ graph_builder.add_conditional_edges(
     },
 )
 
-graph_builder.add_conditional_edges(
-    "analyze_dataset",
-    route_from_dataset_analysis,
-    {"analytic_tools": "analytic_tools", "plan_query": "plan_query"},
-)
+# graph_builder.add_conditional_edges(
+#     "analyze_dataset",
+#     route_from_dataset_analysis,
+#     {"analytic_tools": "analytic_tools", "plan_query": "plan_query"},
+# )
+
+# graph_builder.add_edge("analytic_tools", "analyze_dataset")
 
 graph_builder.add_edge(START, "generate_subqueries")
 graph_builder.add_edge("generate_subqueries", "analyze_query")
-graph_builder.add_edge("analytic_tools", "analyze_dataset")
+graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("tools", "analyze_query")
 graph_builder.add_edge("identify_datasets", "analyze_dataset")
 graph_builder.add_edge("plan_query", "execute_query")
