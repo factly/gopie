@@ -33,8 +33,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
 
         3. For each selected dataset, identify:
            - The specific columns that will be needed for the analysis
-           - Expected values or value ranges that might be relevant to the query
-           - Any potential filters or conditions that would be applied
+           - For string columns in , list the specific string column values that might be relevant to the query
 
         RESPONSE FORMAT:
         Respond in this JSON format:
@@ -47,8 +46,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
                     "columns": [
                         {{
                             "name": "column_name",
-                            "expected_values": ["value1", "value2"] or "range: min-max",
-                            "filter_condition": "equals/greater than/less than/between/etc"
+                            "expected_values": ["value1", "value2", "value3"] // Include if the column contains string values
                         }}
                     ]
                 }}

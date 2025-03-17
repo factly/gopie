@@ -1,12 +1,7 @@
 import json
 from pprint import pprint
 
-from langchain_core.messages import AIMessage
-from langchain_core.output_parsers import JsonOutputParser
-
-from src.lib.config.langchain_config import lc
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
-from src.tools.tool_node import has_tool_calls
 from src.utils.correct_column_values import correct_column_values
 
 
@@ -58,59 +53,54 @@ def analyze_dataset(state: State) -> dict:
         - Gather the information systematically using appropriate tools
     """
     try:
-        query_index = state.get("subquery_index", 0)
-        user_query = (
-            state.get("subqueries")[query_index] if "subqueries" in state else ""
-        )
+        # query_index = state.get("subquery_index", 0)
+        # user_query = (
+        #     state.get("subqueries")[query_index] if "subqueries" in state else ""
+        # )
         query_result = state.get("query_result", {})
-        tools_results = query_result.subqueries[query_index].tool_used_result
+        # tools_results = query_result.subqueries[query_index].tool_used_result
 
         dataset_info = state.get("dataset_info", {})
 
         column_requirements = dataset_info.get("column_assumptions", [])
 
-        print("dataset_info", dataset_info)
-
         print("\n----- Column Requirements -----")
         pprint(column_requirements, indent=4, width=100, sort_dicts=False)
         print("------------------------------\n")
-        temp = correct_column_values(column_requirements)
+        corrected_column_requirements = correct_column_values(column_requirements)
 
         print("\n----- Column Values Validation Results -----")
-        pprint(temp, indent=4, width=100, sort_dicts=False)
+        pprint(corrected_column_requirements, indent=4, width=100, sort_dicts=False)
         print("-------------------------------------------\n")
-        return {
-            "messages": [IntermediateStep.from_text(json.dumps("Hello", indent=2))],
-        }
+        # return {
+        #     "messages": [IntermediateStep.from_text(json.dumps("Hello", indent=2))],
+        # }
 
-        analysis_prompt = create_analysis_prompt(
-            user_query, column_requirements, tools_results
-        )
-        response = lc.llm.invoke(analysis_prompt)
+        # analysis_prompt = create_analysis_prompt(
+        #     user_query, column_requirements, tools_results
+        # )
+        # response = lc.llm.invoke(analysis_prompt)
 
-        if has_tool_calls(response):
-            return {
-                "messages": [
-                    response
-                    if isinstance(response, AIMessage)
-                    else AIMessage(content=str(response))
-                ],
-            }
+        # if has_tool_calls(response):
+        #     return {
+        #         "messages": [
+        #             response
+        #             if isinstance(response, AIMessage)
+        #             else AIMessage(content=str(response))
+        #         ],
+        #     }
 
-        response_content = str(response.content)
-        parsed_content = JsonOutputParser().parse(response_content)
+        # response_content = str(response.content)
+        # parsed_content = JsonOutputParser().parse(response_content)
 
-        datasets_info = {
-            "column_values_that_can_be_used_for_query_generation": parsed_content.get(
-                "correct_column_requirements", []
-            ),
-            "schema": state.get("dataset_info", {}).get("schema", []),
-        }
+        dataset_info["correct_column_requirements"] = corrected_column_requirements
 
         return {
-            "dataset_info": datasets_info,
+            "dataset_info": dataset_info,
             "messages": [
-                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+                IntermediateStep.from_text(
+                    json.dumps(corrected_column_requirements, indent=2)
+                )
             ],
         }
     except Exception as e:
@@ -128,9 +118,9 @@ def analyze_dataset(state: State) -> dict:
 
 def route_from_dataset_analysis(state: State) -> str:
     """Route to the next node based on analysis results"""
-    last_message = state["messages"][-1]
+    # last_message = state["messages"][-1]
 
-    if has_tool_calls(last_message):
-        return "analytic_tools"
+    # if has_tool_calls(last_message):
+    #     return "analytic_tools"
 
     return "plan_query"
