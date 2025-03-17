@@ -94,20 +94,11 @@ def _handle_conversational_query(
 
 def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
-    if query_result.has_error():
-        error_details = (
-            json.dumps(query_result.error_message)
-            if query_result.error_message
-            else "Unknown error"
-        )
-        return {
-            "messages": [ErrorMessage.from_text(json.dumps({"error": error_details}))]
-        }
-
     user_query = query_result.original_user_query
     results = []
     tool_used_results = []
     sql_queries = []
+    errors = query_result.error_message
 
     if query_result.has_subqueries():
         for subquery in query_result.subqueries:
@@ -125,18 +116,21 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
 
     prompt = f"""
     Context:
-    - Query: "{user_query}"
+    - Originial User Query: "{user_query}"
     - SQL: "{"; ".join(sql_queries)}"
     - Results: {json.dumps(results, indent=2)}
     - Tool Results: {json.dumps(tool_used_results, indent=2) if tool_used_results else "No additional context available."}
+    - Errors encountered: {json.dumps(errors, indent=2) if errors else "No errors encountered."}
 
     Instructions:
-        1. Provide direct, concise answers
+        1. Provide direct, concise answers based on the available data
         2. Present key insights first
         3. Format numbers properly (1,000,000, ₹, etc.)
         4. Include trends and patterns for financial/statistical data
         5. Use clear comparative language
         6. Only use facts from query results
+        7. If there were errors in some parts of the query, acknowledge them briefly but focus on the data that was successfully retrieved
+        8. Be transparent about limitations caused by errors without being negative
     """
 
     return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}

@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
@@ -6,6 +7,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from src.lib.config.langchain_config import lc
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 from src.tools.tool_node import has_tool_calls
+from src.utils.correct_column_values import correct_column_values
 
 
 def create_analysis_prompt(
@@ -63,9 +65,23 @@ def analyze_dataset(state: State) -> dict:
         query_result = state.get("query_result", {})
         tools_results = query_result.subqueries[query_index].tool_used_result
 
-        column_requirements = state.get("dataset_info", {}).get(
-            "column_requirements", []
-        )
+        dataset_info = state.get("dataset_info", {})
+
+        column_requirements = dataset_info.get("column_assumptions", [])
+
+        print("dataset_info", dataset_info)
+
+        print("\n----- Column Requirements -----")
+        pprint(column_requirements, indent=4, width=100, sort_dicts=False)
+        print("------------------------------\n")
+        temp = correct_column_values(column_requirements)
+
+        print("\n----- Column Values Validation Results -----")
+        pprint(temp, indent=4, width=100, sort_dicts=False)
+        print("-------------------------------------------\n")
+        return {
+            "messages": [IntermediateStep.from_text(json.dumps("Hello", indent=2))],
+        }
 
         analysis_prompt = create_analysis_prompt(
             user_query, column_requirements, tools_results
