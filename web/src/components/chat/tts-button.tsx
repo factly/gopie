@@ -30,6 +30,7 @@ export async function getLiveKitCredentials(datasetId: string) {
 function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
   const room = useRoomContext();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleTTS = async () => {
     if (!datasetId) {
@@ -40,20 +41,28 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
     if (isPlaying) {
       // Stop playback
       setIsPlaying(false);
-      await room.disconnect();
       return;
     }
 
     try {
       setIsPlaying(true);
-      // Get LiveKit credentials
+      setIsConnecting(true);
+
+      // Get LiveKit credentials and connect to room first
       const { token, serverUrl } = await getLiveKitCredentials(datasetId);
       if (!serverUrl || !token) {
         throw new Error("LiveKit configuration missing");
       }
 
-      // Connect to room and start TTS
-      await room.connect(serverUrl, token);
+      // Make sure we're connected before sending data
+      if (room.state !== "connected") {
+        console.log("Connecting to LiveKit room...");
+        await room.connect(serverUrl, token);
+        console.log("Connected to LiveKit room");
+      }
+
+      setIsConnecting(false);
+
       // Send the text to be converted to speech
       await room.localParticipant.publishData(new TextEncoder().encode(text), {
         reliable: true,
@@ -65,6 +74,7 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
       console.error("Failed to start TTS:", error);
       toast.error("Failed to start text-to-speech");
       setIsPlaying(false);
+      setIsConnecting(false);
     }
   };
 
@@ -77,8 +87,11 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
             size="icon"
             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={handleTTS}
+            disabled={isConnecting}
           >
-            {isPlaying ? (
+            {isConnecting ? (
+              <span className="h-3 w-3 rounded-full bg-primary/50 animate-pulse" />
+            ) : isPlaying ? (
               <VolumeX className="h-3 w-3" />
             ) : (
               <Volume2 className="h-3 w-3" />
@@ -86,7 +99,11 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {isPlaying ? "Stop speaking" : "Speak message"}
+          {isConnecting
+            ? "Connecting..."
+            : isPlaying
+            ? "Stop speaking"
+            : "Speak message"}
         </TooltipContent>
       </Tooltip>
       <RoomAudioRenderer />
@@ -95,11 +112,20 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
 }
 
 export function TTSButton({ text, role, datasetId }: TTSButtonProps) {
+  // React hooks must be called before any conditional returns
+  const [serverUrl] = useState("");
+  const [token] = useState("");
+
   // Only show TTS for assistant messages
   if (role !== "assistant") return null;
 
   return (
-    <LiveKitRoom serverUrl="" token="" connect={false} audio={true}>
+    <LiveKitRoom
+      serverUrl={serverUrl}
+      token={token}
+      connect={false}
+      audio={true}
+    >
       <TTSInner text={text} datasetId={datasetId} />
     </LiveKitRoom>
   );

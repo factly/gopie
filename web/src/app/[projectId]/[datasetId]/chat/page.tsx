@@ -105,28 +105,47 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   // Track latest assistant message for voice mode
   useEffect(() => {
-    // Wait a short delay to ensure message is fully received
-    // This helps with state synchronization and timing
-    const timer = setTimeout(() => {
-      if (allMessages.length > 0) {
-        const assistantMessages = allMessages.filter(
-          (msg) => msg.role === "assistant"
+    if (allMessages.length > 0) {
+      const assistantMessages = allMessages.filter(
+        (msg) => msg.role === "assistant"
+      );
+      if (assistantMessages.length > 0) {
+        const lastAssistantMessage =
+          assistantMessages[assistantMessages.length - 1];
+        console.log(
+          "Updated latest assistant message:",
+          lastAssistantMessage.content.slice(0, 50) + "..."
         );
-        if (assistantMessages.length > 0) {
-          const lastAssistantMessage =
-            assistantMessages[assistantMessages.length - 1];
-          setLatestAssistantMessage(lastAssistantMessage.content);
-        }
+        setLatestAssistantMessage(lastAssistantMessage.content);
       }
-    }, 500);
-
-    return () => clearTimeout(timer);
+    }
   }, [allMessages]);
 
+  // Also check optimistic messages to detect when an assistant response is being received
+  useEffect(() => {
+    const assistantOptimisticMessages = optimisticMessages.filter(
+      (msg) => msg.role === "assistant" && !msg.isLoading
+    );
+
+    if (assistantOptimisticMessages.length > 0) {
+      const lastOptimisticAssistant =
+        assistantOptimisticMessages[assistantOptimisticMessages.length - 1];
+      if (lastOptimisticAssistant.content) {
+        console.log(
+          "Setting latest assistant message from optimistic:",
+          lastOptimisticAssistant.content.slice(0, 50) + "..."
+        );
+        setLatestAssistantMessage(lastOptimisticAssistant.content);
+      }
+    }
+  }, [optimisticMessages]);
+
   // Clear latest assistant message when sending a new message
-  // This ensures we don't process the same message repeatedly
   useEffect(() => {
     if (isSending) {
+      console.log(
+        "Clearing latest assistant message due to new message being sent"
+      );
       setLatestAssistantMessage(null);
     }
   }, [isSending]);

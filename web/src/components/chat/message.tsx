@@ -130,6 +130,9 @@ export function ChatMessage({
           "w-fit max-w-[90%] min-w-0",
           role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/50"
         )}
+        id={`message-${id}`}
+        data-message-role={role}
+        data-message-id={id}
       >
         <div className="flex-1 min-w-0">
           {isLoading ? (
@@ -209,7 +212,16 @@ export function ChatMessage({
                   {new Date(createdAt).toLocaleTimeString()}
                 </span>
                 {!isLoading && (
-                  <TTSButton text={content} role={role} datasetId={datasetId} />
+                  <div
+                    id={`tts-button-container-${id}`}
+                    data-tts-message-id={id}
+                  >
+                    <TTSButton
+                      text={content}
+                      role={role}
+                      datasetId={datasetId}
+                    />
+                  </div>
                 )}
                 {onDelete && chatId && (
                   <DropdownMenu>
