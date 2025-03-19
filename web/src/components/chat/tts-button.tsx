@@ -19,7 +19,7 @@ interface TTSButtonProps {
   datasetId?: string;
 }
 
-async function getLiveKitCredentials(datasetId: string) {
+export async function getLiveKitCredentials(datasetId: string) {
   const response = await fetch(`/api/livekit?datasetId=${datasetId}`);
   if (!response.ok) {
     throw new Error("Failed to get LiveKit credentials");

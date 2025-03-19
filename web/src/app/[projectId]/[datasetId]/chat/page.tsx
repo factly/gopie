@@ -30,6 +30,8 @@ import { useSqlStore } from "@/lib/stores/sql-store";
 import { ChatHistory } from "@/components/chat/chat-history";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { AudioInput } from "@/components/chat/audio-input";
+import { VoiceMode } from "@/components/chat/voice-mode";
+import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 
 interface ChatPageProps {
   params: Promise<{
@@ -57,6 +59,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     OptimisticMessage[]
   >([]);
   const { isOpen, results, setIsOpen } = useSqlStore();
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+  const [latestAssistantMessage, setLatestAssistantMessage] = useState<
+    string | null
+  >(null);
 
   const [inputValue, setInputValue] = useState("");
 
@@ -96,6 +102,34 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
       return timeA - timeB;
     });
   }, [messagesData?.pages]);
+
+  // Track latest assistant message for voice mode
+  useEffect(() => {
+    // Wait a short delay to ensure message is fully received
+    // This helps with state synchronization and timing
+    const timer = setTimeout(() => {
+      if (allMessages.length > 0) {
+        const assistantMessages = allMessages.filter(
+          (msg) => msg.role === "assistant"
+        );
+        if (assistantMessages.length > 0) {
+          const lastAssistantMessage =
+            assistantMessages[assistantMessages.length - 1];
+          setLatestAssistantMessage(lastAssistantMessage.content);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [allMessages]);
+
+  // Clear latest assistant message when sending a new message
+  // This ensures we don't process the same message repeatedly
+  useEffect(() => {
+    if (isSending) {
+      setLatestAssistantMessage(null);
+    }
+  }, [isSending]);
 
   // Mutations
   const createChat = useCreateChat();
@@ -141,9 +175,17 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value || isSending) return;
+    if (!inputRef.current?.value && !inputValue) return;
+    if (isSending) return;
 
-    const message = inputRef.current.value;
+    const message = inputRef.current?.value || inputValue;
+    await sendMessage(message);
+  };
+
+  // Extracted send message logic for reuse in voice mode
+  const sendMessage = async (message: string) => {
+    if (!message || isSending) return;
+
     setIsSending(true);
 
     // Add optimistic user message
@@ -166,7 +208,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
 
     // Clear input immediately
-    inputRef.current.value = "";
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    setInputValue("");
 
     try {
       if (!selectedChatId) {
@@ -219,30 +264,34 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           ref={inputRef}
           placeholder="Type your message..."
           className="flex-1"
-          disabled={isSending}
+          disabled={isSending || isVoiceModeActive}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
         />
-        <AudioInput
-          onTranscriptionReceived={(text) => {
-            setInputValue(text);
-            setTimeout(() => {
-              const sendButton = document.getElementById(
-                "send-message-button"
-              ) as HTMLButtonElement;
-              if (sendButton) {
-                sendButton.click();
-                setInputValue("");
-              }
-            }, 100);
-          }}
-          datasetId={params.datasetId}
-        />
-        <ChatHistory datasetId={params.datasetId} />
+        {!isVoiceModeActive && (
+          <>
+            <AudioInput
+              onTranscriptionReceived={(text) => {
+                setInputValue(text);
+                setTimeout(() => {
+                  const sendButton = document.getElementById(
+                    "send-message-button"
+                  ) as HTMLButtonElement;
+                  if (sendButton) {
+                    sendButton.click();
+                    setInputValue("");
+                  }
+                }, 100);
+              }}
+              datasetId={params.datasetId}
+            />
+            <ChatHistory datasetId={params.datasetId} />
+          </>
+        )}
         <Button
           id="send-message-button"
           type="submit"
-          disabled={isSending}
+          disabled={isSending || isVoiceModeActive}
           size="icon"
         >
           {isSending ? (
@@ -275,6 +324,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                     Show Results
                   </Button>
                 )}
+                <VoiceModeToggle
+                  isActive={isVoiceModeActive}
+                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -403,6 +456,16 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           </>
         )}
       </ResizablePanelGroup>
+
+      {/* Voice Mode Component */}
+      <VoiceMode
+        isActive={isVoiceModeActive}
+        onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+        onSendMessage={sendMessage}
+        latestAssistantMessage={latestAssistantMessage}
+        datasetId={params.datasetId}
+        isWaitingForResponse={isSending}
+      />
     </div>
   );
 }
