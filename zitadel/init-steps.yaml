@@ -1,0 +1,13 @@
+# All possible options and their defaults: https://github.com/zitadel/zitadel/blob/main/cmd/setup/steps.yaml
+
+FirstInstance:
+  InstanceName: Gopie
+  Org:
+    Name: Factly
+    Human:
+      UserName: gopie-admin # ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME
+      DisplayName: gopie-admin # ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME
+      Email:
+        Address: gopie@factly.in
+        Verified: true
+      Password: Password1! # ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD

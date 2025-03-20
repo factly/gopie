@@ -15,6 +15,7 @@ exclude_dir = [
     "volumes",
     "web",
     "livekit-py",
+    "zitadel",
 ]
 exclude_file = []
 exclude_regex = ["_test.go"]
