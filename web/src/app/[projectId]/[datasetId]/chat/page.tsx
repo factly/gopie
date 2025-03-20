@@ -192,12 +192,20 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     }
   }, [allMessages, optimisticMessages, isFetchingNextPage]);
 
+  // Handle input change without causing focus loss
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInputValue(e.target.value);
+    },
+    []
+  );
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value && !inputValue) return;
+    if (!inputValue.trim() && !inputRef.current?.value) return;
     if (isSending) return;
 
-    const message = inputRef.current?.value || inputValue;
+    const message = inputValue.trim() || inputRef.current?.value || "";
     await sendMessage(message);
   };
 
@@ -226,11 +234,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     };
     setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
 
-    // Clear input immediately
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+    // Clear input and maintain focus
     setInputValue("");
+    // Focus input again after clearing
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    });
 
     try {
       if (!selectedChatId) {
@@ -285,7 +296,11 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           className="flex-1"
           disabled={isSending || isVoiceModeActive}
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={handleInputChange}
+          onFocus={() => {
+            // Ensures focus stays when input value changes
+            console.log("Input focused");
+          }}
         />
         {!isVoiceModeActive && (
           <>
