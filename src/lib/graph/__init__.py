@@ -23,7 +23,6 @@ graph_builder.add_node("generate_result", generate_result)
 graph_builder.add_node("max_iterations_reached", max_iterations_reached)
 graph_builder.add_node("analyze_dataset", analyze_dataset)
 graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
-graph_builder.add_node("analytic_tools", ToolNode(tools=list(TOOLS.values())))
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(
@@ -55,6 +54,8 @@ graph_builder.add_conditional_edges(
         "max_iterations_reached": "max_iterations_reached",
     },
 )
+
+# graph_builder.add_node("analytic_tools", ToolNode(tools=list(TOOLS.values())))
 
 # graph_builder.add_conditional_edges(
 #     "analyze_dataset",

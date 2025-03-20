@@ -103,6 +103,8 @@ def identify_datasets(state: State):
         query_result.subqueries[query_index].tables_used = selected_datasets
         column_assumptions = parsed_content.get("column_requirements", [])
 
+        print(json.dumps(datasets_info, indent=2))
+
         dataset_info = {
             "column_assumptions": column_assumptions,
             "schema": datasets_info,

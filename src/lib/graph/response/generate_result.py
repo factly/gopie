@@ -120,45 +120,62 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
                 )
 
     if not results and not tool_used_results:
-        return _handle_empty_results()
+        return _handle_empty_results(user_query, errors)
 
     prompt = f"""
     Context:
-    - Originial User Query: "{user_query}"
+    - Original User Query: "{user_query}"
     - SQL Queries with Explanations:
       {"\n\n".join(sql_with_explanations) if sql_with_explanations else "No SQL queries were executed."}
     - Results: {json.dumps(results, indent=2)}
     - Tool Results: {json.dumps(tool_used_results, indent=2) if tool_used_results else "No additional context available."}
     - Errors encountered: {json.dumps(errors, indent=2) if errors else "No errors encountered."}
 
-    - Analyze the SQL query explanation and it's results to answer the user query effectively.
-
     Instructions:
-        1. Provide direct, concise answers based on the available data, but don't mention like i got from the SQL query result. You should directly answer the original user query.
-        2. Present key insights first
-        3. Format numbers properly (1,000,000, ₹, etc.)
-        4. Include trends and patterns for financial/statistical data
-        5. Use clear comparative language
-        6. Only use facts from query results
-        7. If there were errors in some parts of the query, acknowledge them briefly but focus on the data that was successfully retrieved
-        8. Be transparent about limitations caused by errors without being negative
+        1. You are answering: "{user_query}"
+        2. Provide direct, concise answers based on the available data, but don't mention that you got information from SQL query results. You should directly answer the original user query.
+        3. Present key insights first
+        4. Format numbers properly (1,000,000, ₹, etc.)
+        5. Include trends and patterns for financial/statistical data
+        6. Use clear comparative language
+        7. Only use facts from query results
+        8. If there were errors in some parts of the query, acknowledge them briefly but focus on the data that was successfully retrieved
+        9. Be transparent about limitations caused by errors without being negative
+        10. If the data seems insufficient to fully answer the query, clearly state what aspects you can answer and what remains unclear
     """
 
     return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
 
 
-def _handle_empty_results() -> Dict[str, List[Any]]:
-    """Handle empty query results"""
-    return {
-        "messages": [
-            AIMessage(
-                content=(
-                    "I analyzed your query but couldn't find matching data. This could be because:\n"
-                    "- The data isn't in our current datasets\n"
-                    "- The query needs rephrasing\n"
-                    "- Specific filters might be excluding all results\n\n"
-                    "Could you try rephrasing your question or asking about a different aspect?"
+def _handle_empty_results(
+    user_query: str = "", errors: Any = None
+) -> Dict[str, List[Any]]:
+    """Handle empty query results with a more personalized response"""
+    prompt = f"""
+    The user asked: "{user_query}"
+
+    I need to inform them that I couldn't find any matching data in a helpful way.
+
+    Instructions:
+    1. Be empathetic but professional
+    2. Specifically mention their query topic
+    3. Suggest 2-3 possible alternative approaches or related questions they might try
+    4. If there were errors, briefly acknowledge them without technical details
+    """
+
+    if not user_query:
+        return {
+            "messages": [
+                AIMessage(
+                    content=(
+                        "I analyzed your query but couldn't find matching data. This could be because:\n"
+                        "- The data isn't in our current datasets\n"
+                        "- The query needs rephrasing\n"
+                        "- Specific filters might be excluding all results\n\n"
+                        "Could you try rephrasing your question or asking about a different aspect?"
+                    )
                 )
-            )
-        ]
-    }
+            ]
+        }
+
+    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}

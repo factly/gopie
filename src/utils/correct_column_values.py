@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 import pandas as pd
 
 DATA_DIRECTORY = "./data"
-DEFAULT_MAX_DISTANCE = 2
+DEFAULT_MAX_DISTANCE = 10
 MAX_UNIQUE_VALUES_TO_RETURN = 20
 
 
