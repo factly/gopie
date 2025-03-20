@@ -54,4 +54,6 @@ ENV PORT=3000
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_PUBLIC_COMPANION_URL="http://companion-gopie.gopie.svc.cluster.local:3020"
+ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
 CMD ["bun", "server.js"]
