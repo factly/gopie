@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 
 from src.lib.graph.types import ColumnSchema, DatasetSchema
+from src.utils.col_desc_generator import generate_column_descriptions
 
 DATA_DIR = "./data"
 
@@ -53,6 +54,20 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> DatasetSchem
             "column_count": column_count,
             "columns": columns_info,
         }
+
+        try:
+            column_descriptions = generate_column_descriptions(dataset_schema)
+
+            for column in dataset_schema["columns"]:
+                if column["name"] in column_descriptions:
+                    column["description"] = column_descriptions[column["name"]]
+                else:
+                    column["description"] = (
+                        f"Column representing {column['name'].replace('_', ' ').lower()}"
+                    )
+
+        except Exception as e:
+            print(f"Warning: Could not generate column descriptions: {e}")
 
         return dataset_schema
 
