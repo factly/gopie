@@ -1,5 +1,4 @@
 import { AccessToken, TrackSource } from "livekit-server-sdk";
-import { env } from "@/lib/env";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -16,11 +15,15 @@ export async function GET(request: NextRequest) {
 
   try {
     // Create a new AccessToken
-    const token = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
-      identity: datasetId,
-      name: `dataset-${datasetId}`,
-      ttl: 3600 * 24, // 24 hour token
-    });
+    const token = new AccessToken(
+      process.env.LIVEKIT_API_KEY,
+      process.env.LIVEKIT_API_SECRET,
+      {
+        identity: datasetId,
+        name: `dataset-${datasetId}`,
+        ttl: 3600 * 24, // 24 hour token
+      }
+    );
 
     // Create room name based on datasetId
     const roomName = `dataset-${datasetId}`;
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Return the token as a JSON response
     return NextResponse.json({
       token: await token.toJwt(),
-      serverUrl: env.NEXT_PUBLIC_LIVEKIT_URL,
+      serverUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL,
     });
   } catch (error) {
     console.error("Error generating LiveKit token:", error);
