@@ -78,6 +78,71 @@ services:
       - "3020:3020"
     env_file: ./companion.env
 
+  #########################################################################
+  #####                        LIVEKIT SERVICES                        #####
+  #########################################################################
+  livekit-server:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"      # WebRTC traffic
+      - "7881:7881"      # RTMP traffic
+      - "7882:7882"      # WHIP/WHEP
+    environment:
+      - "LIVEKIT_KEYS=devkey: secret"
+      - LIVEKIT_REDIS_HOST=livekit-redis
+      - LIVEKIT_TURN_HTTPS=false
+    networks:
+      - gopie_network
+    depends_on:
+      - livekit-redis
+
+  livekit-redis:
+    image: redis:alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - livekit_redis_data:/data
+    networks:
+      - gopie_network
+
+  livekit-py:
+    build:
+      context: ./livekit-py
+      dockerfile: Dockerfile
+    volumes:
+      - ./livekit-py:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - LIVEKIT_URL=ws://livekit-server:7880
+    depends_on:
+      - livekit-server
+    networks:
+      - gopie_network
+
+  gopie-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    environment:
+      - NEXT_PUBLIC_COMPANION_URL=http://companion:3020
+      - NEXT_PUBLIC_GOPIE_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: ./web
+        target: /app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    stdin_open: true
+    networks:
+      - gopie_network
+
 networks:
   gopie_network:
     name: gopie_network
@@ -86,3 +151,5 @@ networks:
 volumes:
   postgres_data:
     name: gopie_postgres_data
+  livekit_redis_data:
+    name: gopie_livekit_redis_data
