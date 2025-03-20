@@ -67,8 +67,17 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
       await room.localParticipant.publishData(new TextEncoder().encode(text), {
         reliable: true,
       });
-      await room.localParticipant.sendText(text);
-      await room.localParticipant.sendChatMessage(text);
+      if (text.startsWith("---SQL---")) {
+        await room.localParticipant.sendText(
+          "Here is the response in a table format for your request"
+        );
+        await room.localParticipant.sendChatMessage(
+          "Here is the response in a table format for your request"
+        );
+      } else {
+        await room.localParticipant.sendText(text);
+        await room.localParticipant.sendChatMessage(text);
+      }
       console.log("Text sent to LiveKit");
     } catch (error) {
       console.error("Failed to start TTS:", error);

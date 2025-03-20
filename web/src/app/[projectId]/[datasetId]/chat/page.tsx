@@ -457,6 +457,16 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Voice Mode Component - Moved inside the chat panel */}
+              <VoiceMode
+                isActive={isVoiceModeActive}
+                onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                onSendMessage={sendMessage}
+                latestAssistantMessage={latestAssistantMessage}
+                datasetId={params.datasetId}
+                isWaitingForResponse={isSending}
+              />
             </div>
           </div>
         </ResizablePanel>
@@ -469,16 +479,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           </>
         )}
       </ResizablePanelGroup>
-
-      {/* Voice Mode Component */}
-      <VoiceMode
-        isActive={isVoiceModeActive}
-        onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-        onSendMessage={sendMessage}
-        latestAssistantMessage={latestAssistantMessage}
-        datasetId={params.datasetId}
-        isWaitingForResponse={isSending}
-      />
     </div>
   );
 }

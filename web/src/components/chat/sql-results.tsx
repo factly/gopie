@@ -14,7 +14,7 @@ export function SqlResults() {
     if (!results?.data?.length) return;
     downloadCsv(
       results.data,
-      `sql_results_${new Date().toISOString().split("T")[0]}.csv`,
+      `sql_results_${new Date().toISOString().split("T")[0]}.csv`
     );
   };
 
@@ -123,7 +123,7 @@ export function SqlResults() {
                         key={i}
                         className={cn(
                           "border-b last:border-b-0",
-                          i % 2 === 0 ? "bg-background" : "bg-muted/30",
+                          i % 2 === 0 ? "bg-background" : "bg-muted/30"
                         )}
                       >
                         {Object.values(row).map((value, j) => (
