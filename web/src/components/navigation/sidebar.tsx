@@ -142,7 +142,7 @@ export function AppSidebar() {
                 >
                   <HomeIcon className="h-4 w-4" />
                 </Button>
-                <span className="font-semibold">Gopie</span>
+                <span className="font-semibold">GoPie</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />

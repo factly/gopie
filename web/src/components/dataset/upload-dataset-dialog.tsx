@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import "@uppy/core/dist/style.css";
 import "@uppy/dashboard/dist/style.css";
 import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
-import { useAddDatasetToProject } from "@/lib/mutations/project/add-dataset";
 import { useQueryClient } from "@tanstack/react-query";
 
 function sanitizeFileName(name: string): string {
@@ -28,7 +27,6 @@ function sanitizeFileName(name: string): string {
 export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const sourceDataset = useSourceDataset();
-  const addDatasetToProject = useAddDatasetToProject();
   const queryClient = useQueryClient();
 
   const uppy = new Uppy({
@@ -86,14 +84,9 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
         createdBy: "system",
       });
 
-      if (!res?.tableName) {
+      if (!res?.data.name) {
         throw new Error("Invalid response from server");
       }
-
-      await addDatasetToProject.mutateAsync({
-        projectId,
-        datasetId: res.tableName,
-      });
 
       toast.success(`Dataset ${file.name} uploaded successfully`);
       queryClient.invalidateQueries({

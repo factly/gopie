@@ -365,7 +365,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   >
                     <div className="text-center space-y-2 mb-4">
                       <h1 className="text-2xl font-semibold">
-                        Welcome to Gopie Chat
+                        Welcome to GoPie Chat
                       </h1>
                       <p className="text-muted-foreground">
                         Start a conversation by typing a message below

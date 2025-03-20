@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gopie",
-  description: "Gopie",
+  title: "GoPie",
+  description: "GoPie",
 };
 
 export default function RootLayout({
