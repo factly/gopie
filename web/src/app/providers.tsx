@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { ThemeProvider } from "@/components/theme/provider";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { SessionProvider } from "next-auth/react";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -14,7 +15,7 @@ export function Providers({ children }: { children: ReactNode }) {
             staleTime: 60 * 1000,
           },
         },
-      }),
+      })
   );
 
   return (
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <SidebarProvider>{children}</SidebarProvider>
+        <SidebarProvider>
+          <SessionProvider>{children}</SessionProvider>
+        </SidebarProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
