@@ -29,7 +29,6 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { ChatHistory } from "@/components/chat/chat-history";
 import { useChatStore } from "@/lib/stores/chat-store";
-import { AudioInput } from "@/components/chat/audio-input";
 import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 
@@ -65,12 +64,20 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   >(null);
 
   const [inputValue, setInputValue] = useState("");
+  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
 
   // Close sidebar only on initial mount
   useEffect(() => {
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array means it only runs once on mount
+
+  // Maintain focus when inputValue changes
+  useEffect(() => {
+    if (shouldMaintainFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [inputValue, shouldMaintainFocus]);
 
   // Queries
   const {
@@ -192,20 +199,12 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     }
   }, [allMessages, optimisticMessages, isFetchingNextPage]);
 
-  // Handle input change without causing focus loss
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInputValue(e.target.value);
-    },
-    []
-  );
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() && !inputRef.current?.value) return;
+    if (!inputRef.current?.value && !inputValue) return;
     if (isSending) return;
 
-    const message = inputValue.trim() || inputRef.current?.value || "";
+    const message = inputRef.current?.value || inputValue;
     await sendMessage(message);
   };
 
@@ -234,14 +233,11 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     };
     setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
 
-    // Clear input and maintain focus
+    // Clear input immediately
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
     setInputValue("");
-    // Focus input again after clearing
-    requestAnimationFrame(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    });
 
     try {
       if (!selectedChatId) {
@@ -296,29 +292,12 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           className="flex-1"
           disabled={isSending || isVoiceModeActive}
           value={inputValue}
-          onChange={handleInputChange}
-          onFocus={() => {
-            // Ensures focus stays when input value changes
-            console.log("Input focused");
-          }}
+          onChange={(e) => setInputValue(e.target.value)}
+          onFocus={() => setShouldMaintainFocus(true)}
+          onBlur={() => setShouldMaintainFocus(false)}
         />
         {!isVoiceModeActive && (
           <>
-            <AudioInput
-              onTranscriptionReceived={(text) => {
-                setInputValue(text);
-                setTimeout(() => {
-                  const sendButton = document.getElementById(
-                    "send-message-button"
-                  ) as HTMLButtonElement;
-                  if (sendButton) {
-                    sendButton.click();
-                    setInputValue("");
-                  }
-                }, 100);
-              }}
-              datasetId={params.datasetId}
-            />
             <ChatHistory datasetId={params.datasetId} />
           </>
         )}
