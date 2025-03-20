@@ -132,14 +132,7 @@ services:
       - LIVEKIT_API_SECRET=secret
     ports:
       - "3000:3000"
-    volumes:
-      - type: bind
-        source: ./web
-        target: /app
-      - /app/node_modules
-      - /app/.next
     restart: unless-stopped
-    stdin_open: true
     networks:
       - gopie_network
 
