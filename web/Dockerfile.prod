@@ -21,6 +21,10 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Set env variables.
+ENV NEXT_PUBLIC_COMPANION_URL="http://companion-gopie.gopie.svc.cluster.local:3020"
+ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
+
 RUN bun run build
 
 # Production image, copy all the files and run next
@@ -54,6 +58,4 @@ ENV PORT=3000
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_PUBLIC_COMPANION_URL="http://companion-gopie.gopie.svc.cluster.local:3020"
-ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
 CMD ["bun", "server.js"]
