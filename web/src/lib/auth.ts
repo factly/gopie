@@ -1,25 +1,27 @@
 import NextAuth from "next-auth";
 import { JWT } from "next-auth/jwt";
 import ZitadelProvider from "next-auth/providers/zitadel";
-import { Issuer } from "openid-client";
+import * as openidClient from "openid-client";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const issuer = await Issuer.discover(process.env.ZITADEL_ISSUER ?? "");
-    const client = new issuer.Client({
-      client_id: process.env.ZITADEL_CLIENT_ID || "",
-      token_endpoint_auth_method: "none",
-    });
-
-    const { refresh_token, access_token, expires_at } = await client.refresh(
-      token.refreshToken as string
+    const config = await openidClient.discovery(
+      new URL(process.env.ZITADEL_ISSUER ?? ""),
+      process.env.ZITADEL_CLIENT_ID || "",
+      process.env.ZITADEL_CLIENT_SECRET
     );
+
+    const { refresh_token, access_token, expires_at } =
+      await openidClient.refreshTokenGrant(
+        config,
+        token.refreshToken as string
+      );
 
     return {
       ...token,
       accessToken: access_token,
-      expiresAt: (expires_at ?? 0) * 1000,
-      refreshToken: refresh_token, // Fall back to old refresh token
+      expiresAt: typeof expires_at === "number" ? expires_at * 1000 : 0,
+      refreshToken: refresh_token ?? token.refreshToken, // Fall back to old refresh token
     };
   } catch (error) {
     console.error("Error during refreshAccessToken", error);
@@ -74,7 +76,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Access token has expired, try to update it
       return refreshAccessToken(token);
     },
-    async session({ session, token: { user, error: tokenError } }) {
+    async session({
+      session,
+      token: { user, error: tokenError, accessToken },
+    }) {
       session.user = {
         // @ts-expect-error type issue
         id: user?.id,
@@ -91,6 +96,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.clientId = process.env.ZITADEL_CLIENT_ID;
       // @ts-expect-error type issue
       session.error = tokenError;
+      if (accessToken) {
+        // @ts-expect-error type issue
+        session.accessToken = accessToken;
+      }
       return session;
     },
   },
