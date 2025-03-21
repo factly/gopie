@@ -153,15 +153,15 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 	queryResult, err := d.getResultsWithCount(countSql, sql)
 
 	return map[string]any{
-		"total": queryResult.Count,
-		"data":  queryResult.Rows,
+		// "total": queryResult.Count,
+		"data": queryResult.Rows,
 	}, nil
 }
 
 type queryResult struct {
-	Rows  *[]map[string]any
-	Count int64
-	Err   error
+	Rows *[]map[string]any
+	// Count int64
+	Err error
 }
 
 type asyncResult[T any] struct {
@@ -170,10 +170,10 @@ type asyncResult[T any] struct {
 }
 
 func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, error) {
-	countChan := make(chan asyncResult[int64], 1)
+	// countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
-	go d.executeCountQuery(countSql, countChan)
+	// go d.executeCountQuery(countSql, countChan)
 
 	limitedSql, err := pkg.ImposeLimits(sql, 1000)
 	if err != nil {
@@ -181,10 +181,10 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 	}
 	go d.executeDataQuery(limitedSql, rowsChan)
 
-	countResult := <-countChan
-	if countResult.err != nil {
-		return nil, fmt.Errorf("count query failed: %w", countResult.err)
-	}
+	// countResult := <-countChan
+	// if countResult.err != nil {
+	// 	return nil, fmt.Errorf("count query failed: %w", countResult.err)
+	// }
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
@@ -192,8 +192,8 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 	}
 
 	return &queryResult{
-		Count: countResult.data,
-		Rows:  rowsResult.data,
+		// Count: countResult.data,
+		Rows: rowsResult.data,
 	}, nil
 }
 
@@ -259,7 +259,10 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	result, err := d.getResultsWithCount(countSql, sql)
-	return map[string]any{"total": result.Count, "data": result.Rows}, nil
+	return map[string]any{
+		// "total": result.Count,
+		"data": result.Rows,
+	}, nil
 }
 
 func (d *OlapService) GetTableSchema(tableName string) ([]map[string]any, error) {
