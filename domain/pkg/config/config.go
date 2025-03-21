@@ -80,9 +80,6 @@ func validateConfig(config *GopieConfig) error {
 		value string
 		name  string
 	}{
-		{config.S3.AccessKey, "S3 access key"},
-		{config.S3.SecretKey, "S3 secret key"},
-		{config.S3.Region, "S3 region"},
 		{config.MotherDuck.DBName, "MotherDuck DB name"},
 		{config.MotherDuck.Token, "MotherDuck token"},
 		{config.PortKey.VirtualKey, "portkey virtual key"},
