@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type ServeConfig struct {
+type ServerConfig struct {
 	Host string
 	Port string
 }
@@ -31,7 +31,7 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Serve      ServeConfig
+	Server     ServerConfig
 	S3         S3Config
 	Logger     LoggerConfig
 	MotherDuck MotherDuckConfig
@@ -102,8 +102,8 @@ func validateConfig(config *GopieConfig) error {
 }
 
 func setDefaults() {
-	viper.SetDefault("GOPIE_SERVE_HOST", "localhost")
-	viper.SetDefault("GOPIE_SERVE_PORT", "8080")
+	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
+	viper.SetDefault("GOPIE_SERVER_PORT", "8080")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
@@ -119,7 +119,7 @@ func LoadConfig() (*GopieConfig, error) {
 	setDefaults()
 
 	config := &GopieConfig{
-		Serve: ServeConfig{
+		Server: ServerConfig{
 			Host: viper.GetString("GOPIE_SERVE_HOST"),
 			Port: viper.GetString("GOPIE_SERVE_PORT"),
 		},
