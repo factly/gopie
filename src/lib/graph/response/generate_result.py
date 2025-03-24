@@ -6,7 +6,7 @@ from src.lib.graph.query_result.query_type import QueryResult
 from src.lib.graph.types import AIMessage, ErrorMessage, State
 
 
-def generate_result(state: State) -> Dict[str, List[Any]]:
+async def generate_result(state: State) -> Dict[str, List[Any]]:
     """Generate results of the executed query."""
     query_result = state.get("query_result")
     if query_result:
@@ -46,9 +46,9 @@ def generate_result(state: State) -> Dict[str, List[Any]]:
             }
 
         return (
-            _handle_data_query(state, query_result)
+            await _handle_data_query(state, query_result)
             if any_data_query
-            else _handle_conversational_query(state, query_result)
+            else await _handle_conversational_query(state, query_result)
         )
     except Exception as e:
         return {
@@ -65,7 +65,7 @@ def generate_result(state: State) -> Dict[str, List[Any]]:
         }
 
 
-def _handle_conversational_query(
+async def _handle_conversational_query(
     state: State, query_result: QueryResult
 ) -> Dict[str, List[Any]]:
     """Handle conversational or tool-only queries"""
@@ -89,10 +89,12 @@ def _handle_conversational_query(
     - Focus on direct, helpful answers
     """
 
-    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
+    response = await lc.llm.ainvoke(prompt)
+
+    return {"messages": [AIMessage(content=str(response.content))]}
 
 
-def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
+async def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
     user_query = query_result.original_user_query
     results = []
@@ -120,7 +122,7 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
                 )
 
     if not results and not tool_used_results:
-        return _handle_empty_results(user_query, errors)
+        return await _handle_empty_results(user_query, errors)
 
     prompt = f"""
     Context:
@@ -144,10 +146,12 @@ def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, Lis
         10. If the data seems insufficient to fully answer the query, clearly state what aspects you can answer and what remains unclear
     """
 
-    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
+    response = await lc.llm.ainvoke(prompt)
+
+    return {"messages": [AIMessage(content=str(response.content))]}
 
 
-def _handle_empty_results(
+async def _handle_empty_results(
     user_query: str = "", errors: Any = None
 ) -> Dict[str, List[Any]]:
     """Handle empty query results with a more personalized response"""
@@ -178,4 +182,6 @@ def _handle_empty_results(
             ]
         }
 
-    return {"messages": [AIMessage(content=str(lc.llm.invoke(prompt).content))]}
+    response = await lc.llm.ainvoke(prompt)
+
+    return {"messages": [AIMessage(content=str(response.content))]}

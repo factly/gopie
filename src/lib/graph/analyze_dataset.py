@@ -43,7 +43,7 @@ from src.utils.correct_column_values import correct_column_values
 #     """
 
 
-def analyze_dataset(state: State) -> dict:
+async def analyze_dataset(state: State) -> dict:
     """
     Analyze the dataset structure and prepare for query planning.
     This function mimics how a human analyst would approach the problem:

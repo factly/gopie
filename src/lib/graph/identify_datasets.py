@@ -56,7 +56,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
     """
 
 
-def identify_datasets(state: State):
+async def identify_datasets(state: State):
     """
     Identify relevant dataset based on natural language query.
     Uses Qdrant vector search to find the most relevant datasets first.
@@ -94,7 +94,7 @@ def identify_datasets(state: State):
                     datasets_info.append(info)
 
         prompt = create_llm_prompt(user_query, datasets_info)
-        response: Any = lc.llm.invoke(prompt)
+        response: Any = await lc.llm.ainvoke(prompt)
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

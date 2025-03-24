@@ -4,7 +4,7 @@ from src.lib.config.langchain_config import lc
 from src.lib.graph.types import AIMessage, ErrorMessage, State
 
 
-def max_iterations_reached(state: State) -> dict:
+async def max_iterations_reached(state: State) -> dict:
     """
     Handle cases where query planning/execution failed after maximum retry attempts
     """
@@ -38,7 +38,7 @@ def max_iterations_reached(state: State) -> dict:
         Be concise, empathetic and constructive in your response.
         """
 
-        response = lc.llm.invoke(explanation_prompt)
+        response = await lc.llm.ainvoke(explanation_prompt)
         return {"messages": [AIMessage(content=str(response.content))]}
     except Exception as e:
         return {

@@ -18,7 +18,7 @@ def normalize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_]", "_", os.path.splitext(name)[0]).lower()
 
 
-def execute_query(state: State) -> dict:
+async def execute_query(state: State) -> dict:
     """
     Execute the planned query
 
@@ -180,7 +180,7 @@ def execute_query(state: State) -> dict:
             con.close()
 
 
-def route_query_replan(state: State) -> str:
+async def route_query_replan(state: State) -> str:
     """
     Determine whether to replan the query or generate results based on execution status
 
@@ -194,7 +194,7 @@ def route_query_replan(state: State) -> str:
     retry_count = state.get("retry_count", 0)
 
     if isinstance(last_message, ErrorMessage) and retry_count < MAX_RETRY_COUNT:
-        response = lc.llm.invoke(
+        response = await lc.llm.ainvoke(
             f"""
                 I got an error when executing the query: "{last_message.content}"
 

@@ -9,7 +9,7 @@ class ToolNode:
     def __init__(self, tools: list) -> None:
         self.tools = {tool.name: tool for tool in tools}
 
-    def __call__(self, state: dict):
+    async def __call__(self, state: dict):
         if messages := state.get("messages", []):
             message = messages[-1]
         else:
@@ -19,7 +19,7 @@ class ToolNode:
         all_tool_results = []
 
         for tool_call in message.tool_calls:
-            tool_result = self.tools[tool_call["name"]].invoke(tool_call["args"])
+            tool_result = await self.tools[tool_call["name"]].ainvoke(tool_call["args"])
 
             all_tool_results.append({"tool": tool_call["name"], "result": tool_result})
 

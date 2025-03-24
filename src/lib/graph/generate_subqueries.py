@@ -8,9 +8,10 @@ from src.lib.graph.query_result.query_type import QueryResult
 from src.lib.graph.types import ErrorMessage, IntermediateStep, State
 
 
-def generate_subqueries(state: State):
+async def generate_subqueries(state: State):
     """Generate subqueries that would require separate SQL queries"""
-    user_input = state["messages"][0].content if state["messages"] else ""
+    messages = state.get("messages", [])
+    user_input = messages[0].content if messages else ""
 
     prompt = f"""
       User Query: {user_input}
@@ -39,7 +40,7 @@ def generate_subqueries(state: State):
       (Return an empty list if the query doesn't need to be divided)
     """
 
-    response = lc.llm.invoke(prompt)
+    response = await lc.llm.ainvoke(prompt)
 
     query_result_object = QueryResult(
         original_user_query=user_input,

@@ -1,4 +1,5 @@
 ﻿from langgraph.graph import END, START, StateGraph
+from typing import AsyncGenerator
 
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
@@ -15,46 +16,79 @@ from src.lib.graph.types import State
 from src.tools import TOOLS
 from src.tools.tool_node import ToolNode
 import json
-from typing import AsyncGenerator, Dict, Any
 
-# Initialize event dispatcher
 event_dispatcher = AgentEventDispatcher()
-
 graph_builder = StateGraph(State)
 
-# Add nodes with event dispatching
-def add_node_with_events(name, func):
+def create_event_wrapper(name: str, func):
+    """Create an event-wrapped async function for graph nodes."""
     async def wrapped_func(state: State):
-        event_dispatcher.dispatch_event(
-            AgentEventType[name.upper()],
-            {"status": "started", "state": state}
-        )
         try:
+            if name == "tools":
+                event_dispatcher.dispatch_event(
+                    AgentEventType.TOOL_START,
+                    {
+                        "tool": "tools",
+                        "input": str(state.get('messages', [])[-1].content),
+                        "status": "started"
+                    }
+                )
+            else:
+                event_dispatcher.dispatch_event(
+                    AgentEventType[name.upper()],
+                    {"status": "started", "node": name}
+                )
+
             result = await func(state)
-            event_dispatcher.dispatch_event(
-                AgentEventType[name.upper()],
-                {"status": "completed", "result": result}
-            )
+
+            if name == "tools":
+                index = state.get('subquery_index')
+                result_content = state.get('query_result').subqueries[index].tool_used_result
+                event_type = AgentEventType.TOOL_END
+                event_data = {
+                    "tool": "tools",
+                    "output": str(result_content),
+                    "status": "completed"
+                }
+            else:
+                result_content = (
+                    result.get('messages', [])[-1].content
+                    if isinstance(result, dict) and result.get('messages')
+                    else str(result)
+                )
+                event_type = AgentEventType[name.upper()]
+                event_data = {"status": "completed", "result": result_content}
+
+            event_dispatcher.dispatch_event(event_type, event_data)
             return result
+
         except Exception as e:
-            event_dispatcher.dispatch_event(
-                AgentEventType.ERROR,
-                {"error": str(e), "node": name}
+            error_type = AgentEventType.TOOL_ERROR if name == "tools" else AgentEventType.ERROR
+            error_data = (
+                {"tool": "tools", "error": str(e)}
+                if name == "tools"
+                else {"error": str(e), "node": name}
             )
+            event_dispatcher.dispatch_event(error_type, error_data)
             raise
 
-    graph_builder.add_node(name, wrapped_func)
+    return wrapped_func
 
-add_node_with_events("generate_subqueries", generate_subqueries)
-add_node_with_events("identify_datasets", identify_datasets)
-add_node_with_events("analyze_query", analyze_query)
-add_node_with_events("plan_query", plan_query)
-add_node_with_events("execute_query", execute_query)
-add_node_with_events("generate_result", generate_result)
-add_node_with_events("max_iterations_reached", max_iterations_reached)
-add_node_with_events("analyze_dataset", analyze_dataset)
+GRAPH_NODES = {
+    "generate_subqueries": generate_subqueries,
+    "identify_datasets": identify_datasets,
+    "analyze_query": analyze_query,
+    "plan_query": plan_query,
+    "execute_query": execute_query,
+    "generate_result": generate_result,
+    "max_iterations_reached": max_iterations_reached,
+    "analyze_dataset": analyze_dataset,
+    "tools": ToolNode(tools=list(TOOLS.values()))
+}
 
-graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
+for name, func in GRAPH_NODES.items():
+    graph_builder.add_node(name, create_event_wrapper(name, func))
+
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(
@@ -64,7 +98,7 @@ graph_builder.add_conditional_edges(
         "identify_datasets": "identify_datasets",
         "basic_conversation": "response_router",
         "tools": "tools",
-    },
+    }
 )
 
 graph_builder.add_conditional_edges(
@@ -74,7 +108,7 @@ graph_builder.add_conditional_edges(
         "response_router": "response_router",
         "replan": "plan_query",
         "reidentify_datasets": "identify_datasets",
-    },
+    }
 )
 
 graph_builder.add_conditional_edges(
@@ -84,7 +118,7 @@ graph_builder.add_conditional_edges(
         "next_sub_query": "analyze_query",
         "generate_result": "generate_result",
         "max_iterations_reached": "max_iterations_reached",
-    },
+    }
 )
 
 graph_builder.add_edge(START, "generate_subqueries")
@@ -98,44 +132,44 @@ graph_builder.add_edge("max_iterations_reached", END)
 
 graph = graph_builder.compile()
 
-
 async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
-    """Stream graph updates for user input with event tracking."""
-    event_dispatcher.clear_events()
+    """Stream graph updates for user input with event tracking.
 
+    Args:
+        user_input (str): The user's input query
+
+    Yields:
+        str: JSON-formatted event data for streaming
+    """
+    event_dispatcher.clear_events()
     input_state = {"messages": [{"role": "user", "content": user_input}]}
 
     try:
-        for event in graph.stream(input_state):
-            current_events = event_dispatcher.get_events()
-
-            for agent_event in current_events:
-                formatted_event = {
+        async for event in graph.astream(input_state):
+            for agent_event in event_dispatcher.get_events():
+                yield json.dumps({
                     "type": agent_event.event_type.value,
                     "message": create_progress_message(agent_event),
                     "data": agent_event.data
-                }
-                yield json.dumps(formatted_event) + "\n"
+                }) + "\n"
 
             event_dispatcher.clear_events()
 
             if isinstance(event, dict):
-                for key in event:
-                    if isinstance(event[key], dict) and "messages" in event[key]:
-                        message_event = {
+                for key, value in event.items():
+                    if isinstance(value, dict) and "messages" in value:
+                        yield json.dumps({
                             "type": "message",
-                            "message": str(event[key]["messages"][-1].content),
+                            "message": str(value["messages"][-1].content),
                             "data": {"node": key}
-                        }
-                        yield json.dumps(message_event) + "\n"
+                        }) + "\n"
 
     except Exception as e:
-        error_event = {
+        yield json.dumps({
             "type": "error",
             "message": f"Error during streaming: {str(e)}",
             "data": {"error": str(e)}
-        }
-        yield json.dumps(error_event) + "\n"
+        }) + "\n"
 
 def visualize_graph():
     try:

@@ -27,13 +27,14 @@ async def stream_events(events: AsyncGenerator[AgentEvent, None]) -> AsyncGenera
 def create_progress_message(event: AgentEvent) -> str:
     """Create a user-friendly progress message based on the event type."""
     event_messages = {
-        AgentEventType.SUBQUERY_GENERATION: "Breaking down your query into manageable parts...",
-        AgentEventType.DATASET_IDENTIFICATION: "Identifying relevant datasets...",
-        AgentEventType.QUERY_ANALYSIS: "Analyzing your query...",
-        AgentEventType.DATASET_ANALYSIS: "Analyzing dataset structure...",
-        AgentEventType.QUERY_PLANNING: "Planning the database query...",
-        AgentEventType.QUERY_EXECUTION: "Executing the query...",
-        AgentEventType.RESULT_GENERATION: "Generating results...",
+        AgentEventType.GENERATE_SUBQUERIES: "Breaking down your query into manageable parts...",
+        AgentEventType.IDENTIFY_DATASETS: "Identifying relevant datasets...",
+        AgentEventType.ANALYZE_QUERY: "Analyzing your query...",
+        AgentEventType.ANALYZE_DATASET: "Analyzing dataset structure...",
+        AgentEventType.PLAN_QUERY: "Planning the database query...",
+        AgentEventType.EXECUTE_QUERY: "Executing the query...",
+        AgentEventType.GENERATE_RESULT: "Generating results...",
+        AgentEventType.MAX_ITERATIONS_REACHED: "Max iterations reached. Stopping...",
         AgentEventType.ERROR: f"Error: {event.data.get('error', 'An unknown error occurred')}",
         AgentEventType.TOOL_START: f"Starting {event.data.get('tool', 'operation')}...",
         AgentEventType.TOOL_END: f"Completed {event.data.get('tool', 'operation')}",

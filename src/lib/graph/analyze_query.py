@@ -52,7 +52,7 @@ def create_llm_prompt(user_query: str, tool_results: list):
         """
 
 
-def analyze_query(state: State) -> dict:
+async def analyze_query(state: State) -> dict:
     """
     Analyze the user query and the identified datasets to determine:
     1. If this is a data query requiring dataset processing
@@ -98,7 +98,7 @@ def analyze_query(state: State) -> dict:
             }
 
         prompt = create_llm_prompt(user_input, tools_results)
-        response: Any = lc.llm.invoke(prompt)
+        response: Any = await lc.llm.ainvoke(prompt)
         parser = JsonOutputParser()
 
         if has_tool_calls(response):
