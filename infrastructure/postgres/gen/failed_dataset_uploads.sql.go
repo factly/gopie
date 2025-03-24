@@ -19,8 +19,8 @@ insert into failed_dataset_uploads (
 `
 
 type CreateFailedDatasetUploadParams struct {
-	DatasetID string `json:"datasetId"`
-	Error     string `json:"error"`
+	DatasetID string
+	Error     string
 }
 
 func (q *Queries) CreateFailedDatasetUpload(ctx context.Context, arg CreateFailedDatasetUploadParams) (FailedDatasetUpload, error) {

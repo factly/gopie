@@ -122,11 +122,20 @@ func parseFilepath(filepath string) (string, string, error) {
 }
 
 func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
+	// Check for truly empty identifiers (not just quoted ones)
+	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
+		parts := strings.Split(sql, `"`)
+		for i := 0; i < len(parts)-1; i++ {
+			if parts[i] == "" && i+1 < len(parts) && parts[i+1] == "" {
+				return nil, fmt.Errorf("invalid SQL: query contains empty identifiers")
+			}
+		}
+	}
 
 	hasMultiple, err := pkg.HasMultipleStatements(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
 
 	if hasMultiple {
@@ -136,8 +145,8 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 
 	isSelect, err := pkg.IsSelectStatement(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to validate query type: %w", err)
 	}
 	if !isSelect {
 		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
@@ -146,22 +155,30 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 
 	countSql, err := pkg.BuildCountQuery(sql)
 	if err != nil {
-		d.logger.Error("Invalid query: %v", zap.Error(err))
-		return nil, err
+		d.logger.Error("Invalid query", zap.Error(err))
+		return nil, fmt.Errorf("failed to build count query: %w", err)
 	}
 
 	queryResult, err := d.getResultsWithCount(countSql, sql)
+	if err != nil {
+		d.logger.Error("Query execution failed", zap.Error(err))
+		return nil, err
+	}
+
+	if queryResult == nil {
+		return nil, fmt.Errorf("query execution returned no results")
+	}
 
 	return map[string]any{
-		"total": queryResult.Count,
-		"data":  queryResult.Rows,
+		// "total": queryResult.Count,
+		"data": queryResult.Rows,
 	}, nil
 }
 
 type queryResult struct {
-	Rows  *[]map[string]any
-	Count int64
-	Err   error
+	Rows *[]map[string]any
+	// Count int64
+	Err error
 }
 
 type asyncResult[T any] struct {
@@ -170,10 +187,10 @@ type asyncResult[T any] struct {
 }
 
 func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, error) {
-	countChan := make(chan asyncResult[int64], 1)
+	// countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
-	go d.executeCountQuery(countSql, countChan)
+	// go d.executeCountQuery(countSql, countChan)
 
 	limitedSql, err := pkg.ImposeLimits(sql, 1000)
 	if err != nil {
@@ -181,10 +198,10 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 	}
 	go d.executeDataQuery(limitedSql, rowsChan)
 
-	countResult := <-countChan
-	if countResult.err != nil {
-		return nil, fmt.Errorf("count query failed: %w", countResult.err)
-	}
+	// countResult := <-countChan
+	// if countResult.err != nil {
+	// 	return nil, fmt.Errorf("count query failed: %w", countResult.err)
+	// }
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
@@ -192,8 +209,8 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 	}
 
 	return &queryResult{
-		Count: countResult.data,
-		Rows:  rowsResult.data,
+		// Count: countResult.data,
+		Rows: rowsResult.data,
 	}, nil
 }
 
@@ -259,7 +276,10 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	result, err := d.getResultsWithCount(countSql, sql)
-	return map[string]any{"total": result.Count, "data": result.Rows}, nil
+	return map[string]any{
+		// "total": result.Count,
+		"data": result.Rows,
+	}, nil
 }
 
 func (d *OlapService) GetTableSchema(tableName string) ([]map[string]any, error) {

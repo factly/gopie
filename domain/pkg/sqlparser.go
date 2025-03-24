@@ -287,7 +287,13 @@ func BuildCountQuery(query string) (string, error) {
 
 	// Build count query
 	var queryParts []string
-	queryParts = append(queryParts, fmt.Sprintf(`SELECT COUNT(*) FROM "%s"`, stmt.Table))
+	// Preserve quotes if they exist in the original table name
+	tableName := stmt.Table
+	if strings.HasPrefix(tableName, `"`) && strings.HasSuffix(tableName, `"`) {
+		queryParts = append(queryParts, fmt.Sprintf(`SELECT COUNT(*) FROM %s`, tableName))
+	} else {
+		queryParts = append(queryParts, fmt.Sprintf(`SELECT COUNT(*) FROM "%s"`, tableName))
+	}
 
 	if stmt.Where != "" {
 		queryParts = append(queryParts, "WHERE "+stmt.Where)

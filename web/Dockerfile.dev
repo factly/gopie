@@ -1,0 +1,14 @@
+FROM oven/bun:1 AS base
+
+# Create app directory
+RUN mkdir -p /app
+WORKDIR /app
+
+# Copying source files
+COPY . /app
+
+# Installing dependencies
+RUN bun install --frozen-lockfile
+
+# Running the app
+CMD ["bun", "dev"]

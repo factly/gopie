@@ -27,9 +27,100 @@ definitions:
     required:
     - query
     type: object
+  chats.chatRequeryBody:
+    description: Request body for creating or continuing a chat conversation
+    properties:
+      chat_id:
+        description: Unique identifier of an existing chat (optional for new chats)
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      created_by:
+        description: User ID of the creator
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      dataset_id:
+        description: ID of the dataset to analyze
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      messages:
+        description: Array of chat messages
+        items:
+          properties:
+            content:
+              description: Message content
+              example: Show me the total sales by region
+              type: string
+            role:
+              description: Message role (user/assistant)
+              example: user
+              type: string
+          required:
+          - content
+          - role
+          type: object
+        type: array
+    required:
+    - messages
+    type: object
+  datasets.updateDatasetParams:
+    properties:
+      alias:
+        type: string
+      description:
+        type: string
+      updated_by:
+        type: string
+    required:
+    - updated_by
+    type: object
+  models.Chat:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ChatMessage:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  models.ChatWithMessages:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/models.ChatMessage'
+        type: array
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.Dataset:
     description: Dataset model
     properties:
+      alias:
+        description: Alias of the dataset
+        example: sales_data_alias
+        type: string
       columns:
         description: Column definitions of the dataset
         items:
@@ -39,6 +130,10 @@ definitions:
       created_at:
         description: Creation timestamp
         example: "2024-02-05T12:00:00Z"
+        type: string
+      created_by:
+        description: CreatedBy represents the user who created the dataset
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       description:
         description: Description of the dataset
@@ -58,7 +153,7 @@ definitions:
         type: string
       name:
         description: Name of the dataset
-        example: sales_data
+        example: gp_Dh790Asdf17kd
         type: string
       row_count:
         description: Number of rows in the dataset
@@ -72,10 +167,17 @@ definitions:
         description: Last update timestamp
         example: "2024-02-05T12:00:00Z"
         type: string
+      updated_by:
+        description: UpdatedBy represents the user who last updated the dataset
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
     type: object
   models.Project:
     description: Project model
     properties:
+      created_by:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       createdAt:
         description: Creation timestamp
         example: "2024-02-05T12:00:00Z"
@@ -92,6 +194,9 @@ definitions:
         description: Name of the project
         example: My Project
         type: string
+      updated_by:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       updatedAt:
         description: Last update timestamp
         example: "2024-02-05T12:00:00Z"
@@ -100,6 +205,9 @@ definitions:
   projects.createRequestBody:
     description: Request body for creating a new project
     properties:
+      created_by:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       description:
         description: Description of the project
         example: This is a detailed description of my new project
@@ -113,6 +221,7 @@ definitions:
         minLength: 3
         type: string
     required:
+    - created_by
     - description
     - name
     type: object
@@ -130,8 +239,12 @@ definitions:
         maxLength: 50
         minLength: 3
         type: string
+      updated_by:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
     required:
     - name
+    - updated_by
     type: object
   responses.ErrorResponse:
     description: Error response structure
@@ -173,12 +286,26 @@ definitions:
         example: my-bucket/data/updated_sales.csv
         minLength: 1
         type: string
+      updated_by:
+        description: User ID of the updater
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
     required:
     - dataset
+    - updated_by
     type: object
   s3.uploadRequestBody:
     description: Request body for uploading a file from S3
     properties:
+      alias:
+        description: Alias of the dataset
+        example: sales_data
+        minLength: 3
+        type: string
+      created_by:
+        description: User ID of the creator
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       description:
         description: Description of the dataset
         example: Sales data for Q1 2024
@@ -195,6 +322,8 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
+    - alias
+    - created_by
     - file_path
     - project_id
     type: object
@@ -283,6 +412,192 @@ paths:
       summary: Upload file from S3
       tags:
       - s3
+  /v1/api/chats:
+    get:
+      consumes:
+      - application/json
+      description: Get all chats associated with a specific dataset with pagination
+      parameters:
+      - description: Dataset ID
+        in: query
+        name: dataset_id
+        required: true
+        type: string
+      - default: 10
+        description: Number of chats per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset chats retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Chat'
+                  type: array
+              type: object
+        "400":
+          description: Dataset ID is required
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: List dataset chats
+      tags:
+      - chats
+    post:
+      consumes:
+      - application/json
+      description: Create a new chat or continue an existing chat conversation with
+        AI about a dataset
+      parameters:
+      - description: Chat request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/chats.chatRequeryBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Chat created/continued successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.ChatWithMessages'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Create or continue chat
+      tags:
+      - chats
+  /v1/api/chats/{chatID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an entire chat and all its messages
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Chat deleted successfully
+        "404":
+          description: Chat not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete chat
+      tags:
+      - chats
+  /v1/api/chats/{chatID}/messages:
+    get:
+      consumes:
+      - application/json
+      description: Get all messages from a specific chat with pagination
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - default: 10
+        description: Number of messages per page
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat messages retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.ChatMessage'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get chat messages
+      tags:
+      - chats
+  /v1/api/chats/{chatID}/messages/{messageID}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific message from a chat
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - description: Message ID
+        in: path
+        name: messageID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Message deleted successfully
+        "404":
+          description: Message not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete chat message
+      tags:
+      - chats
   /v1/api/nl2sql:
     post:
       consumes:
@@ -603,6 +918,50 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Get dataset details
+      tags:
+      - datasets
+    put:
+      consumes:
+      - application/json
+      description: Update an existing dataset information
+      operationId: update-dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      - description: Dataset update parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/datasets.updateDatasetParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Update dataset
       tags:
       - datasets
   /v1/api/schemas/{tableName}:

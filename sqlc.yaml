@@ -9,8 +9,7 @@ sql:
         out: "./infrastructure/postgres/gen"
         sql_package: "pgx/v5"
         emit_interface: true
-        emit_json_tags: true
-        json_tags_case_style: "camel"
+        emit_json_tags: false
         omit_unused_structs: true
         overrides:
           - column: "datasets.id"

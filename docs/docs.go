@@ -143,6 +143,297 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/api/chats": {
+            "get": {
+                "description": "Get all chats associated with a specific dataset with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "List dataset chats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "dataset_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of chats per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset chats retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.Chat"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Dataset ID is required",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new chat or continue an existing chat conversation with AI about a dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Create or continue chat",
+                "parameters": [
+                    {
+                        "description": "Chat request parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chats.chatRequeryBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Chat created/continued successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.ChatWithMessages"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/chats/{chatID}": {
+            "delete": {
+                "description": "Delete an entire chat and all its messages",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Delete chat",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat ID",
+                        "name": "chatID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Chat deleted successfully"
+                    },
+                    "404": {
+                        "description": "Chat not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/chats/{chatID}/messages": {
+            "get": {
+                "description": "Get all messages from a specific chat with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Get chat messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat ID",
+                        "name": "chatID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of messages per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chat messages retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.ChatMessage"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/chats/{chatID}/messages/{messageID}": {
+            "delete": {
+                "description": "Delete a specific message from a chat",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Delete chat message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat ID",
+                        "name": "chatID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message ID",
+                        "name": "messageID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Message deleted successfully"
+                    },
+                    "404": {
+                        "description": "Message not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/nl2sql": {
             "post": {
                 "description": "Convert a natural language query to SQL for a specific dataset",
@@ -589,6 +880,76 @@ const docTemplate = `{
                     }
                 }
             },
+            "put": {
+                "description": "Update an existing dataset information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Update dataset",
+                "operationId": "update-dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dataset update parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/datasets.updateDatasetParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Dataset"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Delete a dataset from a project",
                 "consumes": [
@@ -853,10 +1214,142 @@ const docTemplate = `{
                 }
             }
         },
+        "chats.chatRequeryBody": {
+            "description": "Request body for creating or continuing a chat conversation",
+            "type": "object",
+            "required": [
+                "messages"
+            ],
+            "properties": {
+                "chat_id": {
+                    "description": "Unique identifier of an existing chat (optional for new chats)",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "created_by": {
+                    "description": "User ID of the creator",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "dataset_id": {
+                    "description": "ID of the dataset to analyze",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "messages": {
+                    "description": "Array of chat messages",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "content",
+                            "role"
+                        ],
+                        "properties": {
+                            "content": {
+                                "description": "Message content",
+                                "type": "string",
+                                "example": "Show me the total sales by region"
+                            },
+                            "role": {
+                                "description": "Message role (user/assistant)",
+                                "type": "string",
+                                "example": "user"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "datasets.updateDatasetParams": {
+            "type": "object",
+            "required": [
+                "updated_by"
+            ],
+            "properties": {
+                "alias": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Chat": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ChatMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ChatWithMessages": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ChatMessage"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Dataset": {
             "description": "Dataset model",
             "type": "object",
             "properties": {
+                "alias": {
+                    "description": "Alias of the dataset",
+                    "type": "string",
+                    "example": "sales_data_alias"
+                },
                 "columns": {
                     "description": "Column definitions of the dataset",
                     "type": "array",
@@ -869,6 +1362,11 @@ const docTemplate = `{
                     "description": "Creation timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "created_by": {
+                    "description": "CreatedBy represents the user who created the dataset",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "description": {
                     "description": "Description of the dataset",
@@ -893,7 +1391,7 @@ const docTemplate = `{
                 "name": {
                     "description": "Name of the dataset",
                     "type": "string",
-                    "example": "sales_data"
+                    "example": "gp_Dh790Asdf17kd"
                 },
                 "row_count": {
                     "description": "Number of rows in the dataset",
@@ -909,6 +1407,11 @@ const docTemplate = `{
                     "description": "Last update timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "updated_by": {
+                    "description": "UpdatedBy represents the user who last updated the dataset",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -920,6 +1423,10 @@ const docTemplate = `{
                     "description": "Creation timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "created_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "description": {
                     "description": "Description of the project",
@@ -940,6 +1447,10 @@ const docTemplate = `{
                     "description": "Last update timestamp",
                     "type": "string",
                     "example": "2024-02-05T12:00:00Z"
+                },
+                "updated_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -947,10 +1458,15 @@ const docTemplate = `{
             "description": "Request body for creating a new project",
             "type": "object",
             "required": [
+                "created_by",
                 "description",
                 "name"
             ],
             "properties": {
+                "created_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
@@ -971,7 +1487,8 @@ const docTemplate = `{
             "description": "Request body for updating an existing project",
             "type": "object",
             "required": [
-                "name"
+                "name",
+                "updated_by"
             ],
             "properties": {
                 "description": {
@@ -986,6 +1503,10 @@ const docTemplate = `{
                     "maxLength": 50,
                     "minLength": 3,
                     "example": "Updated Project Name"
+                },
+                "updated_by": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -1023,7 +1544,8 @@ const docTemplate = `{
             "description": "Request body for updating a dataset from S3",
             "type": "object",
             "required": [
-                "dataset"
+                "dataset",
+                "updated_by"
             ],
             "properties": {
                 "dataset": {
@@ -1043,6 +1565,11 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 1,
                     "example": "my-bucket/data/updated_sales.csv"
+                },
+                "updated_by": {
+                    "description": "User ID of the updater",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -1050,10 +1577,23 @@ const docTemplate = `{
             "description": "Request body for uploading a file from S3",
             "type": "object",
             "required": [
+                "alias",
+                "created_by",
                 "file_path",
                 "project_id"
             ],
             "properties": {
+                "alias": {
+                    "description": "Alias of the dataset",
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "sales_data"
+                },
+                "created_by": {
+                    "description": "User ID of the creator",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",

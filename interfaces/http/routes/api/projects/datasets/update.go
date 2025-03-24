@@ -11,22 +11,22 @@ import (
 type updateDatasetParams struct {
 	Description string `json:"description,omitempty"`
 	Alias       string `json:"alias,omitempty"`
-	UpdateBy    string `json:"update_by" validate:"required"`
+	UpdateBy    string `json:"updated_by" validate:"required"`
 }
 
 // @Summary Update dataset
 // @Description Update an existing dataset information
 // @ID update-dataset
-// @Tags Datasets
+// @Tags datasets
 // @Accept json
 // @Produce json
 // @Param datasetID path string true "Dataset ID"
 // @Param body body updateDatasetParams true "Dataset update parameters"
-// @Success 200 {object} map[string]interface{} "Successfully updated dataset"
-// @Failure 400 {object} fiber.Map "Invalid request body"
-// @Failure 404 {object} fiber.Map "Dataset not found"
-// @Failure 500 {object} fiber.Map "Internal server error"
-// @Router /datasets/{datasetID} [put]
+// @Success 200 {object} responses.SuccessResponse{data=models.Dataset}
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body"
+// @Failure 404 {object} responses.ErrorResponse "Dataset not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /v1/api/projects/{projectID}/datasets/{datasetID} [put]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 

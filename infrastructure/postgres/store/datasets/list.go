@@ -28,9 +28,12 @@ func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination 
 		datasets = append(datasets, &models.Dataset{
 			ID:          d.ID,
 			Name:        d.Name,
+			Alias:       d.Alias.String,
 			Description: d.Description.String,
 			CreatedAt:   d.CreatedAt.Time,
+			CreatedBy:   d.CreatedBy.String,
 			UpdatedAt:   d.UpdatedAt.Time,
+			UpdatedBy:   d.UpdatedBy.String,
 			Columns:     columns,
 			RowCount:    int(d.RowCount.Int32),
 			Size:        int(d.Size.Int64),
