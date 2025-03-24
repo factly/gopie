@@ -49,6 +49,7 @@ import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { CommandSearch } from "@/components/search/command-search";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { SidebarUser } from "@/components/auth/sidebar-user";
 
 export function AppSidebar() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export function AppSidebar() {
           variables: { projectId },
           enabled: Boolean(projectId),
         }
-      : { enabled: false },
+      : { enabled: false }
   );
   const { data: datasets } = useDatasets({
     variables: {
@@ -141,7 +142,7 @@ export function AppSidebar() {
                 >
                   <HomeIcon className="h-4 w-4" />
                 </Button>
-                <span className="font-semibold">Gopie</span>
+                <span className="font-semibold">GoPie</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
@@ -152,7 +153,7 @@ export function AppSidebar() {
                   title="Toggle Sidebar"
                   onClick={() => {
                     const trigger = document.querySelector(
-                      '[data-sidebar="trigger"]',
+                      '[data-sidebar="trigger"]'
                     ) as HTMLButtonElement;
                     if (trigger) {
                       trigger.click();
@@ -183,7 +184,7 @@ export function AppSidebar() {
               title="Toggle Sidebar"
               onClick={() => {
                 const trigger = document.querySelector(
-                  '[data-sidebar="trigger"]',
+                  '[data-sidebar="trigger"]'
                 ) as HTMLButtonElement;
                 if (trigger) {
                   trigger.click();
@@ -362,8 +363,8 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-2">
-        <div className="flex flex-col gap-2">
+      <SidebarFooter className="border-t">
+        <div className="flex flex-col gap-2 p-2">
           {!isSidebarOpen && (
             <div className="flex justify-center">
               <ThemeToggle />
@@ -377,7 +378,7 @@ export function AppSidebar() {
                 </span>
                 <DatabaseIcon className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <ScrollArea className="h-[200px] pr-2">
+              <ScrollArea className="h-[150px] pr-2">
                 <div className="space-y-0.5">
                   {schema.map((column) => (
                     <div
@@ -405,6 +406,7 @@ export function AppSidebar() {
             </div>
           )}
         </div>
+        <SidebarUser />
       </SidebarFooter>
     </Sidebar>
   );

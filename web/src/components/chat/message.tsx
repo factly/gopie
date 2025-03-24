@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEffect, useRef, useState } from "react";
 import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
+import { TTSButton } from "./tts-button";
 
 interface MessageContent {
   type: "text" | "sql";
@@ -55,6 +56,7 @@ interface ChatMessageProps {
   onDelete?: (messageId: string) => void;
   chatId?: string;
   isLatest?: boolean;
+  datasetId?: string;
 }
 
 export function ChatMessage({
@@ -66,6 +68,7 @@ export function ChatMessage({
   onDelete,
   chatId,
   isLatest,
+  datasetId,
 }: ChatMessageProps) {
   const executeSql = useDatasetSql();
   const { setResults, setIsOpen } = useSqlStore();
@@ -118,17 +121,18 @@ export function ChatMessage({
     <div
       className={cn(
         "group flex w-full",
-        role === "user" ? "justify-end" : "justify-start",
+        role === "user" ? "justify-end" : "justify-start"
       )}
     >
       <div
         className={cn(
           "flex items-start gap-3 rounded-2xl px-4 py-2.5",
           "w-fit max-w-[90%] min-w-0",
-          role === "user"
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted/50",
+          role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/50"
         )}
+        id={`message-${id}`}
+        data-message-role={role}
+        data-message-id={id}
       >
         <div className="flex-1 min-w-0">
           {isLoading ? (
@@ -188,7 +192,7 @@ export function ChatMessage({
                         "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre",
                         role === "user"
                           ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
-                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-2",
+                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-2"
                       )}
                     >
                       <ReactMarkdown>{parsed.content}</ReactMarkdown>
@@ -202,11 +206,23 @@ export function ChatMessage({
                     "text-[11px]",
                     role === "user"
                       ? "text-primary-foreground/70"
-                      : "text-muted-foreground",
+                      : "text-muted-foreground"
                   )}
                 >
                   {new Date(createdAt).toLocaleTimeString()}
                 </span>
+                {!isLoading && (
+                  <div
+                    id={`tts-button-container-${id}`}
+                    data-tts-message-id={id}
+                  >
+                    <TTSButton
+                      text={content}
+                      role={role}
+                      datasetId={datasetId}
+                    />
+                  </div>
+                )}
                 {onDelete && chatId && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -217,7 +233,7 @@ export function ChatMessage({
                           "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100",
                           role === "user"
                             ? "hover:bg-primary-foreground/10 text-primary-foreground"
-                            : "hover:bg-muted",
+                            : "hover:bg-muted"
                         )}
                       >
                         <MoreVertical className="h-3 w-3" />

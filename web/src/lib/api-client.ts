@@ -1,9 +1,8 @@
 import ky from "ky";
-import { env } from "@/lib/env";
 import { ColumnInfo } from "@/lib/queries/dataset/get-schema";
 
 export const apiClient = ky.create({
-  prefixUrl: env.NEXT_PUBLIC_GOPIE_API_URL,
+  prefixUrl: process.env.NEXT_PUBLIC_GOPIE_API_URL,
   headers: {
     "Content-Type": "application/json",
   },

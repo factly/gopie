@@ -1,9 +1,8 @@
 import { createMutation } from "react-query-kit";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, Dataset } from "@/lib/api-client";
 
 interface Response {
-  message: string;
-  tableName: string;
+  data: Dataset;
 }
 
 export const useSourceDataset = createMutation({
@@ -22,7 +21,7 @@ export const useSourceDataset = createMutation({
     const res = await apiClient.post("source/s3/upload", {
       body: JSON.stringify({
         file_path: datasetUrl,
-        description: "Uploaded from Gopie Web",
+        description: "Uploaded from GoPie Web",
         project_id: projectId,
         alias,
         created_by: createdBy,

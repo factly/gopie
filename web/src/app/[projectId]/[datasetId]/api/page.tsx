@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { env } from "@/lib/env";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,7 +88,7 @@ export default function RestApiPage({
   });
 
   const apiUrl =
-    `${env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/tables/${tableName}?` +
+    `${process.env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/tables/${tableName}?` +
     new URLSearchParams({
       page,
       limit,
@@ -99,7 +98,7 @@ export default function RestApiPage({
           filters.map((f) => [
             `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
             f.value,
-          ]),
+          ])
         )),
     }).toString();
 
@@ -203,7 +202,7 @@ export default function RestApiPage({
                               setSelectedColumns((prev) =>
                                 prev.includes(column)
                                   ? prev.filter((c) => c !== column)
-                                  : [...prev, column],
+                                  : [...prev, column]
                               );
                             }}
                           >
@@ -212,7 +211,7 @@ export default function RestApiPage({
                                 "mr-2 h-4 w-4",
                                 selectedColumns.includes(column)
                                   ? "opacity-100"
-                                  : "opacity-0",
+                                  : "opacity-0"
                               )}
                             />
                             {column}

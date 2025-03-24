@@ -29,6 +29,8 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { ChatHistory } from "@/components/chat/chat-history";
 import { useChatStore } from "@/lib/stores/chat-store";
+import { VoiceMode } from "@/components/chat/voice-mode";
+import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 
 interface ChatPageProps {
   params: Promise<{
@@ -56,12 +58,26 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     OptimisticMessage[]
   >([]);
   const { isOpen, results, setIsOpen } = useSqlStore();
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+  const [latestAssistantMessage, setLatestAssistantMessage] = useState<
+    string | null
+  >(null);
+
+  const [inputValue, setInputValue] = useState("");
+  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
 
   // Close sidebar only on initial mount
   useEffect(() => {
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array means it only runs once on mount
+
+  // Maintain focus when inputValue changes
+  useEffect(() => {
+    if (shouldMaintainFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [inputValue, shouldMaintainFocus]);
 
   // Queries
   const {
@@ -94,6 +110,53 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     });
   }, [messagesData?.pages]);
 
+  // Track latest assistant message for voice mode
+  useEffect(() => {
+    if (allMessages.length > 0) {
+      const assistantMessages = allMessages.filter(
+        (msg) => msg.role === "assistant"
+      );
+      if (assistantMessages.length > 0) {
+        const lastAssistantMessage =
+          assistantMessages[assistantMessages.length - 1];
+        console.log(
+          "Updated latest assistant message:",
+          lastAssistantMessage.content.slice(0, 50) + "..."
+        );
+        setLatestAssistantMessage(lastAssistantMessage.content);
+      }
+    }
+  }, [allMessages]);
+
+  // Also check optimistic messages to detect when an assistant response is being received
+  useEffect(() => {
+    const assistantOptimisticMessages = optimisticMessages.filter(
+      (msg) => msg.role === "assistant" && !msg.isLoading
+    );
+
+    if (assistantOptimisticMessages.length > 0) {
+      const lastOptimisticAssistant =
+        assistantOptimisticMessages[assistantOptimisticMessages.length - 1];
+      if (lastOptimisticAssistant.content) {
+        console.log(
+          "Setting latest assistant message from optimistic:",
+          lastOptimisticAssistant.content.slice(0, 50) + "..."
+        );
+        setLatestAssistantMessage(lastOptimisticAssistant.content);
+      }
+    }
+  }, [optimisticMessages]);
+
+  // Clear latest assistant message when sending a new message
+  useEffect(() => {
+    if (isSending) {
+      console.log(
+        "Clearing latest assistant message due to new message being sent"
+      );
+      setLatestAssistantMessage(null);
+    }
+  }, [isSending]);
+
   // Mutations
   const createChat = useCreateChat();
 
@@ -112,14 +175,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         fetchNextPage();
       }
     },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
   );
 
   // Scroll to bottom whenever new messages are added (but not when loading previous messages)
   useLayoutEffect(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]",
+        "[data-radix-scroll-area-viewport]"
       );
       if (viewport) {
         // Only auto-scroll if we're already near the bottom
@@ -138,9 +201,17 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value || isSending) return;
+    if (!inputRef.current?.value && !inputValue) return;
+    if (isSending) return;
 
-    const message = inputRef.current.value;
+    const message = inputRef.current?.value || inputValue;
+    await sendMessage(message);
+  };
+
+  // Extracted send message logic for reuse in voice mode
+  const sendMessage = async (message: string) => {
+    if (!message || isSending) return;
+
     setIsSending(true);
 
     // Add optimistic user message
@@ -163,7 +234,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
 
     // Clear input immediately
-    inputRef.current.value = "";
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    setInputValue("");
 
     try {
       if (!selectedChatId) {
@@ -209,24 +283,39 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const isEmpty = !allMessages.length && !optimisticMessages.length;
 
-  const ChatInput = () => (
-    <form onSubmit={handleSendMessage} className="flex gap-2">
-      <Input
-        ref={inputRef}
-        placeholder="Type your message..."
-        className="flex-1"
-        disabled={isSending}
-      />
-      <ChatHistory datasetId={params.datasetId} />
-      <Button type="submit" disabled={isSending} size="icon">
-        {isSending ? (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
-        ) : (
-          <Send className="h-4 w-4" />
+  const ChatInput = () => {
+    return (
+      <form onSubmit={handleSendMessage} className="flex gap-2">
+        <Input
+          ref={inputRef}
+          placeholder="Type your message..."
+          className="flex-1"
+          disabled={isSending || isVoiceModeActive}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onFocus={() => setShouldMaintainFocus(true)}
+          onBlur={() => setShouldMaintainFocus(false)}
+        />
+        {!isVoiceModeActive && (
+          <>
+            <ChatHistory datasetId={params.datasetId} />
+          </>
         )}
-      </Button>
-    </form>
-  );
+        <Button
+          id="send-message-button"
+          type="submit"
+          disabled={isSending || isVoiceModeActive}
+          size="icon"
+        >
+          {isSending ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </form>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -248,6 +337,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                     Show Results
                   </Button>
                 )}
+                <VoiceModeToggle
+                  isActive={isVoiceModeActive}
+                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -272,7 +365,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   >
                     <div className="text-center space-y-2 mb-4">
                       <h1 className="text-2xl font-semibold">
-                        Welcome to Gopie Chat
+                        Welcome to GoPie Chat
                       </h1>
                       <p className="text-muted-foreground">
                         Start a conversation by typing a message below
@@ -324,6 +417,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                 index === allMessages.length - 1 &&
                                 !sortedOptimisticMessages.length
                               }
+                              datasetId={params.datasetId}
                             />
                           ))}
 
@@ -340,6 +434,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                 index === sortedOptimisticMessages.length - 1 &&
                                 !message.isLoading
                               }
+                              datasetId={params.datasetId}
                             />
                           ))}
                         </div>
@@ -362,6 +457,16 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Voice Mode Component - Moved inside the chat panel */}
+              <VoiceMode
+                isActive={isVoiceModeActive}
+                onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                onSendMessage={sendMessage}
+                latestAssistantMessage={latestAssistantMessage}
+                datasetId={params.datasetId}
+                isWaitingForResponse={isSending}
+              />
             </div>
           </div>
         </ResizablePanel>
