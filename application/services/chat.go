@@ -53,8 +53,16 @@ func (service *ChatService) DeleteMessage(chatID string, messageID string) error
 
 func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models.ChatWithMessages, error) {
 	messages := params.Messages
+	prevMsgs := &models.PaginationView[*models.ChatMessage]{}
+	var err error
+	if params.ChatID != "" {
+		prevMsgs, err = service.GetChatMessages(params.ChatID, models.Pagination{Offset: 0, Limit: 100})
+		if err != nil {
+			return nil, fmt.Errorf("Error getting chat messages: %v", err)
+		}
+	}
 
-	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt)
+	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt, prevMsgs.Results)
 	if err != nil {
 		return nil, fmt.Errorf("Error generating chat response from ai: %v", err)
 	}
