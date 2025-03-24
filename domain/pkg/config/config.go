@@ -123,7 +123,7 @@ func validateConfig(config *GopieConfig) error {
 
 func setDefaults() {
 	viper.SetDefault("GOPIE_SERVE_HOST", "localhost")
-	viper.SetDefault("GOPIE_SERVE_PORT", "8080")
+	viper.SetDefault("GOPIE_SERVE_PORT", "8000")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
