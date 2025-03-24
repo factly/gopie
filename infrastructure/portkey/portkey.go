@@ -86,23 +86,21 @@ func (c *PortkeyClient) GenerateResponse(content string) (string, error) {
 
 func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.ChatMessage) (string, error) {
 	c.logger.Debug("generating sql from portkey")
-	msgs := make([]openai.ChatCompletionMessage, len(prevMsgs)+1)
-	for i, msg := range prevMsgs {
-		msgs[i] = openai.ChatCompletionMessage{
-			Role:    "user",
-			Content: msg.Content,
+	msgs := make([]openai.ChatCompletionMessage, 0, len(prevMsgs)+1)
+	for _, msg := range prevMsgs {
+		if msg.Role == "assistant" || msg.Role == "user" {
+			msgs = append(msgs, openai.ChatCompletionMessage{
+				Role:    msg.Role,
+				Content: msg.Content,
+			})
 		}
 	}
-
 	latestMessage := openai.ChatCompletionMessage{
 		Role:    "user",
 		Content: userMsg,
 	}
-
 	msgs = append(msgs, latestMessage)
-
 	ctx := context.Background()
-
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: msgs,
@@ -111,7 +109,6 @@ func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*mod
 	if err != nil {
 		return "", err
 	}
-
 	if len(res.Choices) == 0 {
 		return "", domain.ErrFailedToGenerateSql
 	}
@@ -123,8 +120,8 @@ func (c *PortkeyClient) GenerateSql(content string) (string, error) {
 	return c.GenerateResponse(content)
 }
 
-func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessage []*models.ChatMessage) (*models.AiChatResponse, error) {
-	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessage)
+func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.ChatMessage) (*models.AiChatResponse, error) {
+	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessages)
 	if err != nil {
 		return nil, err
 	}
