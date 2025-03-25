@@ -1,10 +1,14 @@
-﻿from langgraph.graph import END, START, StateGraph
+﻿import json
 from typing import AsyncGenerator
+
+from langgraph.graph import END, START, StateGraph
 
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
-from src.lib.graph.events.dispatcher import AgentEventDispatcher
-from src.lib.graph.events.wrapper_func import create_event_wrapper
+from src.lib.graph.events.dispatcher import (
+    create_progress_message,
+)
+from src.lib.graph.events.wrapper_func import create_event_wrapper, event_dispatcher
 from src.lib.graph.execute_query import execute_query, route_query_replan
 from src.lib.graph.generate_subqueries import generate_subqueries
 from src.lib.graph.identify_datasets import identify_datasets
@@ -15,9 +19,7 @@ from src.lib.graph.response.response_handler import route_response_handler
 from src.lib.graph.types import State
 from src.tools import TOOLS
 from src.tools.tool_node import ToolNode
-import json
 
-event_dispatcher = AgentEventDispatcher()
 graph_builder = StateGraph(State)
 
 GRAPH_NODES = {
@@ -29,7 +31,7 @@ GRAPH_NODES = {
     "generate_result": generate_result,
     "max_iterations_reached": max_iterations_reached,
     "analyze_dataset": analyze_dataset,
-    "tools": ToolNode(tools=list(TOOLS.values()))
+    "tools": ToolNode(tools=list(TOOLS.values())),
 }
 
 for name, func in GRAPH_NODES.items():
@@ -44,7 +46,7 @@ graph_builder.add_conditional_edges(
         "identify_datasets": "identify_datasets",
         "basic_conversation": "response_router",
         "tools": "tools",
-    }
+    },
 )
 
 graph_builder.add_conditional_edges(
@@ -54,7 +56,7 @@ graph_builder.add_conditional_edges(
         "response_router": "response_router",
         "replan": "plan_query",
         "reidentify_datasets": "identify_datasets",
-    }
+    },
 )
 
 graph_builder.add_conditional_edges(
@@ -64,7 +66,7 @@ graph_builder.add_conditional_edges(
         "next_sub_query": "analyze_query",
         "generate_result": "generate_result",
         "max_iterations_reached": "max_iterations_reached",
-    }
+    },
 )
 
 graph_builder.add_edge(START, "generate_subqueries")
@@ -78,6 +80,7 @@ graph_builder.add_edge("max_iterations_reached", END)
 
 graph = graph_builder.compile()
 
+
 async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
     """Stream graph updates for user input with event tracking.
 
@@ -87,31 +90,51 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
     Yields:
         str: JSON-formatted event data for streaming
     """
-    event_dispatcher.clear_events()
+    # event_dispatcher.clear_events()
     input_state = {"messages": [{"role": "user", "content": user_input}]}
 
     try:
         async for event in graph.astream(input_state):
             for agent_event in event_dispatcher.get_events():
-                yield json.dumps(agent_event) + "\n"
+                yield (
+                    json.dumps(
+                        {
+                            "type": agent_event.event_node.value,
+                            "message": create_progress_message(agent_event.event_node),
+                            "data": agent_event.data.model_dump(),
+                        }
+                    )
+                    + "\n"
+                )
 
             event_dispatcher.clear_events()
 
-            if isinstance(event, dict):
-                for key, value in event.items():
-                    if isinstance(value, dict) and "messages" in value:
-                        yield json.dumps({
-                            "type": "message",
-                            "message": str(value["messages"][-1].content),
-                            "data": {"node": key}
-                        }) + "\n"
+            # if isinstance(event, dict):
+            #     for key, value in event.items():
+            #         if isinstance(value, dict) and "messages" in value:
+            #             yield (
+            #                 json.dumps(
+            #                     {
+            #                         "type": "message",
+            #                         "message": str(value["messages"][-1].content),
+            #                         "data": {"node": key},
+            #                     }
+            #                 )
+            #                 + "\n"
+            #             )
 
     except Exception as e:
-        yield json.dumps({
-            "type": "error",
-            "message": f"Error during streaming: {str(e)}",
-            "data": {"error": str(e)}
-        }) + "\n"
+        yield (
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": f"Error during streaming: {str(e)}",
+                    "data": {"error": str(e)},
+                }
+            )
+            + "\n"
+        )
+
 
 def visualize_graph():
     try:
