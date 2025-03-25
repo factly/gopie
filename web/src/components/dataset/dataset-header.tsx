@@ -22,6 +22,8 @@ import { updateDataset } from "@/lib/mutations/dataset/update-dataset";
 import { Dataset } from "@/lib/api-client";
 import Link from "next/link";
 import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DatasetHeaderProps {
   dataset: Dataset;
@@ -35,15 +37,15 @@ export function DatasetHeader({
   onUpdate,
 }: DatasetHeaderProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedAlias, setEditedAlias] = useState(dataset.alias || "");
   const [editedDescription, setEditedDescription] = useState(
-    dataset.description || "",
+    dataset.description || ""
   );
 
   const handleUpdate = async () => {
-    if (!onUpdate) return;
     if (editedDescription.length < 10) {
       toast({
         title: "Validation Error",
@@ -60,7 +62,21 @@ export function DatasetHeader({
         description: editedDescription,
         updated_by: "gopie-web-ui",
       });
-      await onUpdate();
+
+      // Invalidate both dataset and datasets queries to ensure all data is refreshed
+      await queryClient.invalidateQueries({
+        queryKey: ["dataset", { projectId, datasetId: dataset.id }],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["datasets"],
+      });
+
+      // Call the parent's onUpdate if provided
+      if (onUpdate) {
+        await onUpdate();
+      }
+
       setIsEditing(false);
       toast({
         title: "Dataset updated",
@@ -125,6 +141,13 @@ export function DatasetHeader({
                     className="text-lg font-semibold h-9"
                     placeholder="Enter a friendly name..."
                   />
+                  <Textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    className="mt-2 resize-none"
+                    placeholder="Enter a description..."
+                    rows={3}
+                  />
                   <div className="flex gap-2">
                     <Button
                       variant="default"
@@ -169,9 +192,19 @@ export function DatasetHeader({
                       CSV
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {dataset.description || "No description provided"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {dataset.description || "No description provided"}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 rounded-full hover:bg-secondary/80 flex-shrink-0"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <PencilIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 mt-6">
                     <Button
