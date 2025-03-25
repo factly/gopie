@@ -14,58 +14,37 @@ def create_event_wrapper(name: str, func):
 
     async def wrapped_func(state: State):
         try:
-            if name == "tools":
-                await event_dispatcher.dispatch_event(
-                    event_node=EventNode.TOOL_START,
-                    status=EventStatus.STARTED,
-                    data=EventData(
-                        input=str(state.get("messages", [])[-1].content),
-                    ),
-                )
-            else:
-                await event_dispatcher.dispatch_event(
-                    event_node=EventNode[name.upper()],
-                    status=EventStatus.STARTED,
-                    data=EventData(
-                        input=str(state.get("messages", [])[-1].content),
-                    ),
-                )
+            await event_dispatcher.dispatch_event(
+                event_node=EventNode[name.upper()],
+                status=EventStatus.STARTED,
+                data=EventData(
+                    input=str(state.get("messages", [])[-1].content),
+                ),
+            )
 
             result = await func(state)
 
-            if name == "tools":
-                index = state.get("subquery_index")
-                result_content = (
-                    state.get("query_result").subqueries[index].tool_used_result
-                )
-                event_node = EventNode.TOOL_END
-                event_data = EventData(
-                    result=str(result_content),
-                )
-            else:
-                result_content = (
-                    result.get("messages", [])[-1].content
-                    if isinstance(result, dict) and result.get("messages")
-                    else str(result)
-                )
-                event_node = EventNode[name.upper()]
-                event_data = EventData(
-                    result=result_content,
-                )
+            result_content = (
+                result.get("messages", [])[-1].content
+                if isinstance(result, dict) and result.get("messages")
+                else str(result)
+            )
+            event_data = EventData(
+                result=result_content,
+            )
 
             await event_dispatcher.dispatch_event(
-                event_node, EventStatus.COMPLETED, event_data
+                EventNode[name.upper()], EventStatus.COMPLETED, event_data
             )
 
             return result
 
         except Exception as e:
-            error_type = EventNode.TOOL_ERROR if name == "tools" else EventNode.ERROR
             error_data = EventData(
                 error=str(e),
             )
             await event_dispatcher.dispatch_event(
-                error_type, EventStatus.ERROR, error_data
+                EventNode.ERROR, EventStatus.ERROR, error_data
             )
             raise
 

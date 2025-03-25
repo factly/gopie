@@ -2,6 +2,9 @@ import json
 
 from langchain_core.messages import ToolMessage
 
+from src.lib.graph.events.dispatcher import EventData, EventNode, EventStatus
+from src.lib.graph.events.wrapper_func import event_dispatcher
+
 
 class ToolNode:
     """A node that runs the tools requested in the last AIMessage and returns to the calling node"""
@@ -19,14 +22,33 @@ class ToolNode:
         all_tool_results = []
 
         for tool_call in message.tool_calls:
-            tool_result = await self.tools[tool_call["name"]].ainvoke(tool_call["args"])
+            tool_name = tool_call["name"]
+            tool_args = tool_call["args"]
 
-            all_tool_results.append({"tool": tool_call["name"], "result": tool_result})
+            await event_dispatcher.dispatch_event(
+                event_node=EventNode.TOOL_START,
+                status=EventStatus.STARTED,
+                data=EventData(
+                    input=json.dumps({"tool": tool_name, "args": tool_args})
+                ),
+            )
+
+            tool_result = await self.tools[tool_name].ainvoke(tool_args)
+
+            all_tool_results.append({"tool": tool_name, "result": tool_result})
+
+            await event_dispatcher.dispatch_event(
+                event_node=EventNode.TOOL_END,
+                status=EventStatus.COMPLETED,
+                data=EventData(
+                    result=json.dumps({"tool": tool_name, "result": tool_result})
+                ),
+            )
 
             outputs.append(
                 ToolMessage(
                     content=json.dumps(tool_result),
-                    name=tool_call["name"],
+                    name=tool_name,
                     tool_call_id=tool_call["id"],
                 )
             )

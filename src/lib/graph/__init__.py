@@ -28,12 +28,12 @@ GRAPH_NODES = {
     "generate_result": generate_result,
     "max_iterations_reached": max_iterations_reached,
     "analyze_dataset": analyze_dataset,
-    "tools": ToolNode(tools=list(TOOLS.values())),
 }
 
 for name, func in GRAPH_NODES.items():
     graph_builder.add_node(name, create_event_wrapper(name, func))
 
+graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(
@@ -94,8 +94,8 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
-                print(formatted_event)
-                yield (json.dumps(formatted_event) + "\n")
+                # yield (json.dumps(formatted_event) + "\n")
+                yield f"data: {json.dumps(formatted_event)}\n\n"  # testing purpose
     except Exception as e:
         yield (
             json.dumps(
