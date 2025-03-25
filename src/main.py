@@ -1,9 +1,7 @@
 import logging
-import os
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 
 from src.lib.graph import stream_graph_updates
 
@@ -19,26 +17,9 @@ logging.basicConfig(filename="log/agent.log", level=logging.INFO)
 # profile.to_file("report.html")
 
 
-# @app.get("/")
-# def read_root():
-#     return {"message": "Welcome to the Dataful Agent API"}
-
-os.makedirs("src/api/templates", exist_ok=True)
-
-templates = Jinja2Templates(directory="src/api/templates")
-
-@app.get("/", response_class=HTMLResponse)
-async def test_page(request: Request):
-    return templates.TemplateResponse(
-        "test_events.html",
-        {"request": request}
-    )
-
-@app.get("/stream_events")
-async def stream_events(query: str):
-    return StreamingResponse(
-        stream_graph_updates(query),
-    )
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Dataful Agent API"}
 
 @app.get("/nl2sql")
 async def get_nl2sql(user_input: str):

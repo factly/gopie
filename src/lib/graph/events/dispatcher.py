@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.outputs import LLMResult
+from pydantic import BaseModel
 
-class AgentEventType(Enum):
+class EventNode(Enum):
     GENERATE_SUBQUERIES = "generate_subqueries"
     IDENTIFY_DATASETS = "identify_datasets"
     ANALYZE_QUERY = "analyze_query"
@@ -20,12 +20,23 @@ class AgentEventType(Enum):
     TOOL_ERROR = "tool_error"
 
 
+class EventData(BaseModel):
+    input: Optional[str] = None
+    result: Optional[str] = None
+    error: Optional[str] = None
+
+class EventStatus(Enum):
+    STARTED = "started"
+    COMPLETED = "completed"
+    ERROR = "error"
+
 @dataclass
 class AgentEvent:
     """Event data structure for agent events."""
-    event_type: AgentEventType
-    data: Dict[str, Any]
-    metadata: Optional[Dict[str, Any]] = None
+    event_type: EventNode
+    status: EventStatus
+    message: str
+    data: EventData
 
 class AgentEventDispatcher(BaseCallbackHandler):
     """Custom event dispatcher for the Dataful Agent."""
@@ -34,9 +45,9 @@ class AgentEventDispatcher(BaseCallbackHandler):
         super().__init__()
         self.events: List[AgentEvent] = []
 
-    def dispatch_event(self, event_type: AgentEventType, data: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> None:
+    def dispatch_event(self, event_node: EventNode, status: EventStatus, data: EventData) -> None:
         """Dispatch a custom event."""
-        self.events.append(AgentEvent(event_type=event_type, data=data, metadata=metadata))
+        self.events.append(AgentEvent(event_type=event_node, status=status, message="", data=data))
 
     def get_events(self) -> List[AgentEvent]:
         """Get all recorded events."""

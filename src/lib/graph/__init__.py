@@ -3,8 +3,8 @@ from typing import AsyncGenerator
 
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
-from src.lib.graph.events.dispatcher import AgentEventDispatcher, AgentEventType
-from src.lib.graph.events.stream_handler import create_progress_message
+from src.lib.graph.events.dispatcher import AgentEventDispatcher
+from src.lib.graph.events.wrapper_func import create_event_wrapper
 from src.lib.graph.execute_query import execute_query, route_query_replan
 from src.lib.graph.generate_subqueries import generate_subqueries
 from src.lib.graph.identify_datasets import identify_datasets
@@ -19,60 +19,6 @@ import json
 
 event_dispatcher = AgentEventDispatcher()
 graph_builder = StateGraph(State)
-
-def create_event_wrapper(name: str, func):
-    """Create an event-wrapped async function for graph nodes."""
-    async def wrapped_func(state: State):
-        try:
-            if name == "tools":
-                event_dispatcher.dispatch_event(
-                    AgentEventType.TOOL_START,
-                    {
-                        "tool": "tools",
-                        "input": str(state.get('messages', [])[-1].content),
-                        "status": "started"
-                    }
-                )
-            else:
-                event_dispatcher.dispatch_event(
-                    AgentEventType[name.upper()],
-                    {"status": "started", "node": name}
-                )
-
-            result = await func(state)
-
-            if name == "tools":
-                index = state.get('subquery_index')
-                result_content = state.get('query_result').subqueries[index].tool_used_result
-                event_type = AgentEventType.TOOL_END
-                event_data = {
-                    "tool": "tools",
-                    "output": str(result_content),
-                    "status": "completed"
-                }
-            else:
-                result_content = (
-                    result.get('messages', [])[-1].content
-                    if isinstance(result, dict) and result.get('messages')
-                    else str(result)
-                )
-                event_type = AgentEventType[name.upper()]
-                event_data = {"status": "completed", "result": result_content}
-
-            event_dispatcher.dispatch_event(event_type, event_data)
-            return result
-
-        except Exception as e:
-            error_type = AgentEventType.TOOL_ERROR if name == "tools" else AgentEventType.ERROR
-            error_data = (
-                {"tool": "tools", "error": str(e)}
-                if name == "tools"
-                else {"error": str(e), "node": name}
-            )
-            event_dispatcher.dispatch_event(error_type, error_data)
-            raise
-
-    return wrapped_func
 
 GRAPH_NODES = {
     "generate_subqueries": generate_subqueries,
@@ -147,11 +93,7 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
     try:
         async for event in graph.astream(input_state):
             for agent_event in event_dispatcher.get_events():
-                yield json.dumps({
-                    "type": agent_event.event_type.value,
-                    "message": create_progress_message(agent_event),
-                    "data": agent_event.data
-                }) + "\n"
+                yield json.dumps(agent_event) + "\n"
 
             event_dispatcher.clear_events()
 
