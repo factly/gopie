@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.callbacks.manager import adispatch_custom_event
 from pydantic import BaseModel
 
 
@@ -74,10 +75,19 @@ class AgentEventDispatcher(BaseCallbackHandler):
         super().__init__()
         self.events: List[AgentEvent] = []
 
-    def dispatch_event(
+    async def dispatch_event(
         self, event_node: EventNode, status: EventStatus, data: EventData
     ) -> None:
         """Dispatch a custom event."""
+        await adispatch_custom_event(
+            "dataful_agent",
+            {
+                "event_node": event_node.value,
+                "status": status.value,
+                "message": create_progress_message(event_node),
+                "event_data": data.model_dump(),
+            },
+        )
         self.events.append(
             AgentEvent(
                 event_node=event_node,

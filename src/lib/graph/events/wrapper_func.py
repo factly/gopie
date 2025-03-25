@@ -15,7 +15,7 @@ def create_event_wrapper(name: str, func):
     async def wrapped_func(state: State):
         try:
             if name == "tools":
-                event_dispatcher.dispatch_event(
+                await event_dispatcher.dispatch_event(
                     event_node=EventNode.TOOL_START,
                     status=EventStatus.STARTED,
                     data=EventData(
@@ -23,7 +23,7 @@ def create_event_wrapper(name: str, func):
                     ),
                 )
             else:
-                event_dispatcher.dispatch_event(
+                await event_dispatcher.dispatch_event(
                     event_node=EventNode[name.upper()],
                     status=EventStatus.STARTED,
                     data=EventData(
@@ -53,7 +53,7 @@ def create_event_wrapper(name: str, func):
                     result=result_content,
                 )
 
-            event_dispatcher.dispatch_event(
+            await event_dispatcher.dispatch_event(
                 event_node, EventStatus.COMPLETED, event_data
             )
 
@@ -64,7 +64,9 @@ def create_event_wrapper(name: str, func):
             error_data = EventData(
                 error=str(e),
             )
-            event_dispatcher.dispatch_event(error_type, EventStatus.ERROR, error_data)
+            await event_dispatcher.dispatch_event(
+                error_type, EventStatus.ERROR, error_data
+            )
             raise
 
     return wrapped_func

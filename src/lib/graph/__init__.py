@@ -5,9 +5,6 @@ from langgraph.graph import END, START, StateGraph
 
 from src.lib.graph.analyze_dataset import analyze_dataset
 from src.lib.graph.analyze_query import analyze_query, route_from_analysis
-from src.lib.graph.events.dispatcher import (
-    create_progress_message,
-)
 from src.lib.graph.events.wrapper_func import create_event_wrapper, event_dispatcher
 from src.lib.graph.execute_query import execute_query, route_query_replan
 from src.lib.graph.generate_subqueries import generate_subqueries
@@ -90,39 +87,15 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
     Yields:
         str: JSON-formatted event data for streaming
     """
-    # event_dispatcher.clear_events()
+    event_dispatcher.clear_events()
     input_state = {"messages": [{"role": "user", "content": user_input}]}
 
     try:
-        async for event in graph.astream(input_state):
-            for agent_event in event_dispatcher.get_events():
-                yield (
-                    json.dumps(
-                        {
-                            "type": agent_event.event_node.value,
-                            "message": create_progress_message(agent_event.event_node),
-                            "data": agent_event.data.model_dump(),
-                        }
-                    )
-                    + "\n"
-                )
-
-            event_dispatcher.clear_events()
-
-            # if isinstance(event, dict):
-            #     for key, value in event.items():
-            #         if isinstance(value, dict) and "messages" in value:
-            #             yield (
-            #                 json.dumps(
-            #                     {
-            #                         "type": "message",
-            #                         "message": str(value["messages"][-1].content),
-            #                         "data": {"node": key},
-            #                     }
-            #                 )
-            #                 + "\n"
-            #             )
-
+        async for event in graph.astream_events(input_state, version="v2"):
+            if event.get("event", None) == "on_custom_event":
+                formatted_event = event.get("data", {})
+                print(formatted_event)
+                yield (json.dumps(formatted_event) + "\n")
     except Exception as e:
         yield (
             json.dumps(
