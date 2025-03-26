@@ -31,6 +31,7 @@ import { ChatTabs } from "@/components/chat/chat-tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
+import { ChatHistory } from "@/components/chat/chat-history";
 
 interface ChatPageProps {
   params: Promise<{
@@ -317,14 +318,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     });
   }, [optimisticMessages]);
 
-  // Check if chat is empty
-  const isEmpty = useMemo(() => {
-    return (
-      !selectedChatId ||
-      (allMessages.length === 0 && optimisticMessages.length === 0)
-    );
-  }, [selectedChatId, allMessages.length, optimisticMessages.length]);
-
   const ChatInput = () => {
     return (
       <form onSubmit={handleSendMessage} className="flex gap-2 w-full">
@@ -354,6 +347,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
             <Send className="h-5 w-5" />
           )}
         </Button>
+        {!selectedChatId && <ChatHistory datasetId={params.datasetId} />}
         <VoiceModeToggle
           isActive={isVoiceModeActive}
           onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
@@ -402,30 +396,9 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
               </div>
             </div>
 
-            <ChatTabs datasetId={params.datasetId}>
-              <div className="relative flex-1">
-                {isEmpty ? (
-                  // Welcome screen when no chat is selected
-                  <motion.div
-                    className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                  >
-                    <div className="text-center space-y-3 mb-6">
-                      <h1 className="text-3xl font-semibold text-foreground">
-                        Welcome to GoPie Chat
-                      </h1>
-                      <p className="text-muted-foreground text-lg">
-                        Start a conversation by typing a message below
-                      </p>
-                    </div>
-                    <div className="w-full max-w-xl px-4">
-                      <ChatInput />
-                    </div>
-                  </motion.div>
-                ) : (
-                  // Chat messages when a chat is selected
+            {selectedChatId ? (
+              <ChatTabs datasetId={params.datasetId}>
+                <div className="relative flex-1">
                   <AnimatePresence mode="wait">
                     <motion.div
                       className="absolute inset-0 flex flex-col"
@@ -510,7 +483,38 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                       </motion.div>
                     </motion.div>
                   </AnimatePresence>
-                )}
+
+                  {/* Voice Mode Component */}
+                  <VoiceMode
+                    isActive={isVoiceModeActive}
+                    onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                    onSendMessage={sendMessage}
+                    latestAssistantMessage={latestAssistantMessage}
+                    datasetId={params.datasetId}
+                    isWaitingForResponse={isSending}
+                  />
+                </div>
+              </ChatTabs>
+            ) : (
+              <div className="relative flex-1">
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  <div className="text-center space-y-3 mb-6">
+                    <h1 className="text-3xl font-semibold text-foreground">
+                      Welcome to GoPie Chat
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                      Start a conversation by typing a message below
+                    </p>
+                  </div>
+                  <div className="w-full max-w-xl px-4">
+                    <ChatInput />
+                  </div>
+                </motion.div>
 
                 {/* Voice Mode Component */}
                 <VoiceMode
@@ -522,7 +526,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   isWaitingForResponse={isSending}
                 />
               </div>
-            </ChatTabs>
+            )}
           </div>
         </ResizablePanel>
         {isOpen && (

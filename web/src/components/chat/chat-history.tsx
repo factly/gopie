@@ -18,7 +18,7 @@ interface ChatHistoryProps {
 }
 
 export function ChatHistory({ datasetId }: ChatHistoryProps) {
-  const { selectedChatId, setSelectedChatId } = useChatStore();
+  const { selectedChatId, selectChat } = useChatStore();
 
   const {
     data: chatsData,
@@ -39,14 +39,14 @@ export function ChatHistory({ datasetId }: ChatHistoryProps) {
   const allChats = chatsData?.pages.flatMap((page) => page.data.results) ?? [];
 
   const handleStartNewChat = () => {
-    setSelectedChatId(null);
+    selectChat(null, null);
   };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync(chatId);
       if (chatId === selectedChatId) {
-        setSelectedChatId(null);
+        selectChat(null, null);
       }
       await refetchChats();
       toast.success("Chat deleted successfully");
@@ -55,11 +55,19 @@ export function ChatHistory({ datasetId }: ChatHistoryProps) {
     }
   };
 
+  const handleSelectChat = (chatId: string, chatName: string) => {
+    selectChat(chatId, chatName || "New Chat");
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="icon">
-          <History className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 rounded-full shadow-sm"
+        >
+          <History className="h-5 w-5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 p-0">
@@ -117,9 +125,11 @@ export function ChatHistory({ datasetId }: ChatHistoryProps) {
                       key={chat.id}
                       className={cn(
                         "group relative flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer gap-2",
-                        selectedChatId === chat.id && "bg-muted",
+                        selectedChatId === chat.id && "bg-muted"
                       )}
-                      onClick={() => setSelectedChatId(chat.id)}
+                      onClick={() =>
+                        handleSelectChat(chat.id, chat.name || "New Chat")
+                      }
                     >
                       <div className="flex-1 min-w-0">
                         <div className="break-words font-medium">
