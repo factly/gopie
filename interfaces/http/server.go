@@ -78,7 +78,7 @@ func ServeHttp() error {
 	datasetService := services.NewDatasetService(datasetStore)
 	chatService := services.NewChatService(chatStore, porkeyClient)
 
-	logger.Info("starting server", zap.String("host", config.Serve.Host), zap.String("port", config.Serve.Port))
+	logger.Info("starting server", zap.String("host", config.Server.Host), zap.String("port", config.Server.Port))
 
 	app := fiber.New(fiber.Config{
 		CaseSensitive: true,
@@ -137,7 +137,7 @@ func ServeHttp() error {
 		OlapService:    olapService,
 	})
 
-	log.Fatal(app.Listen(":" + config.Serve.Port))
+	log.Fatal(app.Listen(":" + config.Server.Port))
 
 	return nil
 }

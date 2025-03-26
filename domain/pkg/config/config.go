@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type ServeConfig struct {
+type ServerConfig struct {
 	Host string
 	Port string
 }
@@ -31,7 +31,7 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Serve      ServeConfig
+	Server     ServerConfig
 	S3         S3Config
 	Logger     LoggerConfig
 	MotherDuck MotherDuckConfig
@@ -91,9 +91,6 @@ func validateConfig(config *GopieConfig) error {
 		value string
 		name  string
 	}{
-		{config.S3.AccessKey, "S3 access key"},
-		{config.S3.SecretKey, "S3 secret key"},
-		{config.S3.Region, "S3 region"},
 		{config.MotherDuck.DBName, "MotherDuck DB name"},
 		{config.MotherDuck.Token, "MotherDuck token"},
 		{config.PortKey.VirtualKey, "portkey virtual key"},
@@ -139,7 +136,7 @@ func LoadConfig() (*GopieConfig, error) {
 	setDefaults()
 
 	config := &GopieConfig{
-		Serve: ServeConfig{
+		Server: ServerConfig{
 			Host: viper.GetString("GOPIE_SERVE_HOST"),
 			Port: viper.GetString("GOPIE_SERVE_PORT"),
 		},

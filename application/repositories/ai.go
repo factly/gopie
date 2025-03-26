@@ -11,6 +11,6 @@ type AiRepository interface {
 }
 
 type AiChatRepository interface {
-	GenerateChatResponse(ctx context.Context, userMessage string) (*models.AiChatResponse, error)
+	GenerateChatResponse(ctx context.Context, userMessage string, prevMessage []*models.ChatMessage) (*models.AiChatResponse, error)
 	GenerateTitle(ctx context.Context, userMessage string) (*models.AiChatResponse, error)
 }

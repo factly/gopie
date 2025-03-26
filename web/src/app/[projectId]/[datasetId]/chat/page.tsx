@@ -65,6 +65,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const [inputValue, setInputValue] = useState("");
   const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
 
   // Close sidebar only on initial mount
   useEffect(() => {
@@ -72,12 +73,17 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array means it only runs once on mount
 
-  // Maintain focus when inputValue changes
+  // Maintain focus and cursor position when inputValue changes
   useEffect(() => {
     if (shouldMaintainFocus && inputRef.current) {
       inputRef.current.focus();
+
+      // Restore cursor position if we have it
+      if (cursorPosition !== null) {
+        inputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
     }
-  }, [inputValue, shouldMaintainFocus]);
+  }, [inputValue, shouldMaintainFocus, cursorPosition]);
 
   // Queries
   const {
@@ -292,9 +298,18 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           className="flex-1"
           disabled={isSending || isVoiceModeActive}
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setCursorPosition(e.target.selectionStart);
+          }}
           onFocus={() => setShouldMaintainFocus(true)}
           onBlur={() => setShouldMaintainFocus(false)}
+          onClick={(e) => {
+            setCursorPosition(e.currentTarget.selectionStart);
+          }}
+          onKeyUp={(e) => {
+            setCursorPosition(e.currentTarget.selectionStart);
+          }}
         />
         {!isVoiceModeActive && (
           <>
