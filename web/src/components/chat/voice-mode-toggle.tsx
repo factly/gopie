@@ -16,12 +16,14 @@ export function VoiceModeToggle({ isActive, onToggle }: VoiceModeToggleProps) {
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant={isActive ? "default" : "ghost"}
+          variant={isActive ? "default" : "outline"}
           size="icon"
           onClick={onToggle}
-          className={isActive ? "bg-primary text-primary-foreground" : ""}
+          className={`h-11 w-11 rounded-full shadow-sm ${
+            isActive ? "bg-primary text-primary-foreground" : ""
+          }`}
         >
-          <Headphones className="h-4 w-4" />
+          <Headphones className="h-5 w-5" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>
