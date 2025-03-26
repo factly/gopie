@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -31,20 +33,33 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server     ServerConfig
-	S3         S3Config
-	Logger     LoggerConfig
-	MotherDuck MotherDuckConfig
-	PortKey    PortKeyConfig
-	Meterus    MeterusConfig
-	Postgres   PostgresConfig
-	Zitadel    ZitadelConfig
+	Server   ServerConfig
+	S3       S3Config
+	Logger   LoggerConfig
+	OlapDB   OlapDBConfig
+	PortKey  PortKeyConfig
+	Meterus  MeterusConfig
+	Postgres PostgresConfig
+	Zitadel  ZitadelConfig
+}
+
+type OlapDBConfig struct {
+	DBType     string
+	MotherDuck *MotherDuckConfig
+	DuckDB     *DuckDBConfig
+	AccessMode string
+}
+
+type DuckDBConfig struct {
+	Path         string
+	CPU          int
+	MemoryLimit  int
+	StorageLimit int
 }
 
 type MotherDuckConfig struct {
-	DBName     string
-	Token      string
-	AccessMode string
+	DBName string
+	Token  string
 }
 
 type PortKeyConfig struct {
@@ -86,13 +101,13 @@ func initializeViper() error {
 	return nil
 }
 
-func validateConfig(config *GopieConfig) error {
-	validations := []struct {
+func validateConfig(config *GopieConfig) (*GopieConfig, error) {
+	type validation struct {
 		value string
 		name  string
-	}{
-		{config.MotherDuck.DBName, "MotherDuck DB name"},
-		{config.MotherDuck.Token, "MotherDuck token"},
+	}
+
+	validations := []validation{
 		{config.PortKey.VirtualKey, "portkey virtual key"},
 		{config.PortKey.Apikey, "portkey api key"},
 		{config.PortKey.BaseUrl, "portkey base url"},
@@ -102,19 +117,87 @@ func validateConfig(config *GopieConfig) error {
 		{config.Postgres.Database, "postgres database"},
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
-		{config.Zitadel.Protocol, "zitadel protocol"},
-		{config.Zitadel.Domain, "zitadel domain"},
-		{config.Zitadel.ProjectID, "zitadel project id"},
-		{config.Zitadel.PersonalAccessToken, "zitadel personal access token"},
-		{config.Zitadel.ServiceUserID, "zitadel service user id"},
-		{config.Zitadel.LoginURL, "zitadel app login url"},
+		// {config.Zitadel.Protocol, "zitadel protocol"},
+		// {config.Zitadel.Domain, "zitadel domain"},
+		// {config.Zitadel.ProjectID, "zitadel project id"},
+		// {config.Zitadel.PersonalAccessToken, "zitadel personal access token"},
+		// {config.Zitadel.ServiceUserID, "zitadel service user id"},
+		// {config.Zitadel.LoginURL, "zitadel app login url"},
+	}
+
+	if config.OlapDB.DBType == "" {
+		return nil, fmt.Errorf("missing olapdb dbtype")
+	}
+
+	switch config.OlapDB.DBType {
+	case "duck":
+		config.OlapDB.DuckDB = &DuckDBConfig{
+			Path:         viper.GetString("GOPIE_DUCKDB_PATH"),
+			CPU:          viper.GetInt("GOPIE_DUCKDB_CPU"),
+			MemoryLimit:  viper.GetInt("GOPIE_DUCKDB_MEMORY_LIMIT"),
+			StorageLimit: viper.GetInt("GOPIE_DUCKDB_STORAGE_LIMIT"),
+		}
+
+		// check it path exists
+		if config.OlapDB.DuckDB.Path == "" {
+			return nil, fmt.Errorf("missing DuckDB path")
+		}
+
+		// INFO: path should exist if access mode is read_only
+		// we create the directory if access mode is read_write
+		if config.OlapDB.AccessMode == "read_write" {
+			if err := ensureDirectoryExists(config.OlapDB.DuckDB.Path); err != nil {
+				return nil, err
+			}
+		}
+
+		if config.OlapDB.DuckDB.CPU <= 0 {
+			return nil, fmt.Errorf("DuckDB CPU must be greater than 0")
+		}
+		if config.OlapDB.DuckDB.MemoryLimit <= 0 {
+			return nil, fmt.Errorf("DuckDB memory limit must be greater than 0")
+		}
+		if config.OlapDB.DuckDB.StorageLimit <= 0 {
+			return nil, fmt.Errorf("DuckDB storage limit must be greater than 0")
+		}
+
+	case "motherduck":
+		config.OlapDB.MotherDuck = &MotherDuckConfig{
+			DBName: viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
+			Token:  viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
+		}
+		validations = append(validations,
+			validation{config.OlapDB.MotherDuck.DBName, "MotherDuck DB name"},
+			validation{config.OlapDB.MotherDuck.Token, "MotherDuck token"},
+		)
+
+	default:
+		return nil, fmt.Errorf("invalid olapdb dbtype: %s", config.OlapDB.DBType)
 	}
 
 	for _, v := range validations {
 		if v.value == "" {
-			return fmt.Errorf("missing %s", v.name)
+			return nil, fmt.Errorf("missing %s", v.name)
 		}
 	}
+
+	return config, nil
+}
+
+func ensureDirectoryExists(path string) error {
+	dir := filepath.Dir(path)
+
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+		log.Printf("Created directory: %s", dir)
+	} else if err != nil {
+		return fmt.Errorf("error checking directory %s: %w", dir, err)
+	}
+
 	return nil
 }
 
@@ -125,7 +208,11 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
-	viper.SetDefault("GOPIE_MOTHERDUCK_ACCESS_MODE", "read_only")
+	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
+	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
+	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
+	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
+	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -137,8 +224,8 @@ func LoadConfig() (*GopieConfig, error) {
 
 	config := &GopieConfig{
 		Server: ServerConfig{
-			Host: viper.GetString("GOPIE_SERVE_HOST"),
-			Port: viper.GetString("GOPIE_SERVE_PORT"),
+			Host: viper.GetString("GOPIE_SERVER_HOST"),
+			Port: viper.GetString("GOPIE_SERVER_PORT"),
 		},
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
@@ -151,10 +238,9 @@ func LoadConfig() (*GopieConfig, error) {
 			LogFile: viper.GetString("GOPIE_LOGGER_FILE"),
 			Mode:    viper.GetString("GOPIE_LOGGER_MODE"),
 		},
-		MotherDuck: MotherDuckConfig{
-			DBName:     viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
-			Token:      viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
-			AccessMode: viper.GetString("GOPIE_MOTHERDUCK_ACCESS_MODE"),
+		OlapDB: OlapDBConfig{
+			DBType:     viper.GetString("GOPIE_OLAPDB_DBTYPE"),
+			AccessMode: viper.GetString("GOPIE_OLAPDB_ACCESS_MODE"),
 		},
 		PortKey: PortKeyConfig{
 			AIModel:    viper.GetString("GOPIE_PORTKEY_MODEL"),
@@ -184,7 +270,8 @@ func LoadConfig() (*GopieConfig, error) {
 		},
 	}
 
-	if err := validateConfig(config); err != nil {
+	var err error
+	if config, err = validateConfig(config); err != nil {
 		return nil, err
 	}
 
