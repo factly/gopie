@@ -94,7 +94,7 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
-                # yield (json.dumps(formatted_event) + "\n")
+                # yield (json.dumps(formatted_event) + "\n\n")
                 yield f"data: {json.dumps(formatted_event)}\n\n"  # testing purpose
     except Exception as e:
         yield (

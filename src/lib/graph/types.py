@@ -1,4 +1,4 @@
-from typing import Annotated, Any, List, Optional, TypedDict
+from typing import Annotated, Any, List, Optional, TypedDict, Dict
 
 from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
@@ -47,6 +47,7 @@ class ColumnSchema(TypedDict):
     type: str
     sample_values: List[Any]
     non_null_count: Optional[int]
+    constraints: Optional[Dict[str, Any]]
 
 
 class DatasetSchema(TypedDict):

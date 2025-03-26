@@ -41,7 +41,7 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
         {{
             "selected_dataset": ["dataset_name1", "dataset_name2"],
             "reasoning": "Clear explanation of why these datasets were selected",
-            "column_requirements": [
+            "column_predicted": [
                 {{
                     "dataset": "dataset_name1",
                     "columns": [
@@ -101,7 +101,7 @@ async def identify_datasets(state: State):
 
         selected_datasets = parsed_content.get("selected_dataset", [])
         query_result.subqueries[query_index].tables_used = selected_datasets
-        column_assumptions = parsed_content.get("column_requirements", [])
+        column_assumptions = parsed_content.get("column_predicted", [])
 
         dataset_info = {
             "column_assumptions": column_assumptions,

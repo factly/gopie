@@ -169,7 +169,7 @@ def correct_column_values(
 
                 if column_name in df.columns:
                     column_result["name"] = column_name
-                    mapped_expected_values = {}
+                    column_result["expected_name"] = column_name
 
                     unique_values = (
                         df[column_name].fillna("NA").astype(str).unique().tolist()
@@ -186,11 +186,12 @@ def correct_column_values(
                         mapped_unique_dict[new_value] = value
 
                     mapped_unique_values = list(mapped_unique_dict.keys())
-
-                    column_result["unique_values"] = unique_values[
-                        :MAX_UNIQUE_VALUES_TO_RETURN
-                    ]
                     column_result["total_unique_values"] = len(unique_values)
+
+                    if len(unique_values) > 100:
+                        column_result["suggestion"] = (
+                            "Large number of unique values. Consider filtering or grouping."
+                        )
 
                     correct_column_values = []
 
