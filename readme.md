@@ -1,6 +1,14 @@
 # Gopie
 
-### Pre-requisites
+## Pre-requisites to run GoPie using Docker Compose
+- Add `zitadel/key.json`
+- Add `.env` in the root directory based on `.env.example`
+
+### Things to Note
+- Currently it doesn't support hot reload when starting using Docker Compose
+- It creates a directory named `volumes` in the root directory to persist the data for services like Postgres, Redis etc
+
+--- Following setup with running Zitadel locally is not working as expected currently ---
 
 # Zitadel Setup Guide
 
