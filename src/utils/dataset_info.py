@@ -12,8 +12,27 @@ DATA_DIR = "./data"
 def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> DatasetSchema:
     """
     Get metadata and sample data from a dataset.
+
+    Args:
+        dataset_name: Name of the dataset to find in the data directory
+        sample_rows: Number of sample rows to include in the preview
+        add_constraints: Whether to add SQL constraints through profiling
+
+    Returns:
+        A DatasetSchema object containing metadata and schema information
     """
     try:
+        try:
+            from src.utils.dataset_profiling import get_profiled_dataset
+
+            for suffix in [".csv", ""]:
+                cached_dataset = get_profiled_dataset(f"{dataset_name}{suffix}")
+                if cached_dataset:
+                    print(f"Using pre-profiled dataset from cache: {dataset_name}")
+                    return cached_dataset
+        except Exception as e:
+            print(f"Warning: Could not retrieve pre-profiled dataset: {e}")
+
         matching_files = [
             f
             for f in os.listdir(DATA_DIR)
@@ -43,6 +62,7 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> DatasetSchem
                 "type": data_type,
                 "sample_values": sample_values,
                 "non_null_count": non_null_count,
+                "constraints": {},
             }
             columns_info.append(column_info)
 
@@ -68,6 +88,14 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> DatasetSchem
 
         except Exception as e:
             print(f"Warning: Could not generate column descriptions: {e}")
+
+        try:
+            from src.utils.dataset_profiling import profile_dataset
+
+            dataset_schema = profile_dataset(dataset_schema)
+            print("Added column constraints through profiling")
+        except Exception as e:
+            print(f"Warning: Could not generate column constraints: {e}")
 
         return dataset_schema
 

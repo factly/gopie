@@ -54,6 +54,8 @@ async def analyze_dataset(state: State) -> dict:
         query_result = state.get("query_result", {})
         dataset_info = state.get("dataset_info", {})
 
+        print(json.dumps(dataset_info, indent=2))
+
         column_requirements = dataset_info.get("column_assumptions", [])
         corrected_column_requirements = correct_column_values(column_requirements)
 

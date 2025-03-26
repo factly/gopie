@@ -1,21 +1,34 @@
 import logging
+import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
-from src.lib.graph import stream_graph_updates, visualize_graph
+from src.lib.graph import stream_graph_updates
+from src.utils.dataset_profiling import profile_all_datasets
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI application."""
+    logging.info("Starting dataset pre-profiling...")
+    try:
+        data_dir = os.getenv("DATA_DIR", "./data")
+        datasets = profile_all_datasets(data_dir=data_dir)
+        logging.info(f"Successfully pre-profiled {len(datasets)} datasets")
+    except Exception as e:
+        logging.error(f"Error during dataset pre-profiling: {e}")
+
+    yield
+
+    logging.info("Shutting down application...")
+
+
+app = FastAPI(lifespan=lifespan)
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-visualize_graph()
-
-# df = pd.read_csv(
-#     "data/corporate_social_responsibility_csr_master_data_year_and_company_wise_average_net_profit_csr_amount_prescribed_and_spent_in_local_area_and_overall.csv",
-#     nrows=1000,
-# )
-# profile = ProfileReport(df, minimal=True)
-# profile.to_file("report.html")
+# visualize_graph()
 
 templates = Jinja2Templates(directory="src/test/templates")
 
