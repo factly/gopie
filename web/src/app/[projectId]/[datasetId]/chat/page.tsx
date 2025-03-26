@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Send, MessageSquarePlus, Table2 } from "lucide-react";
+import { Send, Table2, MessageSquarePlus } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "@/components/chat/message";
@@ -27,10 +27,11 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
-import { ChatHistory } from "@/components/chat/chat-history";
+import { ChatTabs } from "@/components/chat/chat-tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
+import { ChatHistory } from "@/components/chat/chat-history";
 
 interface ChatPageProps {
   params: Promise<{
@@ -52,12 +53,12 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const { setOpen } = useSidebar();
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, setSelectedChatId } = useChatStore();
+  const { selectedChatId, selectedChatTitle, selectChat } = useChatStore();
   const [isSending, setIsSending] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
   >([]);
-  const { isOpen, results, setIsOpen } = useSqlStore();
+  const { isOpen, setIsOpen } = useSqlStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
     string | null
@@ -115,6 +116,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
       return timeA - timeB;
     });
   }, [messagesData?.pages]);
+
+  // Flag to show SQL button - only if we have messages containing SQL
+  const showSqlButton = useMemo(() => {
+    return (
+      selectedChatId &&
+      allMessages.some((msg) => msg.content.toLowerCase().includes("sql"))
+    );
+  }, [selectedChatId, allMessages]);
 
   // Track latest assistant message for voice mode
   useEffect(() => {
@@ -207,72 +216,94 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value && !inputValue) return;
-    if (isSending) return;
-
-    const message = inputRef.current?.value || inputValue;
-    await sendMessage(message);
-  };
-
-  // Extracted send message logic for reuse in voice mode
-  const sendMessage = async (message: string) => {
-    if (!message || isSending) return;
-
-    setIsSending(true);
-
-    // Add optimistic user message
-    const optimisticUserMessage: OptimisticMessage = {
-      id: Date.now().toString(),
-      content: message,
-      role: "user",
-      created_at: new Date().toISOString(),
-    };
-    setOptimisticMessages((prev) => [...prev, optimisticUserMessage]);
-
-    // Add optimistic loading message for assistant
-    const optimisticLoadingMessage: OptimisticMessage = {
-      id: Date.now().toString() + "-loading",
-      content: "",
-      role: "assistant",
-      created_at: new Date().toISOString(),
-      isLoading: true,
-    };
-    setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
-
-    // Clear input immediately
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-    setInputValue("");
+    if (!inputValue.trim() || isSending) return;
 
     try {
-      if (!selectedChatId) {
+      await sendMessage(inputValue);
+      setInputValue("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    }
+  };
+
+  const sendMessage = async (message: string) => {
+    if (!message.trim() || isSending) return;
+
+    setIsSending(true);
+    const optimisticId = Date.now().toString();
+    let chatId = selectedChatId;
+
+    try {
+      // Add optimistic user message
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${optimisticId}`,
+          content: message,
+          role: "user",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Add optimistic loading message for assistant
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${optimisticId}`,
+          content: "",
+          role: "assistant",
+          created_at: new Date().toISOString(),
+          isLoading: true,
+        },
+      ]);
+
+      // If no chat is selected, create a new one
+      if (!chatId) {
         const result = await createChat.mutateAsync({
           datasetId: params.datasetId,
           messages: [{ role: "user", content: message }],
         });
-        setSelectedChatId(result.data.id);
+        chatId = result.data.id;
+        // Set the title to the first message if it's a new chat
+        selectChat(
+          chatId,
+          message.length > 30 ? message.substring(0, 30) + "..." : message
+        );
       } else {
+        // Send message to existing chat
         await createChat.mutateAsync({
-          chatId: selectedChatId,
           datasetId: params.datasetId,
+          chatId: chatId,
           messages: [{ role: "user", content: message }],
         });
+        // Refresh messages to get the response
+        await refetchMessages();
       }
-      // Clear optimistic messages after successful response
-      setOptimisticMessages([]);
-      await refetchMessages();
-    } catch {
+
+      // Remove ALL optimistic messages related to this interaction after successful API call
+      setOptimisticMessages((prev) =>
+        prev.filter(
+          (msg) =>
+            msg.id !== `user-${optimisticId}` &&
+            msg.id !== `assistant-${optimisticId}`
+        )
+      );
+    } catch (error) {
       toast.error("Failed to send message");
-      // Remove the loading message on error
-      setOptimisticMessages((prev) => prev.slice(0, -1));
+      console.error(error);
+      // Clean up optimistic messages in case of error
+      setOptimisticMessages((prev) =>
+        prev.filter(
+          (msg) =>
+            msg.id !== `user-${optimisticId}` &&
+            msg.id !== `assistant-${optimisticId}`
+        )
+      );
+      throw error; // Re-throw to handle in caller
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleStartNewChat = () => {
-    setSelectedChatId(null);
   };
 
   // Sort optimistic messages by time
@@ -287,202 +318,215 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     });
   }, [optimisticMessages]);
 
-  const isEmpty = !allMessages.length && !optimisticMessages.length;
-
   const ChatInput = () => {
     return (
-      <form onSubmit={handleSendMessage} className="flex gap-2">
+      <form onSubmit={handleSendMessage} className="flex gap-2 w-full">
         <Input
           ref={inputRef}
+          className="flex-1 h-11 py-2 px-4 shadow-sm"
           placeholder="Type your message..."
-          className="flex-1"
-          disabled={isSending || isVoiceModeActive}
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
+            setShouldMaintainFocus(true);
             setCursorPosition(e.target.selectionStart);
           }}
-          onFocus={() => setShouldMaintainFocus(true)}
           onBlur={() => setShouldMaintainFocus(false)}
-          onClick={(e) => {
-            setCursorPosition(e.currentTarget.selectionStart);
-          }}
-          onKeyUp={(e) => {
-            setCursorPosition(e.currentTarget.selectionStart);
-          }}
+          disabled={isSending}
         />
-        {!isVoiceModeActive && (
-          <>
-            <ChatHistory datasetId={params.datasetId} />
-          </>
-        )}
         <Button
           id="send-message-button"
           type="submit"
-          disabled={isSending || isVoiceModeActive}
           size="icon"
+          className="h-11 w-11 rounded-full shadow-sm"
+          disabled={!inputValue.trim() || isSending}
         >
           {isSending ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           )}
         </Button>
+        {!selectedChatId && <ChatHistory datasetId={params.datasetId} />}
+        <VoiceModeToggle
+          isActive={isVoiceModeActive}
+          onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+        />
       </form>
     );
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="h-screen flex w-full bg-background">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={isOpen ? 40 : 100} minSize={30}>
-          <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="border-b bg-background p-4 flex items-center justify-between">
-              <h2 className="font-semibold">Chat</h2>
-              <div className="flex items-center gap-2">
-                {!isOpen && results && selectedChatId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsOpen(true)}
-                    className="gap-2"
-                  >
-                    <Table2 className="h-4 w-4" />
-                    Show Results
-                  </Button>
+        <ResizablePanel defaultSize={100} minSize={50}>
+          <div className="flex h-full flex-col overflow-hidden">
+            <div className="border-b bg-background/80 backdrop-blur-sm z-10 shadow-sm p-4 flex justify-between items-center">
+              <h1 className="font-semibold flex items-center gap-2">
+                {selectedChatId ? (
+                  <span className="truncate max-w-60 text-foreground/90">
+                    {selectedChatTitle || "New Chat"}
+                  </span>
+                ) : (
+                  <span className="text-foreground/90">New Chat</span>
                 )}
-                <VoiceModeToggle
-                  isActive={isVoiceModeActive}
-                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-                />
+              </h1>
+
+              <div className="flex gap-2 items-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleStartNewChat}
-                  className="gap-2"
+                  onClick={() => selectChat(null, null)}
+                  className="gap-1.5 h-9 font-medium shadow-sm"
                 >
-                  <MessageSquarePlus className="h-4 w-4" />
+                  <MessageSquarePlus className="h-3.5 w-3.5" />
                   New Chat
                 </Button>
+                {showSqlButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="gap-1.5 h-9 font-medium shadow-sm"
+                  >
+                    <Table2 className="h-3.5 w-3.5" />
+                    {isOpen ? "Hide Results" : "Show Results"}
+                  </Button>
+                )}
               </div>
             </div>
 
-            <div className="relative flex-1">
-              <AnimatePresence mode="wait">
-                {isEmpty ? (
-                  <motion.div
-                    className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                  >
-                    <div className="text-center space-y-2 mb-4">
-                      <h1 className="text-2xl font-semibold">
-                        Welcome to GoPie Chat
-                      </h1>
-                      <p className="text-muted-foreground">
-                        Start a conversation by typing a message below
-                      </p>
-                    </div>
-                    <div className="w-full max-w-2xl">
-                      <ChatInput />
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    className="absolute inset-0 flex flex-col"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {/* Messages */}
-                    <ScrollArea
-                      ref={scrollRef}
-                      className="flex-1 p-4"
-                      onScroll={handleScroll}
-                    >
-                      {isLoadingMessages && !isFetchingNextPage ? (
-                        <div className="space-y-4">
-                          {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-20 w-full" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Loading more indicator */}
-                          {isFetchingNextPage && (
-                            <div className="flex justify-center py-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                            </div>
-                          )}
-
-                          {/* Real messages */}
-                          {allMessages.map((message, index) => (
-                            <ChatMessage
-                              key={message.id}
-                              id={message.id}
-                              content={message.content}
-                              role={message.role}
-                              createdAt={message.created_at}
-                              chatId={selectedChatId || undefined}
-                              isLatest={
-                                index === allMessages.length - 1 &&
-                                !sortedOptimisticMessages.length
-                              }
-                              datasetId={params.datasetId}
-                            />
-                          ))}
-
-                          {/* Optimistic messages */}
-                          {sortedOptimisticMessages.map((message, index) => (
-                            <ChatMessage
-                              key={message.id}
-                              id={message.id}
-                              content={message.content}
-                              role={message.role}
-                              createdAt={message.created_at}
-                              isLoading={message.isLoading}
-                              isLatest={
-                                index === sortedOptimisticMessages.length - 1 &&
-                                !message.isLoading
-                              }
-                              datasetId={params.datasetId}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-
-                    {/* Input Area */}
+            {selectedChatId ? (
+              <ChatTabs datasetId={params.datasetId}>
+                <div className="relative flex-1">
+                  <AnimatePresence mode="wait">
                     <motion.div
-                      className="border-t bg-background p-4"
-                      initial={{ y: 100 }}
-                      animate={{ y: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
-                      }}
+                      className="absolute inset-0 flex flex-col"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <ChatInput />
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      {/* Messages */}
+                      <ScrollArea
+                        ref={scrollRef}
+                        className="flex-1 px-4 py-6"
+                        onScroll={handleScroll}
+                      >
+                        {isLoadingMessages && !isFetchingNextPage ? (
+                          <div className="space-y-6 px-2">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                              <Skeleton key={i} className="h-24 w-full" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-6 px-2">
+                            {/* Loading more indicator */}
+                            {isFetchingNextPage && (
+                              <div className="flex justify-center py-3">
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                              </div>
+                            )}
 
-              {/* Voice Mode Component - Moved inside the chat panel */}
-              <VoiceMode
-                isActive={isVoiceModeActive}
-                onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-                onSendMessage={sendMessage}
-                latestAssistantMessage={latestAssistantMessage}
-                datasetId={params.datasetId}
-                isWaitingForResponse={isSending}
-              />
-            </div>
+                            {/* Real messages */}
+                            {allMessages.map((message, index) => (
+                              <ChatMessage
+                                key={message.id}
+                                id={message.id}
+                                content={message.content}
+                                role={message.role}
+                                createdAt={message.created_at}
+                                chatId={selectedChatId || undefined}
+                                isLatest={
+                                  index === allMessages.length - 1 &&
+                                  !sortedOptimisticMessages.length
+                                }
+                                datasetId={params.datasetId}
+                              />
+                            ))}
+
+                            {/* Optimistic messages */}
+                            {sortedOptimisticMessages.map((message, index) => (
+                              <ChatMessage
+                                key={message.id}
+                                id={message.id}
+                                content={message.content}
+                                role={message.role}
+                                createdAt={message.created_at}
+                                isLoading={message.isLoading}
+                                isLatest={
+                                  index ===
+                                    sortedOptimisticMessages.length - 1 &&
+                                  !message.isLoading
+                                }
+                                datasetId={params.datasetId}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+
+                      {/* Input Area */}
+                      <motion.div
+                        className="border-t bg-background/80 backdrop-blur-sm p-4 shadow-sm"
+                        initial={{ y: 100 }}
+                        animate={{ y: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 20,
+                        }}
+                      >
+                        <div className="max-w-4xl mx-auto">
+                          <ChatInput />
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Voice Mode Component */}
+                  <VoiceMode
+                    isActive={isVoiceModeActive}
+                    onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                    onSendMessage={sendMessage}
+                    latestAssistantMessage={latestAssistantMessage}
+                    datasetId={params.datasetId}
+                    isWaitingForResponse={isSending}
+                  />
+                </div>
+              </ChatTabs>
+            ) : (
+              <div className="relative flex-1">
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  <div className="text-center space-y-3 mb-6">
+                    <h1 className="text-3xl font-semibold text-foreground">
+                      Welcome to GoPie Chat
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                      Start a conversation by typing a message below
+                    </p>
+                  </div>
+                  <div className="w-full max-w-xl px-4">
+                    <ChatInput />
+                  </div>
+                </motion.div>
+
+                {/* Voice Mode Component */}
+                <VoiceMode
+                  isActive={isVoiceModeActive}
+                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                  onSendMessage={sendMessage}
+                  latestAssistantMessage={latestAssistantMessage}
+                  datasetId={params.datasetId}
+                  isWaitingForResponse={isSending}
+                />
+              </div>
+            )}
           </div>
         </ResizablePanel>
         {isOpen && (
