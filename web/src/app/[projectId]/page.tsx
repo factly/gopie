@@ -12,6 +12,7 @@ import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { deleteDataset } from "@/lib/mutations/dataset/delete-dataset";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { InlineProjectEditor } from "@/components/project/inline-project-editor";
 
 export default function ProjectPage({
   params,
@@ -106,16 +107,7 @@ export default function ProjectPage({
 
   return (
     <div className="mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-      <div className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground/90">
-          {project.name}
-        </h1>
-        {project.description && (
-          <p className="text-lg text-muted-foreground/90 max-w-[800px]">
-            {project.description}
-          </p>
-        )}
-      </div>
+      <InlineProjectEditor project={project} />
 
       <div className="pt-8">
         <div className="flex items-center justify-between mb-6">
