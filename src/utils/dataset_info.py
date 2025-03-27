@@ -53,7 +53,9 @@ def get_dataset_preview(dataset_name: str, sample_rows: int = 3) -> DatasetSchem
 
         for column in df.columns:
             data_type = str(df[column].dtype)
-            sample_values = df[column].dropna().head(sample_rows).tolist()
+            sample_values = (
+                df[column].dropna().drop_duplicates().head(sample_rows).tolist()
+            )
             non_null_count = int(df[column].count())
 
             column_info: ColumnSchema = {

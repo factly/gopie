@@ -85,7 +85,7 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
         user_input (str): The user's input query
 
     Yields:
-        str: JSON-formatted event data for streaming
+        str: JSON-formatted event data for streaming in SSE format
     """
     event_dispatcher.clear_events()
     input_state = {"messages": [{"role": "user", "content": user_input}]}
@@ -94,19 +94,17 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
-                # yield (json.dumps(formatted_event) + "\n\n")
-                yield f"data: {json.dumps(formatted_event)}\n\n"  # testing purpose
+                yield f"data: {json.dumps(formatted_event)}\n\n"
     except Exception as e:
-        yield (
+        yield f"data: {
             json.dumps(
                 {
-                    "type": "error",
-                    "message": f"Error during streaming: {str(e)}",
-                    "data": {"error": str(e)},
+                    'type': 'error',
+                    'message': f'Error during streaming: {str(e)}',
+                    'data': {'error': str(e)},
                 }
             )
-            + "\n"
-        )
+        }\n\n"
 
 
 def visualize_graph():

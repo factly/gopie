@@ -13,13 +13,19 @@ from src.utils.dataset_profiling import profile_all_datasets
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application."""
-    logging.info("Starting dataset pre-profiling...")
-    try:
-        data_dir = os.getenv("DATA_DIR", "./data")
-        datasets = profile_all_datasets(data_dir=data_dir)
-        logging.info(f"Successfully pre-profiled {len(datasets)} datasets")
-    except Exception as e:
-        logging.error(f"Error during dataset pre-profiling: {e}")
+    if not hasattr(app.state, "datasets_profiled") or not app.state.datasets_profiled:
+        logging.info("Starting dataset pre-profiling...")
+        try:
+            data_dir = os.getenv("DATA_DIR", "./data")
+            datasets = profile_all_datasets(data_dir=data_dir)
+            logging.info(f"Successfully pre-profiled {len(datasets)} datasets")
+            app.state.datasets_profiled = True
+            app.state.datasets = datasets
+        except Exception as e:
+            logging.error(f"Error during dataset pre-profiling: {e}")
+            app.state.datasets_profiled = False
+    else:
+        logging.info("Dataset profiling already done, skipping...")
 
     yield
 
@@ -28,7 +34,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 logging.basicConfig(filename="log/agent.log", level=logging.INFO)
-# visualize_graph()
 
 templates = Jinja2Templates(directory="src/test/templates")
 
@@ -41,12 +46,7 @@ async def root(request: Request):
 @app.get("/nl2sql")
 async def get_nl2sql(user_input: str):
     """Stream the agent's processing events as Server-Sent Events."""
-
-    async def event_generator():
-        async for chunk in stream_graph_updates(user_input):
-            yield chunk
-
     return StreamingResponse(
-        event_generator(),
+        stream_graph_updates(user_input),
         media_type="text/event-stream",
     )
