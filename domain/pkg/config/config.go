@@ -203,7 +203,7 @@ func ensureDirectoryExists(path string) error {
 
 func setDefaults() {
 	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
-	viper.SetDefault("GOPIE_SERVER_PORT", "8080")
+	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
