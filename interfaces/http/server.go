@@ -8,8 +8,8 @@ import (
 	_ "github.com/factly/gopie/docs" // Import generated Swagger docs
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/meterus"
-	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
@@ -53,7 +53,7 @@ func ServeHttp() error {
 	// zitadel.SetupZitadelInterceptor(config, logger)
 
 	source := s3.NewS3SourceRepository(&config.S3, logger)
-	olap, err := motherduck.NewOlapDBDriver(&config.OlapDB, logger, &config.S3)
+	olap, err := duckdb.NewOlapDBDriver(&config.OlapDB, logger, &config.S3)
 	if err != nil {
 		logger.Error("error connecting to motherduck", zap.Error(err))
 		return err

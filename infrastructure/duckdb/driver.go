@@ -1,4 +1,4 @@
-package motherduck
+package duckdb
 
 import (
 	"database/sql"
@@ -26,63 +26,77 @@ func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *con
 	olap := OlapDBDriver{
 		logger: logger,
 	}
-	logger.Info("connecting to motherduck")
+	logger.Info("initializing duckdb driver",
+		zap.String("db_type", cfg.DB),
+		zap.String("access_mode", cfg.AccessMode))
+
 	err := olap.Connect(cfg)
 	if err != nil {
-		logger.Error("error connecting to motherduck", zap.Error(err))
-		fmt.Println("error connecting to motherduck: ", err.Error())
+		logger.Error("failed to connect to duckdb",
+			zap.String("db_type", cfg.DB),
+			zap.Error(err))
 		return nil, err
 	}
-	logger.Info("connected to motherduck")
-	if cfg.DBType == "duck" {
+	logger.Info("successfully connected to duckdb",
+		zap.String("db_type", cfg.DB))
+
+	if cfg.DB == "duckdb" {
 		err = olap.postDuckDbConnect(s3Cfg)
 		if err != nil {
-			logger.Error("error connecting to motherduck", zap.Error(err))
-			fmt.Println("error connecting to motherduck: ", err.Error())
+			logger.Error("failed to run post-connection setup",
+				zap.String("db_type", cfg.DB),
+				zap.Error(err))
 			return nil, err
 		}
-		logger.Info("post duckdb connection successful")
+		logger.Info("completed post-connection setup successfully")
 	}
 	return &olap, nil
 }
 
 func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
-
 	var dsn string
-	if cfg.DBType == "motherduck" {
+	if cfg.DB == "motherduck" {
 		dsn = fmt.Sprintf("md:%s?motherduck_token=%s", cfg.MotherDuck.DBName, cfg.MotherDuck.Token)
 		if cfg.AccessMode != "" {
 			dsn = fmt.Sprintf("%s&access_mode=%s", dsn, cfg.AccessMode)
-			m.logger.Info("access mode", zap.String("mode", cfg.AccessMode))
+			m.logger.Debug("setting motherduck access mode",
+				zap.String("mode", cfg.AccessMode))
 		}
 	} else {
 		dsn = cfg.DuckDB.Path
-
 		params := []string{}
 
 		if cfg.DuckDB.CPU > 0 {
 			params = append(params, fmt.Sprintf("threads=%d", cfg.DuckDB.CPU))
+			m.logger.Debug("setting CPU threads",
+				zap.Int("threads", cfg.DuckDB.CPU))
 		}
 
 		if cfg.DuckDB.MemoryLimit > 0 {
 			params = append(params, fmt.Sprintf("memory_limit=%dMB", cfg.DuckDB.MemoryLimit))
+			m.logger.Debug("setting memory limit",
+				zap.Int("limit_mb", cfg.DuckDB.MemoryLimit))
 		}
 
 		if cfg.AccessMode != "" {
 			params = append(params, fmt.Sprintf("access_mode=%s", cfg.AccessMode))
+			m.logger.Debug("setting duckdb access mode",
+				zap.String("mode", cfg.AccessMode))
 		}
 
-		// Add query parameters if we have any
 		if len(params) > 0 {
 			dsn = fmt.Sprintf("%s?%s", dsn, strings.Join(params, "&"))
 		}
 
-		m.logger.Info("duckdb connection string", zap.String("dsn", dsn))
+		m.logger.Debug("constructed duckdb connection string",
+			zap.String("dsn", dsn))
 	}
 
 	db, err := sql.Open("duckdb", dsn)
 	if err != nil {
-		m.logger.Error("error connecting to motherduck", zap.Error(err))
+		m.logger.Error("failed to open database connection",
+			zap.String("db_type", cfg.DB),
+			zap.Error(err))
 		return err
 	}
 
@@ -91,60 +105,80 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 }
 
 func (m *OlapDBDriver) postDuckDbConnect(s3Cfg *config.S3Config) error {
+	m.logger.Debug("starting post-connection setup")
+
 	_, err := m.db.Exec("install httpfs;")
 	if err != nil {
-		m.logger.Error("error installing httpfs", zap.Error(err))
+		m.logger.Error("failed to install httpfs extension",
+			zap.Error(err))
 		return fmt.Errorf("error installing httpfs extension: %w", err)
 	}
+	m.logger.Debug("httpfs extension installed")
 
 	_, err = m.db.Exec("load httpfs;")
 	if err != nil {
-		m.logger.Error("error loading httpfs", zap.Error(err))
+		m.logger.Error("failed to load httpfs extension",
+			zap.Error(err))
 		return fmt.Errorf("error loading httpfs extension: %w", err)
 	}
+	m.logger.Debug("httpfs extension loaded")
 
-	// Set S3 credentials
 	_, err = m.db.Exec(fmt.Sprintf(("SET s3_access_key_id='%s';"), s3Cfg.AccessKey))
 	if err != nil {
-		m.logger.Error("error setting s3 access key", zap.Error(err))
+		m.logger.Error("failed to set S3 access key",
+			zap.Error(err))
 		return fmt.Errorf("error setting s3 access key: %w", err)
 	}
+	m.logger.Debug("S3 access key configured")
 
 	_, err = m.db.Exec(fmt.Sprintf("SET s3_secret_access_key='%s';", s3Cfg.SecretKey))
 	if err != nil {
-		m.logger.Error("error setting S3 secret key", zap.Error(err))
+		m.logger.Error("failed to set S3 secret key",
+			zap.Error(err))
 		return fmt.Errorf("failed to set S3 secret key: %w", err)
 	}
+	m.logger.Debug("S3 secret key configured")
 
 	if s3Cfg.Endpoint != "" {
 		_, err = m.db.Exec(fmt.Sprintf("SET s3_endpoint='%s';", s3Cfg.Endpoint))
 		if err != nil {
-			m.logger.Error("error setting S3 endpoint", zap.Error(err))
+			m.logger.Error("failed to set S3 endpoint",
+				zap.String("endpoint", s3Cfg.Endpoint),
+				zap.Error(err))
 			return fmt.Errorf("failed to set S3 endpoint: %w", err)
 		}
+		m.logger.Debug("S3 endpoint configured",
+			zap.String("endpoint", s3Cfg.Endpoint))
 	}
 
 	if s3Cfg.Region != "" {
 		_, err = m.db.Exec(fmt.Sprintf("SET s3_region='%s';", s3Cfg.Region))
 		if err != nil {
-			m.logger.Error("error setting S3 region", zap.Error(err))
+			m.logger.Error("failed to set S3 region",
+				zap.String("region", s3Cfg.Region),
+				zap.Error(err))
 			return fmt.Errorf("failed to set S3 region: %w", err)
 		}
+		m.logger.Debug("S3 region configured",
+			zap.String("region", s3Cfg.Region))
 	}
 
 	_, err = m.db.Exec("SET s3_url_style='path';")
 	if err != nil {
-		m.logger.Error("error setting S3 URL style", zap.Error(err))
+		m.logger.Error("failed to set S3 URL style",
+			zap.Error(err))
 		return fmt.Errorf("failed to set S3 URL style: %w", err)
 	}
+	m.logger.Debug("S3 URL style configured")
 
-	_, err = m.db.Exec("SET s3_use_ssl=false;")
+	_, err = m.db.Exec(fmt.Sprintf("SET s3_use_ssl=%v;", s3Cfg.SSL))
 	if err != nil {
-		m.logger.Error("error disabling S3 SSL", zap.Error(err))
-		return fmt.Errorf("failed to disable S3 SSL: %w", err)
+		m.logger.Error("failed to set S3 SSL config",
+			zap.Error(err))
+		return fmt.Errorf("failed to set S3 SSL config: %w", err)
 	}
 
-	m.logger.Info("S3 configuration successful",
+	m.logger.Info("S3 configuration completed successfully",
 		zap.String("endpoint", s3Cfg.Endpoint),
 		zap.String("region", s3Cfg.Region))
 

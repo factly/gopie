@@ -24,6 +24,7 @@ type S3Config struct {
 	SecretKey string
 	Region    string
 	Endpoint  string
+	SSL       bool
 }
 
 type LoggerConfig struct {
@@ -44,7 +45,7 @@ type GopieConfig struct {
 }
 
 type OlapDBConfig struct {
-	DBType     string
+	DB         string
 	MotherDuck *MotherDuckConfig
 	DuckDB     *DuckDBConfig
 	AccessMode string
@@ -125,12 +126,12 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		// {config.Zitadel.LoginURL, "zitadel app login url"},
 	}
 
-	if config.OlapDB.DBType == "" {
+	if config.OlapDB.DB == "" {
 		return nil, fmt.Errorf("missing olapdb dbtype")
 	}
 
-	switch config.OlapDB.DBType {
-	case "duck":
+	switch config.OlapDB.DB {
+	case "duckdb":
 		config.OlapDB.DuckDB = &DuckDBConfig{
 			Path:         viper.GetString("GOPIE_DUCKDB_PATH"),
 			CPU:          viper.GetInt("GOPIE_DUCKDB_CPU"),
@@ -172,7 +173,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		)
 
 	default:
-		return nil, fmt.Errorf("invalid olapdb dbtype: %s", config.OlapDB.DBType)
+		return nil, fmt.Errorf("invalid olapdb dbtype: %s", config.OlapDB.DB)
 	}
 
 	for _, v := range validations {
@@ -205,6 +206,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
 	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
+	viper.SetDefault("GOPIE_S3_SSL", false)
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
@@ -232,6 +234,7 @@ func LoadConfig() (*GopieConfig, error) {
 			SecretKey: viper.GetString("GOPIE_S3_SECRET_KEY"),
 			Region:    viper.GetString("GOPIE_S3_REGION"),
 			Endpoint:  viper.GetString("GOPIE_S3_ENDPOINT"),
+			SSL:       viper.GetBool("GOPIE_S3_SSL"),
 		},
 		Logger: LoggerConfig{
 			Level:   viper.GetString("GOPIE_LOGGER_LEVEL"),
@@ -239,7 +242,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Mode:    viper.GetString("GOPIE_LOGGER_MODE"),
 		},
 		OlapDB: OlapDBConfig{
-			DBType:     viper.GetString("GOPIE_OLAPDB_DBTYPE"),
+			DB:         viper.GetString("GOPIE_OLAPDB_DBTYPE"),
 			AccessMode: viper.GetString("GOPIE_OLAPDB_ACCESS_MODE"),
 		},
 		PortKey: PortKeyConfig{
