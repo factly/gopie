@@ -6,7 +6,7 @@ import (
 )
 
 type OlapRepository interface {
-	Connect(*config.MotherDuckConfig) error
+	Connect(*config.OlapDBConfig) error
 	CreateTable(filePath, tableName, format string) error
 	CreateTableFromS3(s3Path, tableName, format string) error
 	Query(query string) (*models.Result, error)

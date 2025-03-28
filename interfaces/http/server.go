@@ -8,15 +8,14 @@ import (
 	_ "github.com/factly/gopie/docs" // Import generated Swagger docs
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/meterus"
-	"github.com/factly/gopie/infrastructure/motherduck"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
-	"github.com/factly/gopie/infrastructure/zitadel"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
@@ -42,7 +41,7 @@ func ServeHttp() error {
 	}
 
 	logger, err := logger.NewLogger(
-		map[string]interface{}{
+		map[string]any{
 			"log_level": config.Logger.Level,
 			"mode":      config.Logger.Mode,
 			"log_file":  config.Logger.LogFile,
@@ -51,10 +50,10 @@ func ServeHttp() error {
 	logger.Info("logger initialized")
 
 	// zitadel interceptor setup
-	zitadel.SetupZitadelInterceptor(config, logger)
+	// zitadel.SetupZitadelInterceptor(config, logger)
 
 	source := s3.NewS3SourceRepository(&config.S3, logger)
-	olap, err := motherduck.NewMotherDuckOlapoDriver(&config.MotherDuck, logger)
+	olap, err := duckdb.NewOlapDBDriver(&config.OlapDB, logger, &config.S3)
 	if err != nil {
 		logger.Error("error connecting to motherduck", zap.Error(err))
 		return err
@@ -118,7 +117,7 @@ func ServeHttp() error {
 		})
 	})
 
-	if config.MotherDuck.AccessMode != "read_only" {
+	if config.OlapDB.AccessMode != "read_only" {
 		logger.Info("s3 upload routes enabled")
 		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, projectService, logger)
 	}
