@@ -9,7 +9,6 @@ import {
   NetworkIcon,
   ChevronDown,
   PanelLeftIcon,
-  HomeIcon,
   HashIcon,
   CalendarIcon,
   TextIcon,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   Sidebar,
@@ -132,7 +132,7 @@ export function AppSidebar() {
         {isSidebarOpen ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -140,7 +140,7 @@ export function AppSidebar() {
                   onClick={() => router.push("/")}
                   title="Back to Home"
                 >
-                  <HomeIcon className="h-4 w-4" />
+                  <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
                 </Button>
                 <span className="font-semibold">GoPie</span>
               </div>
@@ -175,7 +175,7 @@ export function AppSidebar() {
               onClick={() => router.push("/")}
               title="Back to Home"
             >
-              <HomeIcon className="h-4 w-4" />
+              <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
             </Button>
             <Button
               variant="ghost"
