@@ -14,7 +14,7 @@ def initialize_qdrant_client(url="http://localhost:6333"):
     if not collection_exists(client, "dataset_collection"):
         client.create_collection(
             collection_name="dataset_collection",
-            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
         )
     return client
 

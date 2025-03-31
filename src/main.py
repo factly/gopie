@@ -13,19 +13,13 @@ from src.utils.dataset_profiling import profile_all_datasets
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application."""
-    if not hasattr(app.state, "datasets_profiled") or not app.state.datasets_profiled:
-        logging.info("Starting dataset pre-profiling...")
-        try:
-            data_dir = os.getenv("DATA_DIR", "./data")
-            datasets = profile_all_datasets(data_dir=data_dir)
-            logging.info(f"Successfully pre-profiled {len(datasets)} datasets")
-            app.state.datasets_profiled = True
-            app.state.datasets = datasets
-        except Exception as e:
-            logging.error(f"Error during dataset pre-profiling: {e}")
-            app.state.datasets_profiled = False
-    else:
-        logging.info("Dataset profiling already done, skipping...")
+    logging.info("Starting dataset pre-profiling...")
+    try:
+        data_dir = os.getenv("DATA_DIR", "./data")
+        datasets = profile_all_datasets(data_dir=data_dir)
+        logging.info(f"Successfully pre-profiled {len(datasets)} datasets")
+    except Exception as e:
+        logging.error(f"Error during dataset pre-profiling: {e}")
 
     yield
 
