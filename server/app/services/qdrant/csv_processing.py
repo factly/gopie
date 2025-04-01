@@ -5,7 +5,7 @@ from uuid import uuid4
 import pandas as pd
 from langchain_core.documents import Document
 
-from server.app.workflow.graph.types import ColumnSchema, DatasetSchema
+from server.app.models.types import ColumnSchema, DatasetSchema
 
 DATA_DIR = "./data"
 
@@ -44,6 +44,7 @@ def extract_csv_metadata(file_path: str) -> DatasetSchema:
             "row_count": row_count,
             "column_count": column_count,
             "columns": columns_info,
+
         }
     except Exception as e:
         print(f"Error extracting metadata from {file_path}: {e}")

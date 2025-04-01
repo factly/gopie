@@ -1,4 +1,5 @@
-from server.app.workflow.graph.types import ErrorMessage, State
+from server.app.models.types import ErrorMessage
+from server.app.workflow.graph.types import State
 
 
 def route_response_handler(state: State) -> str:

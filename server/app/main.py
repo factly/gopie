@@ -13,19 +13,13 @@ from server.app.api.api_v1.routers.nl2sql import router as nl2sql_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager for FastAPI application."""
-    logging.info("Starting dataset profiling...")
     try:
         data_dir = settings.DATA_DIR
         datasets = profile_all_datasets(data_dir=data_dir)
-        logging.info(f"Successfully profiled {len(datasets)} datasets")
     except Exception as e:
         logging.error(f"Error during dataset profiling: {e}")
 
     yield
-
-    logging.info("Shutting down application...")
-
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

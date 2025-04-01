@@ -5,7 +5,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from server.app.core.langchain_config import lc
-from server.app.workflow.graph.types import DatasetSchema
+from server.app.models.types import DatasetSchema
 
 
 def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:

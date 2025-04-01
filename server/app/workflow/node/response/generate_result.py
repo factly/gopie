@@ -2,8 +2,8 @@ import json
 from typing import Any, Dict, List
 
 from server.app.core.langchain_config import lc
-from server.app.workflow.node.query_result.query_type import QueryResult
-from server.app.workflow.graph.types import AIMessage, ErrorMessage, State
+from server.app.models.types import AIMessage, ErrorMessage, QueryResult
+from server.app.workflow.graph.types import State
 
 
 async def generate_result(state: State) -> Dict[str, List[Any]]:

@@ -1,9 +1,14 @@
-from typing import Annotated, Any, Dict, List, Optional, TypedDict
+from typing import Annotated, TypedDict
 
-from langchain_core.messages import AIMessage
 from langgraph.graph.message import add_messages
 
-from server.app.workflow.node.query_result.query_type import QueryResult
+from server.app.models.types import (
+    ColumnSchema,
+    DatasetSchema,
+    ErrorMessage,
+    IntermediateStep,
+    QueryResult,
+)
 
 
 class State(TypedDict):
@@ -18,44 +23,5 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     query_result: QueryResult
 
-
-class IntermediateStep(AIMessage):
-    """Represents an intermediate step in the processing pipeline"""
-
-    type: str = "intermediate_step"
-
-    @classmethod
-    def from_text(cls, text: str) -> "IntermediateStep":
-        return cls(content=text)
-
-
-class ErrorMessage(AIMessage):
-    """Represents an error message"""
-
-    type: str = "error_message"
-
-    @classmethod
-    def from_text(cls, text: str) -> "ErrorMessage":
-        return cls(content=text)
-
-
-class ColumnSchema(TypedDict):
-    """Schema information for a dataset column"""
-
-    name: str
-    description: str
-    type: str
-    sample_values: List[Any]
-    non_null_count: Optional[int]
-    constraints: Optional[Dict[str, Any]]
-
-
-class DatasetSchema(TypedDict):
-    """Comprehensive schema information for a dataset"""
-
-    name: str
-    file_path: str
-    file_size_mb: float
-    row_count: int
-    column_count: int
-    columns: List[ColumnSchema]
+# The class definitions for IntermediateStep, ErrorMessage, ColumnSchema, and DatasetSchema
+# have been moved to server.app.models.types

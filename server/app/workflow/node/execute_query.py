@@ -8,7 +8,8 @@ import pandas as pd
 from langchain_core.output_parsers import JsonOutputParser
 
 from server.app.core.langchain_config import lc
-from server.app.workflow.graph.types import ErrorMessage, IntermediateStep, State
+from server.app.models.types import ErrorMessage, IntermediateStep
+from server.app.workflow.graph.types import State
 from server.app.utils.dataset_info import DATA_DIR
 
 MAX_RETRY_COUNT = 3

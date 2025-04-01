@@ -3,8 +3,8 @@ import os
 import shutil
 
 from server.app.models.data import UploadResponse
-from server.app.services.dataset_profiling import profile_dataset
-from server.app.services.qdrant.vector_store import vectorize_dataset
+# from server.app.services.dataset_profiling import profile_dataset
+# from server.app.services.qdrant.vector_store import vectorize_dataset
 
 data_router = APIRouter()
 

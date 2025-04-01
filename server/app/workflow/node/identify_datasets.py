@@ -5,7 +5,8 @@ from typing import Any, Dict, List
 from langchain_core.output_parsers import JsonOutputParser
 
 from server.app.core.langchain_config import lc
-from server.app.workflow.graph.types import ErrorMessage, IntermediateStep, State
+from server.app.models.types import ErrorMessage, IntermediateStep
+from server.app.workflow.graph.types import State
 from server.app.utils.dataset_info import get_dataset_preview
 from server.app.services.qdrant_client import find_and_preview_dataset
 
@@ -72,7 +73,6 @@ async def identify_datasets(state: State):
         datasets_info = []
         try:
             relevant_datasets = find_and_preview_dataset(user_query, top_k=5)
-            print(relevant_datasets)
 
             for dataset in relevant_datasets:
                 if "error" not in dataset:
