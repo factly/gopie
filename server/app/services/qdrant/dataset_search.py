@@ -5,7 +5,6 @@ from server.app.services.qdrant.qdrant_setup import (
 )
 from server.app.services.qdrant.vector_store import (
     perform_similarity_search,
-    vectorize_datasets,
 )
 from server.app.utils.dataset_info import get_dataset_preview
 
@@ -48,7 +47,6 @@ def find_and_preview_dataset(
     client = initialize_qdrant_client()
     vector_store = setup_vector_store(client)
 
-    vector_store = vectorize_datasets(vector_store, directory_path)
     results = find_relevant_datasets(vector_store, query, top_k=top_k)
 
     previews = []
