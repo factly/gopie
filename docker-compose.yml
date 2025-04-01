@@ -1,9 +1,6 @@
-version: "3.8"
-
 services:
   server:
     build:
-      context: ./server
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -12,6 +9,14 @@ services:
       - ./log:/app/log
     env_file:
       - .env
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage:z
     restart: unless-stopped
 
 volumes:
