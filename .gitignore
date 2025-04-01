@@ -175,4 +175,4 @@ cython_debug/
 
 TODO.md
 qdrant_storage
-test
+tests
