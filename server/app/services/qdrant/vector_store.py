@@ -8,7 +8,7 @@ from server.app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-
+from server.app.core.config import settings
 DATA_DIR = "./data"
 
 
@@ -19,7 +19,7 @@ def add_documents_to_vector_store(vector_store, documents, ids=None):
     vector_store.add_documents(documents=documents, ids=ids)
 
 
-def perform_similarity_search(vector_store, query, top_k=1):
+def perform_similarity_search(vector_store, query, top_k=settings.QDRANT_TOP_K):
     """Perform a similarity search."""
     return vector_store.similarity_search(query, k=top_k)
 

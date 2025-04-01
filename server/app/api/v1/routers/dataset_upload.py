@@ -91,8 +91,6 @@ async def upload_dataset(
             "success": True,
             "message": f"Dataset {file.filename} uploaded successfully and processing started.",
             "dataset_name": table_name,
-            "table_name": table_name,
-            "file_path": file_path,
         }
     except HTTPException as e:
         raise e

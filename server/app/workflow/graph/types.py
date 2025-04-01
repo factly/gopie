@@ -1,17 +1,14 @@
-from typing import Annotated, TypedDict
+from typing import Annotated, TypedDict, Optional
 
 from langgraph.graph.message import add_messages
 
 from server.app.models.types import (
-    ColumnSchema,
-    DatasetSchema,
-    ErrorMessage,
-    IntermediateStep,
     QueryResult,
 )
 
 
 class State(TypedDict):
+    dataset_id: Optional[str]
     datasets: list[str]
     subqueries: list[str]
     subquery_index: int
@@ -22,6 +19,3 @@ class State(TypedDict):
     user_query: str
     messages: Annotated[list, add_messages]
     query_result: QueryResult
-
-# The class definitions for IntermediateStep, ErrorMessage, ColumnSchema, and DatasetSchema
-# have been moved to server.app.models.types

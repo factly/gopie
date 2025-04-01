@@ -7,6 +7,7 @@ from server.app.services.qdrant.vector_store import (
     perform_similarity_search,
 )
 from server.app.utils.dataset_info import get_dataset_preview
+from server.app.core.config import settings
 
 DATA_DIR = "./data"
 
@@ -26,7 +27,7 @@ def filter_csv_documents(results):
     return filtered_results
 
 
-def find_relevant_datasets(vector_store, query: str, top_k: int = 3):
+def find_relevant_datasets(vector_store, query: str, top_k: int = settings.QDRANT_TOP_K):
     """Find the most relevant datasets for a given query."""
     search_k = top_k * 2
     results = perform_similarity_search(vector_store, query, top_k=search_k)
@@ -41,7 +42,7 @@ def find_relevant_datasets(vector_store, query: str, top_k: int = 3):
 
 
 def find_and_preview_dataset(
-    query: str, top_k: int = 3, directory_path: str = DATA_DIR
+    query: str, top_k: int = settings.QDRANT_TOP_K, directory_path: str = DATA_DIR
 ):
     """Find relevant datasets based on a query and provide their previews."""
     client = initialize_qdrant_client()

@@ -72,27 +72,22 @@ async def identify_datasets(state: State):
     try:
         datasets_info = []
         try:
-            relevant_datasets = find_and_preview_dataset(user_query, top_k=5)
+            relevant_datasets = find_and_preview_dataset(user_query)
 
             for dataset in relevant_datasets:
-                if "error" not in dataset:
-                    dataset_name = dataset["relevance_info"].metadata.get(
-                        "dataset_name", ""
-                    )
-                    if dataset_name.endswith(".csv"):
-                        file_name = os.path.basename(dataset_name)
-                        info = get_dataset_preview(file_name)
-                        datasets_info.append(info)
+                if "error" not in dataset and "schema" in dataset and dataset["schema"]:
+                    datasets_info.append(dataset["schema"])
         except Exception as e:
-            print(
-                f"Vector search error: {str(e)}. Falling back to listing all datasets."
-            )
+            print(f"Vector search error: {str(e)}. Unable to retrieve dataset information.")
 
         if not datasets_info:
-            for file in os.listdir("./data"):
-                if file.endswith(".csv"):
-                    info = get_dataset_preview(file)
-                    datasets_info.append(info)
+            return {
+                "query_result": query_result,
+                "datasets": None,
+                "messages": [
+                    ErrorMessage.from_text(json.dumps({"error": "No relevant datasets found"}, indent=2))
+                ],
+            }
 
         prompt = create_llm_prompt(user_query, datasets_info)
         response: Any = await lc.llm.ainvoke(prompt)

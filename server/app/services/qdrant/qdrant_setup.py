@@ -5,16 +5,16 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import CountResult, Distance, Filter, VectorParams
 
 from server.app.core.langchain_config import lc
+from server.app.core.config import settings
 
-
-def initialize_qdrant_client(url="http://localhost:6333"):
+def initialize_qdrant_client():
     """Initialize the Qdrant client and create a collection if it doesn't exist."""
-    client = QdrantClient(url=url)
+    client = QdrantClient(url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
 
     if not collection_exists(client, "dataset_collection"):
         client.create_collection(
             collection_name="dataset_collection",
-            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
         )
     return client
 

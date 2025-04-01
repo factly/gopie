@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.app.core.config import settings
 from server.app.services.dataset_profiling import profile_all_datasets
-from server.app.api.api_v1.routers.nl2sql import router as nl2sql_router
-from server.app.api.api_v1.routers.dataset_upload import dataset_router as dataset_upload_router
+from server.app.api.v1.routers.query import router as query_router
+from server.app.api.v1.routers.dataset_upload import dataset_router as dataset_upload_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,7 +46,7 @@ app.add_middleware(
     allow_headers=settings.CORS_HEADERS,
 )
 
-app.include_router(nl2sql_router, prefix=settings.API_V1_STR, tags=["nl2sql"])
+app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(dataset_upload_router, prefix=settings.API_V1_STR, tags=["dataset_upload"])
 
 def start():

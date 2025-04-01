@@ -1,5 +1,5 @@
 ﻿import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from langgraph.graph import END, START, StateGraph
 
@@ -78,24 +78,29 @@ graph_builder.add_edge("max_iterations_reached", END)
 graph = graph_builder.compile()
 
 
-async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
+async def stream_graph_updates(user_input: str, dataset_id: Optional[str] = None) -> AsyncGenerator[str, None]:
     """Stream graph updates for user input with event tracking.
 
     Args:
         user_input (str): The user's input query
+        dataset_id (str, optional): Specific dataset ID to use for the query
 
     Yields:
         str: JSON-formatted event data for streaming in SSE format
     """
     event_dispatcher.clear_events()
-    input_state = {"messages": [{"role": "user", "content": user_input}]}
+
+    input_state = {
+        "messages": [{"role": "user", "content": user_input}],
+        "dataset_id": dataset_id
+    }
 
     try:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
                 print(formatted_event)
-                yield f"""data: {json.dumps(formatted_event)}\n\n"""
+                yield f"""data: {json.dumps(formatted_event, indent=2)}\n\n"""
     except Exception as e:
         yield f"""data: {
             json.dumps(
@@ -103,7 +108,8 @@ async def stream_graph_updates(user_input: str) -> AsyncGenerator[str, None]:
                     'type': 'error',
                     'message': f'Error during streaming: {str(e)}',
                     'data': {'error': str(e)},
-                }
+                },
+                indent=2,
             )
         }
         """
