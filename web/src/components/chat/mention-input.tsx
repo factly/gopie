@@ -1,4 +1,11 @@
-import { useState, useRef, useEffect, KeyboardEvent, ReactNode } from "react";
+import {
+  useCallback,
+  useState,
+  useRef,
+  useEffect,
+  ReactNode,
+  KeyboardEvent,
+} from "react";
 import { X, Sparkles, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,10 +22,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ContextItem } from "./context-picker";
 import { useProjects } from "@/lib/queries/project/list-projects";
-import { fetchDatasets } from "@/lib/queries/dataset/list-datasets";
+import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { Dataset } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { debounce } from "@/lib/utils";
 
 interface MentionInputProps {
   value: string;
@@ -33,6 +42,7 @@ interface MentionInputProps {
   actionButtons?: ReactNode;
   showSendButton?: boolean;
   isSending?: boolean;
+  lockableContextIds?: string[]; // Array of context IDs that cannot be removed
 }
 
 export function MentionInput({
@@ -48,11 +58,13 @@ export function MentionInput({
   actionButtons,
   showSendButton = false,
   isSending = false,
+  lockableContextIds,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const [showMentionPopover, setShowMentionPopover] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [mentionResults, setMentionResults] = useState<{
     projects: { id: string; name: string }[];
     datasets: { id: string; name: string; projectId: string; alias: string }[];
@@ -61,10 +73,21 @@ export function MentionInput({
     datasets: [],
   });
 
+  const queryClient = useQueryClient();
+
   // Get projects
   const { data: projectsData } = useProjects({
     variables: { limit: 1000 },
   });
+
+  // Define a debounced search function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setSearchQuery(query);
+    }, 300),
+    []
+  );
 
   // Handle input changes and detect @ mentions
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +109,7 @@ export function MentionInput({
 
     if (mentionMatch) {
       setShowMentionPopover(true);
-      searchMentions(mentionMatch[1]);
+      debouncedSearch(mentionMatch[1]);
     } else {
       setShowMentionPopover(false);
     }
@@ -106,9 +129,15 @@ export function MentionInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "@") {
       setShowMentionPopover(true);
-      searchMentions("");
+      debouncedSearch("");
     } else if (e.key === "Escape") {
       setShowMentionPopover(false);
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      // Handle Enter key press to submit the form
+      e.preventDefault();
+      if (value.trim() && !disabled) {
+        onSubmit(e);
+      }
     }
   };
 
@@ -145,43 +174,96 @@ export function MentionInput({
     };
   }, []);
 
-  // Search for projects and datasets that match the mention query
-  const searchMentions = async (query: string) => {
-    const projects = projectsData?.results || [];
-    const filteredProjects = projects.filter((project) =>
-      project.name.toLowerCase().includes(query.toLowerCase())
-    );
+  // Effect to search projects and datasets when searchQuery changes
+  useEffect(() => {
+    const loadMentionResults = async () => {
+      const projects = projectsData?.results || [];
+      const filteredProjects = projects.filter((project) =>
+        project.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
-    const allDatasets: Dataset[] = [];
-    for (const project of projects) {
-      try {
-        const data = await fetchDatasets({
-          projectId: project.id,
-          limit: 100,
-          query,
+      // Start building results with filtered projects
+      const results = {
+        projects: filteredProjects.map((p) => ({ id: p.id, name: p.name })),
+        datasets: [] as {
+          id: string;
+          name: string;
+          projectId: string;
+          alias: string;
+        }[],
+      };
+
+      // Only search datasets if we have projects
+      if (projects.length > 0) {
+        // We'll collect all dataset queries and run them in parallel
+        const datasetPromises = projects.map(async (project) => {
+          try {
+            const queryKey = [
+              "datasets",
+              { projectId: project.id, limit: 100, query: searchQuery },
+            ];
+            const cachedData = queryClient.getQueryData(queryKey);
+
+            // If we have cached data, use it
+            if (cachedData) {
+              return { projectId: project.id, data: cachedData };
+            }
+
+            // Otherwise fetch it using the hook's fetcher
+            const data = await queryClient.fetchQuery({
+              queryKey,
+              queryFn: async () => {
+                const result = await useDatasets.fetcher({
+                  projectId: project.id,
+                  limit: 100,
+                  query: searchQuery,
+                });
+                return result;
+              },
+            });
+
+            return { projectId: project.id, data };
+          } catch (error) {
+            console.error(
+              `Failed to fetch datasets for project ${project.id}:`,
+              error
+            );
+            return { projectId: project.id, data: { results: [] } };
+          }
         });
 
-        if (data.results) {
-          allDatasets.push(...data.results);
-        }
-      } catch (error) {
-        console.error(
-          `Failed to fetch datasets for project ${project.id}:`,
-          error
-        );
-      }
-    }
+        // Wait for all dataset queries to complete
+        const datasetResults = await Promise.all(datasetPromises);
 
-    setMentionResults({
-      projects: filteredProjects.map((p) => ({ id: p.id, name: p.name })),
-      datasets: allDatasets.map((d) => ({
-        id: d.id,
-        name: d.alias,
-        projectId: d.id.split("/")[0], // Assuming projectId is first part of dataset ID
-        alias: d.alias,
-      })),
-    });
-  };
+        // Process dataset results
+        datasetResults.forEach(({ data }) => {
+          // Type guard to ensure data has results property and it's an array
+          const hasResults =
+            data &&
+            typeof data === "object" &&
+            "results" in data &&
+            Array.isArray(data.results);
+
+          if (hasResults) {
+            results.datasets.push(
+              ...data.results.map((d: Dataset) => ({
+                id: d.id,
+                name: d.alias,
+                projectId: d.id.split("/")[0],
+                alias: d.alias,
+              }))
+            );
+          }
+        });
+      }
+
+      setMentionResults(results);
+    };
+
+    if (showMentionPopover) {
+      loadMentionResults();
+    }
+  }, [searchQuery, projectsData, showMentionPopover, queryClient]);
 
   // Handle selection of a mention
   const handleSelectMention = (item: {
@@ -199,20 +281,6 @@ export function MentionInput({
         projectId: item.projectId,
       });
     }
-
-    // Add the mention to the input
-    // let newText = value;
-    // if (cursorPosition !== null && inputRef.current) {
-    //   const beforeMention = value
-    //     .substring(0, cursorPosition)
-    //     .replace(/@[^@\s]*$/, "");
-    //   const afterMention = value.substring(cursorPosition);
-    //   newText = `${beforeMention}@${item.name} ${afterMention}`;
-    // } else {
-    //   // If we don't have cursor position, just append
-    //   newText = `${value}@${item.name} `;
-    // }
-    // onChange(newText);
 
     // Close the popover
     setShowMentionPopover(false);
@@ -278,10 +346,16 @@ export function MentionInput({
                   )}
                   <span className="truncate max-w-32">{context.name}</span>
                   <X
-                    className="h-3 w-3 cursor-pointer hover:text-red-500 transition-colors"
+                    className={cn(
+                      "h-3 w-3 cursor-pointer hover:text-red-500 transition-colors",
+                      lockableContextIds?.includes(context.id) &&
+                        "pointer-events-none opacity-40"
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemoveContext(context.id);
+                      if (!lockableContextIds?.includes(context.id)) {
+                        onRemoveContext(context.id);
+                      }
                     }}
                   />
                 </Badge>

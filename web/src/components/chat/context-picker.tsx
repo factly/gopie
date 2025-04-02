@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, X, AtSign } from "lucide-react";
+import { Check, X, AtSign, Sparkles } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -16,15 +17,18 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useProjects } from "@/lib/queries/project/list-projects";
-import { fetchDatasets } from "@/lib/queries/dataset/list-datasets";
+import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { Dataset } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface ContextItem {
   id: string;
   type: "project" | "dataset";
   name: string;
-  projectId?: string; // Only applicable for datasets
+  projectId?: string;
 }
 
 interface ContextPickerProps {
@@ -34,6 +38,7 @@ interface ContextPickerProps {
   currentDatasetId?: string;
   currentProjectId?: string;
   triggerClassName?: string;
+  lockableContextIds?: string[]; // Array of context IDs that cannot be removed
 }
 
 export function ContextPicker({
@@ -43,117 +48,129 @@ export function ContextPicker({
   currentDatasetId,
   currentProjectId,
   triggerClassName,
+  lockableContextIds = [], // Default to empty array
 }: ContextPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [open, setOpen] = useState(false);
   const [allDatasets, setAllDatasets] = useState<
     (Dataset & { projectId: string })[]
   >([]);
 
-  // Fetch all projects
-  const { data: projectsData, isLoading: isLoadingProjects } = useProjects({
-    variables: { limit: 1000 }, // Large limit to avoid pagination
+  const queryClient = useQueryClient();
+
+  // Get projects
+  const { data: projectsData } = useProjects({
+    variables: { limit: 100 },
   });
 
-  const projects = projectsData?.results || [];
-
-  // For each project, fetch all datasets
-  const fetchAllDatasets = async () => {
-    if (!projects.length) return;
-
-    const allDatasetsArray: (Dataset & { projectId: string })[] = [];
-
-    for (const project of projects) {
-      try {
-        const data = await fetchDatasets({
-          projectId: project.id,
-          limit: 1000,
-        });
-
-        if (data.results) {
-          // Add projectId to each dataset
-          const datasetsWithProject = data.results.map((dataset) => ({
-            ...dataset,
-            projectId: project.id,
-          }));
-          allDatasetsArray.push(...datasetsWithProject);
-        }
-      } catch (error) {
-        console.error(
-          `Failed to fetch datasets for project ${project.id}:`,
-          error
-        );
-      }
-    }
-
-    setAllDatasets(allDatasetsArray);
-  };
-
   useEffect(() => {
-    if (projects.length > 0) {
-      fetchAllDatasets();
-    }
-  }, [projects]);
+    async function getDatasets() {
+      const projects = projectsData?.results || [];
+      const datasets: (Dataset & { projectId: string })[] = [];
 
-  // Filter projects and datasets based on search query
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      // Collect all dataset queries and run them in parallel
+      const datasetPromises = projects.map(async (project) => {
+        try {
+          const queryKey = ["datasets", { projectId: project.id, limit: 100 }];
+          // Check cache first
+          const cachedData = queryClient.getQueryData(queryKey);
+
+          // Safely handle cached data with type assertion
+          if (
+            cachedData &&
+            typeof cachedData === "object" &&
+            "results" in cachedData
+          ) {
+            return { projectId: project.id, data: cachedData };
+          }
+
+          // If not in cache, fetch it
+          const data = await queryClient.fetchQuery({
+            queryKey,
+            queryFn: async () => {
+              const result = await useDatasets.fetcher({
+                projectId: project.id,
+                limit: 100,
+              });
+              return result;
+            },
+          });
+
+          return { projectId: project.id, data };
+        } catch (error) {
+          console.error(
+            `Failed to fetch datasets for project ${project.id}:`,
+            error
+          );
+          return { projectId: project.id, data: { results: [] } };
+        }
+      });
+
+      // Wait for all dataset queries to complete
+      const datasetResults = await Promise.all(datasetPromises);
+
+      // Process dataset results
+      for (const result of datasetResults) {
+        const projectId = result.projectId;
+        const data = result.data;
+
+        // Properly type guard for data.results
+        if (
+          !data ||
+          typeof data !== "object" ||
+          !("results" in data) ||
+          !Array.isArray(data.results)
+        ) {
+          continue;
+        }
+
+        const datasetsWithProjectId = data.results.map((dataset) => ({
+          ...dataset,
+          projectId,
+        }));
+        datasets.push(...datasetsWithProjectId);
+      }
+
+      setAllDatasets(datasets);
+    }
+
+    getDatasets();
+  }, [projectsData?.results, queryClient]);
+
+  const filteredProjects = projectsData?.results
+    ? projectsData.results.filter((project) =>
+        project.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   const filteredDatasets = allDatasets.filter((dataset) =>
     dataset.alias.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Ensure current dataset is pre-selected
-  useEffect(() => {
-    if (currentDatasetId && currentProjectId) {
-      const currentDataset = allDatasets.find((d) => d.id === currentDatasetId);
-
-      if (
-        currentDataset &&
-        !selectedContexts.some((c) => c.id === currentDatasetId)
-      ) {
-        onSelectContext({
-          id: currentDatasetId,
-          type: "dataset",
-          name: currentDataset.alias,
-          projectId: currentProjectId,
-        });
-      }
-    }
-  }, [currentDatasetId, currentProjectId, allDatasets]);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size="sm"
-          className={`relative flex items-center justify-center bg-background/80 border border-input hover:bg-accent hover:text-accent-foreground ${
-            triggerClassName || ""
-          }`}
+          variant="ghost"
+          className={`relative ${triggerClassName || "h-10 w-10"}`}
         >
           <AtSign className="h-4 w-4" />
-          <span className="sr-only">Context</span>
           {selectedContexts.length > 0 && (
-            <Badge
-              variant="secondary"
-              rounded="full"
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs font-medium"
-            >
-              {selectedContexts.length}
-            </Badge>
+            <div className="absolute top-0 right-0 h-2 w-2 bg-primary rounded-full" />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[350px] p-0" align="start">
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="p-0 w-[300px] max-h-[400px] overflow-hidden"
+      >
         <Command>
           <CommandInput
-            placeholder="Search projects and datasets..."
+            placeholder="Search projects or datasets..."
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandList>
+          <CommandList className="max-h-[320px]">
             <CommandEmpty>No results found.</CommandEmpty>
 
             {/* Selected contexts */}
@@ -179,7 +196,11 @@ export function ContextPicker({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        className={`h-6 w-6 p-0 ${
+                          lockableContextIds.includes(context.id)
+                            ? "opacity-40 pointer-events-none"
+                            : ""
+                        }`}
                         onClick={() => onRemoveContext(context.id)}
                       >
                         <X className="h-3 w-3" />
@@ -193,9 +214,7 @@ export function ContextPicker({
 
             {/* Projects */}
             <CommandGroup heading="Projects">
-              {isLoadingProjects ? (
-                <CommandItem disabled>Loading projects...</CommandItem>
-              ) : filteredProjects.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <CommandItem disabled>No projects found</CommandItem>
               ) : (
                 filteredProjects.map((project) => {
@@ -242,7 +261,7 @@ export function ContextPicker({
                   );
 
                   // Find project for this dataset - using projectId property instead of checking if ID starts with project ID
-                  const project = projects.find(
+                  const project = projectsData?.results.find(
                     (p) => p.id === dataset.projectId
                   );
 

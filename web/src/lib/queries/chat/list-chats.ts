@@ -8,9 +8,9 @@ interface ListChatsVariables {
   page?: number;
 }
 
-async function fetchChats(
+export async function fetchChats(
   { datasetId, limit }: ListChatsVariables,
-  context: { pageParam: number },
+  context: { pageParam: number }
 ): Promise<{ data: PaginatedResponse<Chat> }> {
   try {
     const searchParams = new URLSearchParams({
@@ -37,7 +37,7 @@ export const useChats = createInfiniteQuery<
   initialPageParam: 1,
   getNextPageParam: (lastPage, allPages) => {
     const totalPages = Math.ceil(
-      lastPage.data.total / (lastPage.data.limit || 10),
+      lastPage.data.total / (lastPage.data.limit || 10)
     );
     const nextPage = allPages.length + 1;
     return nextPage <= totalPages ? nextPage : undefined;

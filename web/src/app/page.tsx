@@ -20,10 +20,12 @@ import { useChatStore } from "@/lib/stores/chat-store";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { data: projects, isLoading } = useProjects({
     variables: {
       limit: 100,
@@ -51,8 +53,11 @@ export default function HomePage() {
     if (!inputValue.trim() || isSending) return;
 
     try {
-      await sendMessage(inputValue);
-      setInputValue("");
+      const success = await sendMessage(inputValue);
+      // Only clear input if message was successfully sent
+      if (success) {
+        setInputValue("");
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       toast({
@@ -64,11 +69,36 @@ export default function HomePage() {
   };
 
   const sendMessage = async (message: string) => {
-    if (!message.trim() || isSending) return;
+    if (!message.trim() || isSending) return false;
+
+    // Check if there's at least one dataset in the context
+    const datasetContext = selectedContexts.find(
+      (ctx) => ctx.type === "dataset"
+    );
+    if (!datasetContext) {
+      toast({
+        title: "Context Required",
+        description:
+          "Please select at least one dataset in context before sending a message",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     setIsSending(true);
 
     try {
+      // Redirect to the chat page with the message and context information
+      const encodedMessage = encodeURIComponent(message);
+      const contextData = encodeURIComponent(JSON.stringify(selectedContexts));
+      router.push(
+        `/chat?initialMessage=${encodedMessage}&contextData=${contextData}`
+      );
+      return true;
+
+      // Note: The code below is intentionally not executed due to the return statement above
+      // It's kept for reference in case we need to revert to the old behavior
+
       // Get context information for logs and potential backend use
       if (selectedContexts.length > 0) {
         console.log(

@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
 import { TTSButton } from "./tts-button";
 
@@ -71,51 +71,59 @@ export function ChatMessage({
   datasetId,
 }: ChatMessageProps) {
   const executeSql = useDatasetSql();
-  const { setResults, setIsOpen } = useSqlStore();
-  const hasAutoExecuted = useRef(false);
+  const { setResults, setIsOpen, markQueryAsExecuted } = useSqlStore();
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const handleRunQuery = async (query: string) => {
-    setIsExecuting(true);
-    try {
-      const result = await executeSql.mutateAsync(query);
-      setResults({
-        data: result.data ?? [],
-        total: result.data?.length ?? 0,
-        query,
-        chatId,
-      });
-      setIsOpen(true);
-    } catch (error) {
-      setResults({
-        data: [],
-        total: 0,
-        error:
-          error instanceof Error ? error.message : "Failed to execute query",
-        query,
-        chatId,
-      });
-      setIsOpen(true);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
+  const handleRunQuery = useCallback(
+    async (query: string) => {
+      setIsExecuting(true);
+      try {
+        const result = await executeSql.mutateAsync(query);
+        setResults({
+          data: result.data ?? [],
+          total: result.data?.length ?? 0,
+          query,
+          chatId,
+        });
+        setIsOpen(true);
+      } catch (error) {
+        setResults({
+          data: [],
+          total: 0,
+          error:
+            error instanceof Error ? error.message : "Failed to execute query",
+          query,
+          chatId,
+        });
+        setIsOpen(true);
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [executeSql, setResults, setIsOpen, chatId]
+  );
 
   // Auto-execute SQL queries from assistant only if it's the latest message
   useEffect(() => {
-    if (
-      !isLoading &&
-      role === "assistant" &&
-      isLatest &&
-      !hasAutoExecuted.current
-    ) {
+    if (!isLoading && role === "assistant" && isLatest) {
       const parsed = parseMessageContent(content);
       if (parsed.type === "sql") {
-        hasAutoExecuted.current = true;
-        handleRunQuery(parsed.content);
+        // Only execute if this query hasn't been executed before
+        const shouldExecute = markQueryAsExecuted(id, parsed.content);
+        if (shouldExecute) {
+          handleRunQuery(parsed.content);
+        }
       }
     }
-  }, [content, isLoading, role, isLatest]);
+  }, [
+    content,
+    isLoading,
+    role,
+    isLatest,
+    handleRunQuery,
+    id,
+    markQueryAsExecuted,
+  ]);
 
   return (
     <div

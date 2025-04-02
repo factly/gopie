@@ -23,7 +23,7 @@ export function downloadCsv(data: DataRow[], filename?: string) {
             ? `"${value.replace(/"/g, '""')}"`
             : value;
         })
-        .join(","),
+        .join(",")
     ),
   ].join("\n");
 
@@ -34,4 +34,31 @@ export function downloadCsv(data: DataRow[], filename?: string) {
     filename || `export_${new Date().toISOString().split("T")[0]}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+/**
+ * Debounce function that delays invoking provided function
+ * until after wait milliseconds have elapsed since the last time it was invoked.
+ *
+ * @param func - The function to debounce
+ * @param wait - The number of milliseconds to delay
+ * @returns A debounced version of the function
+ */
+export function debounce<Args extends unknown[], R>(
+  func: (...args: Args) => R,
+  wait: number
+): (...args: Args) => void {
+  let timeout: NodeJS.Timeout | null = null;
+
+  return function (this: unknown, ...args: Args): void {
+    const later = () => {
+      timeout = null;
+      func.apply(this, args);
+    };
+
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(later, wait);
+  };
 }
