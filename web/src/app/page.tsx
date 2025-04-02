@@ -13,6 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import { FolderIcon } from "lucide-react";
 import { ProtectedPage } from "@/components/auth/protected-page";
 import { AuthStatus } from "@/components/auth/auth-status";
+import { MentionInput } from "@/components/chat/mention-input";
+import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
+import { useCreateChat } from "@/lib/mutations/chat";
+import { useChatStore } from "@/lib/stores/chat-store";
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -23,6 +30,83 @@ export default function HomePage() {
       page: 1,
     },
   });
+
+  // Chat functionality
+  const [inputValue, setInputValue] = useState("");
+  const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const createChat = useCreateChat();
+  const { selectChat } = useChatStore();
+
+  const handleSelectContext = (context: ContextItem) => {
+    setSelectedContexts((prev) => [...prev, context]);
+  };
+
+  const handleRemoveContext = (contextId: string) => {
+    setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isSending) return;
+
+    try {
+      await sendMessage(inputValue);
+      setInputValue("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendMessage = async (message: string) => {
+    if (!message.trim() || isSending) return;
+
+    setIsSending(true);
+
+    try {
+      // Get context information for logs and potential backend use
+      if (selectedContexts.length > 0) {
+        console.log(
+          "Using contexts:",
+          selectedContexts.map((ctx) => ({ id: ctx.id, type: ctx.type }))
+        );
+      }
+
+      // Note: In a home page context, we don't need to specify a dataset ID
+      const result = await createChat.mutateAsync({
+        messages: [{ role: "user", content: message }],
+      });
+
+      // Success notification
+      toast({
+        title: "Success",
+        description: "Your message has been sent",
+      });
+
+      // If we get a chatId back, we could navigate to the chat page
+      // or handle the response here
+      if (result?.data?.id) {
+        selectChat(result.data.id, message.substring(0, 40) + "...");
+
+        // Optionally navigate to the chat page
+        // router.push(`/${project}/dataset/chat?id=${result.data.id}`);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+      console.error(error);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleUpdateProject = async (
     projectId: string,
@@ -93,63 +177,133 @@ export default function HomePage() {
     }
 
     return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex items-center justify-between pt-8">
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-          >
-            Projects
-          </motion.h1>
-          <div className="flex items-center gap-4">
-            <AuthStatus size="lg" />
-            <CreateProjectDialog />
+      <div className="min-h-screen flex flex-col">
+        {/* Gradient background */}
+        <div className="absolute inset-x-0 top-0 h-[300px] bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 opacity-70 -z-10" />
+
+        {/* Navbar */}
+        <div className="border-b bg-background/80 backdrop-blur-sm z-10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="/gopie.svg"
+                  alt="GoPie Logo"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7"
+                />
+                <span className="font-semibold text-lg">GoPie</span>
+              </Link>
+            </div>
+            <AuthStatus size="md" />
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"
-        >
-          {projects && projects.results && projects.results.length > 0 ? (
-            projects.results.map((project, idx) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-              >
-                <ProjectCard
-                  project={project}
-                  onUpdate={handleUpdateProject}
-                  onDelete={handleDeleteProject}
-                />
-              </motion.div>
-            ))
-          ) : (
+        <div className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+          {/* Centered Chat Interface */}
+          <div className="flex flex-col items-center justify-center min-h-[45vh] py-20">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-full flex flex-col items-center justify-center h-[calc(100vh-12rem)]"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-2xl"
             >
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <FolderIcon className="w-8 h-8 text-muted-foreground" />
+              <div className="flex flex-col items-center mb-8">
+                <div className="flex items-center mb-4">
+                  <Image
+                    src="/gopie.svg"
+                    alt="GoPie Logo"
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 mr-3"
+                  />
+                  <h2 className="text-3xl font-semibold">GoPie Chat</h2>
+                </div>
+                <p className="text-muted-foreground text-center text-base max-w-md mt-2">
+                  Your AI-powered assistant for data insights and analysis
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                No projects yet
-              </h3>
-              <p className="text-muted-foreground text-center mb-6">
-                Get started by creating your first project
-              </p>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <AuthStatus size="lg" />
-                <CreateProjectDialog />
+
+              <div className="rounded-2xl bg-black/10 dark:bg-white/5 p-3 backdrop-blur-sm border border-black/10 dark:border-white/10 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <ContextPicker
+                    selectedContexts={selectedContexts}
+                    onSelectContext={handleSelectContext}
+                    onRemoveContext={handleRemoveContext}
+                    triggerClassName="h-14 w-14 rounded-full bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                  />
+                  <MentionInput
+                    value={inputValue}
+                    onChange={setInputValue}
+                    onSubmit={handleSendMessage}
+                    disabled={isSending}
+                    placeholder="Ask GoPie anything..."
+                    selectedContexts={selectedContexts}
+                    onSelectContext={handleSelectContext}
+                    onRemoveContext={handleRemoveContext}
+                    className="flex-1"
+                    showSendButton={true}
+                    isSending={isSending}
+                  />
+                </div>
               </div>
             </motion.div>
-          )}
-        </motion.div>
+          </div>
+
+          {/* Projects section pushed to bottom */}
+          <div className="mt-16 mb-20">
+            <div className="flex items-center justify-between pb-8">
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-4xl font-bold tracking-tight"
+              >
+                Projects
+              </motion.h1>
+              <CreateProjectDialog />
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {projects && projects.results && projects.results.length > 0 ? (
+                projects.results.map((project, idx) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                  >
+                    <ProjectCard
+                      project={project}
+                      onUpdate={handleUpdateProject}
+                      onDelete={handleDeleteProject}
+                    />
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="col-span-full flex flex-col items-center justify-center py-12"
+                >
+                  <div className="rounded-full bg-muted p-4 mb-4">
+                    <FolderIcon className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    No projects yet
+                  </h3>
+                  <p className="text-muted-foreground text-center mb-6 max-w-md">
+                    Start by creating your first project to organize your data
+                  </p>
+                  <CreateProjectDialog />
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        </div>
       </div>
     );
   };

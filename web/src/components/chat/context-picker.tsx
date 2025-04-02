@@ -231,7 +231,8 @@ export function ContextPicker({
             {/* Datasets */}
             <CommandGroup heading="Datasets">
               {allDatasets.length === 0 ? (
-                <CommandItem disabled>Loading datasets...</CommandItem>
+                // TODO: handle proper loading
+                <CommandItem disabled>No datasets found</CommandItem>
               ) : filteredDatasets.length === 0 ? (
                 <CommandItem disabled>No datasets found</CommandItem>
               ) : (
