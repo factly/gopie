@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=gopie
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -119,7 +119,7 @@ services:
       - "3000:3000"
     restart: unless-stopped
     networks:
-      - gopie      
+      - gopie
 
   #########################################################################
   #####                        MINIO                                #######
@@ -139,7 +139,7 @@ services:
       - gopie
     command: server -console-address :9002 /export
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -188,9 +188,9 @@ services:
   livekit-server:
     image: livekit/livekit-server:latest
     ports:
-      - "7880:7880"      # WebRTC traffic
-      - "7881:7881"      # RTMP traffic
-      - "7882:7882"      # WHIP/WHEP
+      - "7880:7880" # WebRTC traffic
+      - "7881:7881" # RTMP traffic
+      - "7882:7882" # WHIP/WHEP
     environment:
       - "LIVEKIT_KEYS=devkey: secret"
       - LIVEKIT_REDIS_HOST=livekit-redis

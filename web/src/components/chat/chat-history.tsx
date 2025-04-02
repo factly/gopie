@@ -15,9 +15,15 @@ import { toast } from "sonner";
 
 interface ChatHistoryProps {
   datasetId: string;
+  variant?: "default" | "outline" | "ghost";
+  className?: string;
 }
 
-export function ChatHistory({ datasetId }: ChatHistoryProps) {
+export function ChatHistory({
+  datasetId,
+  variant = "outline",
+  className = "",
+}: ChatHistoryProps) {
   const { selectedChatId, selectChat } = useChatStore();
 
   const {
@@ -63,9 +69,9 @@ export function ChatHistory({ datasetId }: ChatHistoryProps) {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant={variant}
           size="icon"
-          className="h-11 w-11 rounded-full shadow-sm"
+          className={`h-9 w-9 rounded-full shadow-sm ${className}`}
         >
           <History className="h-5 w-5" />
         </Button>

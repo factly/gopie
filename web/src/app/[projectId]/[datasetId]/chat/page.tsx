@@ -12,11 +12,10 @@ import {
 import { useChatMessages } from "@/lib/queries/chat";
 import { useCreateChat } from "@/lib/mutations/chat";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Send, Table2, MessageSquarePlus } from "lucide-react";
+import { Table2, MessageSquarePlus } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "@/components/chat/message";
@@ -32,6 +31,8 @@ import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 import { ChatHistory } from "@/components/chat/chat-history";
+import { MentionInput } from "@/components/chat/mention-input";
+import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 
 interface ChatPageProps {
   params: Promise<{
@@ -51,7 +52,6 @@ interface OptimisticMessage {
 export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const params = use(paramsPromise);
   const { setOpen } = useSidebar();
-  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { selectedChatId, selectedChatTitle, selectChat } = useChatStore();
   const [isSending, setIsSending] = useState(false);
@@ -65,26 +65,13 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   >(null);
 
   const [inputValue, setInputValue] = useState("");
-  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
 
   // Close sidebar only on initial mount
   useEffect(() => {
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array means it only runs once on mount
-
-  // Maintain focus and cursor position when inputValue changes
-  useEffect(() => {
-    if (shouldMaintainFocus && inputRef.current) {
-      inputRef.current.focus();
-
-      // Restore cursor position if we have it
-      if (cursorPosition !== null) {
-        inputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    }
-  }, [inputValue, shouldMaintainFocus, cursorPosition]);
+  }, []);
 
   // Queries
   const {
@@ -235,6 +222,17 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     let chatId = selectedChatId;
 
     try {
+      // Collect context information for the backend
+      // Note: We're preparing this but the backend may not use it yet
+      const contextData =
+        selectedContexts.length > 0
+          ? selectedContexts.map((ctx) => ({
+              id: ctx.id,
+              type: ctx.type,
+              projectId: ctx.projectId || undefined,
+            }))
+          : [];
+
       // Add optimistic user message
       setOptimisticMessages((prev) => [
         ...prev,
@@ -258,47 +256,48 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         },
       ]);
 
-      // If no chat is selected, create a new one
+      // Create a new chat or use existing one
       if (!chatId) {
         const result = await createChat.mutateAsync({
           datasetId: params.datasetId,
           messages: [{ role: "user", content: message }],
+          // Backend will need to be updated to use contextData
         });
         chatId = result.data.id;
-        // Set the title to the first message if it's a new chat
-        selectChat(
-          chatId,
-          message.length > 30 ? message.substring(0, 30) + "..." : message
-        );
+        selectChat(chatId, message.substring(0, 40) + "...");
+
+        // Log the contexts for debugging
+        if (contextData.length > 0) {
+          console.log("Sending contexts:", contextData);
+        }
       } else {
         // Send message to existing chat
         await createChat.mutateAsync({
           datasetId: params.datasetId,
           chatId: chatId,
           messages: [{ role: "user", content: message }],
+          // Backend will need to be updated to use contextData
         });
+
+        // Log the contexts for debugging
+        if (contextData.length > 0) {
+          console.log("Sending contexts:", contextData);
+        }
+
         // Refresh messages to get the response
         await refetchMessages();
       }
 
       // Remove ALL optimistic messages related to this interaction after successful API call
       setOptimisticMessages((prev) =>
-        prev.filter(
-          (msg) =>
-            msg.id !== `user-${optimisticId}` &&
-            msg.id !== `assistant-${optimisticId}`
-        )
+        prev.filter((msg) => !msg.id.includes(optimisticId.toString()))
       );
     } catch (error) {
       toast.error("Failed to send message");
       console.error(error);
       // Clean up optimistic messages in case of error
       setOptimisticMessages((prev) =>
-        prev.filter(
-          (msg) =>
-            msg.id !== `user-${optimisticId}` &&
-            msg.id !== `assistant-${optimisticId}`
-        )
+        prev.filter((msg) => !msg.id.includes(optimisticId.toString()))
       );
       throw error; // Re-throw to handle in caller
     } finally {
@@ -318,41 +317,62 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     });
   }, [optimisticMessages]);
 
+  // Handle context selection
+  const handleSelectContext = (context: ContextItem) => {
+    setSelectedContexts((prev) => [...prev, context]);
+  };
+
+  // Handle context removal
+  const handleRemoveContext = (contextId: string) => {
+    setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
+  };
+
   const ChatInput = () => {
     return (
-      <form onSubmit={handleSendMessage} className="flex gap-2 w-full">
-        <Input
-          ref={inputRef}
-          className="flex-1 h-11 py-2 px-4 shadow-sm"
-          placeholder="Type your message..."
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            setShouldMaintainFocus(true);
-            setCursorPosition(e.target.selectionStart);
-          }}
-          onBlur={() => setShouldMaintainFocus(false)}
-          disabled={isSending}
-        />
-        <Button
-          id="send-message-button"
-          type="submit"
-          size="icon"
-          className="h-11 w-11 rounded-full shadow-sm"
-          disabled={!inputValue.trim() || isSending}
-        >
-          {isSending ? (
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </Button>
-        {!selectedChatId && <ChatHistory datasetId={params.datasetId} />}
-        <VoiceModeToggle
-          isActive={isVoiceModeActive}
-          onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-        />
-      </form>
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex gap-2 items-center">
+            <ContextPicker
+              selectedContexts={selectedContexts}
+              onSelectContext={handleSelectContext}
+              onRemoveContext={handleRemoveContext}
+              currentDatasetId={params.datasetId}
+              currentProjectId={params.projectId}
+              triggerClassName="h-11 w-11 rounded-full"
+            />
+            <MentionInput
+              value={inputValue}
+              onChange={setInputValue}
+              onSubmit={handleSendMessage}
+              disabled={isSending}
+              placeholder="Type your message... (use @ to mention datasets or projects)"
+              selectedContexts={selectedContexts}
+              onSelectContext={handleSelectContext}
+              onRemoveContext={handleRemoveContext}
+              className="flex-1"
+              showSendButton={true}
+              isSending={isSending}
+              actionButtons={
+                <>
+                  {!selectedChatId && (
+                    <ChatHistory
+                      datasetId={params.datasetId}
+                      variant="ghost"
+                      className="mr-0.5"
+                    />
+                  )}
+                  <VoiceModeToggle
+                    isActive={isVoiceModeActive}
+                    onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                    className="h-9 w-9 flex-shrink-0 rounded-full mr-0.5"
+                    variant="ghost"
+                  />
+                </>
+              }
+            />
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -477,7 +497,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                           damping: 20,
                         }}
                       >
-                        <div className="max-w-4xl mx-auto">
+                        <div className="max-w-5xl mx-auto w-full">
                           <ChatInput />
                         </div>
                       </motion.div>
@@ -511,7 +531,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                       Start a conversation by typing a message below
                     </p>
                   </div>
-                  <div className="w-full max-w-xl px-4">
+                  <div className="w-full max-w-3xl px-4">
                     <ChatInput />
                   </div>
                 </motion.div>
