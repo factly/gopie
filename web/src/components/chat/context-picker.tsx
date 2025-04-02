@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, X, AtSign, Sparkles } from "lucide-react";
+import { Check, X, AtSign } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -17,11 +16,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { useProjects } from "@/lib/queries/project/list-projects";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { Dataset } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 
 export interface ContextItem {
@@ -45,8 +42,6 @@ export function ContextPicker({
   selectedContexts,
   onSelectContext,
   onRemoveContext,
-  currentDatasetId,
-  currentProjectId,
   triggerClassName,
   lockableContextIds = [], // Default to empty array
 }: ContextPickerProps) {
