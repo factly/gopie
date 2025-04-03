@@ -998,11 +998,13 @@ export default function ChatPage() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [
+      isSending,
+      selectedContexts,
       selectedChatId,
-      createChat.mutateAsync,
+      createChat,
+      queryClient,
       refetchMessages,
       selectChat,
-      setActiveTab,
     ]
   );
 
@@ -1061,7 +1063,7 @@ export default function ChatPage() {
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
       <div className="flex w-full relative overflow-hidden max-h-screen">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={isOpen ? 60 : 100} minSize={50}>
+          <ResizablePanel defaultSize={isOpen ? 60 : 100} minSize={30}>
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -1140,7 +1142,7 @@ export default function ChatPage() {
           {isOpen && (
             <>
               <ResizableHandle />
-              <ResizablePanel defaultSize={40} minSize={30} maxSize={60}>
+              <ResizablePanel defaultSize={70} minSize={30} maxSize={70}>
                 <div ref={sqlPanelRef} className="h-screen overflow-hidden">
                   <SqlResults />
                 </div>
