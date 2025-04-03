@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Dataful Agent"
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/v1/api"
 
     CORS_ORIGINS: List[str] = ["*"]
     CORS_METHODS: List[str] = ["*"]

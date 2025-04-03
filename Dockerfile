@@ -7,4 +7,4 @@ WORKDIR /app
 COPY . .
 
 # Run the application
-CMD ["uv", "run", "uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "800"]

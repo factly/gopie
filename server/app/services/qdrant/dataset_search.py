@@ -1,4 +1,3 @@
-from server.app.services.qdrant.csv_processing import DATA_DIR
 from server.app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
@@ -9,46 +8,12 @@ from server.app.services.qdrant.vector_store import (
 from server.app.utils.dataset_info import get_dataset_preview
 from server.app.core.config import settings
 
-DATA_DIR = "./data"
-
-
-def filter_csv_documents(results):
-    """Filter search results to include only CSV documents with proper metadata."""
-    filtered_results = []
-    for doc in results:
-        if (
-            "file_name" in doc.metadata
-            and doc.metadata["file_name"].endswith(".csv")
-            and "source" in doc.metadata
-            and doc.metadata["source"].endswith(".csv")
-        ):
-            filtered_results.append(doc)
-
-    return filtered_results
-
-
-def find_relevant_datasets(vector_store, query: str, top_k: int = settings.QDRANT_TOP_K):
-    """Find the most relevant datasets for a given query."""
-    search_k = top_k * 2
-    results = perform_similarity_search(vector_store, query, top_k=search_k)
-    filtered_results = filter_csv_documents(results)
-
-    if len(filtered_results) < top_k and len(filtered_results) < len(results):
-        search_k = search_k * 2
-        results = perform_similarity_search(vector_store, query, top_k=search_k)
-        filtered_results = filter_csv_documents(results)
-
-    return filtered_results[:top_k]
-
-
-def find_and_preview_dataset(
-    query: str, top_k: int = settings.QDRANT_TOP_K, directory_path: str = DATA_DIR
-):
+def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
     """Find relevant datasets based on a query and provide their previews."""
     client = initialize_qdrant_client()
     vector_store = setup_vector_store(client)
 
-    results = find_relevant_datasets(vector_store, query, top_k=top_k)
+    results = perform_similarity_search(vector_store, query, top_k=top_k)
 
     previews = []
     for result in results:
