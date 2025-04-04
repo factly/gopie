@@ -12,6 +12,8 @@ import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { fetchChats } from "@/lib/queries/chat/list-chats";
 import { useQueryClient } from "@tanstack/react-query";
 import { Chat } from "@/lib/api-client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ChatItem extends Chat {
   datasetId: string;
@@ -25,9 +27,10 @@ export function GlobalChatHistory() {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [allChats, setAllChats] = useState<ChatItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch all projects
-  const { data: projectsData } = useProjects({
+  const { data: projectsData, error: projectsError } = useProjects({
     variables: { limit: 100 },
   });
 
@@ -37,9 +40,17 @@ export function GlobalChatHistory() {
   // Fetch all chats across all datasets and projects
   useEffect(() => {
     async function fetchAllChats() {
-      if (!projectsData?.results?.length) return;
+      if (!projectsData?.results?.length) {
+        if (!projectsError && !isLoading) {
+          // Only show no projects error if we're not loading and there's no project error
+          // (which would be shown separately)
+          setError("No projects available.");
+        }
+        return;
+      }
 
       setIsLoading(true);
+      setError(null); // Reset error when fetching
       const projects = projectsData.results;
       const allChatsArray: ChatItem[] = [];
 
@@ -141,14 +152,14 @@ export function GlobalChatHistory() {
         setAllChats(allChatsArray);
       } catch (error) {
         console.error("Error fetching all chats:", error);
-        toast.error("Failed to load chat history");
+        setError("Failed to load chat history. Please try again later.");
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchAllChats();
-  }, [projectsData?.results, queryClient]);
+  }, [projectsData?.results, queryClient, projectsError, isLoading]);
 
   const handleStartNewChat = () => {
     selectChat(null, null);
@@ -168,14 +179,38 @@ export function GlobalChatHistory() {
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
 
       toast.success("Chat deleted successfully");
-    } catch {
-      toast.error("Failed to delete chat");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Failed to delete chat: ${errorMessage}`);
+      console.error("Error deleting chat:", err);
     }
   };
 
   const handleSelectChat = (chatId: string, chatName: string) => {
     selectChat(chatId, chatName || "New Chat");
   };
+
+  if (projectsError) {
+    return (
+      <Alert variant="destructive" className="m-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load projects: {projectsError.message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="m-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
 
   if (isLoading) {
     return (

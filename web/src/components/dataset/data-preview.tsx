@@ -61,6 +61,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const MotionCard = motion.create(Card);
 const MotionTableRow = motion.create(TableRow);
@@ -89,7 +91,11 @@ export function DataPreview(props: { datasetId: string }) {
     value: "",
   });
 
-  const { data, isLoading: isTableLoading } = useGetTable({
+  const {
+    data,
+    isLoading: isTableLoading,
+    error: tableError,
+  } = useGetTable({
     variables: {
       limit: rowsPerPage,
       page: currentPage,
@@ -106,18 +112,23 @@ export function DataPreview(props: { datasetId: string }) {
     },
   });
 
-  const { data: schema, isLoading: isSchemaLoading } = useSchema({
+  const {
+    data: schema,
+    isLoading: isSchemaLoading,
+    error: schemaError,
+  } = useSchema({
     variables: {
       datasetId: props.datasetId,
     },
   });
 
   const isLoading = isTableLoading || isSchemaLoading;
+  const hasError = tableError || schemaError;
 
   // Get all available columns from the schema and maintain their order
   const allColumns = React.useMemo(
     () => schema?.schema.map((col) => col.column_name) ?? [],
-    [schema],
+    [schema]
   );
 
   // Use selected columns in schema order
@@ -126,7 +137,7 @@ export function DataPreview(props: { datasetId: string }) {
       selectedColumns.length > 0
         ? allColumns.filter((col) => selectedColumns.includes(col))
         : allColumns,
-    [selectedColumns, allColumns],
+    [selectedColumns, allColumns]
   );
 
   React.useEffect(() => {
@@ -173,8 +184,24 @@ export function DataPreview(props: { datasetId: string }) {
   // Get the column count for skeleton UI
   const skeletonColumnCount = React.useMemo(
     () => schema?.schema.length || 6,
-    [schema],
+    [schema]
   );
+
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {tableError
+            ? `Failed to load table data: ${tableError.message}`
+            : schemaError
+            ? `Failed to load schema: ${schemaError.message}`
+            : "An unknown error occurred while loading data."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -234,10 +261,10 @@ export function DataPreview(props: { datasetId: string }) {
                           j === 0
                             ? "w-[80px]"
                             : j === 1
-                              ? "w-[150px]"
-                              : j === 2
-                                ? "w-[100px]"
-                                : "w-[120px]",
+                            ? "w-[150px]"
+                            : j === 2
+                            ? "w-[100px]"
+                            : "w-[120px]"
                         )}
                       />
                     </TableCell>
@@ -349,8 +376,8 @@ export function DataPreview(props: { datasetId: string }) {
                                 selectedColumns.includes(column)
                                 ? "font-medium text-primary"
                                 : selectedColumns.includes(column)
-                                  ? "text-foreground"
-                                  : "text-muted-foreground",
+                                ? "text-foreground"
+                                : "text-muted-foreground"
                             )}
                           >
                             {column}
@@ -413,8 +440,8 @@ export function DataPreview(props: { datasetId: string }) {
                                   {filter.operator === "e"
                                     ? "equals"
                                     : filter.operator === "gt"
-                                      ? "greater than or equals"
-                                      : "less than or equals"}
+                                    ? "greater than or equals"
+                                    : "less than or equals"}
                                 </span>
                                 <Badge variant="outline" className="font-mono">
                                   {filter.value}
@@ -425,7 +452,7 @@ export function DataPreview(props: { datasetId: string }) {
                                 size="sm"
                                 onClick={() =>
                                   setFilters((prev) =>
-                                    prev.filter((_, i) => i !== index),
+                                    prev.filter((_, i) => i !== index)
                                   )
                                 }
                                 className="h-auto p-1 opacity-0 group-hover:opacity-100 transition-opacity"

@@ -18,6 +18,8 @@ import "@uppy/core/dist/style.css";
 import "@uppy/dashboard/dist/style.css";
 import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 function sanitizeFileName(name: string): string {
   // Remove non-alphanumeric characters except for dots and hyphens
@@ -26,6 +28,7 @@ function sanitizeFileName(name: string): string {
 
 export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
 
@@ -70,10 +73,12 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   uppy.on("upload-success", async (file, response) => {
     if (!file) {
       toast.error("No file data available");
+      setUploadError("No file data available");
       return;
     }
 
     try {
+      setUploadError(null);
       const s3Url = response.uploadURL
         ? `s3:/${new URL(response.uploadURL).pathname}`
         : "";
@@ -101,6 +106,8 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
 
+      setUploadError(errorMessage);
+
       if (
         error instanceof Error &&
         error.message.includes("add dataset to project")
@@ -115,10 +122,12 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   });
 
   uppy.on("upload-error", (file, error) => {
+    setUploadError(error.message);
     toast.error(`Upload failed: ${error.message}`);
   });
 
   uppy.on("restriction-failed", (file, error) => {
+    setUploadError(error.message);
     toast.error(error.message);
   });
 
@@ -140,6 +149,13 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
           </p>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto py-4">
+          {uploadError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Upload Error</AlertTitle>
+              <AlertDescription>{uploadError}</AlertDescription>
+            </Alert>
+          )}
           <Dashboard
             uppy={uppy}
             proudlyDisplayPoweredByUppy={false}

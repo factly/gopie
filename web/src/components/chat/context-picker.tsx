@@ -20,6 +20,8 @@ import { useProjects } from "@/lib/queries/project/list-projects";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { Dataset } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export interface ContextItem {
   id: string;
@@ -49,18 +51,28 @@ export function ContextPicker({
   const [allDatasets, setAllDatasets] = useState<
     (Dataset & { projectId: string })[]
   >([]);
+  const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
   // Get projects
-  const { data: projectsData } = useProjects({
+  const { data: projectsData, error: projectsError } = useProjects({
     variables: { limit: 100 },
   });
 
   useEffect(() => {
     async function getDatasets() {
+      setError(null);
       const projects = projectsData?.results || [];
       const datasets: (Dataset & { projectId: string })[] = [];
+
+      if (projects.length === 0) {
+        // Don't set error if we have a projects error (it will be shown separately)
+        if (!projectsError) {
+          setError("No projects available to display datasets from.");
+        }
+        return;
+      }
 
       // Collect all dataset queries and run them in parallel
       const datasetPromises = projects.map(async (project) => {
@@ -100,36 +112,41 @@ export function ContextPicker({
         }
       });
 
-      // Wait for all dataset queries to complete
-      const datasetResults = await Promise.all(datasetPromises);
+      try {
+        // Wait for all dataset queries to complete
+        const datasetResults = await Promise.all(datasetPromises);
 
-      // Process dataset results
-      for (const result of datasetResults) {
-        const projectId = result.projectId;
-        const data = result.data;
+        // Process dataset results
+        for (const result of datasetResults) {
+          const projectId = result.projectId;
+          const data = result.data;
 
-        // Properly type guard for data.results
-        if (
-          !data ||
-          typeof data !== "object" ||
-          !("results" in data) ||
-          !Array.isArray(data.results)
-        ) {
-          continue;
+          // Properly type guard for data.results
+          if (
+            !data ||
+            typeof data !== "object" ||
+            !("results" in data) ||
+            !Array.isArray(data.results)
+          ) {
+            continue;
+          }
+
+          const datasetsWithProjectId = data.results.map((dataset) => ({
+            ...dataset,
+            projectId,
+          }));
+          datasets.push(...datasetsWithProjectId);
         }
 
-        const datasetsWithProjectId = data.results.map((dataset) => ({
-          ...dataset,
-          projectId,
-        }));
-        datasets.push(...datasetsWithProjectId);
+        setAllDatasets(datasets);
+      } catch (err) {
+        console.error("Error fetching datasets:", err);
+        setError("Failed to load datasets. Please try again.");
       }
-
-      setAllDatasets(datasets);
     }
 
     getDatasets();
-  }, [projectsData?.results, queryClient]);
+  }, [projectsData?.results, queryClient, projectsError]);
 
   const filteredProjects = projectsData?.results
     ? projectsData.results.filter((project) =>
@@ -166,6 +183,30 @@ export function ContextPicker({
             onValueChange={setSearchQuery}
           />
           <CommandList className="max-h-[320px]">
+            {projectsError && (
+              <div className="p-2">
+                <Alert variant="destructive" className="p-2">
+                  <AlertCircle className="h-3 w-3" />
+                  <AlertTitle className="text-xs">Error</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Failed to load projects: {projectsError.message}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
+            {error && !projectsError && (
+              <div className="p-2">
+                <Alert variant="destructive" className="p-2">
+                  <AlertCircle className="h-3 w-3" />
+                  <AlertTitle className="text-xs">Error</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <CommandEmpty>No results found.</CommandEmpty>
 
             {/* Selected contexts */}

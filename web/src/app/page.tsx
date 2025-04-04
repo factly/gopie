@@ -21,12 +21,18 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function HomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { data: projects, isLoading } = useProjects({
+  const {
+    data: projects,
+    isLoading,
+    error,
+  } = useProjects({
     variables: {
       limit: 100,
       page: 1,
@@ -190,6 +196,21 @@ export default function HomePage() {
   };
 
   const renderContent = () => {
+    if (error) {
+      return (
+        <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load projects: {error.message}
+            </AlertDescription>
+          </Alert>
+          <CreateProjectDialog />
+        </div>
+      );
+    }
+
     if (isLoading) {
       return (
         <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">

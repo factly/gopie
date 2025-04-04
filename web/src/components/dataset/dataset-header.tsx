@@ -266,7 +266,7 @@ export function DatasetHeader({
                   Columns
                 </div>
                 <div className="text-sm font-semibold tabular-nums">
-                  {dataset.columns.length}
+                  {dataset.columns?.length || 0}
                 </div>
               </div>
             </div>
