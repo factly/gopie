@@ -34,7 +34,9 @@ class DatasetListResponse(BaseModel):
 class UploadResponse(BaseModel):
     """Response model for dataset upload."""
     success: bool = Field(..., description="Whether the upload was successful")
-    message: str = Field(..., description="Status message")
-    dataset_name: str = Field(..., description="Name of the dataset")
-    table_name: str = Field(..., description="Name of the table")
-    file_path: str = Field(..., description="Path where the file was saved")
+    message: str = Field(..., description="Message about the upload status")
+
+class UploadSchemaRequest(BaseModel):
+    project_id: str
+    dataset_id: str
+    file_path: str

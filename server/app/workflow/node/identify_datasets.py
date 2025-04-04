@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Any, Dict, List
 
 from langchain_core.output_parsers import JsonOutputParser
@@ -7,7 +8,6 @@ from langchain_core.output_parsers import JsonOutputParser
 from server.app.core.langchain_config import lc
 from server.app.models.types import ErrorMessage, IntermediateStep
 from server.app.workflow.graph.types import State
-from server.app.utils.dataset_info import get_dataset_preview
 from server.app.services.qdrant_client import find_and_preview_dataset
 
 
@@ -75,10 +75,19 @@ async def identify_datasets(state: State):
             relevant_datasets = find_and_preview_dataset(user_query)
 
             for dataset in relevant_datasets:
-                if "error" not in dataset and "schema" in dataset and dataset["schema"]:
-                    datasets_info.append(dataset["schema"])
+                if "error" not in dataset:
+                    dataset_metadata = dataset["relevance_info"].metadata
+                    dataset_content = dataset["relevance_info"].page_content
+                    dataset_name = dataset_metadata.get("file_name", "")
+
+                    if dataset_name.endswith(".csv"):
+                        info = parse_dataset_content(dataset_content, dataset_metadata)
+                        if info:
+                            datasets_info.append(info)
         except Exception as e:
             print(f"Vector search error: {str(e)}. Unable to retrieve dataset information.")
+
+        print("datasets_info: ", datasets_info)
 
         if not datasets_info:
             return {
@@ -123,3 +132,33 @@ async def identify_datasets(state: State):
                 ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
             ],
         }
+
+
+def parse_dataset_content(content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse dataset information from the page_content of a Document"""
+    try:
+        dataset_info = {
+            "dataset_name": metadata.get("file_name", ""),
+            "row_count": metadata.get("row_count", 0),
+            "column_count": metadata.get("column_count", 0),
+            "columns": []
+        }
+
+        column_pattern = r'  - (\w+) \(Type: (\w+), Sample values: (.*?)\)'
+        column_matches = re.findall(column_pattern, content)
+
+        for match in column_matches:
+            column_name, column_type, sample_values = match
+            values = [v.strip() for v in sample_values.split(',')]
+
+            column_info = {
+                "name": column_name,
+                "type": column_type,
+                "sample_values": values
+            }
+            dataset_info["columns"].append(column_info)
+
+        return dataset_info
+    except Exception as e:
+        print(f"Error parsing dataset content: {e}")
+        return None

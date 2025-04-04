@@ -100,19 +100,13 @@ async def stream_graph_updates(user_input: str, dataset_id: Optional[str] = None
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
                 print(formatted_event)
-                yield f"""data: {json.dumps(formatted_event, indent=2)}\n\n"""
+                yield f"data: {json.dumps(formatted_event)}\n\n"
     except Exception as e:
-        yield f"""data: {
-            json.dumps(
-                {
-                    'type': 'error',
-                    'message': f'Error during streaming: {str(e)}',
-                    'data': {'error': str(e)},
-                },
-                indent=2,
-            )
-        }
-        """
+        yield f"data: {json.dumps({
+                'type': 'error',
+                'message': f'Error during streaming: {str(e)}',
+                'data': {'error': str(e)},
+            }, indent=2)}\n\n"
 
 
 def visualize_graph():

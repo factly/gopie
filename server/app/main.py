@@ -8,18 +8,15 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.app.core.config import settings
-from server.app.services.dataset_profiling import profile_all_datasets
 from server.app.api.v1.routers.query import router as query_router
-from server.app.api.v1.routers.dataset_upload import dataset_router as dataset_upload_router
+from server.app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        data_dir = settings.DATA_DIR
-        datasets = profile_all_datasets(data_dir=data_dir)
+        logging.info("Starting the application...")
     except Exception as e:
-        logging.error(f"Error during dataset profiling: {e}")
-
+        logging.error(f"Error starting the application: {e}")
     yield
 
 app = FastAPI(
@@ -41,13 +38,14 @@ async def add_process_time_header(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
+    allow_credentials=True,
     allow_origins=settings.CORS_ORIGINS,
     allow_methods=settings.CORS_METHODS,
     allow_headers=settings.CORS_HEADERS,
 )
 
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
-app.include_router(dataset_upload_router, prefix=settings.API_V1_STR, tags=["dataset_upload"])
+app.include_router(schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"])
 
 def start():
     os.makedirs(settings.LOG_DIR, exist_ok=True)

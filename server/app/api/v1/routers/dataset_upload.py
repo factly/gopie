@@ -1,76 +1,72 @@
 from fastapi import APIRouter, HTTPException
-import os
-
-from server.app.models.data import UploadResponse
-from server.app.services.qdrant.qdrant_setup import initialize_qdrant_client, setup_vector_store
-from server.app.services.qdrant.csv_processing import csv_metadata_to_document
-from server.app.models.types import DatasetSchema
-from uuid import uuid4
+from server.app.models.data import UploadResponse, UploadSchemaRequest
+from server.app.core.config import settings
+import requests
+import json
 
 dataset_router = APIRouter()
 
-def store_schema(file_name: str, schema: DatasetSchema):
-    """Store schema in Qdrant without uploading the file."""
+MONGODB_CONNECTION_STRING = settings.MONGODB_CONNECTION_STRING
+HUNTING_API_URL = settings.HUNTING_API_URL
+
+
+@dataset_router.post("/upload_schema", response_model=UploadResponse)
+async def upload_schema(payload: UploadSchemaRequest):
+    print(f"Received request: {payload}")
     try:
-        client = initialize_qdrant_client()
-        vector_store = setup_vector_store(client)
+        project_id = payload.project_id
+        dataset_id = payload.dataset_id
+        file_path = payload.file_path
 
-        from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+        print("Received request to get dataset info")
+        print(f"Project ID: {project_id}")
+        print(f"Dataset ID: {dataset_id}")
+        print(f"File Path: {file_path}")
 
-        filter_condition = Filter(
-            must=[
-                FieldCondition(
-                    key="metadata.file_name",
-                    match=MatchValue(value=file_name)
-                )
-            ]
-        )
+        payloads = {
+            "urls": [file_path],
+            "minimal": True,
+            "samples_to_fetch": 10,
+            "trigger_id": "test_trigger_id"
+        }
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json"
+        }
 
-        count_response = client.count(
-            collection_name="dataset_collection",
-            count_filter=filter_condition
-        )
+        response = requests.post(settings.HUNTING_API_URL, json=payloads, headers=headers)
 
-        if count_response.count == 0:
-            document = csv_metadata_to_document(schema)
-            vector_store.add_documents(documents=[document], ids=[str(uuid4())])
-            print(f"Schema for {file_name} vectorized successfully")
-        else:
-            print(f"Schema for {file_name} already exists in vector store, skipping vectorization")
+        print(f"Response status code: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        print(f"Response content: {response.text}")
 
-        return True
-    except Exception as e:
-        print(f"Error processing schema {file_name}: {str(e)}")
-        return False
+        response.raise_for_status()
 
-@dataset_router.post("/index/schema", response_model=UploadResponse)
-async def index_dataset_schema(
-    file_name: str,
-    schema: DatasetSchema
-):
-    """
-    Index the schema of a dataset.
-
-    Args:
-        file_name: Name of the file including extension
-        schema: The schema/metadata of the dataset
-
-    Returns:
-        Status of the schema indexing operation
-    """
-    try:
-        table_name = os.path.splitext(file_name)[0]
-
-        success = store_schema(file_name, schema)
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to store schema in vector database")
+        try:
+            response_data = response.json()
+            print(f"Response data: {response_data}")
+        except json.JSONDecodeError:
+            print(f"Invalid JSON response: {response.text}")
+            raise HTTPException(status_code=500, detail=f"Invalid response from prefetch API: {response.text[:100]}...")
 
         return {
             "success": True,
-            "message": f"Schema for {file_name} indexed successfully.",
-            "dataset_name": table_name,
+            "message": f"Dataset information retrieved successfully.",
         }
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error occurred: {e}")
+        error_detail = f"Prefetch API error: {str(e)}"
+        try:
+            error_text = response.text[:200] if response and hasattr(response, 'text') else "No response text"
+            error_detail += f" - Response: {error_text}"
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=error_detail)
+    except requests.exceptions.RequestException as e:
+        print(f"Request error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Error connecting to prefetch API: {str(e)}")
     except HTTPException as e:
         raise e
     except Exception as e:
+        print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

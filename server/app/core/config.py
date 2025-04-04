@@ -6,15 +6,14 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Dataful Agent"
-    API_V1_STR: str = "/v1/api"
+    API_V1_STR: str = "/api/v1"
+
+    LOG_DIR: str = "./log"
+    MAX_RETRY_COUNT: int = 3
 
     CORS_ORIGINS: List[str] = ["*"]
     CORS_METHODS: List[str] = ["*"]
     CORS_HEADERS: List[str] = ["*"]
-
-    DATA_DIR: str = "./data"
-
-    LOG_DIR: str = "./log"
 
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = "gpt-4o"
@@ -23,9 +22,15 @@ class Settings(BaseSettings):
     PORTKEY_API_KEY: str = os.getenv("PORTKEY_API_KEY", "")
     VIRTUAL_KEY: str = os.getenv("VIRTUAL_KEY", "")
 
-    QDRANT_HOST: str = "qdrant"
+    QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
+
+    MONGODB_PASSWORD: str = os.getenv("MONGODB_PASSWORD", "")
+    MONGODB_USERNAME: str = os.getenv("MONGODB_USERNAME", "root")
+    MONGODB_CONNECTION_STRING: str = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
+    HUNTING_API_URL: str = "http://localhost:8000/api/v1/prefetch"
+    GOPIE_API_ENDPOINT: str = "http://localhost:8000"
 
     class Config:
         env_file = ".env"

@@ -1,6 +1,7 @@
 import json
 
-from ...workflow.graph.types import ErrorMessage, IntermediateStep, State
+from ...workflow.graph.types import State
+from ...models.types import ErrorMessage, IntermediateStep
 from ...utils.correct_column_values import correct_column_values
 
 # def create_analysis_prompt(

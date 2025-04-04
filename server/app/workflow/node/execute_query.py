@@ -2,26 +2,20 @@ import json
 import logging
 import os
 import re
+import requests
 
-import duckdb
-import pandas as pd
 from langchain_core.output_parsers import JsonOutputParser
 
 from server.app.core.langchain_config import lc
 from server.app.models.types import ErrorMessage, IntermediateStep
 from server.app.workflow.graph.types import State
-from server.app.utils.dataset_info import DATA_DIR
+from server.app.core.config import settings
 
-MAX_RETRY_COUNT = 3
-
-
-def normalize_name(name: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9_]", "_", os.path.splitext(name)[0]).lower()
-
+SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
 async def execute_query(state: State) -> dict:
     """
-    Execute the planned query
+    Execute the planned query using the external SQL API
 
     Args:
         state: The current state object containing messages and query information
@@ -29,7 +23,6 @@ async def execute_query(state: State) -> dict:
     Returns:
         Updated state with query results or error messages
     """
-    con = None
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
 
@@ -50,87 +43,35 @@ async def execute_query(state: State) -> dict:
         if not query_plan:
             raise ValueError("Failed to parse query plan from message")
 
-        con = duckdb.connect(database=":memory:")
-
-        dataset_names = query_plan.get("tables_used", [])
-        if not dataset_names:
-            sql_query = query_plan.get("sql_query", "")
-            if "FROM" in sql_query.upper():
-                matches = re.finditer(
-                    r"FROM\s+([^\s,;()]+)|JOIN\s+([^\s,;()]+)", sql_query, re.IGNORECASE
-                )
-                dataset_names = []
-                for match in matches:
-                    table = match.group(1) or match.group(2)
-                    if table:
-                        table = table.strip("\"'")
-                        table = table.split("WHERE")[0].strip()
-                        dataset_names.append(table)
-
-        if not dataset_names:
-            raise ValueError("No datasets specified in query plan")
-
-        if isinstance(dataset_names, str):
-            dataset_names = [dataset_names]
-
-        table_mappings = {}
-
-        for dataset_name in dataset_names:
-            dataset_name = dataset_name.replace(".csv", "")
-            matching_files = [
-                f
-                for f in os.listdir(DATA_DIR)
-                if f.endswith(".csv") and dataset_name.lower() in f.lower()
-            ]
-
-            if not matching_files:
-                raise FileNotFoundError(f"Dataset not found: {dataset_name}")
-
-            file_path = os.path.join(DATA_DIR, matching_files[0])
-            table_name = normalize_name(matching_files[0])
-            table_mappings[dataset_name] = table_name
-
-            df = pd.read_csv(file_path)
-            logging.info(f"Loading dataset: {matching_files[0]} as table: {table_name}")
-
-            for col in df.columns:
-                if df[col].dtype == "object":
-                    df[f"{col.lower()}_lower"] = df[col].str.lower()
-
-            original_cols = df.columns
-            clean_cols = {
-                col: col.lower().strip().replace(" ", "_") for col in original_cols
-            }
-            df.rename(columns=clean_cols, inplace=True)
-
-            try:
-                con.execute(f'DROP TABLE IF EXISTS "{table_name}"')
-                con.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM df')
-            except Exception as e:
-                raise ValueError(
-                    f"Failed to create table {table_name} in DuckDB: {str(e)}"
-                )
-
         sql_query = query_plan.get("sql_query") or query_plan.get("sample_query")
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
-        for dataset_name, table_name in table_mappings.items():
-            sql_query = sql_query.replace(dataset_name, f'"{table_name}"')
+        dataset_id = query_plan.get("dataset_id")
 
-        result = None
-        try:
-            result = con.execute(sql_query).fetchdf()
-        except Exception as original_error:
-            try:
-                result = con.execute(sql_query).fetchdf()
-            except Exception as fixed_error:
-                raise ValueError(
-                    f"Query execution failed. Original error: {str(original_error)}. "
-                    f"After fixing: {str(fixed_error)}"
-                )
+        payload = {"query": sql_query}
+        if dataset_id:
+            payload["dataset_id"] = dataset_id
 
-        if result.empty:
+        logging.info(f"Executing SQL query via API: {sql_query}")
+        response = requests.post(SQL_API_ENDPOINT, json=payload)
+
+        if response.status_code != 200:
+            error_data = response.json()
+            error_message = error_data.get("message", "Unknown error from SQL API")
+            if response.status_code == 400:
+                raise ValueError(f"Invalid SQL query: {error_message}")
+            elif response.status_code == 403:
+                raise ValueError(f"Non-SELECT statement: {error_message}")
+            elif response.status_code == 404:
+                raise ValueError(f"Table not found: {error_message}")
+            else:
+                raise ValueError(f"SQL API error ({response.status_code}): {error_message}")
+
+        result_data = response.json()
+        print(result_data)
+
+        if not result_data or (isinstance(result_data, list) and len(result_data) == 0):
             no_results_data = {
                 "result": "Query executed successfully but returned no results",
                 "query_executed": sql_query,
@@ -145,10 +86,12 @@ async def execute_query(state: State) -> dict:
                 ],
             }
 
-        for col in result.select_dtypes(include=["float64", "int64"]).columns:
-            result[col] = result[col].fillna(0)
-
-        result_records = result.to_dict("records")
+        result_records = result_data
+        if not isinstance(result_data, list):
+            if "data" in result_data:
+                result_records = result_data["data"]
+            else:
+                result_records = [result_data]
 
         result_dict = {
             "result": "Query executed successfully",
@@ -176,10 +119,6 @@ async def execute_query(state: State) -> dict:
             "retry_count": state.get("retry_count", 0) + 1,
         }
 
-    finally:
-        if con:
-            con.close()
-
 
 async def route_query_replan(state: State) -> str:
     """
@@ -194,7 +133,7 @@ async def route_query_replan(state: State) -> str:
     last_message = state["messages"][-1]
     retry_count = state.get("retry_count", 0)
 
-    if isinstance(last_message, ErrorMessage) and retry_count < MAX_RETRY_COUNT:
+    if isinstance(last_message, ErrorMessage) and retry_count < settings.MAX_RETRY_COUNT:
         response = await lc.llm.ainvoke(
             f"""
                 I got an error when executing the query: "{last_message.content}"
