@@ -92,6 +92,9 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
       queryClient.invalidateQueries({
         queryKey: ["project"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["datasets"],
+      });
       setOpen(false);
       uppy.cancelAll();
     } catch (error) {
