@@ -1,10 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Any, Dict, List, Optional, TypedDict
-
-from langchain_core.messages import AIMessage
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -94,85 +90,3 @@ class QueryResult:
             "error_message": self.error_message,
             "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
-
-
-class IntermediateStep(AIMessage):
-    """Represents an intermediate step in the processing pipeline"""
-
-    type: str = "intermediate_step"
-
-    @classmethod
-    def from_text(cls, text: str) -> "IntermediateStep":
-        return cls(content=text)
-
-
-class ErrorMessage(AIMessage):
-    """Represents an error message"""
-
-    type: str = "error_message"
-
-    @classmethod
-    def from_text(cls, text: str) -> "ErrorMessage":
-        return cls(content=text)
-
-
-class ColumnSchema(TypedDict):
-    """Schema information for a dataset column"""
-
-    name: str
-    description: str
-    type: str
-    sample_values: List[Any]
-    non_null_count: Optional[int]
-    constraints: Optional[Dict[str, Any]]
-
-
-class DatasetSchema(TypedDict):
-    """Comprehensive schema information for a dataset"""
-
-    name: str
-    file_path: str
-    file_size_mb: float
-    row_count: int
-    column_count: int
-    columns: List[ColumnSchema]
-
-
-class EventNode(Enum):
-    GENERATE_SUBQUERIES = "generate_subqueries"
-    IDENTIFY_DATASETS = "identify_datasets"
-    ANALYZE_QUERY = "analyze_query"
-    ANALYZE_DATASET = "analyze_dataset"
-    PLAN_QUERY = "plan_query"
-    EXECUTE_QUERY = "execute_query"
-    GENERATE_RESULT = "generate_result"
-    MAX_ITERATIONS_REACHED = "max_iterations_reached"
-    ERROR = "error"
-    TOOL_START = "tool_start"
-    TOOL_END = "tool_end"
-    TOOL_ERROR = "tool_error"
-    TOOLS = "tools"
-
-
-class EventStatus(Enum):
-    STARTED = "started"
-    COMPLETED = "completed"
-    ERROR = "error"
-
-
-class EventData(BaseModel):
-    """Data structure for event data."""
-
-    input: Optional[str] = None
-    result: Optional[str] = None
-    error: Optional[str] = None
-
-
-@dataclass
-class AgentEvent:
-    """Event data structure for agent events."""
-
-    event_node: EventNode
-    status: EventStatus
-    message: str
-    data: EventData

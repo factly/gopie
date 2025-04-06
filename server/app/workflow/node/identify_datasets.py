@@ -1,14 +1,13 @@
 import json
-import os
 import re
 from typing import Any, Dict, List
 
 from langchain_core.output_parsers import JsonOutputParser
 
 from server.app.core.langchain_config import lc
-from server.app.models.types import ErrorMessage, IntermediateStep
-from server.app.workflow.graph.types import State
+from server.app.models.message import ErrorMessage, IntermediateStep
 from server.app.services.qdrant_client import find_and_preview_dataset
+from server.app.workflow.graph.types import State
 
 
 def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:
@@ -85,7 +84,9 @@ async def identify_datasets(state: State):
                         if info:
                             datasets_info.append(info)
         except Exception as e:
-            print(f"Vector search error: {str(e)}. Unable to retrieve dataset information.")
+            print(
+                f"Vector search error: {str(e)}. Unable to retrieve dataset information."
+            )
 
         print("datasets_info: ", datasets_info)
 
@@ -94,7 +95,9 @@ async def identify_datasets(state: State):
                 "query_result": query_result,
                 "datasets": None,
                 "messages": [
-                    ErrorMessage.from_text(json.dumps({"error": "No relevant datasets found"}, indent=2))
+                    ErrorMessage.from_text(
+                        json.dumps({"error": "No relevant datasets found"}, indent=2)
+                    )
                 ],
             }
 
@@ -141,24 +144,24 @@ def parse_dataset_content(content: str, metadata: Dict[str, Any]) -> Dict[str, A
             "dataset_name": metadata.get("file_name", ""),
             "row_count": metadata.get("row_count", 0),
             "column_count": metadata.get("column_count", 0),
-            "columns": []
+            "columns": [],
         }
 
-        column_pattern = r'  - (\w+) \(Type: (\w+), Sample values: (.*?)\)'
+        column_pattern = r"  - (\w+) \(Type: (\w+), Sample values: (.*?)\)"
         column_matches = re.findall(column_pattern, content)
 
         for match in column_matches:
             column_name, column_type, sample_values = match
-            values = [v.strip() for v in sample_values.split(',')]
+            values = [v.strip() for v in sample_values.split(",")]
 
             column_info = {
                 "name": column_name,
                 "type": column_type,
-                "sample_values": values
+                "sample_values": values,
             }
             dataset_info["columns"].append(column_info)
 
         return dataset_info
     except Exception as e:
         print(f"Error parsing dataset content: {e}")
-        return None
+        return {}

@@ -4,7 +4,8 @@ from datetime import datetime
 from langchain_core.output_parsers import JsonOutputParser
 
 from server.app.core.langchain_config import lc
-from server.app.models.types import ErrorMessage, IntermediateStep, QueryResult
+from server.app.models.message import ErrorMessage, IntermediateStep
+from server.app.models.query import QueryResult
 from server.app.workflow.graph.types import State
 
 

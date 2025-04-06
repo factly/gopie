@@ -2,7 +2,7 @@ import json
 
 from langchain_core.messages import ToolMessage
 
-from server.app.models.types import EventData, EventNode, EventStatus
+from server.app.models.event import EventData, EventNode, EventStatus
 from server.app.workflow.events.wrapper_func import event_dispatcher
 
 

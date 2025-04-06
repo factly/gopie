@@ -1,8 +1,8 @@
-from typing import Annotated, TypedDict, Optional
+from typing import Annotated, Optional, TypedDict
 
 from langgraph.graph.message import add_messages
 
-from server.app.models.types import (
+from server.app.models.query import (
     QueryResult,
 )
 

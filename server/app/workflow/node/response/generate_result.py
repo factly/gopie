@@ -2,7 +2,8 @@ import json
 from typing import Any, Dict, List
 
 from server.app.core.langchain_config import lc
-from server.app.models.types import AIMessage, ErrorMessage, QueryResult
+from server.app.models.message import AIMessage, ErrorMessage
+from server.app.models.query import QueryResult
 from server.app.workflow.graph.types import State
 
 
@@ -94,7 +95,9 @@ async def _handle_conversational_query(
     return {"messages": [AIMessage(content=str(response.content))]}
 
 
-async def _handle_data_query(state: State, query_result: QueryResult) -> Dict[str, List[Any]]:
+async def _handle_data_query(
+    state: State, query_result: QueryResult
+) -> Dict[str, List[Any]]:
     """Handle data analysis queries"""
     user_query = query_result.original_user_query
     results = []

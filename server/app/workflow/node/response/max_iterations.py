@@ -1,7 +1,7 @@
 import json
 
 from server.app.core.langchain_config import lc
-from server.app.models.types import AIMessage, ErrorMessage
+from server.app.models.message import AIMessage, ErrorMessage
 from server.app.workflow.graph.types import State
 
 

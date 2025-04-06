@@ -1,17 +1,16 @@
 import json
 import logging
-import os
-import re
-import requests
 
+import requests
 from langchain_core.output_parsers import JsonOutputParser
 
-from server.app.core.langchain_config import lc
-from server.app.models.types import ErrorMessage, IntermediateStep
-from server.app.workflow.graph.types import State
 from server.app.core.config import settings
+from server.app.core.langchain_config import lc
+from server.app.models.message import ErrorMessage, IntermediateStep
+from server.app.workflow.graph.types import State
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
+
 
 async def execute_query(state: State) -> dict:
     """
@@ -66,7 +65,9 @@ async def execute_query(state: State) -> dict:
             elif response.status_code == 404:
                 raise ValueError(f"Table not found: {error_message}")
             else:
-                raise ValueError(f"SQL API error ({response.status_code}): {error_message}")
+                raise ValueError(
+                    f"SQL API error ({response.status_code}): {error_message}"
+                )
 
         result_data = response.json()
         print(result_data)
@@ -133,7 +134,10 @@ async def route_query_replan(state: State) -> str:
     last_message = state["messages"][-1]
     retry_count = state.get("retry_count", 0)
 
-    if isinstance(last_message, ErrorMessage) and retry_count < settings.MAX_RETRY_COUNT:
+    if (
+        isinstance(last_message, ErrorMessage)
+        and retry_count < settings.MAX_RETRY_COUNT
+    ):
         response = await lc.llm.ainvoke(
             f"""
                 I got an error when executing the query: "{last_message.content}"

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from server.app.models.data import UploadResponse, UploadSchemaRequest
-from server.app.core.config import settings
-import requests
 import json
+
+import requests
+from fastapi import APIRouter, HTTPException
+
+from server.app.core.config import settings
+from server.app.models.router import UploadResponse, UploadSchemaRequest
 
 dataset_router = APIRouter()
 
@@ -27,14 +29,13 @@ async def upload_schema(payload: UploadSchemaRequest):
             "urls": [file_path],
             "minimal": True,
             "samples_to_fetch": 10,
-            "trigger_id": "test_trigger_id"
+            "trigger_id": "test_trigger_id",
         }
-        headers = {
-            "accept": "application/json",
-            "Content-Type": "application/json"
-        }
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
 
-        response = requests.post(settings.HUNTING_API_URL, json=payloads, headers=headers)
+        response = requests.post(
+            settings.HUNTING_API_URL, json=payloads, headers=headers
+        )
 
         print(f"Response status code: {response.status_code}")
         print(f"Response headers: {response.headers}")
@@ -47,24 +48,33 @@ async def upload_schema(payload: UploadSchemaRequest):
             print(f"Response data: {response_data}")
         except json.JSONDecodeError:
             print(f"Invalid JSON response: {response.text}")
-            raise HTTPException(status_code=500, detail=f"Invalid response from prefetch API: {response.text[:100]}...")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid response from prefetch API: {response.text[:100]}...",
+            )
 
         return {
             "success": True,
-            "message": f"Dataset information retrieved successfully.",
+            "message": "Dataset information retrieved successfully.",
         }
     except requests.exceptions.HTTPError as e:
         print(f"HTTP error occurred: {e}")
         error_detail = f"Prefetch API error: {str(e)}"
         try:
-            error_text = response.text[:200] if response and hasattr(response, 'text') else "No response text"
+            error_text = (
+                response.text[:200]
+                if response and hasattr(response, "text")
+                else "No response text"
+            )
             error_detail += f" - Response: {error_text}"
         except:
             pass
         raise HTTPException(status_code=500, detail=error_detail)
     except requests.exceptions.RequestException as e:
         print(f"Request error occurred: {e}")
-        raise HTTPException(status_code=500, detail=f"Error connecting to prefetch API: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error connecting to prefetch API: {str(e)}"
+        )
     except HTTPException as e:
         raise e
     except Exception as e:

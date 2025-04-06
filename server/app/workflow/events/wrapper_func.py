@@ -1,4 +1,4 @@
-from server.app.models.types import EventData, EventNode, EventStatus
+from server.app.models.event import EventData, EventNode, EventStatus
 from server.app.workflow.events.dispatcher import AgentEventDispatcher
 from server.app.workflow.graph.types import State
 

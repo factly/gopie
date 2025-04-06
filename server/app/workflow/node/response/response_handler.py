@@ -1,4 +1,4 @@
-from server.app.models.types import ErrorMessage
+from server.app.models.message import ErrorMessage
 from server.app.workflow.graph.types import State
 
 
