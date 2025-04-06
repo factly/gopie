@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     MONGODB_PASSWORD: str = os.getenv("MONGODB_PASSWORD", "")
     MONGODB_USERNAME: str = os.getenv("MONGODB_USERNAME", "root")
     MONGODB_CONNECTION_STRING: str = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
-    HUNTING_API_URL: str = "http://localhost:8002/api/v1/prefetch"
-    GOPIE_API_ENDPOINT: str = "http://localhost:8004"
+    HUNTING_API_URL: str = "http://host.docker.internal:8003/api/v1/prefetch"
+    GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
 
     class Config:
         env_file = ".env"
