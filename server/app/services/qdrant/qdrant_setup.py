@@ -1,11 +1,10 @@
-"""Utilities for setting up Qdrant client and vector store."""
 
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import CountResult, Distance, Filter, VectorParams
 
-from server.app.core.langchain_config import lc
-from server.app.core.config import settings
+from app.core.langchain_config import lc
+from app.core.config import settings
 
 def initialize_qdrant_client():
     """Initialize the Qdrant client and create a collection if it doesn't exist."""

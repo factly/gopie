@@ -2,7 +2,7 @@ from typing import Annotated, TypedDict, Optional
 
 from langgraph.graph.message import add_messages
 
-from server.app.models.types import (
+from app.models.types import (
     QueryResult,
 )
 

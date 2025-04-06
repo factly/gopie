@@ -5,7 +5,7 @@ from uuid import uuid4
 import pandas as pd
 from langchain_core.documents import Document
 
-from server.app.models.types import ColumnSchema, DatasetSchema
+from app.models.types import ColumnSchema, DatasetSchema
 
 DATA_DIR = "./data"
 

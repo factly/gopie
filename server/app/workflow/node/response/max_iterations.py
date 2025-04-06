@@ -1,8 +1,8 @@
 import json
 
-from server.app.core.langchain_config import lc
-from server.app.models.types import AIMessage, ErrorMessage
-from server.app.workflow.graph.types import State
+from app.core.langchain_config import lc
+from app.models.types import AIMessage, ErrorMessage
+from app.workflow.graph.types import State
 
 
 async def max_iterations_reached(state: State) -> dict:

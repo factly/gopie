@@ -3,7 +3,7 @@ from typing import List
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.callbacks.manager import adispatch_custom_event
 
-from server.app.models.types import AgentEvent, EventData, EventNode, EventStatus
+from app.models.types import AgentEvent, EventData, EventNode, EventStatus
 
 
 def create_progress_message(event_node: EventNode) -> str:

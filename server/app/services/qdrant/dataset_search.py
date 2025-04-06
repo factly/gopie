@@ -1,12 +1,12 @@
-from server.app.services.qdrant.qdrant_setup import (
+from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from server.app.services.qdrant.vector_store import (
+from app.services.qdrant.vector_store import (
     perform_similarity_search,
 )
-from server.app.utils.dataset_info import get_dataset_preview
-from server.app.core.config import settings
+from app.utils.dataset_info import get_dataset_preview
+from app.core.config import settings
 
 def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
     """Find relevant datasets based on a query and provide their previews."""

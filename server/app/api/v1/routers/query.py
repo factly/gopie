@@ -1,10 +1,9 @@
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
-from ....workflow.graph import stream_graph_updates
-import os
-from ....core.config import settings
+from app.workflow.graph import stream_graph_updates
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory="server/app/tests/templates")

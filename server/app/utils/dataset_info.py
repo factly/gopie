@@ -3,8 +3,8 @@ from typing import List
 
 import pandas as pd
 
-from server.app.models.types import ColumnSchema, DatasetSchema
-from server.app.utils.col_desc_generator import generate_column_descriptions
+from app.models.types import ColumnSchema, DatasetSchema
+from app.utils.col_desc_generator import generate_column_descriptions
 
 DATA_DIR = "./data"
 

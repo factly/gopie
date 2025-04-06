@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from server.app.models.types import DatasetSchema
+from app.models.types import DatasetSchema
 
 
 def analyze_column_constraints(df: pd.DataFrame, column_name: str) -> Dict[str, Any]:

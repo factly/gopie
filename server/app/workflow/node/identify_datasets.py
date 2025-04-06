@@ -5,10 +5,10 @@ from typing import Any, Dict, List
 
 from langchain_core.output_parsers import JsonOutputParser
 
-from server.app.core.langchain_config import lc
-from server.app.models.types import ErrorMessage, IntermediateStep
-from server.app.workflow.graph.types import State
-from server.app.services.qdrant_client import find_and_preview_dataset
+from app.core.langchain_config import lc
+from app.models.types import ErrorMessage, IntermediateStep
+from app.workflow.graph.types import State
+from app.services.qdrant_client import find_and_preview_dataset
 
 
 def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:

@@ -7,9 +7,9 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.app.core.config import settings
-from server.app.api.v1.routers.query import router as query_router
-from server.app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
+from app.core.config import settings
+from app.api.v1.routers.query import router as query_router
+from app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,7 +25,11 @@ app = FastAPI(
     openapi_url="/api",
     lifespan=lifespan,
 )
-logging.basicConfig(filename=os.path.join(settings.LOG_DIR, "agent.log"), level=logging.INFO)
+if settings.MODE == "development":
+    os.makedirs(settings.LOG_DIR, exist_ok=True)
+    logging.basicConfig(filename=os.path.join(settings.LOG_DIR, "agent.log"), level=logging.INFO)
+else:
+    logging.basicConfig(level=logging.INFO)
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
@@ -48,5 +52,4 @@ app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"])
 
 def start():
-    os.makedirs(settings.LOG_DIR, exist_ok=True)
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

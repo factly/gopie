@@ -2,13 +2,13 @@
 
 from uuid import uuid4
 
-from server.app.services.qdrant.csv_processing import process_csv_directory
-from server.app.services.qdrant.qdrant_setup import (
+from app.services.qdrant.csv_processing import process_csv_directory
+from app.services.qdrant.qdrant_setup import (
     check_collection_has_documents,
     initialize_qdrant_client,
     setup_vector_store,
 )
-from server.app.core.config import settings
+from app.core.config import settings
 DATA_DIR = "./data"
 
 
