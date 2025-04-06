@@ -1,11 +1,18 @@
 ﻿import json
+import logging
 from typing import AsyncGenerator, Optional
 
 from langgraph.graph import END, START, StateGraph
 
+from server.app.tools import TOOLS
+from server.app.tools.tool_node import ToolNode
+from server.app.workflow.events.wrapper_func import (
+    create_event_wrapper,
+    event_dispatcher,
+)
+from server.app.workflow.graph.types import State
 from server.app.workflow.node.analyze_dataset import analyze_dataset
 from server.app.workflow.node.analyze_query import analyze_query, route_from_analysis
-from server.app.workflow.events.wrapper_func import create_event_wrapper, event_dispatcher
 from server.app.workflow.node.execute_query import execute_query, route_query_replan
 from server.app.workflow.node.generate_subqueries import generate_subqueries
 from server.app.workflow.node.identify_datasets import identify_datasets
@@ -13,9 +20,6 @@ from server.app.workflow.node.plan_query import plan_query
 from server.app.workflow.node.response.generate_result import generate_result
 from server.app.workflow.node.response.max_iterations import max_iterations_reached
 from server.app.workflow.node.response.response_handler import route_response_handler
-from server.app.workflow.graph.types import State
-from server.app.tools import TOOLS
-from server.app.tools.tool_node import ToolNode
 
 graph_builder = StateGraph(State)
 
@@ -78,7 +82,9 @@ graph_builder.add_edge("max_iterations_reached", END)
 graph = graph_builder.compile()
 
 
-async def stream_graph_updates(user_input: str, dataset_id: Optional[str] = None) -> AsyncGenerator[str, None]:
+async def stream_graph_updates(
+    user_input: str, dataset_id: Optional[str] = None
+) -> AsyncGenerator[str, None]:
     """Stream graph updates for user input with event tracking.
 
     Args:
@@ -92,21 +98,25 @@ async def stream_graph_updates(user_input: str, dataset_id: Optional[str] = None
 
     input_state = {
         "messages": [{"role": "user", "content": user_input}],
-        "dataset_id": dataset_id
+        "dataset_id": dataset_id,
     }
 
     try:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
-                print(formatted_event)
+                logging.info(formatted_event)
                 yield f"data: {json.dumps(formatted_event)}\n\n"
     except Exception as e:
-        yield f"data: {json.dumps({
-                'type': 'error',
-                'message': f'Error during streaming: {str(e)}',
-                'data': {'error': str(e)},
-            }, indent=2)}\n\n"
+        error_event = json.dumps(
+            {
+                "type": "error",
+                "message": f"Error during streaming: {str(e)}",
+                "data": {"error": str(e)},
+            },
+            indent=2,
+        )
+        yield f"data: {error_event}\n\n"
 
 
 def visualize_graph():

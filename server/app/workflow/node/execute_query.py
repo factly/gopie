@@ -70,7 +70,7 @@ async def execute_query(state: State) -> dict:
                 )
 
         result_data = response.json()
-        print(result_data)
+        logging.info(result_data)
 
         if not result_data or (isinstance(result_data, list) and len(result_data) == 0):
             no_results_data = {

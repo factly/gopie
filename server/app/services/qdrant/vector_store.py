@@ -1,14 +1,16 @@
 """Utilities for working with vector stores."""
 
+import logging
 from uuid import uuid4
 
+from server.app.core.config import settings
 from server.app.services.qdrant.csv_processing import process_csv_directory
 from server.app.services.qdrant.qdrant_setup import (
     check_collection_has_documents,
     initialize_qdrant_client,
     setup_vector_store,
 )
-from server.app.core.config import settings
+
 DATA_DIR = "./data"
 
 
@@ -38,16 +40,16 @@ def vectorize_datasets(vector_store=None, directory_path: str = DATA_DIR):
 
     has_documents = check_collection_has_documents(client, "dataset_collection")
 
-    documents, ids = process_csv_directory(directory_path)
+    documents, ids = process_csv_directory()
 
     if has_documents:
-        print("Documents are already vectorized. Skipping vectorization.")
+        logging.info("Documents are already vectorized. Skipping vectorization.")
         return vector_store
 
     if documents:
         add_documents_to_vector_store(vector_store, documents, ids)
-        print(f"Vectorized {len(documents)} dataset(s) from {directory_path}")
+        logging.info(f"Vectorized {len(documents)} dataset(s) from {DATA_DIR}")
     else:
-        print(f"No CSV files found in {directory_path}")
+        logging.warning(f"No CSV files found in {DATA_DIR}")
 
     return vector_store

@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Dict
 
 from langchain_core.output_parsers import JsonOutputParser
@@ -89,14 +90,14 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
             return descriptions
 
         except Exception as e:
-            print(f"Error parsing LLM response: {e}")
+            logging.error(f"Error parsing LLM response: {e}")
             return _generate_fallback_descriptions(dataset_schema)
 
     except ImportError as e:
-        print(f"Error: Required LLM configuration not found. {e}")
+        logging.error(f"Error: Required LLM configuration not found. {e}")
         return _generate_fallback_descriptions(dataset_schema)
     except Exception as e:
-        print(f"Error generating column descriptions with LLM: {e}")
+        logging.error(f"Error generating column descriptions with LLM: {e}")
         return _generate_fallback_descriptions(dataset_schema)
 
 

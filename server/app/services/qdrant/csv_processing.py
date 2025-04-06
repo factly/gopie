@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List, Tuple
 from uuid import uuid4
@@ -46,7 +47,7 @@ def extract_csv_metadata(file_path: str) -> DatasetSchema:
             "columns": columns_info,
         }
     except Exception as e:
-        print(f"Error extracting metadata from {file_path}: {e}")
+        logging.info(f"Error extracting metadata from {file_path}: {e}")
         return {
             "name": os.path.basename(file_path),
             "file_path": file_path,
@@ -91,22 +92,20 @@ def csv_metadata_to_document(metadata: DatasetSchema) -> Document:
     )
 
 
-def process_csv_directory(
-    directory_path: str = DATA_DIR,
-) -> Tuple[List[Document], List[str]]:
+def process_csv_directory() -> Tuple[List[Document], List[str]]:
     """Process all CSV files in a directory and convert them to documents with rich metadata."""
     documents = []
     ids = []
 
     try:
-        for file in os.listdir(directory_path):
+        for file in os.listdir(DATA_DIR):
             if file.endswith(".csv"):
-                file_path = os.path.join(directory_path, file)
+                file_path = os.path.join(DATA_DIR, file)
                 metadata = extract_csv_metadata(file_path)
                 document = csv_metadata_to_document(metadata)
                 documents.append(document)
                 ids.append(str(uuid4()))
     except Exception as e:
-        print(f"Error processing CSV directory {directory_path}: {e}")
+        logging.info(f"Error processing CSV directory {DATA_DIR}: {e}")
 
     return documents, ids

@@ -1,3 +1,6 @@
+import logging
+
+from server.app.core.config import settings
 from server.app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
@@ -6,7 +9,7 @@ from server.app.services.qdrant.vector_store import (
     perform_similarity_search,
 )
 from server.app.utils.dataset_info import get_dataset_preview
-from server.app.core.config import settings
+
 
 def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
     """Find relevant datasets based on a query and provide their previews."""
@@ -20,7 +23,7 @@ def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
         if "file_name" not in result.metadata or not result.metadata[
             "file_name"
         ].endswith(".csv"):
-            print(
+            logging.info(
                 f"Skipping document without proper CSV metadata: {result.metadata.get('source', 'Unknown')}"
             )
             continue
@@ -36,10 +39,10 @@ def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
                 }
             )
         except Exception as e:
-            print(f"Error getting preview for {dataset_name}: {e}")
+            logging.info(f"Error getting preview for {dataset_name}: {e}")
             previews.append({"relevance_info": result, "error": str(e)})
 
-    print(f"Found {len(previews)} relevant datasets")
+    logging.info(f"Found {len(previews)} relevant datasets")
     return previews
 
 

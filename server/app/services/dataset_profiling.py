@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
@@ -193,7 +194,7 @@ def profile_dataset(dataset_schema: DatasetSchema) -> DatasetSchema:
                 for col in dataset_schema["columns"]
             }
     except Exception as e:
-        print(f"Error during dataset profiling: {e}")
+        logging.info(f"Error during dataset profiling: {e}")
         return dataset_schema
 
     for column in dataset_schema["columns"]:
@@ -357,13 +358,13 @@ def profile_all_datasets(data_dir: str = "./data") -> Dict[str, DatasetSchema]:
         os.makedirs(data_dir, exist_ok=True)
 
         if not os.path.exists(data_dir):
-            print(f"Data directory {data_dir} does not exist.")
+            logging.info(f"Data directory {data_dir} does not exist.")
             return {}
 
         csv_files = [f for f in os.listdir(data_dir) if f.endswith(".csv")]
 
         if not csv_files:
-            print("No CSV files found in the data directory.")
+            logging.info("No CSV files found in the data directory.")
             _profiled_datasets = {}
             return {}
 
@@ -371,19 +372,19 @@ def profile_all_datasets(data_dir: str = "./data") -> Dict[str, DatasetSchema]:
 
         for csv_file in csv_files:
             dataset_name = csv_file.replace(".csv", "")
-            print(f"Profiling dataset: {dataset_name}")
+            logging.info(f"Profiling dataset: {dataset_name}")
 
             try:
                 dataset_schema = get_dataset_preview(dataset_name, sample_rows=5)
                 _profiled_datasets[dataset_name] = dataset_schema
-                print(f"Successfully profiled dataset: {dataset_name}")
+                logging.info(f"Successfully profiled dataset: {dataset_name}")
             except Exception as e:
-                print(f"Error profiling dataset {dataset_name}: {e}")
+                logging.info(f"Error profiling dataset {dataset_name}: {e}")
 
-        print(f"Profiled {len(_profiled_datasets)} datasets successfully.")
+        logging.info(f"Profiled {len(_profiled_datasets)} datasets successfully.")
         return _profiled_datasets
 
     except Exception as e:
-        print(f"Error during dataset profiling: {e}")
+        logging.info(f"Error during dataset profiling: {e}")
         _profiled_datasets = {}
         return {}

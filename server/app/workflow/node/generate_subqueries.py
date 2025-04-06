@@ -56,7 +56,6 @@ async def generate_subqueries(state: State):
         parsed_content = parser.parse(str(response.content))
 
         subqueries = None
-        print(parsed_content.get("subqueries"))
 
         if not subqueries:
             subqueries = [user_input]

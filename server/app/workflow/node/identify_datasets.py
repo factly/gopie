@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any, Dict, List
 
@@ -84,11 +85,9 @@ async def identify_datasets(state: State):
                         if info:
                             datasets_info.append(info)
         except Exception as e:
-            print(
+            logging.warning(
                 f"Vector search error: {str(e)}. Unable to retrieve dataset information."
             )
-
-        print("datasets_info: ", datasets_info)
 
         if not datasets_info:
             return {
@@ -163,5 +162,5 @@ def parse_dataset_content(content: str, metadata: Dict[str, Any]) -> Dict[str, A
 
         return dataset_info
     except Exception as e:
-        print(f"Error parsing dataset content: {e}")
+        logging.warning(f"Error parsing dataset content: {e}")
         return {}

@@ -23,17 +23,21 @@ class Settings(BaseSettings):
     VIRTUAL_KEY: str = os.getenv("VIRTUAL_KEY", "")
 
     QDRANT_HOST: str = "localhost"
+    QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
 
     MONGODB_PASSWORD: str = os.getenv("MONGODB_PASSWORD", "")
     MONGODB_USERNAME: str = os.getenv("MONGODB_USERNAME", "root")
-    MONGODB_CONNECTION_STRING: str = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
+    MONGODB_CONNECTION_STRING: str = (
+        f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
+    )
     HUNTING_API_URL: str = "http://localhost:8000/api/v1/prefetch"
     GOPIE_API_ENDPOINT: str = "http://localhost:8000"
 
     class Config:
         env_file = ".env"
         case_sensitive = True
+
 
 settings = Settings()

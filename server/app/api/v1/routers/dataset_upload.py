@@ -1,4 +1,5 @@
 import json
+import logging
 
 import requests
 from fastapi import APIRouter, HTTPException
@@ -14,16 +15,16 @@ HUNTING_API_URL = settings.HUNTING_API_URL
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
 async def upload_schema(payload: UploadSchemaRequest):
-    print(f"Received request: {payload}")
+    logging.info(f"Received request: {payload}")
     try:
         project_id = payload.project_id
         dataset_id = payload.dataset_id
         file_path = payload.file_path
 
-        print("Received request to get dataset info")
-        print(f"Project ID: {project_id}")
-        print(f"Dataset ID: {dataset_id}")
-        print(f"File Path: {file_path}")
+        logging.info("Received request to get dataset info")
+        logging.info(f"Project ID: {project_id}")
+        logging.info(f"Dataset ID: {dataset_id}")
+        logging.info(f"File Path: {file_path}")
 
         payloads = {
             "urls": [file_path],
@@ -37,17 +38,17 @@ async def upload_schema(payload: UploadSchemaRequest):
             settings.HUNTING_API_URL, json=payloads, headers=headers
         )
 
-        print(f"Response status code: {response.status_code}")
-        print(f"Response headers: {response.headers}")
-        print(f"Response content: {response.text}")
+        logging.info(f"Response status code: {response.status_code}")
+        logging.info(f"Response headers: {response.headers}")
+        logging.info(f"Response content: {response.text}")
 
         response.raise_for_status()
 
         try:
             response_data = response.json()
-            print(f"Response data: {response_data}")
+            logging.info(f"Response data: {response_data}")
         except json.JSONDecodeError:
-            print(f"Invalid JSON response: {response.text}")
+            logging.info(f"Invalid JSON response: {response.text}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Invalid response from prefetch API: {response.text[:100]}...",
@@ -58,7 +59,7 @@ async def upload_schema(payload: UploadSchemaRequest):
             "message": "Dataset information retrieved successfully.",
         }
     except requests.exceptions.HTTPError as e:
-        print(f"HTTP error occurred: {e}")
+        logging.info(f"HTTP error occurred: {e}")
         error_detail = f"Prefetch API error: {str(e)}"
         try:
             error_text = (
@@ -67,16 +68,16 @@ async def upload_schema(payload: UploadSchemaRequest):
                 else "No response text"
             )
             error_detail += f" - Response: {error_text}"
-        except:
+        except Exception as e:
             pass
         raise HTTPException(status_code=500, detail=error_detail)
     except requests.exceptions.RequestException as e:
-        print(f"Request error occurred: {e}")
+        logging.info(f"Request error occurred: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error connecting to prefetch API: {str(e)}"
         )
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logging.info(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
