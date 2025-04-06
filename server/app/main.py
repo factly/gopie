@@ -3,15 +3,12 @@ import os
 import time
 
 import uvicorn
+from app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
+from app.api.v1.routers.query import router as query_router
+from app.core.config import settings
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-
-from server.app.api.v1.routers.dataset_upload import (
-    dataset_router as schema_upload_router,
-)
-from server.app.api.v1.routers.query import router as query_router
-from server.app.core.config import settings
 
 
 @asynccontextmanager
@@ -29,13 +26,13 @@ app = FastAPI(
     openapi_url="/api",
     lifespan=lifespan,
 )
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[
-        logging.FileHandler(os.path.join(settings.LOG_DIR, "agent.log")),
-        logging.StreamHandler(),
-    ],
-)
+if settings.MODE == "development":
+    os.makedirs(settings.LOG_DIR, exist_ok=True)
+    logging.basicConfig(
+        filename=os.path.join(settings.LOG_DIR, "agent.log"), level=logging.INFO
+    )
+else:
+    logging.basicConfig(level=logging.INFO)
 
 
 @app.middleware("http")
@@ -62,5 +59,4 @@ app.include_router(
 
 
 def start():
-    os.makedirs(settings.LOG_DIR, exist_ok=True)
-    uvicorn.run("server.app.main:app", host="0.0.0.0", port=8090, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

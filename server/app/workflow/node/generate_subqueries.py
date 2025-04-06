@@ -1,12 +1,11 @@
 import json
 from datetime import datetime
 
+from app.core.langchain_config import lc
+from app.models.message import ErrorMessage, IntermediateStep
+from app.models.query import QueryResult
+from app.workflow.graph.types import State
 from langchain_core.output_parsers import JsonOutputParser
-
-from server.app.core.langchain_config import lc
-from server.app.models.message import ErrorMessage, IntermediateStep
-from server.app.models.query import QueryResult
-from server.app.workflow.graph.types import State
 
 
 async def generate_subqueries(state: State):

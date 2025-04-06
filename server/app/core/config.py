@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Dataful Agent"
     API_V1_STR: str = "/api/v1"
+    MODE: str = "development"
 
     LOG_DIR: str = "./log"
     MAX_RETRY_COUNT: int = 3
@@ -32,8 +33,8 @@ class Settings(BaseSettings):
     MONGODB_CONNECTION_STRING: str = (
         f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
     )
-    HUNTING_API_URL: str = "http://localhost:8000/api/v1/prefetch"
-    GOPIE_API_ENDPOINT: str = "http://localhost:8000"
+    HUNTING_API_URL: str = "http://host.docker.internal:8003/api/v1/prefetch"
+    GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
 
     class Config:
         env_file = ".env"

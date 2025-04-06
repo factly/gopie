@@ -1,10 +1,9 @@
 from typing import Annotated, Optional, TypedDict
 
-from langgraph.graph.message import add_messages
-
-from server.app.models.query import (
+from app.models.query import (
     QueryResult,
 )
+from langgraph.graph.message import add_messages
 
 
 class State(TypedDict):

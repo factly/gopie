@@ -4,9 +4,8 @@ from typing import List, Tuple
 from uuid import uuid4
 
 import pandas as pd
+from app.models.types import ColumnSchema, DatasetSchema
 from langchain_core.documents import Document
-
-from server.app.models.schema import ColumnSchema, DatasetSchema
 
 DATA_DIR = "./data"
 

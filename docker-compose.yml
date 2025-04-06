@@ -1,14 +1,21 @@
 services:
   server:
     build:
+      context: ./server
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./log:/app/log
+      - ./server/app:/code/app
     env_file:
-      - .env
+      - ./server/.env
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   qdrant:
     image: qdrant/qdrant
@@ -16,9 +23,16 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_storage:/qdrant/storage:z
+      - ./qdrant_storage:/qdrant/storage
     restart: unless-stopped
+    networks:
+      - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   data:
   log:
+
+networks:
+  default:

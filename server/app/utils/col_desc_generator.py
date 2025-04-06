@@ -2,11 +2,10 @@ import json
 import logging
 from typing import Dict
 
+from app.core.langchain_config import lc
+from app.models.schema import DatasetSchema
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
-
-from server.app.core.langchain_config import lc
-from server.app.models.schema import DatasetSchema
 
 
 def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:

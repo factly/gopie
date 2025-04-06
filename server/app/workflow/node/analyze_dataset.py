@@ -1,8 +1,8 @@
 import json
 
-from ...models.message import ErrorMessage, IntermediateStep
-from ...utils.correct_column_values import correct_column_values
-from ...workflow.graph.types import State
+from app.models.message import ErrorMessage, IntermediateStep
+from app.utils.correct_column_values import correct_column_values
+from app.workflow.graph.types import State
 
 # def create_analysis_prompt(
 #     user_query: str, column_requirements: list, tools_results: dict

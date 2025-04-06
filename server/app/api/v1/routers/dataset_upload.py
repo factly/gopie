@@ -2,15 +2,11 @@ import json
 import logging
 
 import requests
+from app.core.config import settings
+from app.models.data import UploadResponse, UploadSchemaRequest
 from fastapi import APIRouter, HTTPException
 
-from server.app.core.config import settings
-from server.app.models.router import UploadResponse, UploadSchemaRequest
-
 dataset_router = APIRouter()
-
-MONGODB_CONNECTION_STRING = settings.MONGODB_CONNECTION_STRING
-HUNTING_API_URL = settings.HUNTING_API_URL
 
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)

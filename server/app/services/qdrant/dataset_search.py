@@ -1,14 +1,14 @@
 import logging
 
-from server.app.core.config import settings
-from server.app.services.qdrant.qdrant_setup import (
+from app.core.config import settings
+from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from server.app.services.qdrant.vector_store import (
+from app.services.qdrant.vector_store import (
     perform_similarity_search,
 )
-from server.app.utils.dataset_info import get_dataset_preview
+from app.utils.dataset_info import get_dataset_preview
 
 
 def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):

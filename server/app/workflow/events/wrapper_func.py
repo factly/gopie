@@ -1,6 +1,6 @@
-from server.app.models.event import EventData, EventNode, EventStatus
-from server.app.workflow.events.dispatcher import AgentEventDispatcher
-from server.app.workflow.graph.types import State
+from app.models.event import EventData, EventNode, EventStatus
+from app.workflow.events.dispatcher import AgentEventDispatcher
+from app.workflow.graph.types import State
 
 event_dispatcher = AgentEventDispatcher()
 

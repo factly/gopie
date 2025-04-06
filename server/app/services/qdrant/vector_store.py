@@ -3,9 +3,9 @@
 import logging
 from uuid import uuid4
 
-from server.app.core.config import settings
-from server.app.services.qdrant.csv_processing import process_csv_directory
-from server.app.services.qdrant.qdrant_setup import (
+from app.core.config import settings
+from app.services.qdrant.csv_processing import process_csv_directory
+from app.services.qdrant.qdrant_setup import (
     check_collection_has_documents,
     initialize_qdrant_client,
     setup_vector_store,

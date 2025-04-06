@@ -1,9 +1,8 @@
 from typing import List
 
+from app.models.event import AgentEvent, EventData, EventNode, EventStatus
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.callbacks.manager import adispatch_custom_event
-
-from server.app.models.event import AgentEvent, EventData, EventNode, EventStatus
 
 
 def create_progress_message(event_node: EventNode) -> str:

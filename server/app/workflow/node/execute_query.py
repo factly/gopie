@@ -2,12 +2,11 @@ import json
 import logging
 
 import requests
+from app.core.config import settings
+from app.core.langchain_config import lc
+from app.models.message import ErrorMessage, IntermediateStep
+from app.workflow.graph.types import State
 from langchain_core.output_parsers import JsonOutputParser
-
-from server.app.core.config import settings
-from server.app.core.langchain_config import lc
-from server.app.models.message import ErrorMessage, IntermediateStep
-from server.app.workflow.graph.types import State
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
