@@ -67,11 +67,12 @@ async def identify_datasets(state: State):
         state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
     )
     query_result = state.get("query_result", {})
+    dataset_ids = state.get("dataset_ids", [])
 
     try:
         datasets_info = []
         try:
-            relevant_datasets = find_and_preview_dataset(user_query)
+            relevant_datasets = find_and_preview_dataset(user_query, dataset_ids=dataset_ids)
 
             for dataset in relevant_datasets:
                 if "error" not in dataset:

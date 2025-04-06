@@ -1,7 +1,7 @@
 import json
 import logging
 
-import requests
+import aiohttp
 from app.core.config import settings
 from app.models.data import UploadResponse, UploadSchemaRequest
 from fastapi import APIRouter, HTTPException
@@ -11,69 +11,56 @@ dataset_router = APIRouter()
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
 async def upload_schema(payload: UploadSchemaRequest):
-    logging.info(f"Received request: {payload}")
     try:
         project_id = payload.project_id
         dataset_id = payload.dataset_id
         file_path = payload.file_path
 
-        logging.info("Received request to get dataset info")
-        logging.info(f"Project ID: {project_id}")
-        logging.info(f"Dataset ID: {dataset_id}")
-        logging.info(f"File Path: {file_path}")
+        logging.info(
+            f"Processing schema upload for dataset {dataset_id} in project {project_id}"
+        )
 
         payloads = {
             "urls": [file_path],
             "minimal": True,
             "samples_to_fetch": 10,
-            "trigger_id": "test_trigger_id",
+            "trigger_id": "",
         }
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
-        response = requests.post(
-            settings.HUNTING_API_URL, json=payloads, headers=headers
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                settings.HUNTING_API_URL, json=payloads, headers=headers
+            ) as response:
+                if response.status >= 400:
+                    response_text = await response.text()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Prefetch API error: {response.status} - {response_text[:100]}",
+                    )
 
-        logging.info(f"Response status code: {response.status_code}")
-        logging.info(f"Response headers: {response.headers}")
-        logging.info(f"Response content: {response.text}")
-
-        response.raise_for_status()
-
-        try:
-            response_data = response.json()
-            logging.info(f"Response data: {response_data}")
-        except json.JSONDecodeError:
-            logging.info(f"Invalid JSON response: {response.text}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Invalid response from prefetch API: {response.text[:100]}...",
-            )
+                try:
+                    response_data = await response.json()
+                    print(response_data)
+                    logging.debug("Successfully processed schema data")
+                except json.JSONDecodeError:
+                    response_text = await response.text()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Invalid response from prefetch API: {response_text[:100]}...",
+                    )
 
         return {
             "success": True,
             "message": "Dataset information retrieved successfully.",
         }
-    except requests.exceptions.HTTPError as e:
-        logging.info(f"HTTP error occurred: {e}")
-        error_detail = f"Prefetch API error: {str(e)}"
-        try:
-            error_text = (
-                response.text[:200]
-                if response and hasattr(response, "text")
-                else "No response text"
-            )
-            error_detail += f" - Response: {error_text}"
-        except Exception as e:
-            pass
-        raise HTTPException(status_code=500, detail=error_detail)
-    except requests.exceptions.RequestException as e:
-        logging.info(f"Request error occurred: {e}")
+    except HTTPException:
+        raise
+    except aiohttp.ClientError as e:
+        logging.error(f"Connection error with prefetch API: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error connecting to prefetch API: {str(e)}"
         )
-    except HTTPException as e:
-        raise e
     except Exception as e:
-        logging.info(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error during schema upload: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

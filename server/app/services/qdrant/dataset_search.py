@@ -1,4 +1,5 @@
 import logging
+from typing import List, Optional
 
 from app.core.config import settings
 from app.services.qdrant.qdrant_setup import (
@@ -11,12 +12,23 @@ from app.services.qdrant.vector_store import (
 from app.utils.dataset_info import get_dataset_preview
 
 
-def find_and_preview_dataset(query: str, top_k: int = settings.QDRANT_TOP_K):
-    """Find relevant datasets based on a query and provide their previews."""
+def find_and_preview_dataset(
+    query: str,
+    top_k: int = settings.QDRANT_TOP_K,
+    dataset_ids: Optional[List[str]] = None
+):
+    """
+    Find relevant datasets based on a query and provide their previews.
+
+    Args:
+        query: The search query
+        top_k: Number of results to return
+        dataset_ids: Optional list of dataset IDs to filter results
+    """
     client = initialize_qdrant_client()
     vector_store = setup_vector_store(client)
 
-    results = perform_similarity_search(vector_store, query, top_k=top_k)
+    results = perform_similarity_search(vector_store, query, top_k=top_k, dataset_ids=dataset_ids)
 
     previews = []
     for result in results:
