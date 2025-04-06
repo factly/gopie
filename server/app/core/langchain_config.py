@@ -1,8 +1,8 @@
+from app.core.config import settings
+from app.tools import TOOLS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
-from app.core.config import settings
 
-from app.tools import TOOLS
 
 class ModelConfig:
     def __init__(self):
@@ -15,6 +15,7 @@ class ModelConfig:
         self.portkey_headers = createHeaders(
             api_key=portkey_api_key, virtual_key=virtual_key
         )
+
 
 class LangchainConfig:
     def __init__(self, config: ModelConfig):

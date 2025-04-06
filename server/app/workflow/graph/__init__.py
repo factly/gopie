@@ -1,6 +1,6 @@
 ﻿import json
 import logging
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, List, Optional
 
 from app.tools import TOOLS
 from app.tools.tool_node import ToolNode
@@ -79,13 +79,13 @@ graph = graph_builder.compile()
 
 
 async def stream_graph_updates(
-    user_input: str, dataset_id: Optional[str] = None
+    user_input: str, dataset_ids: Optional[List[str]] = None
 ) -> AsyncGenerator[str, None]:
     """Stream graph updates for user input with event tracking.
 
     Args:
         user_input (str): The user's input query
-        dataset_id (str, optional): Specific dataset ID to use for the query
+        dataset_ids (List[str], optional): Specific dataset IDs to use for the query
 
     Yields:
         str: JSON-formatted event data for streaming in SSE format
@@ -94,7 +94,7 @@ async def stream_graph_updates(
 
     input_state = {
         "messages": [{"role": "user", "content": user_input}],
-        "dataset_id": dataset_id,
+        "dataset_ids": dataset_ids,
     }
 
     try:

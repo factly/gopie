@@ -1,4 +1,4 @@
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, List, Optional, TypedDict
 
 from app.models.query import (
     QueryResult,
@@ -7,7 +7,7 @@ from langgraph.graph.message import add_messages
 
 
 class State(TypedDict):
-    dataset_id: Optional[str]
+    dataset_ids: Optional[List[str]]
     datasets: list[str]
     subqueries: list[str]
     subquery_index: int

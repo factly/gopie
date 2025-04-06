@@ -176,4 +176,4 @@ cython_debug/
 TODO.md
 qdrant_storage
 *.html
-templates
+tests
