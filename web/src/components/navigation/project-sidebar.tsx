@@ -245,7 +245,7 @@ export function ProjectsSidebar({ isSidebarOpen }: { isSidebarOpen: boolean }) {
                                       )
                                     }
                                   >
-                                    <DatabaseIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    <DatabaseIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
                                     <span className="truncate text-sm text-muted-foreground group-hover:text-foreground">
                                       {dataset.alias || dataset.name}
                                     </span>

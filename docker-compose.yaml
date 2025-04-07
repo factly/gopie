@@ -101,7 +101,7 @@ services:
   gopie-web:
     build:
       context: ./web
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     environment:
       - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
       - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
