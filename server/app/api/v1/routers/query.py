@@ -21,18 +21,19 @@ async def test(request: Request):
 
 
 @router.get("/query")
-async def get_nl2sql(
+async def query(
     user_input: str = Query(
         ..., description="The natural language query from the user"
     ),
-    project_ids: Optional[List[str]] = Query(..., description="List of project IDs"),
-    dataset_ids: Optional[List[str]] = Query(..., description="List of dataset IDs"),
+    project_ids: Optional[List[str]] = Query(None, description="List of project IDs"),
+    dataset_ids: Optional[List[str]] = Query(None, description="List of dataset IDs"),
 ):
     """Stream the agent's processing events as Server-Sent Events.
 
     Args:
         user_input: The natural language query from the user
-        dataset_ids (List[str], optional): Specific dataset IDs to use for the query
+        project_ids (List[str], optional): List of project IDs to use for the query
+        dataset_ids (List[str], optional): List of dataset IDs to use for the query
     """
 
     return StreamingResponse(

@@ -19,8 +19,9 @@ def initialize_qdrant_client():
     return client
 
 
-def setup_vector_store(client):
+def setup_vector_store():
     """Set up a vector store using the provided client."""
+    client = initialize_qdrant_client()
     return QdrantVectorStore(
         client=client,
         collection_name=settings.QDRANT_COLLECTION,
