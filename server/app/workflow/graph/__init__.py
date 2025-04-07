@@ -2,6 +2,7 @@
 import logging
 from typing import AsyncGenerator, List, Optional
 
+from app.core.langchain_config import lc
 from app.tools import TOOLS
 from app.tools.tool_node import ToolNode
 from app.workflow.events.wrapper_func import create_event_wrapper, event_dispatcher
@@ -18,6 +19,7 @@ from app.workflow.node.response.response_handler import route_response_handler
 from langgraph.graph import END, START, StateGraph
 
 graph_builder = StateGraph(State)
+lc.llm.bind_tools(list(TOOLS.values()))
 
 GRAPH_NODES = {
     "generate_subqueries": generate_subqueries,

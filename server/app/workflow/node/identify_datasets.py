@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 from typing import Any, Dict, List
 
 from app.core.langchain_config import lc
@@ -72,18 +71,15 @@ async def identify_datasets(state: State):
     try:
         datasets_info = []
         try:
-            relevant_datasets = find_and_preview_dataset(user_query, dataset_ids=dataset_ids)
+            relevant_datasets = find_and_preview_dataset(
+                user_query, dataset_ids=dataset_ids
+            )
+
+            print("relevant_datasets", relevant_datasets)
 
             for dataset in relevant_datasets:
-                if "error" not in dataset:
-                    dataset_metadata = dataset["relevance_info"].metadata
-                    dataset_content = dataset["relevance_info"].page_content
-                    dataset_name = dataset_metadata.get("file_name", "")
+                datasets_info.append(dataset.page_content)
 
-                    if dataset_name.endswith(".csv"):
-                        info = parse_dataset_content(dataset_content, dataset_metadata)
-                        if info:
-                            datasets_info.append(info)
         except Exception as e:
             logging.warning(
                 f"Vector search error: {str(e)}. Unable to retrieve dataset information."
@@ -134,33 +130,3 @@ async def identify_datasets(state: State):
                 ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
             ],
         }
-
-
-def parse_dataset_content(content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse dataset information from the page_content of a Document"""
-    try:
-        dataset_info = {
-            "dataset_name": metadata.get("file_name", ""),
-            "row_count": metadata.get("row_count", 0),
-            "column_count": metadata.get("column_count", 0),
-            "columns": [],
-        }
-
-        column_pattern = r"  - (\w+) \(Type: (\w+), Sample values: (.*?)\)"
-        column_matches = re.findall(column_pattern, content)
-
-        for match in column_matches:
-            column_name, column_type, sample_values = match
-            values = [v.strip() for v in sample_values.split(",")]
-
-            column_info = {
-                "name": column_name,
-                "type": column_type,
-                "sample_values": values,
-            }
-            dataset_info["columns"].append(column_info)
-
-        return dataset_info
-    except Exception as e:
-        logging.warning(f"Error parsing dataset content: {e}")
-        return {}

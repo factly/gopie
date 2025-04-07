@@ -1,8 +1,11 @@
+import json
 import logging
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
 from app.models.data import UploadResponse, UploadSchemaRequest
+from app.models.schema import DatasetSchema
+from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
 from fastapi import APIRouter, HTTPException
 
 dataset_router = APIRouter()
@@ -54,11 +57,37 @@ async def upload_schema(payload: UploadSchemaRequest):
             )
 
         dataset_schema = await fetched_dataset_schema.json()
-        print(dataset_schema)
+
+        transformed_schema: DatasetSchema = {
+            "name": file_path.split("/")[-1],
+            "dataset_id": dataset_id,
+            "file_path": file_path,
+            "project_id": project_id,
+            "analysis": dataset_schema["analysis"],
+            "row_count": dataset_schema["table"]["n"],
+            "col_count": dataset_schema["table"]["n_var"],
+            "columns": [
+                {
+                    "name": col,
+                    "description": "",
+                    "type": dataset_schema["variables"][col]["type"],
+                    "sample_values": dataset_schema["samples"][0]["data"][col] if dataset_schema["samples"] else {},
+                    "non_null_count": dataset_schema["variables"][col]["n"] - dataset_schema["variables"][col]["n_missing"]
+                }
+                for col in dataset_schema["columns"]
+            ]
+        }
+
+        success = store_schema_in_qdrant(transformed_schema)
+        if not success:
+            raise HTTPException(500, "Failed to store schema in vector database")
 
         return {
             "success": True,
-            "message": "Dataset information retrieved successfully.",
+            "message": "Dataset information retrieved and stored successfully.",
         }
     except HTTPException as e:
         raise e
+    except Exception as e:
+        logging.error(f"Error processing schema upload: {str(e)}")
+        raise HTTPException(500, str(e))
