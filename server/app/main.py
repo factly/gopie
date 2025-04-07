@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 
 import uvicorn
@@ -29,7 +30,9 @@ app = FastAPI(
 if settings.MODE == "development":
     os.makedirs(settings.LOG_DIR, exist_ok=True)
     logging.basicConfig(
-        filename=os.path.join(settings.LOG_DIR, "agent.log"), level=logging.INFO
+        filename=os.path.join(settings.LOG_DIR, "agent.log"),
+        level=logging.INFO,
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
 else:
     logging.basicConfig(level=logging.INFO)

@@ -21,7 +21,7 @@ def perform_similarity_search(
     vector_store,
     query,
     top_k=settings.QDRANT_TOP_K,
-    dataset_ids: Optional[List[str]] = None
+    dataset_ids: Optional[List[str]] = None,
 ):
     """
     Perform a similarity search.
@@ -33,16 +33,22 @@ def perform_similarity_search(
         top_k: Number of results to return
         dataset_ids: Optional list of dataset IDs to filter results
     """
-    filter_by_dataset = None
+    filter_dict = None
     if dataset_ids:
-        filter_by_dataset = {
-            "filter": {
-                "$or": [
-                    {"file_name": {"$eq": f"{dataset_id}.csv"}}
-                    for dataset_id in dataset_ids
-                ]
-            }
+        filter_dict = {
+            "$or": [
+                {"metadata.dataset_id": {"$eq": dataset_id}}
+                for dataset_id in dataset_ids
+            ]
         }
         logging.info(f"Filtering search to datasets: {dataset_ids}")
 
-    return vector_store.similarity_search(query, k=top_k, filter=filter_by_dataset)
+    try:
+        return vector_store.similarity_search(query, k=top_k, filter=filter_dict)
+    except Exception as e:
+        logging.error(f"Error performing similarity search: {str(e)}")
+        if filter_dict:
+            logging.info("Attempting unfiltered search as fallback...")
+            return vector_store.similarity_search(query, k=top_k)
+        else:
+            raise e

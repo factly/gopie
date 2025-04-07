@@ -1,15 +1,18 @@
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, List
 
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
-from app.services.qdrant_client import find_and_preview_dataset
+from app.models.schema import DatasetSchema
+from app.services.qdrant.dataset_search import search_schemas
 from app.workflow.graph.types import State
 from langchain_core.output_parsers import JsonOutputParser
 
 
-def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]]) -> str:
+def create_llm_prompt(
+    user_query: str, available_datasets_schemas: List[DatasetSchema]
+) -> str:
     """Create a prompt for the LLM to identify the relevant dataset and required columns"""
     return f"""
         You are an AI assistant specialized in data analysis. Your role is to help users analyze data by identifying relevant datasets and column values.
@@ -17,8 +20,8 @@ def create_llm_prompt(user_query: str, available_datasets: List[Dict[str, Any]])
         USER QUERY:
         "{user_query}"
 
-        PRE-FILTERED DATASETS (ordered by relevance):
-        {json.dumps(available_datasets, indent=2)}
+        PRE-FILTERED DATASETS SCHEMAS(ordered by relevance):
+        {json.dumps(available_datasets_schemas, indent=2)}
 
         INSTRUCTIONS:
         1. The datasets above have been pre-filtered using semantic search based on relevance to the user query.
@@ -67,18 +70,15 @@ async def identify_datasets(state: State):
     )
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
+    project_ids = state.get("project_ids", [])
 
     try:
         datasets_info = []
         try:
-            relevant_datasets = find_and_preview_dataset(
-                user_query, dataset_ids=dataset_ids
+            dataset_schemas = search_schemas(
+                user_query, dataset_ids=dataset_ids, project_ids=project_ids
             )
-
-            print("relevant_datasets", relevant_datasets)
-
-            for dataset in relevant_datasets:
-                datasets_info.append(dataset.page_content)
+            datasets_info = dataset_schemas
 
         except Exception as e:
             logging.warning(

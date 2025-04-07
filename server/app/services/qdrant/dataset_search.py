@@ -2,85 +2,54 @@ import logging
 from typing import List, Optional
 
 from app.core.config import settings
+from app.models.schema import DatasetSchema
 from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
 )
-from app.utils.dataset_info import get_dataset_preview
 
 
-def find_and_preview_dataset(
-    query: str,
+def search_schemas(
+    user_query: str,
+    project_ids: Optional[List[str]] = None,
+    dataset_ids: Optional[List[str]] = None,
     top_k: int = settings.QDRANT_TOP_K,
-    dataset_ids: Optional[List[str]] = None
-):
+) -> List[DatasetSchema]:
     """
-    Find relevant datasets based on a query and provide their previews.
+    Search for schemas using a vector search.
 
     Args:
         query: The search query
-        top_k: Number of results to return
+        project_id: Optional project ID to filter results
         dataset_ids: Optional list of dataset IDs to filter results
+        top_k: Number of results to return
+
+    Returns:
+        List of matching dataset schemas
     """
-    vector_store = setup_vector_store()
+    try:
+        vector_store = setup_vector_store()
 
-    results = perform_similarity_search(vector_store, query, top_k=top_k, dataset_ids=dataset_ids)
+        # If project_id is provided and dataset_ids is not, get all datasets for the project
+        if project_ids and not dataset_ids:
+            # For now, we'll proceed with the search without dataset filtering
+            pass
 
-    previews = []
-    for result in results:
-        if "file_name" not in result.metadata or not result.metadata[
-            "file_name"
-        ].endswith(".csv"):
-            logging.info(
-                f"Skipping document without proper CSV metadata: {result.metadata.get('source', 'Unknown')}"
-            )
-            continue
+        results = perform_similarity_search(
+            vector_store=vector_store,
+            query=user_query,
+            top_k=top_k,
+            dataset_ids=dataset_ids,
+        )
 
-        dataset_name = result.metadata["file_name"].replace(".csv", "")
-        try:
-            preview_data = get_dataset_preview(dataset_name)
-            previews.append(
-                {
-                    "relevance_info": result,
-                    "metadata": preview_data.get("metadata", {}),
-                    "sample_data": preview_data.get("sample_data", []),
-                }
-            )
-        except Exception as e:
-            logging.info(f"Error getting preview for {dataset_name}: {e}")
-            previews.append({"relevance_info": result, "error": str(e)})
+        schemas = []
+        for doc in results:
+            if "schema" in doc.metadata:
+                schemas.append(doc.metadata["schema"])
 
-    logging.info(f"Found {len(previews)} relevant datasets")
-    return previews
+        logging.info(f"Found {len(schemas)} schemas matching query: {user_query}")
+        return schemas
 
-
-def format_dataset_preview(result):
-    """Format a dataset preview for display."""
-    dataset = result["relevance_info"]
-    output = []
-
-    output.append(f"Dataset: {dataset.metadata.get('file_name', 'Unknown')}")
-    output.append(f"Rows: {dataset.metadata.get('row_count', 'Unknown')}")
-
-    if "error" in result:
-        output.append(f"Error getting preview: {result['error']}")
-    else:
-        metadata = result.get("metadata", {})
-
-        column_names = metadata.get("columns", [])
-        if column_names:
-            output.append(
-                f"Columns: {', '.join(column_names[:5])}{'...' if len(column_names) > 5 else ''}"
-            )
-
-        column_types = metadata.get("column_types", {})
-        if column_types:
-            output.append("Column types:")
-            for col, dtype in list(column_types.items())[:3]:
-                output.append(f"  - {col}: {dtype}")
-            if len(column_types) > 3:
-                output.append("  - ...")
-
-    output.append(f"Match details: {dataset.page_content[:150]}...")
-
-    return "\n".join(output)
+    except Exception as e:
+        logging.error(f"Error searching schemas: {str(e)}")
+        return []
