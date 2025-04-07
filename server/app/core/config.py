@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     MONGODB_CONNECTION_STRING: str = (
         f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
     )
-    HUNTING_API_URL: str = "http://host.docker.internal:8003/api/v1/prefetch"
+    HUNTING_API_ENDPOINT: str = "http://host.docker.internal:8003"
     GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
 
     class Config:

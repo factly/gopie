@@ -34,27 +34,27 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
             column_info.append(col_data)
 
         prompt_template = """
-        You are a data expert specialized in understanding dataset schemas. Your task is to generate accurate,
-        logical descriptions for database columns that explain what each column represents in business terms.
+            You are a data expert specialized in understanding dataset schemas. Your task is to generate accurate,
+            logical descriptions for database columns that explain what each column represents in business terms.
 
-        Dataset name: {dataset_name}
-        Dataset has {row_count} rows and {column_count} columns.
+            Dataset name: {dataset_name}
+            Dataset has {row_count} rows and {column_count} columns.
 
-        For each column below, analyze its name, data type, and sample values to infer what information it contains.
-        Provide a concise but informative description (1-2 sentences) that would help the llm understand the column's purpose.
+            For each column below, analyze its name, data type, and sample values to infer what information it contains.
+            Provide a concise but informative description (1-2 sentences) that would help the llm understand the column's purpose.
 
-        Be specific about what the column represents. For ID columns, explain what entity they identify.
-        For date columns, explain what event or timing they track. For numeric columns, explain what quantity they measure.
+            Be specific about what the column represents. For ID columns, explain what entity they identify.
+            For date columns, explain what event or timing they track. For numeric columns, explain what quantity they measure.
 
-        Column information:
-        {column_info}
+            Column information:
+            {column_info}
 
-        Return ONLY a valid JSON object where keys are the exact column names and values are your descriptions.
-        Format:
-        {{
-            "column_name1": "Description of what this column represents",
-            "column_name2": "Description of what this column represents"
-        }}
+            Return ONLY a valid JSON object where keys are the exact column names and values are your descriptions.
+            Format:
+            {{
+                "column_name1": "Description of what this column represents",
+                "column_name2": "Description of what this column represents"
+            }}
         """
 
         prompt = PromptTemplate(

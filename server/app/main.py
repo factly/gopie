@@ -6,6 +6,7 @@ import uvicorn
 from app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
+from app.core.session import SingletonAiohttp
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,11 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        logging.info("Starting the application...")
-    except Exception as e:
-        logging.error(f"Error starting the application: {e}")
+    SingletonAiohttp.get_aiohttp_client()
     yield
+    await SingletonAiohttp.close_aiohttp_client()
 
 
 app = FastAPI(

@@ -25,6 +25,7 @@ async def get_nl2sql(
     user_input: str = Query(
         ..., description="The natural language query from the user"
     ),
+    project_ids: Optional[List[str]] = Query(..., description="List of project IDs"),
     dataset_ids: Optional[List[str]] = Query(..., description="List of dataset IDs"),
 ):
     """Stream the agent's processing events as Server-Sent Events.
@@ -33,7 +34,6 @@ async def get_nl2sql(
         user_input: The natural language query from the user
         dataset_ids (List[str], optional): Specific dataset IDs to use for the query
     """
-    print(dataset_ids)
 
     return StreamingResponse(
         stream_graph_updates(user_input, dataset_ids=dataset_ids),

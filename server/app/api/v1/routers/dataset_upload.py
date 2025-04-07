@@ -1,12 +1,16 @@
-import json
 import logging
 
-import aiohttp
 from app.core.config import settings
+from app.core.session import SingletonAiohttp
 from app.models.data import UploadResponse, UploadSchemaRequest
 from fastapi import APIRouter, HTTPException
 
 dataset_router = APIRouter()
+
+http_session = SingletonAiohttp.get_aiohttp_client()
+
+PREFETCH_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/prefetch"
+PROFILE_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/profile/description"
 
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
@@ -28,39 +32,33 @@ async def upload_schema(payload: UploadSchemaRequest):
         }
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                settings.HUNTING_API_URL, json=payloads, headers=headers
-            ) as response:
-                if response.status >= 400:
-                    response_text = await response.text()
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Prefetch API error: {response.status} - {response_text[:100]}",
-                    )
+        response = await http_session.post(
+            PREFETCH_API_URL, json=payloads, headers=headers
+        )
 
-                try:
-                    response_data = await response.json()
-                    print(response_data)
-                    logging.debug("Successfully processed schema data")
-                except json.JSONDecodeError:
-                    response_text = await response.text()
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Invalid response from prefetch API: {response_text[:100]}...",
-                    )
+        if response.status != 200:
+            raise HTTPException(response.status, await response.text())
+
+        payloads = {
+            "source": file_path,
+            "samples_to_show": 10,
+        }
+
+        fetched_dataset_schema = await http_session.get(
+            PROFILE_API_URL, params=payloads, headers=headers
+        )
+
+        if fetched_dataset_schema.status != 200:
+            raise HTTPException(
+                fetched_dataset_schema.status, await fetched_dataset_schema.text()
+            )
+
+        dataset_schema = await fetched_dataset_schema.json()
+        print(dataset_schema)
 
         return {
             "success": True,
             "message": "Dataset information retrieved successfully.",
         }
-    except HTTPException:
-        raise
-    except aiohttp.ClientError as e:
-        logging.error(f"Connection error with prefetch API: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error connecting to prefetch API: {str(e)}"
-        )
-    except Exception as e:
-        logging.error(f"Unexpected error during schema upload: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException as e:
+        raise e
