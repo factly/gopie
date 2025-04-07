@@ -3,6 +3,7 @@ import { JWT } from "next-auth/jwt";
 import ZitadelProvider from "next-auth/providers/zitadel";
 import * as openidClient from "openid-client";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const config = await openidClient.discovery(
@@ -11,17 +12,17 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       process.env.ZITADEL_CLIENT_SECRET
     );
 
-    const { refresh_token, access_token, expires_at } =
-      await openidClient.refreshTokenGrant(
-        config,
-        token.refreshToken as string
-      );
+    const output = await openidClient.refreshTokenGrant(
+      config,
+      token.refreshToken as string
+    );
 
     return {
       ...token,
-      accessToken: access_token,
-      expiresAt: typeof expires_at === "number" ? expires_at * 1000 : 0,
-      refreshToken: refresh_token ?? token.refreshToken, // Fall back to old refresh token
+      accessToken: output.access_token,
+      expiresAt:
+        typeof output.expires_at === "number" ? output.expires_at * 1000 : 0,
+      refreshToken: output.refresh_token ?? token.refreshToken, // Fall back to old refresh token
     };
   } catch (error) {
     console.error("Error during refreshAccessToken", error);
@@ -74,7 +75,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       // Access token has expired, try to update it
-      return refreshAccessToken(token);
+      return null;
     },
     async session({
       session,
