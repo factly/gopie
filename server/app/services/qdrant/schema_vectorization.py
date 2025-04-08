@@ -14,11 +14,13 @@ def store_schema_in_qdrant(
     Store a dataset schema in Qdrant.
 
     Args:
-        schema: The dataset schema to store
-        vector_store: Optional pre-initialized vector store
+        schema (Any): The dataset schema to store.
+        dataset_id (str): The unique identifier for the dataset.
+        project_id (str): The unique identifier for the project.
+        file_path (str): The file path of the dataset.
 
     Returns:
-        bool: True if successful, False otherwise
+        bool: True if successful, False otherwise.
     """
     try:
         dataset_name = file_path.split("/")[-1]

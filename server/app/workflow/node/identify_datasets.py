@@ -20,7 +20,7 @@ def create_llm_prompt(
         USER QUERY:
         "{user_query}"
 
-        PRE-FILTERED DATASETS SCHEMAS(ordered by relevance):
+        PRE-FILTERED DATASETS SCHEMAS (ordered by relevance):
         {json.dumps(available_datasets_schemas, indent=2)}
 
         INSTRUCTIONS:

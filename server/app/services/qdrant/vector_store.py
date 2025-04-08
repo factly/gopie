@@ -46,7 +46,9 @@ def perform_similarity_search(
     try:
         return vector_store.similarity_search(query, k=top_k, filter=filter_dict)
     except Exception as e:
-        logging.error(f"Error performing similarity search: {str(e)}")
+        logging.error(
+            f"Error performing similarity search: {str(e)} | Filter criteria: {filter_dict}"
+        )
         if filter_dict:
             logging.info("Attempting unfiltered search as fallback...")
             return vector_store.similarity_search(query, k=top_k)

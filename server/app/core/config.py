@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     PORTKEY_API_KEY: str = os.getenv("PORTKEY_API_KEY", "")
     VIRTUAL_KEY: str = os.getenv("VIRTUAL_KEY", "")
 
-    QDRANT_HOST: str = "localhost"
+    QDRANT_HOST: str = "qdrant"
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
@@ -33,11 +33,11 @@ class Settings(BaseSettings):
     MONGODB_CONNECTION_STRING: str = (
         f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
     )
-    # HUNTING_API_ENDPOINT: str = "http://host.docker.internal:8003"
-    # GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
+    HUNTING_API_ENDPOINT: str = "http://host.docker.internal:8003"
+    GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
 
-    HUNTING_API_ENDPOINT: str = "http://localhost:8003"
-    GOPIE_API_ENDPOINT: str = "http://localhost:8004"
+    # HUNTING_API_ENDPOINT: str = "http://localhost:8003"
+    # GOPIE_API_ENDPOINT: str = "http://localhost:8004"
 
     class Config:
         env_file = ".env"
