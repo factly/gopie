@@ -24,13 +24,13 @@ def perform_similarity_search(
 ):
     """
     Perform a similarity search.
-    If dataset_ids are provided, filter the search to only include documents with matching dataset IDs.
+    Filter the search based on provided query_filter.
 
     Args:
         vector_store: The vector store to search in
         query: The search query
         top_k: Number of results to return
-        dataset_ids: Optional list of dataset IDs to filter results
+        query_filter: Filter to apply to the search (Qdrant filter object)
     """
 
     try:

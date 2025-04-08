@@ -37,7 +37,7 @@ def search_schemas(
         if project_ids:
             filter_conditions.append(
                 models.FieldCondition(
-                    key="project_id",
+                    key="metadata.project_id",
                     match=models.MatchAny(any=project_ids),
                 )
             )
@@ -45,13 +45,13 @@ def search_schemas(
         if dataset_ids:
             filter_conditions.append(
                 models.FieldCondition(
-                    key="dataset_id",
+                    key="metadata.dataset_id",
                     match=models.MatchAny(any=dataset_ids),
                 )
             )
 
         if filter_conditions:
-            query_filter = models.Filter(must=filter_conditions)
+            query_filter = models.Filter(should=filter_conditions)
 
         results = perform_similarity_search(
             vector_store=vector_store,
