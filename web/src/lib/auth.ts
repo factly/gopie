@@ -3,7 +3,6 @@ import { JWT } from "next-auth/jwt";
 import ZitadelProvider from "next-auth/providers/zitadel";
 import * as openidClient from "openid-client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const config = await openidClient.discovery(
@@ -43,7 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorization: {
         params: {
           scope:
-            "openid profile email urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
+            "openid profile email offline_access urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
             process.env.NEXT_PUBLIC_ZITADEL_PROJECT_ID +
             ":roles",
         },
@@ -75,7 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       // Access token has expired, try to update it
-      return null;
+      return refreshAccessToken(token);
     },
     async session({
       session,
