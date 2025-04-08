@@ -29,12 +29,8 @@ class Settings(BaseSettings):
     QDRANT_TOP_K: int = 5
 
     HUNTING_API_ENDPOINT: str = "http://host.docker.internal:8003"
-    FLOWER_API_ENDPOINT: str = os.getenv(
-        "FLOWER_API_ENDPOINT", "http://host.docker.internal:5555"
-    )
-    GOPIE_API_ENDPOINT: str = os.getenv(
-        "GOPIE_API_ENDPOINT", "https://gopie-server.factly.dev"
-    )
+    FLOWER_API_ENDPOINT: str = os.getenv("FLOWER_API_ENDPOINT", "")
+    GOPIE_API_ENDPOINT: str = os.getenv("GOPIE_API_ENDPOINT", "")
 
     class Config:
         env_file = ".env"

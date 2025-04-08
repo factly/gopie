@@ -9,50 +9,42 @@ http_session = SingletonAiohttp.get_aiohttp_client()
 
 PREFETCH_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/prefetch"
 PROFILE_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/profile/description"
-STATUS_API_URL = settings.FLOWER_HUNTING_API_ENDPOINT + "/api/v1/task/status"
+FLOWER_API_ENDPOINT = settings.FLOWER_API_ENDPOINT + "/api/task/result"
 
 
 async def check_task_status(
-    task_id: str, trigger_id: str, max_retries: int = 10
+    task_id: str, max_retries: int = 10, delay: float = 2.0
 ) -> bool:
     """
-    Check if the prefetch task has completed successfully.
-
-    Args:
-        task_id: The ID of the prefetch task
-        trigger_id: The trigger ID of the prefetch task
-        max_retries: Maximum number of times to check status
-
-    Returns:
-        bool: True if the task completed successfully, False if it failed
+    Check if the prefetch task has completed successfully by polling the result endpoint.
     """
     headers = {"accept": "application/json"}
-    params = {"task_id": task_id, "trigger_id": trigger_id}
+    FLOWER_API_URL = f"{FLOWER_API_ENDPOINT}/{task_id}"
+    logging.info(FLOWER_API_ENDPOINT)
 
     for _ in range(max_retries):
         try:
-            status_response = await http_session.get(
-                STATUS_API_URL, params=params, headers=headers
-            )
-
-            if status_response.status != 200:
-                logging.error(
-                    f"Failed to get task status: {await status_response.text()}"
-                )
-                await asyncio.sleep(2)
+            response = await http_session.get(FLOWER_API_URL, headers=headers)
+            if response.status != 200:
+                logging.warning(f"Failed to get task status: {await response.text()}")
+                await asyncio.sleep(delay)
                 continue
 
-            status_data = await status_response.json()
-            if status_data.get("status") == "completed":
+            data = await response.json()
+            state = data.get("state", "").upper()
+
+            logging.info(f"Task {task_id} state: {state}, result: {data.get('result')}")
+
+            if state == "SUCCESS":
                 return True
-            elif status_data.get("status") == "failed":
+            elif state == "FAILURE":
                 return False
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(delay)
 
         except Exception as e:
             logging.error(f"Error checking task status: {str(e)}")
-            await asyncio.sleep(2)
+            await asyncio.sleep(delay)
 
     return False
 
@@ -64,42 +56,39 @@ async def fetch_dataset_schema(file_path: str):
     try:
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
-        # prefetch_payload = {
-        #     "urls": [file_path],
-        #     "minimal": True,
-        #     "samples_to_fetch": 10,
-        #     "trigger_id": "",
-        # }
+        prefetch_payload = {
+            "urls": [file_path],
+            "minimal": True,
+            "samples_to_fetch": 10,
+            "trigger_id": "",
+        }
 
-        # prefetch_response = await http_session.post(
-        #     PREFETCH_API_URL, json=prefetch_payload, headers=headers
-        # )
+        prefetch_response = await http_session.post(
+            PREFETCH_API_URL, json=prefetch_payload, headers=headers
+        )
 
-        # if prefetch_response.status != 200:
-        #     raise HTTPException(
-        #         prefetch_response.status, await prefetch_response.text()
-        #     )
+        if prefetch_response.status != 200:
+            raise HTTPException(
+                prefetch_response.status, await prefetch_response.text()
+            )
 
-        # prefetch_data = await prefetch_response.json()
-        # task_id = prefetch_data.get("task_id", "")
-        # trigger_id = prefetch_data.get("trigger_id", "")
+        prefetch_data = await prefetch_response.json()
+        task_id = prefetch_data.get("task_id", "")
 
-        # logging.info(
-        #     f"Prefetch task started with task_id: {task_id} and trigger_id: {trigger_id}"
-        # )
+        logging.info(f"Prefetch task started with task_id: {task_id}")
 
-        # if not task_id or not trigger_id:
-        #     raise HTTPException(
-        #         500,
-        #         f"Invalid prefetch response: missing task_id or trigger_id. Response: {prefetch_data}",
-        #     )
+        if not task_id:
+            raise HTTPException(
+                500,
+                f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
+            )
 
-        # task_success = await check_task_status(task_id, trigger_id)
-        # if not task_success:
-        #     raise HTTPException(
-        #         500,
-        #         f"Prefetch task failed. You can track the status at: {settings.HUNTING_API_ENDPOINT}",
-        #     )
+        task_success = await check_task_status(task_id)
+        if not task_success:
+            raise HTTPException(
+                500,
+                f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
+            )
 
         profile_payload = {
             "source": file_path,
