@@ -53,16 +53,16 @@ async def analyze_dataset(state: State) -> dict:
     """
     try:
         query_result = state.get("query_result", {})
-        dataset_info = state.get("dataset_info", {})
+        datasets_info = state.get("datasets_info", {})
 
-        column_requirements = dataset_info.get("column_assumptions", [])
+        column_requirements = datasets_info.get("column_assumptions", [])
         corrected_column_requirements = correct_column_values(column_requirements)
 
-        dataset_info["correct_column_requirements"] = corrected_column_requirements
-        dataset_info.pop("column_assumptions", None)
+        datasets_info["correct_column_requirements"] = corrected_column_requirements
+        datasets_info.pop("column_assumptions", None)
 
         return {
-            "dataset_info": dataset_info,
+            "dataset_info": datasets_info,
             "messages": [
                 IntermediateStep.from_text(
                     json.dumps(corrected_column_requirements, indent=2)

@@ -55,6 +55,8 @@ def create_llm_prompt(
                 }}
             ]
         }}
+
+        IMPORTANT: For all dataset references, always use the value from the 'name' field of the dataset (NOT the 'dataset_name' field).
     """
 
 
@@ -73,19 +75,19 @@ async def identify_datasets(state: State):
     project_ids = state.get("project_ids", [])
 
     try:
-        datasets_info = []
+        semantic_searched_datasets = []
         try:
             dataset_schemas = search_schemas(
                 user_query, dataset_ids=dataset_ids, project_ids=project_ids
             )
-            datasets_info = dataset_schemas
+            semantic_searched_datasets = dataset_schemas
 
         except Exception as e:
             logging.warning(
                 f"Vector search error: {str(e)}. Unable to retrieve dataset information."
             )
 
-        if not datasets_info:
+        if not semantic_searched_datasets:
             return {
                 "query_result": query_result,
                 "datasets": None,
@@ -96,7 +98,7 @@ async def identify_datasets(state: State):
                 ],
             }
 
-        prompt = create_llm_prompt(user_query, datasets_info)
+        prompt = create_llm_prompt(user_query, semantic_searched_datasets)
         response: Any = await lc.llm.ainvoke(prompt)
 
         response_content = str(response.content)
@@ -106,14 +108,31 @@ async def identify_datasets(state: State):
         query_result.subqueries[query_index].tables_used = selected_datasets
         column_assumptions = parsed_content.get("column_predicted", [])
 
-        dataset_info = {
+        logging.info(
+            f"Selected datasets: {selected_datasets}, Column assumptions: {column_assumptions}"
+        )
+
+        filtered_dataset_schemas = [
+            schema
+            for schema in semantic_searched_datasets
+            if schema.get("name") in selected_datasets
+        ]
+
+        name_to_dataset_name_mapping = {}
+        for schema in filtered_dataset_schemas:
+            name_to_dataset_name_mapping[schema.get("name")] = schema.get(
+                "dataset_name", schema.get("name")
+            )
+
+        datasets_info = {
             "column_assumptions": column_assumptions,
-            "schema": datasets_info,
+            "schemas": filtered_dataset_schemas,
+            "name_to_actual_dataset_name_mapping": name_to_dataset_name_mapping,
         }
 
         return {
             "query_result": query_result,
-            "dataset_info": dataset_info,
+            "datasets_info": datasets_info,
             "datasets": selected_datasets,
             "messages": [
                 IntermediateStep.from_text(json.dumps(parsed_content, indent=2))

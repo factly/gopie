@@ -12,7 +12,7 @@ class State(TypedDict):
     datasets: list[str]
     subqueries: list[str]
     subquery_index: int
-    dataset_info: dict
+    datasets_info: dict
     query_type: str
     sql_query: str
     retry_count: int

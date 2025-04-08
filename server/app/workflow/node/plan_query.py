@@ -29,6 +29,12 @@ def create_query_prompt(
         Selected Datasets Information:
         {json.dumps(datasets_info, indent=2)}
 
+        IMPORTANT - DATASET NAMING:
+        - Each dataset has a 'name' (user-friendly name) and an 'dataset_name' (the real table name in the database)
+        - In your SQL query, you MUST use the dataset_name from the datasets_info
+        - Example: If a dataset is shown as "COVID-19 Cases" to the user, its actual table name might be "ASD_ASDRDasdfaW"
+        - Reference the provided name_to_actual_dataset_name_mapping for the correct mapping
+
         Error Context: {error_context}
 
         IMPORTANT GUIDELINES:
@@ -76,7 +82,7 @@ async def plan_query(state: State) -> dict:
             else "No input"
         )
         query_result = state.get("query_result", {})
-        datasets_info = state.get("dataset_info", {})
+        datasets_info = state.get("datasets_info", {})
 
         retry_count = state.get("retry_count", 0)
 

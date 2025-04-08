@@ -45,13 +45,7 @@ async def execute_query(state: State) -> dict:
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
-        dataset_id = query_plan.get("dataset_id")
-
         payload = {"query": sql_query}
-        if dataset_id:
-            payload["dataset_id"] = dataset_id
-
-        logging.info(f"Executing SQL query via API: {sql_query}")
         response = requests.post(SQL_API_ENDPOINT, json=payload)
 
         if response.status_code != 200:
@@ -69,7 +63,7 @@ async def execute_query(state: State) -> dict:
                 )
 
         result_data = response.json()
-        logging.info(result_data)
+        logging.info("sql query results: %s", result_data)
 
         if not result_data or (isinstance(result_data, list) and len(result_data) == 0):
             no_results_data = {
