@@ -327,7 +327,7 @@ definitions:
     - file_path
     - project_id
     type: object
-host: localhost:8081
+host: localhost:8000
 info:
   contact: {}
   description: GoPie API documentation

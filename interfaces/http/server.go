@@ -31,7 +31,7 @@ import (
 // @title GoPie API
 // @version 1.0
 // @description GoPie API documentation
-// @host localhost:8081
+// @host localhost:8000
 // @BasePath /
 func ServeHttp() error {
 	config, err := config.LoadConfig()

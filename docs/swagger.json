@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8081",
+    "host": "localhost:8000",
     "basePath": "/",
     "paths": {
         "/source/s3/update": {
