@@ -23,6 +23,7 @@ class DatasetSchema(TypedDict):
     """Comprehensive schema information for a dataset"""
 
     name: str
+    description: str
     dataset_id: str
     file_path: str
     project_id: str

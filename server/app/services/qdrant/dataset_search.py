@@ -62,8 +62,7 @@ def search_schemas(
 
         schemas = []
         for doc in results:
-            if "schema" in doc.metadata:
-                schemas.append(doc.metadata["schema"])
+            schemas.append(doc.metadata)
 
         logging.info(f"Found {len(schemas)} schemas matching query: {user_query}")
         return schemas

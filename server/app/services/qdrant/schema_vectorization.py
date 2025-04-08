@@ -2,13 +2,18 @@ import json
 import logging
 from typing import Any
 
+from app.models.data import Dataset_details
 from app.models.schema import DatasetSchema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
 from langchain_core.documents import Document
 
 
 def store_schema_in_qdrant(
-    schema: Any, dataset_id: str, project_id: str, file_path: str
+    schema: Any,
+    dataset_details: Dataset_details,
+    dataset_id: str,
+    project_id: str,
+    file_path: str,
 ) -> bool:
     """
     Store a dataset schema in Qdrant.
@@ -23,8 +28,6 @@ def store_schema_in_qdrant(
         bool: True if successful, False otherwise.
     """
     try:
-        dataset_name = file_path.split("/")[-1]
-
         columns_details = []
         if schema.get("samples") and len(schema["samples"]) > 0:
             sample_data = schema["samples"][0].get("data", {})
@@ -45,7 +48,8 @@ def store_schema_in_qdrant(
                 )
 
         formatted_schema: DatasetSchema = {
-            "name": dataset_name,
+            "name": dataset_details.alias,
+            "description": dataset_details.description,
             "dataset_id": dataset_id,
             "file_path": file_path,
             "project_id": project_id,
@@ -65,7 +69,9 @@ def store_schema_in_qdrant(
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),
             metadata={
-                "name": dataset_name,
+                "name": dataset_details.alias,
+                "dataset_name": dataset_details.name,
+                "description": dataset_details.description,
                 "dataset_id": dataset_id,
                 "project_id": project_id,
                 "schema": formatted_schema,
@@ -73,7 +79,7 @@ def store_schema_in_qdrant(
         )
 
         add_documents_to_vector_store([document])
-        logging.info(f"Successfully stored schema for dataset {dataset_name}")
+        logging.info("Successfully stored schema for dataset in Qdrant")
         return True
 
     except Exception as e:
