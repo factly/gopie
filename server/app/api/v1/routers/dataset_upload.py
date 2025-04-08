@@ -1,17 +1,15 @@
 import logging
 
-from app.core.config import settings
 from app.core.session import SingletonAiohttp
 from app.models.data import UploadResponse, UploadSchemaRequest
+from app.services.dataset_info import get_dataset_info
 from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
+from app.services.schema_fetcher import fetch_dataset_schema
 from fastapi import APIRouter, HTTPException
 
 dataset_router = APIRouter()
 
 http_session = SingletonAiohttp.get_aiohttp_client()
-
-PREFETCH_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/prefetch"
-PROFILE_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/profile/description"
 
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
@@ -25,39 +23,11 @@ async def upload_schema(payload: UploadSchemaRequest):
             f"Processing schema upload for dataset {dataset_id} in project {project_id}"
         )
 
-        payloads = {
-            "urls": [file_path],
-            "minimal": True,
-            "samples_to_fetch": 10,
-            "trigger_id": "",
-        }
-        headers = {"accept": "application/json", "Content-Type": "application/json"}
-
-        response = await http_session.post(
-            PREFETCH_API_URL, json=payloads, headers=headers
-        )
-
-        if response.status != 200:
-            raise HTTPException(response.status, await response.text())
-
-        payloads = {
-            "source": file_path,
-            "samples_to_show": 10,
-        }
-
-        fetched_dataset_schema = await http_session.get(
-            PROFILE_API_URL, params=payloads, headers=headers
-        )
-
-        if fetched_dataset_schema.status != 200:
-            raise HTTPException(
-                fetched_dataset_schema.status, await fetched_dataset_schema.text()
-            )
-
-        dataset_schema = await fetched_dataset_schema.json()
+        dataset_schema = await fetch_dataset_schema(file_path)
+        dataset_details = await get_dataset_info(dataset_id, project_id)
 
         success = store_schema_in_qdrant(
-            dataset_schema, dataset_id, project_id, file_path
+            dataset_schema, dataset_details, dataset_id, project_id, file_path
         )
         if not success:
             raise HTTPException(500, "Failed to store schema in vector database")

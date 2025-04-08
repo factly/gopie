@@ -28,16 +28,13 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
 
-    MONGODB_PASSWORD: str = os.getenv("MONGODB_PASSWORD", "")
-    MONGODB_USERNAME: str = os.getenv("MONGODB_USERNAME", "root")
-    MONGODB_CONNECTION_STRING: str = (
-        f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@localhost:27017"
-    )
     HUNTING_API_ENDPOINT: str = "http://host.docker.internal:8003"
-    GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
-
-    # HUNTING_API_ENDPOINT: str = "http://localhost:8003"
-    # GOPIE_API_ENDPOINT: str = "http://gopie-server.factly.dev"
+    FLOWER_API_ENDPOINT: str = os.getenv(
+        "FLOWER_API_ENDPOINT", "http://host.docker.internal:5555"
+    )
+    GOPIE_API_ENDPOINT: str = os.getenv(
+        "GOPIE_API_ENDPOINT", "https://gopie-server.factly.dev"
+    )
 
     class Config:
         env_file = ".env"
