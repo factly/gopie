@@ -73,7 +73,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (Date.now() < (token.expiresAt as number)) {
         finalToken = token;
       } else {
-        finalToken = await refreshAccessToken(token);
+        if (token.refreshToken) {
+          finalToken = await refreshAccessToken(token);
+        } else {
+          return null;
+        }
       }
 
       const userInfoEndpoint = `${process.env.ZITADEL_ISSUER}/oidc/v1/userinfo`;
