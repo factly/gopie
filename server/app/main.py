@@ -1,11 +1,9 @@
 import logging
-import os
 import sys
 import time
 
 import uvicorn
 from app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
-from app.api.v1.routers.qdrant import router as qdrant_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
@@ -28,11 +26,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 if settings.MODE == "development":
-    os.makedirs(settings.LOG_DIR, exist_ok=True)
     logging.basicConfig(
-        filename=os.path.join(settings.LOG_DIR, "agent.log"),
         level=logging.INFO,
-        handlers=[logging.StreamHandler(sys.stdout)],
+        stream=sys.stdout,
     )
 else:
     logging.basicConfig(level=logging.INFO)
@@ -59,10 +55,9 @@ app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(
     schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"]
 )
-app.include_router(
-    qdrant_router, prefix=settings.API_V1_STR + "/qdrant", tags=["qdrant"]
-)
 
 
 def start():
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "app.main:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
+    )

@@ -1,7 +1,6 @@
 """Utilities for working with vector stores."""
 
 import logging
-from typing import List, Optional
 from uuid import uuid4
 
 from app.core.config import settings
@@ -21,7 +20,7 @@ def perform_similarity_search(
     vector_store,
     query,
     top_k=settings.QDRANT_TOP_K,
-    dataset_ids: Optional[List[str]] = None,
+    query_filter=None,
 ):
     """
     Perform a similarity search.
@@ -33,23 +32,14 @@ def perform_similarity_search(
         top_k: Number of results to return
         dataset_ids: Optional list of dataset IDs to filter results
     """
-    filter_dict = None
-    if dataset_ids:
-        filter_dict = {
-            "$or": [
-                {"metadata.dataset_id": {"$eq": dataset_id}}
-                for dataset_id in dataset_ids
-            ]
-        }
-        logging.info(f"Filtering search to datasets: {dataset_ids}")
 
     try:
-        return vector_store.similarity_search(query, k=top_k, filter=filter_dict)
+        return vector_store.similarity_search(query, k=top_k, filter=query_filter)
     except Exception as e:
         logging.error(
-            f"Error performing similarity search: {str(e)} | Filter criteria: {filter_dict}"
+            f"Error performing similarity search: {str(e)} | Filter criteria: {query_filter}"
         )
-        if filter_dict:
+        if query_filter:
             logging.info("Attempting unfiltered search as fallback...")
             return vector_store.similarity_search(query, k=top_k)
         else:

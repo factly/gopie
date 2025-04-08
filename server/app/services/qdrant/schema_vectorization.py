@@ -57,8 +57,10 @@ def store_schema_in_qdrant(
             "alerts": schema["alerts"],
             "duplicates": schema["duplicates"],
             "correlations": schema["correlations"],
-            "missing_values": schema["missing_values"],
+            "missing_values": schema["missing"],
         }
+
+        logging.info(f"Formatted schema: {formatted_schema}")
 
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),

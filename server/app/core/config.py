@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    LOG_DIR: str = "./log"
+    LOG_DIR: str = "./server/log"
     MAX_RETRY_COUNT: int = 3
 
     CORS_ORIGINS: List[str] = ["*"]
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     GOPIE_API_ENDPOINT: str = "http://host.docker.internal:8004"
 
     # HUNTING_API_ENDPOINT: str = "http://localhost:8003"
-    # GOPIE_API_ENDPOINT: str = "http://localhost:8004"
+    # GOPIE_API_ENDPOINT: str = "http://gopie-server.factly.dev"
 
     class Config:
         env_file = ".env"

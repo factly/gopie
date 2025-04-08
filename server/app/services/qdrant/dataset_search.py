@@ -7,6 +7,7 @@ from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
 )
+from qdrant_client import models
 
 
 def search_schemas(
@@ -29,17 +30,34 @@ def search_schemas(
     """
     try:
         vector_store = setup_vector_store()
+        query_filter = None
 
-        # If project_id is provided and dataset_ids is not, get all datasets for the project
-        if project_ids and not dataset_ids:
-            # For now, we'll proceed with the search without dataset filtering
-            pass
+        filter_conditions = []
+
+        if project_ids:
+            filter_conditions.append(
+                models.FieldCondition(
+                    key="project_id",
+                    match=models.MatchAny(any=project_ids),
+                )
+            )
+
+        if dataset_ids:
+            filter_conditions.append(
+                models.FieldCondition(
+                    key="dataset_id",
+                    match=models.MatchAny(any=dataset_ids),
+                )
+            )
+
+        if filter_conditions:
+            query_filter = models.Filter(must=filter_conditions)
 
         results = perform_similarity_search(
             vector_store=vector_store,
             query=user_query,
             top_k=top_k,
-            dataset_ids=dataset_ids,
+            query_filter=query_filter,
         )
 
         schemas = []

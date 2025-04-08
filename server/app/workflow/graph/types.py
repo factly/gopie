@@ -8,6 +8,7 @@ from langgraph.graph.message import add_messages
 
 class State(TypedDict):
     dataset_ids: Optional[List[str]]
+    project_ids: Optional[List[str]]
     datasets: list[str]
     subqueries: list[str]
     subquery_index: int
