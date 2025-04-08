@@ -68,13 +68,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       token.refreshToken ??= account?.refresh_token;
       token.expiresAt ??= (account?.expires_at ?? 0) * 1000;
       token.error = undefined;
-      // Return previous token if the access token has not expired yet
+
+      let finalToken = token;
       if (Date.now() < (token.expiresAt as number)) {
-        return token;
+        finalToken = token;
+      } else {
+        finalToken = await refreshAccessToken(token);
       }
 
-      // Access token has expired, try to update it
-      return refreshAccessToken(token);
+      const userInfoEndpoint = `${process.env.ZITADEL_ISSUER}/oidc/v1/userinfo`;
+      const userInfoResponse = await fetch(userInfoEndpoint, {
+        headers: {
+          Authorization: `Bearer ${finalToken.accessToken}`,
+        },
+      });
+
+      const userInfo = await userInfoResponse.json();
+      finalToken.user = userInfo;
+
+      return finalToken;
     },
     async session({
       session,
