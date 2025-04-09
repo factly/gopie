@@ -23,7 +23,9 @@ func ParseLimitAndPage(limitStr, pageStr string) (int, int) {
 
 	if pageStr != "" {
 		page, err = strconv.Atoi(pageStr)
-		return 10, 1
+		if err != nil {
+			return 10, 1
+		}
 	}
 
 	return limit, page
