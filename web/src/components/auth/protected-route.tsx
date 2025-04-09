@@ -15,15 +15,24 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const pathname = usePathname();
   const isLoading = status === "loading";
   const isAuthenticated = status === "authenticated";
+  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
   React.useEffect(() => {
+    // Skip authentication check if auth is disabled
+    if (isAuthDisabled) return;
+
     // Check if the user is not authenticated and not on the auth pages
     if (!isLoading && !isAuthenticated) {
       // Redirect to sign-in page with return URL
       const returnUrl = encodeURIComponent(pathname);
       router.push(`/api/auth/signin?callbackUrl=${returnUrl}`);
     }
-  }, [isLoading, isAuthenticated, router, pathname]);
+  }, [isLoading, isAuthenticated, router, pathname, isAuthDisabled]);
+
+  // If auth is disabled, render children immediately
+  if (isAuthDisabled) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

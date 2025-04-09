@@ -10,13 +10,19 @@ interface ProtectedPageProps {
 
 export function ProtectedPage({ children }: ProtectedPageProps) {
   const { status } = useSession();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
   // Client-side authentication check
   React.useEffect(() => {
-    if (status === "unauthenticated") {
+    if (status === "unauthenticated" && !isAuthDisabled) {
       redirect("/api/auth/signin");
     }
-  }, [status]);
+  }, [status, isAuthDisabled]);
+
+  // Skip auth entirely if disabled
+  if (isAuthDisabled) {
+    return <>{children}</>;
+  }
 
   // Show loading state while session is loading
   if (status === "loading") {

@@ -20,6 +20,7 @@ export function SidebarUser() {
   const { data: session, status } = useSession();
   const isLoading = status === "loading";
   const { open: isSidebarOpen } = useSidebar();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
@@ -34,6 +35,27 @@ export function SidebarUser() {
       .toUpperCase()
       .substring(0, 2);
   };
+
+  // If auth is disabled, show a placeholder user
+  if (isAuthDisabled) {
+    return (
+      <div className="flex h-12 w-full items-center gap-2 px-3 py-2">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>AD</AvatarFallback>
+        </Avatar>
+        {isSidebarOpen && (
+          <div className="flex flex-col items-start gap-0.5 overflow-hidden">
+            <p className="text-sm font-medium leading-none truncate max-w-[140px]">
+              Auth Disabled
+            </p>
+            <p className="text-xs text-muted-foreground truncate max-w-[140px]">
+              Development Mode
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -21,6 +21,18 @@ export function AuthStatus({
   const { data: session, status } = useSession();
   const isLoading = status === "loading";
   const user = session?.user;
+  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+
+  // If auth is disabled, show a disabled auth indicator
+  if (isAuthDisabled) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <div className="px-3 py-1 text-xs bg-amber-100 text-amber-800 rounded-md">
+          Auth Disabled
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
