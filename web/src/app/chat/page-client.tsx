@@ -1064,7 +1064,7 @@ function ChatPageClient() {
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
       <div className="flex w-full relative overflow-hidden max-h-screen">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={isOpen ? 60 : 100} minSize={30}>
+          <ResizablePanel minSize={30}>
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -1143,7 +1143,7 @@ function ChatPageClient() {
           {isOpen && (
             <>
               <ResizableHandle />
-              <ResizablePanel defaultSize={70} minSize={30} maxSize={70}>
+              <ResizablePanel defaultSize={70} minSize={30}>
                 <div ref={sqlPanelRef} className="h-screen overflow-hidden">
                   <SqlResults />
                 </div>

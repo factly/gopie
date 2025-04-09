@@ -379,7 +379,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   return (
     <div className="h-screen flex w-full bg-background">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={100} minSize={50}>
+        <ResizablePanel minSize={30}>
           <div className="flex h-full flex-col overflow-hidden">
             <div className="border-b bg-background/80 backdrop-blur-sm z-10 shadow-sm p-4 flex justify-between items-center">
               <h1 className="font-semibold flex items-center gap-2">
@@ -552,7 +552,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         {isOpen && (
           <>
             <ResizableHandle />
-            <ResizablePanel defaultSize={60} minSize={40}>
+            <ResizablePanel defaultSize={70} minSize={30}>
               <SqlResults />
             </ResizablePanel>
           </>
