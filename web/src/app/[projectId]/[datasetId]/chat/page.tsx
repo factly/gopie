@@ -33,6 +33,7 @@ import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 import { ChatHistory } from "@/components/chat/chat-history";
 import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
+import { useDataset } from "@/lib/queries/dataset/get-dataset";
 
 interface ChatPageProps {
   params: Promise<{
@@ -68,6 +69,34 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const [inputValue, setInputValue] = useState("");
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
+
+  // Fetch current dataset information
+  const { data: datasetData } = useDataset({
+    variables: {
+      projectId: params.projectId,
+      datasetId: params.datasetId,
+    },
+    enabled: !!params.projectId && !!params.datasetId,
+  });
+
+  // Add dataset to context by default when dataset data is available
+  useEffect(() => {
+    if (datasetData && params.projectId) {
+      const datasetContext: ContextItem = {
+        id: params.datasetId,
+        type: "dataset",
+        name: datasetData.alias || `Dataset ${params.datasetId}`,
+        projectId: params.projectId,
+      };
+
+      setSelectedContexts((prev) => {
+        if (!prev.some((ctx) => ctx.id === params.datasetId)) {
+          return [...prev, datasetContext];
+        }
+        return prev;
+      });
+    }
+  }, [datasetData, params.datasetId, params.projectId]);
 
   // Close sidebar only on initial mount
   useEffect(() => {
@@ -328,8 +357,11 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     setSelectedContexts((prev) => [...prev, context]);
   };
 
-  // Handle context removal
+  // Handle context removal but prevent removing the current dataset
   const handleRemoveContext = (contextId: string) => {
+    // Don't allow removing the current dataset
+    if (contextId === params.datasetId) return;
+
     setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
   };
 
@@ -345,6 +377,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
               currentDatasetId={params.datasetId}
               currentProjectId={params.projectId}
               triggerClassName="h-11 w-11 rounded-full"
+              lockableContextIds={[params.datasetId]}
             />
             <MentionInput
               value={inputValue}
