@@ -21,7 +21,9 @@ export function ChatTabs({
   children,
   defaultTab = "chat",
 }: ChatTabsProps) {
-  const { selectedChatId, selectChat } = useChatStore();
+  const { selectChatForDataset, getSelectedChatForDataset } = useChatStore();
+  const selectedChat = getSelectedChatForDataset(datasetId);
+  const selectedChatId = selectedChat.id;
   const [activeTab, setActiveTab] = React.useState(defaultTab);
 
   const {
@@ -46,7 +48,7 @@ export function ChatTabs({
     try {
       await deleteChat.mutateAsync(chatId);
       if (chatId === selectedChatId) {
-        selectChat(null, null);
+        selectChatForDataset(datasetId, null, null);
       }
       await refetchChats();
       toast.success("Chat deleted successfully");
@@ -56,7 +58,7 @@ export function ChatTabs({
   };
 
   const handleSelectChat = (chatId: string, chatName: string) => {
-    selectChat(chatId, chatName || "New Chat");
+    selectChatForDataset(datasetId, chatId, chatName || "New Chat");
     setActiveTab("chat"); // Switch to chat tab when a chat is selected
   };
 

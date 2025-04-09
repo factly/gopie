@@ -23,7 +23,7 @@ interface ChatItem extends Chat {
 }
 
 export function GlobalChatHistory() {
-  const { selectedChatId, selectChat } = useChatStore();
+  const { selectChatForDataset } = useChatStore();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [allChats, setAllChats] = useState<ChatItem[]>([]);
@@ -162,18 +162,23 @@ export function GlobalChatHistory() {
   }, [projectsData?.results, queryClient, projectsError, isLoading]);
 
   const handleStartNewChat = () => {
-    selectChat(null, null);
+    // When starting a new global chat, we don't have a specific dataset
+    selectChatForDataset(null, null, null);
   };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync(chatId);
-      if (chatId === selectedChatId) {
-        selectChat(null, null);
-      }
 
       // Update the local state
-      setAllChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      setAllChats((prev) => {
+        const deletedChat = prev.find((chat) => chat.id === chatId);
+        if (deletedChat) {
+          // Clear selection for this dataset
+          selectChatForDataset(deletedChat.datasetId, null, null);
+        }
+        return prev.filter((chat) => chat.id !== chatId);
+      });
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -186,8 +191,9 @@ export function GlobalChatHistory() {
     }
   };
 
-  const handleSelectChat = (chatId: string, chatName: string) => {
-    selectChat(chatId, chatName || "New Chat");
+  const handleSelectChat = (chat: ChatItem) => {
+    // Select chat with its associated dataset
+    selectChatForDataset(chat.datasetId, chat.id, chat.name || "New Chat");
   };
 
   if (projectsError) {
@@ -270,12 +276,9 @@ export function GlobalChatHistory() {
                 <div
                   key={chat.id}
                   className={cn(
-                    "group relative flex flex-col rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer",
-                    selectedChatId === chat.id && "bg-muted"
+                    "group relative flex flex-col rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer"
                   )}
-                  onClick={() =>
-                    handleSelectChat(chat.id, chat.name || "New Chat")
-                  }
+                  onClick={() => handleSelectChat(chat)}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">

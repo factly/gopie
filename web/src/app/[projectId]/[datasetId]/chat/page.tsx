@@ -53,7 +53,9 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const params = use(paramsPromise);
   const { setOpen } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, selectedChatTitle, selectChat } = useChatStore();
+  const { getSelectedChatForDataset, selectChatForDataset } = useChatStore();
+  const { id: selectedChatId, title: selectedChatTitle } =
+    getSelectedChatForDataset(params.datasetId);
   const [isSending, setIsSending] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
@@ -264,7 +266,11 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
           // Backend will need to be updated to use contextData
         });
         chatId = result.data.id;
-        selectChat(chatId, message.substring(0, 40) + "...");
+        selectChatForDataset(
+          params.datasetId,
+          chatId,
+          message.substring(0, 40) + "..."
+        );
 
         // Log the contexts for debugging
         if (contextData.length > 0) {
@@ -396,7 +402,9 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => selectChat(null, null)}
+                  onClick={() =>
+                    selectChatForDataset(params.datasetId, null, null)
+                  }
                   className="gap-1.5 h-9 font-medium shadow-sm"
                 >
                   <MessageSquarePlus className="h-3.5 w-3.5" />

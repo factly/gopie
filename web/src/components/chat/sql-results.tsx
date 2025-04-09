@@ -5,10 +5,16 @@ import { X, Database, Download } from "lucide-react";
 import { cn, downloadCsv } from "@/lib/utils";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { useEffect } from "react";
+import { useParams } from "next/navigation";
 
 export function SqlResults() {
   const { results, isOpen, setIsOpen } = useSqlStore();
-  const { selectedChatId } = useChatStore();
+  const params = useParams();
+  const datasetId = params?.datasetId as string;
+
+  // Get the selected chat ID for the current dataset
+  const { getSelectedChatForDataset } = useChatStore();
+  const { id: selectedChatId } = getSelectedChatForDataset(datasetId);
 
   const handleDownload = () => {
     if (!results?.data?.length) return;

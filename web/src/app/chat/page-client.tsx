@@ -50,7 +50,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
 }) {
-  const { selectedChatId, selectChat } = useChatStore();
+  const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [allChats, setAllChats] = useState<
@@ -218,24 +218,26 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   ]);
 
   const handleStartNewChat = () => {
-    selectChat(null, null);
-    setLinkedDatasetId(null);
+    selectChatForDataset(null, null, null);
     setActiveTab("chat");
+    setSelectedContexts([]);
+    setLinkedDatasetId(null);
   };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync(chatId);
-      if (chatId === selectedChatId) {
-        selectChat(null, null);
-      }
 
-      // Update the local state
-      setAllChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      // Update local state
+      setAllChats((prev) => {
+        const chatToDelete = prev.find((chat) => chat.id === chatId);
+        if (chatToDelete) {
+          selectChatForDataset(chatToDelete.datasetId, null, null);
+        }
+        return prev.filter((chat) => chat.id !== chatId);
+      });
 
-      // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
-
       toast.success("Chat deleted successfully");
     } catch {
       toast.error("Failed to delete chat");
@@ -248,22 +250,23 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     datasetId?: string,
     datasetName?: string
   ) => {
-    selectChat(chatId, chatName || "New Chat");
-
-    // Auto-select dataset context for the selected chat
     if (datasetId && datasetName) {
-      // Update context for this component
       setSelectedContexts([
         {
           id: datasetId,
           type: "dataset",
           name: datasetName,
+          projectId: "",
         },
       ]);
+      selectChatForDataset(datasetId, chatId, chatName || "New Chat");
       setLinkedDatasetId(datasetId);
+    } else {
+      setSelectedContexts([]);
+      selectChatForDataset(null, chatId, chatName || "New Chat");
+      setLinkedDatasetId(null);
     }
-
-    setActiveTab("chat"); // Switch to chat tab when a chat is selected
+    setActiveTab("chat");
   };
 
   // Clear linked dataset ID when no chat is selected

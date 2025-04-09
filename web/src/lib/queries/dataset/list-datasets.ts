@@ -11,7 +11,7 @@ interface ListDatasetsParams {
 
 export async function fetchDatasets({
   projectId,
-  limit = 10,
+  limit = 100,
   page = 1,
   query,
 }: ListDatasetsParams): Promise<PaginatedResponse<Dataset>> {
