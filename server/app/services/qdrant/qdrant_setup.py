@@ -1,7 +1,7 @@
 import logging
 
 from app.core.config import settings
-from app.core.langchain_config import lc
+from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import CountResult, Distance, Filter, VectorParams
@@ -19,13 +19,13 @@ def initialize_qdrant_client():
     return client
 
 
-def setup_vector_store():
+def setup_vector_store(embeddings: OpenAIEmbeddings):
     """Set up a vector store using the provided client."""
     client = initialize_qdrant_client()
     return QdrantVectorStore(
         client=client,
         collection_name=settings.QDRANT_COLLECTION,
-        embedding=lc.embeddings_model,
+        embedding=embeddings,
     )
 
 

@@ -5,6 +5,7 @@ from typing import Any
 from app.models.data import Dataset_details
 from app.models.schema import DatasetSchema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
+from app.utils.col_desc_generator import generate_column_descriptions
 from langchain_core.documents import Document
 
 
@@ -64,21 +65,28 @@ def store_schema_in_qdrant(
             "missing_values": schema["missing"],
         }
 
-        logging.info(f"Formatted schema: {formatted_schema}")
+        column_descriptions = generate_column_descriptions(formatted_schema)
+
+        for column in formatted_schema["columns_details"]:
+            if column["name"] in column_descriptions:
+                column["description"] = column_descriptions[column["name"]]
+
+        logging.info(
+            f"Formatted schema with generated descriptions: {formatted_schema}"
+        )
 
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),
             metadata={
                 "name": dataset_details.alias,
                 "dataset_name": dataset_details.name,
-                "description": dataset_details.description,
                 "dataset_id": dataset_id,
                 "project_id": project_id,
                 "schema": formatted_schema,
             },
         )
 
-        add_documents_to_vector_store([document])
+        add_documents_to_vector_store(documents=[document])
         logging.info("Successfully stored schema for dataset in Qdrant")
         return True
 

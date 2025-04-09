@@ -2,10 +2,10 @@
 import logging
 from typing import AsyncGenerator, List, Optional
 
-from app.core.langchain_config import lc
 from app.tools import TOOLS
 from app.tools.tool_node import ToolNode
-from app.workflow.events.wrapper_func import create_event_wrapper, event_dispatcher
+from app.workflow.events.dispatcher import AgentEventDispatcher
+from app.workflow.events.wrapper_func import create_event_wrapper
 from app.workflow.graph.types import State
 from app.workflow.node.analyze_dataset import analyze_dataset
 from app.workflow.node.analyze_query import analyze_query, route_from_analysis
@@ -19,7 +19,6 @@ from app.workflow.node.response.response_handler import route_response_handler
 from langgraph.graph import END, START, StateGraph
 
 graph_builder = StateGraph(State)
-lc.llm.bind_tools(list(TOOLS.values()))
 
 GRAPH_NODES = {
     "generate_subqueries": generate_subqueries,
@@ -35,7 +34,11 @@ GRAPH_NODES = {
 for name, func in GRAPH_NODES.items():
     graph_builder.add_node(name, create_event_wrapper(name, func))
 
-graph_builder.add_node("tools", ToolNode(tools=list(TOOLS.values())))
+event_dispatcher = AgentEventDispatcher()
+graph_builder.add_node(
+    "tools",
+    ToolNode(tools=list(TOOLS.values()), event_dispatcher=event_dispatcher),
+)
 graph_builder.add_node("response_router", lambda x: x)
 
 graph_builder.add_conditional_edges(

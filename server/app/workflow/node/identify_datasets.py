@@ -78,7 +78,10 @@ async def identify_datasets(state: State):
         semantic_searched_datasets = []
         try:
             dataset_schemas = search_schemas(
-                user_query, dataset_ids=dataset_ids, project_ids=project_ids
+                user_query,
+                lc.embeddings_model,
+                dataset_ids=dataset_ids,
+                project_ids=project_ids,
             )
             semantic_searched_datasets = dataset_schemas
 

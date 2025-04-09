@@ -24,7 +24,7 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
         dataset_name = dataset_schema["name"]
         column_info = []
 
-        for column in dataset_schema["columns"]:
+        for column in dataset_schema["columns_details"]:
             col_data = {
                 "name": column["name"],
                 "type": column["type"],
@@ -38,7 +38,7 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
             logical descriptions for database columns that explain what each column represents in business terms.
 
             Dataset name: {dataset_name}
-            Dataset has {row_count} rows and {column_count} columns.
+            Dataset has {row_count} rows and {col_count} columns.
 
             For each column below, analyze its name, data type, and sample values to infer what information it contains.
             Provide a concise but informative description (1-2 sentences) that would help the llm understand the column's purpose.
@@ -62,7 +62,7 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
             input_variables=[
                 "dataset_name",
                 "row_count",
-                "column_count",
+                "col_count",
                 "column_info",
             ],
             partial_variables={"format_instructions": parser.get_format_instructions()},
@@ -75,12 +75,12 @@ def generate_column_descriptions(dataset_schema: DatasetSchema) -> dict:
                 {
                     "dataset_name": dataset_name,
                     "row_count": dataset_schema["row_count"],
-                    "column_count": dataset_schema["column_count"],
+                    "col_count": dataset_schema["col_count"],
                     "column_info": json.dumps(column_info, indent=2),
                 }
             )
 
-            for column in dataset_schema["columns"]:
+            for column in dataset_schema["columns_details"]:
                 if column["name"] not in descriptions:
                     descriptions[column["name"]] = (
                         f"Column representing {column['name'].replace('_', ' ').lower()}"
@@ -118,7 +118,7 @@ def _generate_fallback_descriptions(dataset_schema: DatasetSchema) -> Dict[str, 
     """Simple rule-based fallback if LLM fails"""
     descriptions = {}
 
-    for column in dataset_schema["columns"]:
+    for column in dataset_schema["columns_details"]:
         col_name = column["name"]
         col_type = column["type"]
         descriptions[col_name] = f"{col_name.replace('_', ' ').title()} ({col_type})"

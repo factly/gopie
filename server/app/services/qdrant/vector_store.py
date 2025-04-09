@@ -5,11 +5,11 @@ from uuid import uuid4
 
 from app.core.config import settings
 from app.services.qdrant.qdrant_setup import setup_vector_store
-
+from app.core.langchain_config import lc
 
 def add_documents_to_vector_store(documents, ids=None):
     """Add documents to the vector store."""
-    vector_store = setup_vector_store()
+    vector_store = setup_vector_store(lc.embeddings_model)
 
     if ids is None:
         ids = [str(uuid4()) for _ in range(len(documents))]

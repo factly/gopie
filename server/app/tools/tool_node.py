@@ -1,15 +1,19 @@
 import json
+from typing import TYPE_CHECKING
 
 from app.models.event import EventData, EventNode, EventStatus
-from app.workflow.events.wrapper_func import event_dispatcher
 from langchain_core.messages import ToolMessage
+
+if TYPE_CHECKING:
+    from app.workflow.events.dispatcher import AgentEventDispatcher
 
 
 class ToolNode:
     """A node that runs the tools requested in the last AIMessage and returns to the calling node"""
 
-    def __init__(self, tools: list) -> None:
+    def __init__(self, tools: list, event_dispatcher: "AgentEventDispatcher") -> None:
         self.tools = {tool.name: tool for tool in tools}
+        self.event_dispatcher = event_dispatcher
 
     async def __call__(self, state: dict):
         if messages := state.get("messages", []):
@@ -24,7 +28,7 @@ class ToolNode:
             tool_name = tool_call["name"]
             tool_args = tool_call["args"]
 
-            await event_dispatcher.dispatch_event(
+            await self.event_dispatcher.dispatch_event(
                 event_node=EventNode.TOOL_START,
                 status=EventStatus.STARTED,
                 data=EventData(
@@ -36,7 +40,7 @@ class ToolNode:
 
             all_tool_results.append({"tool": tool_name, "result": tool_result})
 
-            await event_dispatcher.dispatch_event(
+            await self.event_dispatcher.dispatch_event(
                 event_node=EventNode.TOOL_END,
                 status=EventStatus.COMPLETED,
                 data=EventData(

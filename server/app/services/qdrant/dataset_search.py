@@ -7,11 +7,13 @@ from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
 )
+from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
 
 
 def search_schemas(
     user_query: str,
+    embeddings: OpenAIEmbeddings,
     project_ids: Optional[List[str]] = None,
     dataset_ids: Optional[List[str]] = None,
     top_k: int = settings.QDRANT_TOP_K,
@@ -29,7 +31,7 @@ def search_schemas(
         List of matching dataset schemas
     """
     try:
-        vector_store = setup_vector_store()
+        vector_store = setup_vector_store(embeddings=embeddings)
         query_filter = None
 
         filter_conditions = []

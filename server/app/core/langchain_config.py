@@ -1,4 +1,5 @@
 from app.core.config import settings
+from app.tools import TOOLS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
@@ -33,7 +34,8 @@ class LangchainConfig:
             default_headers=config.portkey_headers,
             model=config.embeddings_model,
         )
-        self.llm = model
+
+        self.llm = model.bind_tools(list(TOOLS.values()))
 
 
 lc = LangchainConfig(ModelConfig())
