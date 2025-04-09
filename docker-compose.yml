@@ -7,7 +7,6 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - ./log:/app/log
       - ./server/app:/code/app
     env_file:
       - ./server/.env
@@ -32,7 +31,6 @@ services:
 
 volumes:
   data:
-  log:
 
 networks:
   default:

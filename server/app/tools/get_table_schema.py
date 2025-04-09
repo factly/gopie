@@ -1,45 +1,61 @@
-import os
 from typing import Any, Dict
 
-import pandas as pd
+from app.core.config import settings
+from app.services.qdrant.qdrant_setup import initialize_qdrant_client
 from langchain_core.tools import tool
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 
 @tool
-def get_table_schema(table_name: str) -> Dict[str, Any]:
+async def get_table_schema(dataset_name: str) -> Dict[str, Any]:
     """
-    Get the schema of a specific table (column names and data types)
+    Get the schema of a specific table from Qdrant database.
 
     Args:
-        table_name: The name of the table/CSV file (with or without .csv extension)
+        dataset_name: The name of the dataset to retrieve schema for.
 
     Returns:
-        A dictionary with column names and their data types
+        A dictionary with column details and schema information.
     """
-    if not table_name.endswith(".csv"):
-        table_name += ".csv"
-
-    data_dir = "./data"
-    file_path = os.path.join(data_dir, table_name)
-
-    if not os.path.exists(file_path):
-        return {"error": f"Table '{table_name}' not found in the data directory"}
-
     try:
-        df = pd.read_csv(file_path, nrows=5)
+        client = initialize_qdrant_client()
 
-        schema = {}
-        for column in df.columns:
-            schema[column] = str(df[column].dtype)
+        search_result = client.scroll(
+            collection_name=settings.QDRANT_COLLECTION,
+            scroll_filter=Filter(
+                should=[
+                    FieldCondition(
+                        key="metadata.name",
+                        match=MatchValue(value=dataset_name),
+                    ),
+                    FieldCondition(
+                        key="metadata.dataset_name",
+                        match=MatchValue(value=dataset_name),
+                    ),
+                ]
+            ),
+            limit=1,
+        )
 
-        return {
-            "table_name": table_name,
-            "columns": list(df.columns),
-            "schema": schema,
-            "row_count": len(pd.read_csv(file_path, usecols=[0])),
-        }
+        if not search_result[0]:
+            return {"error": f"Dataset '{dataset_name}' not found in the database."}
+
+        point = search_result[0][0]
+
+        payload = point.payload or {}
+        schema = payload.get("metadata", {}).get("schema", None)
+
+        if not schema:
+            return {"error": "Schema information not available for this dataset."}
+
+        for column in schema.get("columns_details", []):
+            if "stats" in column:
+                del column["stats"]
+
+        return schema
+
     except Exception as e:
-        return {"error": f"Error reading table schema: {str(e)}"}
+        return {"error": f"Error retrieving schema from Qdrant: {str(e)}"}
 
 
 __tool__ = get_table_schema
