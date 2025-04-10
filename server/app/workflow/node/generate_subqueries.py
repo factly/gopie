@@ -11,7 +11,6 @@ from langchain_core.output_parsers import JsonOutputParser
 async def generate_subqueries(state: State):
     """Generate subqueries that would require separate SQL queries"""
     messages = state.get("messages", [])
-    dataset_ids = state.get("dataset_ids", [])
     user_input = messages[0].content if messages else ""
 
     prompt = f"""
@@ -62,7 +61,6 @@ async def generate_subqueries(state: State):
 
         return {
             "user_query": user_input,
-            "dataset_ids": dataset_ids,
             "subquery_index": -1,
             "subqueries": subqueries,
             "query_result": query_result_object,

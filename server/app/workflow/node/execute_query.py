@@ -63,7 +63,6 @@ async def execute_query(state: State) -> dict:
                 )
 
         result_data = response.json()
-        logging.info("sql query results: %s", result_data)
 
         if not result_data or (isinstance(result_data, list) and len(result_data) == 0):
             no_results_data = {
@@ -140,6 +139,12 @@ async def route_query_replan(state: State) -> str:
                 If it's need to reidentify the datasets, please return "reidentify_datasets"
                 If it's need to replan the query, please return "replan"
                 If it's no problem, please return "response_router"
+
+                Think through this step-by-step:
+                1. Analyze the error message
+                2. Determine if it's a schema/dataset issue
+                3. Check if it's a query syntax issue
+                4. Decide on the appropriate action
             """
         )
 

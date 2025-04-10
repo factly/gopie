@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from app.workflow.graph import stream_graph_updates
+from app.workflow.graph.graph_stream import stream_graph_updates
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -37,6 +37,8 @@ async def query(
     """
 
     return StreamingResponse(
-        stream_graph_updates(user_input, dataset_ids=dataset_ids),
+        stream_graph_updates(
+            user_input, dataset_ids=dataset_ids, project_ids=project_ids
+        ),
         media_type="text/event-stream",
     )

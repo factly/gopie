@@ -1,8 +1,4 @@
-﻿import json
-import logging
-from typing import AsyncGenerator, List, Optional
-
-from app.tools import TOOLS
+﻿from app.tools import TOOLS
 from app.tools.tool_node import ToolNode
 from app.workflow.events.dispatcher import AgentEventDispatcher
 from app.workflow.events.wrapper_func import create_event_wrapper
@@ -19,6 +15,7 @@ from app.workflow.node.response.response_handler import route_response_handler
 from langgraph.graph import END, START, StateGraph
 
 graph_builder = StateGraph(State)
+event_dispatcher = AgentEventDispatcher()
 
 GRAPH_NODES = {
     "generate_subqueries": generate_subqueries,
@@ -34,7 +31,6 @@ GRAPH_NODES = {
 for name, func in GRAPH_NODES.items():
     graph_builder.add_node(name, create_event_wrapper(name, func))
 
-event_dispatcher = AgentEventDispatcher()
 graph_builder.add_node(
     "tools",
     ToolNode(tools=list(TOOLS.values()), event_dispatcher=event_dispatcher),
@@ -81,48 +77,3 @@ graph_builder.add_edge("generate_result", END)
 graph_builder.add_edge("max_iterations_reached", END)
 
 graph = graph_builder.compile()
-
-
-async def stream_graph_updates(
-    user_input: str, dataset_ids: Optional[List[str]] = None
-) -> AsyncGenerator[str, None]:
-    """Stream graph updates for user input with event tracking.
-
-    Args:
-        user_input (str): The user's input query
-        dataset_ids (List[str], optional): Specific dataset IDs to use for the query
-
-    Yields:
-        str: JSON-formatted event data for streaming in SSE format
-    """
-    event_dispatcher.clear_events()
-
-    input_state = {
-        "messages": [{"role": "user", "content": user_input}],
-        "dataset_ids": dataset_ids,
-    }
-
-    try:
-        async for event in graph.astream_events(input_state, version="v2"):
-            if event.get("event", None) == "on_custom_event":
-                formatted_event = event.get("data", {})
-                logging.info(formatted_event)
-                yield f"data: {json.dumps(formatted_event)}\n\n"
-    except Exception as e:
-        error_event = json.dumps(
-            {
-                "type": "error",
-                "message": f"Error during streaming: {str(e)}",
-                "data": {"error": str(e)},
-            },
-            indent=2,
-        )
-        yield f"data: {error_event}\n\n"
-
-
-def visualize_graph():
-    try:
-        with open("graph/graph.png", "wb") as f:
-            f.write(graph.get_graph().draw_mermaid_png())
-    except Exception as e:
-        raise e
