@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
-templates = Jinja2Templates(directory="server/app/tests/templates")
+templates = Jinja2Templates(directory="app/tests/templates")
 
 
 @router.get("/")

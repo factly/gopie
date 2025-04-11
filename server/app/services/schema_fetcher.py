@@ -7,8 +7,8 @@ from fastapi import HTTPException
 
 http_session = SingletonAiohttp.get_aiohttp_client()
 
-PREFETCH_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/prefetch"
-PROFILE_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/profile/description"
+PREFETCH_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/prefetch/"
+PROFILE_API_URL = settings.HUNTING_API_ENDPOINT + "/api/v1/profile/description/"
 FLOWER_API_ENDPOINT = settings.FLOWER_API_ENDPOINT + "/api/task/result"
 
 
