@@ -23,7 +23,7 @@ async def upload_schema(payload: UploadSchemaRequest):
             f"Processing schema upload for dataset {dataset_id} in project {project_id}"
         )
 
-        task_data =  await initiate_schema_generation(file_path)
+        task_data = await initiate_schema_generation(file_path)
         dataset_schema = await fetch_dataset_schema(file_path, task_data)
         dataset_details = await get_dataset_info(dataset_id, project_id)
 

@@ -1,20 +1,65 @@
+import asyncio
 import logging
 from uuid import uuid4
-import asyncio
-
 from app.core.config import settings
-from app.services.qdrant.qdrant_setup import setup_vector_store
 from app.core.langchain_config import lc
+from app.services.qdrant.qdrant_setup import (
+    setup_vector_store,
+    initialize_qdrant_client,
+)
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+
 
 async def add_documents_to_vector_store(documents, ids=None):
     vector_store = setup_vector_store(lc.embeddings_model)
+    client = initialize_qdrant_client()
 
     if ids is None:
         ids = [str(uuid4()) for _ in range(len(documents))]
 
-    await asyncio.get_event_loop().run_in_executor(
-        None, lambda: vector_store.add_documents(documents=documents, ids=ids)
-    )
+    filtered_docs = []
+    filtered_ids = []
+
+
+    for doc, doc_id in zip(documents, ids):
+        project_id = doc.metadata["project_id"]
+        dataset_id = doc.metadata["dataset_id"]
+        file_path = doc.metadata["file_path"]
+
+        search_result = client.scroll(
+            collection_name=settings.QDRANT_COLLECTION,
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="metadata.project_id",
+                        match=MatchValue(value=project_id),
+                    ),
+                    FieldCondition(
+                        key="metadata.dataset_id",
+                        match=MatchValue(value=dataset_id),
+                    ),
+                    FieldCondition(
+                        key="metadata.file_path",
+                        match=MatchValue(value=file_path),
+                    ),
+                ]
+            ),
+            limit=1,
+        )
+
+        if search_result[0]:
+            logging.info(
+                f"Document with project_id={project_id}, dataset_id={dataset_id}, file_path={file_path} already exists in Qdrant. Skipping."
+            )
+            continue
+
+        filtered_docs.append(doc)
+        filtered_ids.append(doc_id)
+
+    if filtered_docs:
+        await asyncio.get_event_loop().run_in_executor(
+            None, lambda: vector_store.add_documents(documents=filtered_docs, ids=filtered_ids)
+        )
 
 
 def perform_similarity_search(

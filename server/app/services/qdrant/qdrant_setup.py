@@ -1,14 +1,11 @@
-import logging
-
 from app.core.config import settings
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import CountResult, Distance, Filter, VectorParams
+from qdrant_client.http.models import Distance, VectorParams
 
 
 def initialize_qdrant_client():
-    """Initialize the Qdrant client and create a collection if it doesn't exist."""
     client = QdrantClient(url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
 
     if not collection_exists(client):
@@ -20,7 +17,6 @@ def initialize_qdrant_client():
 
 
 def setup_vector_store(embeddings: OpenAIEmbeddings):
-    """Set up a vector store using the provided client."""
     client = initialize_qdrant_client()
     return QdrantVectorStore(
         client=client,
@@ -29,23 +25,7 @@ def setup_vector_store(embeddings: OpenAIEmbeddings):
     )
 
 
-def check_collection_has_documents(
-    client, collection_name="dataset_collection"
-) -> bool:
-    """Check if the collection has documents."""
-    try:
-        count_result: CountResult = client.count(
-            collection_name=collection_name,
-            count_filter=Filter(must=[]),
-        )
-        return count_result.count > 0
-    except Exception as e:
-        logging.info(f"Error checking if collection has documents: {e}")
-        return False
-
-
 def collection_exists(client) -> bool:
-    """Check if the collection exists."""
     collections = client.get_collections().collections
     collection_names = [collection.name for collection in collections]
     return settings.QDRANT_COLLECTION in collection_names

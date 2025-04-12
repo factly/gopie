@@ -21,10 +21,10 @@ def store_schema_in_qdrant(
 
     Args:
         schema (Any): The dataset schema to store.
+        dataset_details (Dataset_details): The dataset details.
         dataset_id (str): The unique identifier for the dataset.
         project_id (str): The unique identifier for the project.
         file_path (str): The file path of the dataset.
-
     Returns:
         bool: True if successful, False otherwise.
     """
