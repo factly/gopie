@@ -4,7 +4,7 @@ from app.core.session import SingletonAiohttp
 from app.models.data import UploadResponse, UploadSchemaRequest
 from app.services.dataset_info import get_dataset_info
 from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
-from app.services.schema_fetcher import fetch_dataset_schema
+from app.services.schema_fetcher import fetch_dataset_schema, initiate_schema_generation
 from fastapi import APIRouter, HTTPException
 
 dataset_router = APIRouter()
@@ -23,7 +23,8 @@ async def upload_schema(payload: UploadSchemaRequest):
             f"Processing schema upload for dataset {dataset_id} in project {project_id}"
         )
 
-        dataset_schema = await fetch_dataset_schema(file_path)
+        task_data =  await initiate_schema_generation(file_path)
+        dataset_schema = await fetch_dataset_schema(file_path, task_data)
         dataset_details = await get_dataset_info(dataset_id, project_id)
 
         success = store_schema_in_qdrant(

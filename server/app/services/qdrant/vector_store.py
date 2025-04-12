@@ -1,19 +1,20 @@
-"""Utilities for working with vector stores."""
-
 import logging
 from uuid import uuid4
+import asyncio
 
 from app.core.config import settings
 from app.services.qdrant.qdrant_setup import setup_vector_store
 from app.core.langchain_config import lc
 
-def add_documents_to_vector_store(documents, ids=None):
-    """Add documents to the vector store."""
+async def add_documents_to_vector_store(documents, ids=None):
     vector_store = setup_vector_store(lc.embeddings_model)
 
     if ids is None:
         ids = [str(uuid4()) for _ in range(len(documents))]
-    vector_store.add_documents(documents=documents, ids=ids)
+
+    await asyncio.get_event_loop().run_in_executor(
+        None, lambda: vector_store.add_documents(documents=documents, ids=ids)
+    )
 
 
 def perform_similarity_search(

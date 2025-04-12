@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 http_session = SingletonAiohttp.get_aiohttp_client()
 
-PREFETCH_API_URL = settings.HUNTING_API_PREFETCH_ENDPOINT 
+PREFETCH_API_URL = settings.HUNTING_API_PREFETCH_ENDPOINT
 PROFILE_API_URL = settings.HUNTING_API_DESCRIPTION_ENDPOINT
 FLOWER_API_ENDPOINT = settings.FLOWER_API_ENDPOINT + "/api/task/result"
 
@@ -49,10 +49,7 @@ async def check_task_status(
     return False
 
 
-async def fetch_dataset_schema(file_path: str):
-    """
-    Generate a dataset schema by calling the prefetch endpoint and fetch the schema using the profile endpoint.
-    """
+async def initiate_schema_generation(file_path: str):
     try:
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
@@ -72,28 +69,42 @@ async def fetch_dataset_schema(file_path: str):
                 prefetch_response.status, await prefetch_response.text()
             )
 
-        prefetch_data = await prefetch_response.json()
-        task_id = prefetch_data.get("task_id", "")
+        return await prefetch_response.json()
+    except HTTPException as e:
+        raise e
 
-        logging.info(f"Prefetch task started with task_id: {task_id}")
 
-        if not task_id:
-            raise HTTPException(
-                500,
-                f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
-            )
+async def fetch_dataset_schema(
+    file_path: str, prefetch_data, check_status: bool = True
+):
+    """
+    fetch the schema using the profile endpoint.
+    """
+    try:
+        if check_status:
+            task_id = prefetch_data.get("task_id", "")
 
-        task_success = await check_task_status(task_id)
-        if not task_success:
-            raise HTTPException(
-                500,
-                f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
-            )
+            logging.info(f"Prefetch task started with task_id: {task_id}")
+
+            if not task_id:
+                raise HTTPException(
+                    500,
+                    f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
+                )
+
+            task_success = await check_task_status(task_id)
+            if not task_success:
+                raise HTTPException(
+                    500,
+                    f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
+                )
 
         profile_payload = {
             "source": file_path,
             "samples_to_show": 10,
         }
+
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
 
         schema_response = await http_session.get(
             PROFILE_API_URL, params=profile_payload, headers=headers

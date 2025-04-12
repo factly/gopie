@@ -1,11 +1,11 @@
+import asyncio
 import json
 import logging
 from typing import Any
 
 from app.models.data import Dataset_details
-from app.models.schema import DatasetSchema
+from app.services.dataset_info import format_schema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
-from app.utils.col_desc_generator import generate_column_descriptions
 from langchain_core.documents import Document
 
 
@@ -29,65 +29,27 @@ def store_schema_in_qdrant(
         bool: True if successful, False otherwise.
     """
     try:
-        columns_details = []
-        if schema.get("samples") and len(schema["samples"]) > 0:
-            sample_data = schema["samples"][0].get("data", {})
-            variables = schema.get("variables", {})
+        formatted_schema = format_schema(schema, project_id, dataset_id, file_path)
 
-            for column_name, column_values in sample_data.items():
-                sample_values = list(column_values.values())[:5]
-                non_null_count = sum(1 for v in column_values.values() if v is not None)
-                columns_details.append(
-                    {
-                        "name": column_name,
-                        "description": f"Column containing {column_name} data",
-                        "type": variables.get(column_name, {}).get("type", "string"),
-                        "sample_values": sample_values,
-                        "non_null_count": non_null_count,
-                        "stats": variables.get(column_name, {}),
-                    }
-                )
-
-        formatted_schema: DatasetSchema = {
-            "name": dataset_details.alias,
-            "description": dataset_details.description,
-            "dataset_id": dataset_id,
-            "file_path": file_path,
-            "project_id": project_id,
-            "analysis": schema["analysis"],
-            "row_count": schema["table"]["n"],
-            "col_count": schema["table"]["n_var"],
-            "columns": schema["columns"],
-            "columns_details": columns_details,
-            "alerts": schema["alerts"],
-            "duplicates": schema["duplicates"],
-            "correlations": schema["correlations"],
-            "missing_values": schema["missing"],
-        }
-
-        column_descriptions = generate_column_descriptions(formatted_schema)
-
-        for column in formatted_schema["columns_details"]:
-            if column["name"] in column_descriptions:
-                column["description"] = column_descriptions[column["name"]]
-
-        logging.info(
-            f"Formatted schema with generated descriptions: {formatted_schema}"
-        )
+        formatted_schema["name"] = dataset_details.alias
+        formatted_schema["dataset_name"] = dataset_details.name
+        formatted_schema["dataset_description"] = dataset_details.description
 
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),
             metadata={
                 "name": dataset_details.alias,
                 "dataset_name": dataset_details.name,
+                "dataset_description": dataset_details.description,
                 "dataset_id": dataset_id,
                 "project_id": project_id,
-                "schema": formatted_schema,
+                "file_path": file_path,
             },
         )
 
-        add_documents_to_vector_store(documents=[document])
-        logging.info("Successfully stored schema for dataset in Qdrant")
+        asyncio.create_task(add_documents_to_vector_store(documents=[document]))
+
+        logging.info("Schema indexing task created successfully")
         return True
 
     except Exception as e:

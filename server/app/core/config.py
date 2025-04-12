@@ -28,8 +28,12 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
 
-    HUNTING_API_PREFETCH_ENDPOINT: str = "http://host.docker.internal:8003"
-    HUNTING_API_DESCRIPTION_ENDPOINT: str = "http://host.docker.internal:8003"
+    HUNTING_API_PREFETCH_ENDPOINT: str = (
+        "http://host.docker.internal:8003/api/v1/prefetch"
+    )
+    HUNTING_API_DESCRIPTION_ENDPOINT: str = (
+        "http://host.docker.internal:8003/api/v1/profile/description"
+    )
     FLOWER_API_ENDPOINT: str = os.getenv("FLOWER_API_ENDPOINT", "")
     GOPIE_API_ENDPOINT: str = os.getenv("GOPIE_API_ENDPOINT", "")
 

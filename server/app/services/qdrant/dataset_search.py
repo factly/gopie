@@ -3,15 +3,17 @@ from typing import List, Optional
 
 from app.core.config import settings
 from app.models.schema import DatasetSchema
+from app.services.dataset_info import format_schema
 from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
 )
+from app.services.schema_fetcher import fetch_dataset_schema
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
 
 
-def search_schemas(
+async def search_schemas(
     user_query: str,
     embeddings: OpenAIEmbeddings,
     project_ids: Optional[List[str]] = None,
@@ -64,7 +66,22 @@ def search_schemas(
 
         schemas = []
         for doc in results:
-            schemas.append(doc.metadata)
+            fetched_schema = await fetch_dataset_schema(
+                doc.metadata["file_path"], {}, check_status=False
+            )
+            formatted_schema = format_schema(
+                fetched_schema,
+                doc.metadata["project_id"],
+                doc.metadata["dataset_id"],
+                doc.metadata["file_path"],
+            )
+            formatted_schema["name"] = doc.metadata["name"]
+            formatted_schema["dataset_name"] = doc.metadata["dataset_name"]
+            formatted_schema["dataset_description"] = doc.metadata[
+                "dataset_description"
+            ]
+
+            schemas.append(formatted_schema)
 
         logging.info(f"Found {len(schemas)} schemas matching query: {user_query}")
         return schemas

@@ -77,7 +77,7 @@ async def identify_datasets(state: State):
     try:
         semantic_searched_datasets = []
         try:
-            dataset_schemas = search_schemas(
+            dataset_schemas = await search_schemas(
                 user_query,
                 lc.embeddings_model,
                 dataset_ids=dataset_ids,
@@ -110,10 +110,6 @@ async def identify_datasets(state: State):
         selected_datasets = parsed_content.get("selected_dataset", [])
         query_result.subqueries[query_index].tables_used = selected_datasets
         column_assumptions = parsed_content.get("column_predicted", [])
-
-        logging.info(
-            f"Selected datasets: {selected_datasets}, Column assumptions: {column_assumptions}"
-        )
 
         filtered_dataset_schemas = [
             schema
