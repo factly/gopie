@@ -5,7 +5,7 @@ from app.models.data import UploadResponse, UploadSchemaRequest
 from app.services.dataset_info import get_dataset_info
 from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
 from app.services.schema_fetcher import fetch_dataset_schema, initiate_schema_generation
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 dataset_router = APIRouter()
 
@@ -24,14 +24,22 @@ async def upload_schema(payload: UploadSchemaRequest):
         )
 
         task_data = await initiate_schema_generation(file_path)
+        logging.info(f"Schema generation initiated for {file_path}")
+
         dataset_schema = await fetch_dataset_schema(file_path, task_data)
+        logging.info(f"Schema fetched successfully for {file_path}")
+
         dataset_details = await get_dataset_info(dataset_id, project_id)
+        logging.info(f"Dataset info retrieved for dataset {dataset_id}")
 
         success = store_schema_in_qdrant(
             dataset_schema, dataset_details, dataset_id, project_id, file_path
         )
         if not success:
-            raise HTTPException(500, "Failed to store schema in vector database")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to store schema in vector database",
+            )
 
         return {
             "success": True,
@@ -40,5 +48,8 @@ async def upload_schema(payload: UploadSchemaRequest):
     except HTTPException as e:
         raise e
     except Exception as e:
-        logging.error(f"Error processing schema upload: {str(e)}")
-        raise HTTPException(500, str(e))
+        logging.error(f"Unexpected error processing schema upload: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process schema upload: {str(e)}",
+        )

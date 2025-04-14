@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-DATA_DIRECTORY = "./data"
 DEFAULT_MAX_DISTANCE = 10
 MAX_UNIQUE_VALUES_TO_RETURN = 20
 
@@ -145,7 +144,7 @@ def correct_column_values(
         if not dataset_name.endswith(".csv"):
             dataset_name += ".csv"
 
-        file_path = os.path.join(DATA_DIRECTORY, dataset_name)
+        file_path = os.path.join("", dataset_name)
 
         if not os.path.exists(file_path):
             column_mappings.append(

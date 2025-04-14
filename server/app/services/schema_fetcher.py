@@ -12,15 +12,21 @@ PROFILE_API_URL = settings.HUNTING_API_DESCRIPTION_ENDPOINT
 FLOWER_API_ENDPOINT = settings.FLOWER_API_ENDPOINT + "/api/task/result"
 
 
+async def handle_api_response(response, operation_name):
+    if response.status != 200:
+        error_text = await response.text()
+        raise HTTPException(
+            status_code=response.status,
+            detail=f"{operation_name} API error: {error_text}",
+        )
+    return await response.json()
+
+
 async def check_task_status(
     task_id: str, max_retries: int = 10, delay: float = 2.0
 ) -> bool:
-    """
-    Check if the prefetch task has completed successfully by polling the result endpoint.
-    """
     headers = {"accept": "application/json"}
     FLOWER_API_URL = f"{FLOWER_API_ENDPOINT}/{task_id}"
-    logging.info(FLOWER_API_ENDPOINT)
 
     for _ in range(max_retries):
         try:
@@ -64,39 +70,38 @@ async def initiate_schema_generation(file_path: str):
             PREFETCH_API_URL, json=prefetch_payload, headers=headers
         )
 
-        if prefetch_response.status != 200:
-            raise HTTPException(
-                prefetch_response.status, await prefetch_response.text()
-            )
+        response_data = await handle_api_response(prefetch_response, "Prefetch")
+        return response_data
 
-        return await prefetch_response.json()
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in initiate_schema_generation: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error in schema generation initiation: {str(e)}",
+        )
 
 
 async def fetch_dataset_schema(
     file_path: str, prefetch_data, check_status: bool = True
 ):
-    """
-    fetch the schema using the profile endpoint.
-    """
     try:
         if check_status:
             task_id = prefetch_data.get("task_id", "")
-
             logging.info(f"Prefetch task started with task_id: {task_id}")
 
             if not task_id:
                 raise HTTPException(
-                    500,
-                    f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
+                    status_code=500,
+                    detail=f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
                 )
 
             task_success = await check_task_status(task_id)
             if not task_success:
                 raise HTTPException(
-                    500,
-                    f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
+                    status_code=500,
+                    detail=f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
                 )
 
         profile_payload = {
@@ -110,13 +115,14 @@ async def fetch_dataset_schema(
             PROFILE_API_URL, params=profile_payload, headers=headers
         )
 
-        if schema_response.status != 200:
-            raise HTTPException(schema_response.status, await schema_response.text())
+        response_data = await handle_api_response(schema_response, "Profile")
 
-        return await schema_response.json()
+        return response_data
 
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Error fetching dataset schema: {str(e)}")
-        raise HTTPException(500, f"Error fetching dataset schema: {str(e)}")
+        logging.error(f"Unexpected error in fetch_dataset_schema: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching dataset schema: {str(e)}"
+        )
