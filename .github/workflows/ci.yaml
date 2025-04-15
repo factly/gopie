@@ -32,6 +32,6 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         push: true
-        tags: asia-south1-docker.pkg.dev/factly-prod/mande/dataful-agent:${{ env.RELEASE_VERSION }}, asia-south1-docker.pkg.dev/factly-prod/mande/dataful-agent:latest
+        tags: asia-south1-docker.pkg.dev/factly-prod/mande/dataful-agent:${{ env.RELEASE_VERSION }}
         context: server
         file: server/Dockerfile
