@@ -25,6 +25,6 @@ func (s *AIService) UploadSchema(params *models.UploadSchemaParams) error {
 	return nil
 }
 
-func (s *AIService) Chat(ctx context.Context, params *models.ChatParams) {
+func (s *AIService) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	s.repository.Chat(ctx, params)
 }

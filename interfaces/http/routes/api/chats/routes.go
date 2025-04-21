@@ -28,6 +28,7 @@ func Routes(router fiber.Router, params RouterParams) {
 		datasetSvc: params.DatasetService,
 	}
 	router.Post("/", httpHandler.chat)
+	router.Post("/v2", httpHandler.chat_v2)
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)
 	router.Delete("/:chatID", httpHandler.deleteChat)
 	router.Delete("/:chatID/messages/:messageID", httpHandler.deleteMessage)

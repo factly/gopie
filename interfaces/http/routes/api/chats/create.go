@@ -14,9 +14,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// chatRequeryBody represents the request body for chat interaction
+// chatRequestBody represents the request body for chat interaction
 // @Description Request body for creating or continuing a chat conversation
-type chatRequeryBody struct {
+type chatRequestBody struct {
 	// Unique identifier of an existing chat (optional for new chats)
 	ChatID string `json:"chat_id" validate:"omitempty,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// ID of the dataset to analyze
@@ -44,7 +44,7 @@ type chatRequeryBody struct {
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /v1/api/chats [post]
 func (h *httpHandler) chat(ctx *fiber.Ctx) error {
-	body := chatRequeryBody{}
+	body := chatRequestBody{}
 	if err := ctx.BodyParser(&body); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
@@ -189,7 +189,7 @@ func convertSchemaToJson(schema any) string {
 	return string(schemaJson)
 }
 
-func convertRowsToCSV(rows []map[string]interface{}) string {
+func convertRowsToCSV(rows []map[string]any) string {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 

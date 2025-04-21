@@ -6,7 +6,7 @@ type UploadSchemaParams struct {
 	FilePath  string
 }
 
-type ChatParams struct {
+type AIAgentChatParams struct {
 	ProjectIDs []string
 	DatasetIDs []string
 	UserInput  string

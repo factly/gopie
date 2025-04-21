@@ -15,7 +15,7 @@ import (
 )
 
 // Chat initiates a chat session with the AI agent
-func (a *aiAgent) Chat(ctx context.Context, params *models.ChatParams) {
+func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	url := a.buildUrl("/chat", getQueryParams(params))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
@@ -52,7 +52,7 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.ChatParams) {
 }
 
 // getQueryParams extracts query parameters from ChatParams
-func getQueryParams(params *models.ChatParams) map[string][]string {
+func getQueryParams(params *models.AIAgentChatParams) map[string][]string {
 	queryParams := make(map[string][]string)
 
 	if len(params.ProjectIDs) != 0 {
