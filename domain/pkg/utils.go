@@ -43,7 +43,7 @@ func RandomString(length uint) string {
 }
 
 // parseAndValidateRequest parses and validates the upload request
-func ValidateRequest(logger *logger.Logger, req interface{}) error {
+func ValidateRequest(logger *logger.Logger, req any) error {
 	if err := validator.New().Struct(req); err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("Invalid request body: %v", err)
