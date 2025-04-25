@@ -1,26 +1,9 @@
-from typing import List, Optional
-
 from app.workflow.graph.graph_stream import stream_graph_updates
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from app.models.data import QueryRequest
 
 router = APIRouter()
-
-
-class QueryRequest(BaseModel):
-    user_input: str
-    project_ids: Optional[List[str]] = None
-    dataset_ids: Optional[List[str]] = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "user_input": "What is the average salary in the company?",
-                "project_ids": ["proj1", "proj2"],
-                "dataset_ids": ["ds1", "ds2"]
-            }
-        }
 
 
 @router.get("/")
