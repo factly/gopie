@@ -1,12 +1,10 @@
 from typing import List, Optional
 
 from app.workflow.graph.graph_stream import stream_graph_updates
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/tests/templates")
 
 
 @router.get("/")
@@ -15,12 +13,7 @@ async def root():
     return {"message": "Welcome to the Database Agent API"}
 
 
-@router.get("/test")
-async def test(request: Request):
-    return templates.TemplateResponse("stream_test.html", {"request": request})
-
-
-@router.get("/query")
+@router.post("/query")
 async def query(
     user_input: str = Query(
         ..., description="The natural language query from the user"

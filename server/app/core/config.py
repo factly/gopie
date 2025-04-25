@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     PORTKEY_API_KEY: str = os.getenv("PORTKEY_API_KEY", "")
     VIRTUAL_KEY: str = os.getenv("VIRTUAL_KEY", "")
 
-    QDRANT_HOST: str = "qdrant"
+    QDRANT_HOST: str = "host.docker.internal"
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5

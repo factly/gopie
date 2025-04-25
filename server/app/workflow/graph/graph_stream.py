@@ -30,7 +30,7 @@ async def stream_graph_updates(
             if event.get("event", None) == "on_custom_event":
                 formatted_event = event.get("data", {})
                 logging.info(formatted_event)
-                yield json.dumps(formatted_event)
+                yield json.dumps(formatted_event) + "\n\n"
     except Exception as e:
         error_event = json.dumps(
             {
@@ -40,12 +40,4 @@ async def stream_graph_updates(
             },
             indent=2,
         )
-        yield error_event
-
-
-def visualize_graph():
-    try:
-        with open("graph/graph.png", "wb") as f:
-            f.write(graph.get_graph().draw_mermaid_png())
-    except Exception as e:
-        raise e
+        yield error_event + "\n\n"

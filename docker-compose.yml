@@ -10,10 +10,10 @@ services:
     env_file:
       - ./server/.env
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    networks:
-      - default
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - dataful-agent
 
   qdrant:
     image: qdrant/qdrant
@@ -23,13 +23,10 @@ services:
     volumes:
       - ./qdrant_storage:/qdrant/storage
     restart: unless-stopped
-    networks:
-      - default
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-volumes:
-  data:
+    networks:
+      - dataful-agent
 
 networks:
-  default:
+  dataful-agent:
