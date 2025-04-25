@@ -1,10 +1,26 @@
 from typing import List, Optional
 
 from app.workflow.graph.graph_stream import stream_graph_updates
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class QueryRequest(BaseModel):
+    user_input: str
+    project_ids: Optional[List[str]] = None
+    dataset_ids: Optional[List[str]] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "user_input": "What is the average salary in the company?",
+                "project_ids": ["proj1", "proj2"],
+                "dataset_ids": ["ds1", "ds2"]
+            }
+        }
 
 
 @router.get("/")
@@ -14,24 +30,18 @@ async def root():
 
 
 @router.post("/query")
-async def query(
-    user_input: str = Query(
-        ..., description="The natural language query from the user"
-    ),
-    project_ids: Optional[List[str]] = Query(None, description="List of project IDs"),
-    dataset_ids: Optional[List[str]] = Query(None, description="List of dataset IDs"),
-):
+async def query(request: QueryRequest):
     """Stream the agent's processing events as Server-Sent Events.
 
     Args:
-        user_input: The natural language query from the user
-        project_ids (List[str], optional): List of project IDs to use for the query
-        dataset_ids (List[str], optional): List of dataset IDs to use for the query
+        request: Request body containing user input and optional project/dataset IDs
     """
 
     return StreamingResponse(
         stream_graph_updates(
-            user_input, dataset_ids=dataset_ids, project_ids=project_ids
+            request.user_input, 
+            dataset_ids=request.dataset_ids, 
+            project_ids=request.project_ids
         ),
         media_type="text/event-stream",
     )
