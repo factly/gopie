@@ -4,12 +4,13 @@ builds:
 - id: gopie
   binary: gopie
   env:
-  - CGO_ENABLED=0
-  - GO386=softfloat
+  - CGO_ENABLED=1
+  - CC=aarch64-linux-gnu-gcc
+  # - GO386=softfloat
   goos:
   - linux
-  goarch:
-    - amd64
+  # goarch:
+  #   - amd64
 
 archives:
   - id: gopie
