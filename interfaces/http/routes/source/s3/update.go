@@ -126,7 +126,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		zap.String("dataset_id", dataset.ID))
 
 	// Return success response
-	return ctx.Status(fiber.StatusCreated).JSON(map[string]interface{}{
+	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
 		"data": dataset,
 	})
 }

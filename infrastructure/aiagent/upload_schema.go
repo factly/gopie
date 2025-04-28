@@ -25,7 +25,8 @@ func (a *aiAgent) UploadSchema(params *models.UploadSchemaParams) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.httpClient.Do(req)
+	httpClient := http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		a.logger.Error("Error in sending request to AI agent", zap.Error(err))
 		return err

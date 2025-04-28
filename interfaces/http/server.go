@@ -8,6 +8,7 @@ import (
 	_ "github.com/factly/gopie/docs" // Import generated Swagger docs
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/aiagent"
 	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/meterus"
 	"github.com/factly/gopie/infrastructure/portkey"
@@ -70,12 +71,14 @@ func ServeHttp() error {
 	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
 	datasetStore := datasets.NewPostgresDatasetStore(store.GetDB(), logger)
 	chatStore := chats.NewChatStoreRepository(store.GetDB(), logger)
+	aiAgentRepo := aiagent.NewAIAgent(config.AIAgent.Url, logger)
 
 	olapService := services.NewOlapService(olap, source, logger)
 	aiService := services.NewAiDriver(porkeyClient)
 	projectService := services.NewProjectService(projectStore)
 	datasetService := services.NewDatasetService(datasetStore)
-	chatService := services.NewChatService(chatStore, porkeyClient)
+	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
+	aiAgentService := services.NewAIService(aiAgentRepo)
 
 	logger.Info("starting server", zap.String("host", config.Server.Host), zap.String("port", config.Server.Port))
 
@@ -119,7 +122,7 @@ func ServeHttp() error {
 
 	if config.OlapDB.AccessMode != "read_only" {
 		logger.Info("s3 upload routes enabled")
-		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, projectService, logger)
+		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, projectService, aiAgentService, logger)
 	}
 
 	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)

@@ -42,6 +42,7 @@ type GopieConfig struct {
 	Meterus  MeterusConfig
 	Postgres PostgresConfig
 	Zitadel  ZitadelConfig
+	AIAgent  AIAgentConfig
 }
 
 type OlapDBConfig struct {
@@ -76,6 +77,10 @@ type PostgresConfig struct {
 	Database string
 	User     string
 	Password string
+}
+
+type AIAgentConfig struct {
+	Url string
 }
 
 type ZitadelConfig struct {
@@ -118,6 +123,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.Database, "postgres database"},
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
+		{config.AIAgent.Url, "ai agent url"},
 		// {config.Zitadel.Protocol, "zitadel protocol"},
 		// {config.Zitadel.Domain, "zitadel domain"},
 		// {config.Zitadel.ProjectID, "zitadel project id"},
@@ -271,7 +277,11 @@ func LoadConfig() (*GopieConfig, error) {
 			ServiceUserID:       viper.GetString("GOPIE_ZITADEL_SERVICE_USER_ID"),
 			LoginURL:            viper.GetString("GOPIE_ZITADEL_APP_LOGIN_URL"),
 		},
+		AIAgent: AIAgentConfig{
+			Url: viper.GetString("GOPIE_AIAGENT_URL"),
+		},
 	}
+	fmt.Println("===>>> ", viper.GetString("GOPIE_AIAGENT_URL"))
 
 	var err error
 	if config, err = validateConfig(config); err != nil {

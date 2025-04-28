@@ -16,8 +16,17 @@ import (
 
 // Chat initiates a chat session with the AI agent
 func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
-	url := a.buildUrl("/chat", getQueryParams(params))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	url := a.buildUrl("/api/v1/query")
+
+	reqBody := map[string]any{
+		"project_ids": params.ProjectIDs,
+		"dataset_ids": params.DatasetIDs,
+		"user_input":  params.UserInput,
+	}
+
+	reqBodyBuf, _ := json.Marshal(reqBody)
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyBuf))
 	if err != nil {
 		a.logger.Error("Error in creating request to AI agent", zap.Error(err))
 		params.ErrChan <- err
@@ -28,7 +37,9 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.httpClient.Do(req)
+	httpClient := &http.Client{}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		a.logger.Error("Error in sending request to AI agent", zap.Error(err))
 		params.ErrChan <- err
@@ -41,7 +52,16 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 
 	if resp.StatusCode != http.StatusOK {
 		a.logger.Error("Error in response from AI agent", zap.Int("status_code", resp.StatusCode))
+
 		params.ErrChan <- fmt.Errorf("error in response from AI agent: %s", resp.Status)
+		close(params.ErrChan)
+		close(params.DataChan)
+		return
+	}
+	if resp.Body == nil {
+		a.logger.Error("Error in response body from AI agent", zap.Int("status_code", resp.StatusCode))
+
+		params.ErrChan <- fmt.Errorf("error in response body from AI agent: %s", resp.Status)
 		close(params.ErrChan)
 		close(params.DataChan)
 		return
@@ -51,27 +71,8 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	return
 }
 
-// getQueryParams extracts query parameters from ChatParams
-func getQueryParams(params *models.AIAgentChatParams) map[string][]string {
-	queryParams := make(map[string][]string)
-
-	if len(params.ProjectIDs) != 0 {
-		queryParams["project_id"] = params.ProjectIDs
-	}
-
-	if len(params.DatasetIDs) != 0 {
-		queryParams["dataset_id"] = params.DatasetIDs
-	}
-
-	if params.UserInput != "" {
-		queryParams["user_input"] = []string{params.UserInput}
-	}
-
-	return queryParams
-}
-
 // handleChatStream processes the streaming response from the AI agent
-func (a *aiAgent) handleChatStream(ctx context.Context, body io.ReadCloser, dataChan chan<- []byte, errChan chan<- error) {
+func (a *aiAgent) handleChatStream(_ context.Context, body io.ReadCloser, dataChan chan<- []byte, errChan chan<- error) {
 	defer close(dataChan)
 	defer close(errChan)
 
@@ -83,18 +84,12 @@ func (a *aiAgent) handleChatStream(ctx context.Context, body io.ReadCloser, data
 
 	for scanner.Scan() {
 		select {
-		case <-ctx.Done():
-			// Handle context cancellation
-			errChan <- ctx.Err()
-			return
 		default:
 			now := time.Now()
 			timeSinceLastMessage := now.Sub(lastMessageTime)
 			lastMessageTime = now
 
 			line := bytes.TrimSpace(scanner.Bytes())
-			line = bytes.TrimPrefix(line, []byte("data:"))
-
 			// ignore empty lines
 			if len(line) == 0 {
 				continue
@@ -119,21 +114,13 @@ func (a *aiAgent) handleChatStream(ctx context.Context, body io.ReadCloser, data
 				return
 			}
 
-			a.logger.Info("Received SSE event",
+			a.logger.Debug("Received SSE event",
 				zap.String("event_node", partialResponse.EventNode),
 				zap.String("status", partialResponse.Status),
 				zap.String("message", partialResponse.Message),
 				zap.Duration("time_since_last_message", timeSinceLastMessage))
 
-			if partialResponse.EventData.Result != nil {
-				result, err := json.Marshal(partialResponse.EventData.Result)
-				if err != nil {
-					a.logger.Error("Error in marshalling SSE event data", zap.Error(err))
-					errChan <- err
-					return
-				}
-				dataChan <- result
-			}
+			dataChan <- line
 		}
 	}
 
@@ -143,6 +130,5 @@ func (a *aiAgent) handleChatStream(ctx context.Context, body io.ReadCloser, data
 		return
 	}
 
-	// Only send EOF if no other errors occurred
 	errChan <- io.EOF
 }
