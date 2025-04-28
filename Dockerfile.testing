@@ -1,0 +1,54 @@
+# -------------------------
+# 1) Builder: compile static Go binaries
+# -------------------------
+    FROM golang:1.23 AS builder
+
+    WORKDIR /app
+    
+    # Only copy go.mod/go.sum first to leverage Docker cache
+    COPY go.mod go.sum ./
+    RUN go mod download
+    
+    # Copy source and build
+    COPY . .
+    # Disable CGO so we get a fully static binary, strip symbols for size
+    RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -ldflags="-s -w" -o gopie main.go
+    
+    # Install goose (also static)
+    RUN CGO_ENABLED=0 go install github.com/pressly/goose/v3/cmd/goose@latest
+    
+    
+    
+    # -------------------------
+    # 2) Runtime: minimal Debian slim
+    # -------------------------
+    FROM debian:bookworm-slim AS runtime
+    
+    ENV USER=gopie \
+        HOME_DIR=/home/${USER} \
+        DATA_DIR=${HOME_DIR}/dataful
+    
+    # Only install what we need at runtime
+    RUN apt-get update \
+     && apt-get install --no-install-recommends -y \
+          ca-certificates \
+     && rm -rf /var/lib/apt/lists/*
+    
+    # Create non-root user and data directory
+    RUN groupadd -g 1001 ${USER} \
+     && useradd -m -u 1001 -s /usr/sbin/nologin -g ${USER} ${USER} \
+     && mkdir -p ${DATA_DIR} \
+     && chown -R ${USER}:${USER} ${HOME_DIR}
+    
+    USER ${USER}
+    WORKDIR ${HOME_DIR}
+    
+    # Copy only the two static binaries
+    COPY --from=builder /app/gopie       /usr/local/bin/gopie
+    COPY --from=builder /go/bin/goose     /usr/local/bin/goose
+    RUN chmod +x /usr/local/bin/gopie /usr/local/bin/goose
+    
+    # Default command
+    CMD ["gopie", "serve"]
+    
