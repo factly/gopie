@@ -1,12 +1,13 @@
 import json
 import logging
 from typing import AsyncGenerator, List, Optional
+from app.models.data import Message
 
 from app.workflow.graph import graph
 
 
 async def stream_graph_updates(
-    user_input: str,
+    messages: List[Message],
     dataset_ids: Optional[List[str]] = None,
     project_ids: Optional[List[str]] = None,
 ) -> AsyncGenerator[str, None]:
@@ -20,7 +21,7 @@ async def stream_graph_updates(
         str: JSON-formatted event data for streaming
     """
     input_state = {
-        "messages": [{"role": "user", "content": user_input}],
+        "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
     }

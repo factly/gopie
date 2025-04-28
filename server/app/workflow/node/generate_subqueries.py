@@ -11,7 +11,11 @@ from langchain_core.output_parsers import JsonOutputParser
 async def generate_subqueries(state: State):
     """Generate subqueries that would require separate SQL queries"""
     messages = state.get("messages", [])
-    user_input = messages[0].content if messages else ""
+    last_message = messages[-1]
+    if last_message.role == "user":
+        user_input = messages[-1].content
+    else:
+        raise Exception("Last Message must be a user message")
 
     prompt = f"""
       User Query: {user_input}

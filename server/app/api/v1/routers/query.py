@@ -22,7 +22,7 @@ async def query(request: QueryRequest):
 
     return StreamingResponse(
         stream_graph_updates(
-            request.user_input, 
+            request.messages, 
             dataset_ids=request.dataset_ids, 
             project_ids=request.project_ids
         ),

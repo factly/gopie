@@ -11,9 +11,15 @@ class UploadSchemaRequest(BaseModel):
     project_id: str
     dataset_id: str
     file_path: str
+    
+class Message(BaseModel):
+    role: str
+    content: str
+
+
 
 class QueryRequest(BaseModel):
-    user_input: str
+    messages: List[Message]
     project_ids: Optional[List[str]] = None
     dataset_ids: Optional[List[str]] = None
 
