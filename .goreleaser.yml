@@ -20,8 +20,8 @@ dockers:
   image_templates:
     - "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:{{ .Tag }}"
   use: docker
-  build_flag_templates:
-  - "--platform=linux/amd64"
+  # build_flag_templates:
+  # - "--platform=linux/amd64"
 
 docker_manifests:
   -
