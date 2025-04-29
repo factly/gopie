@@ -1,6 +1,8 @@
 name: Server Release CI
 on:
   push:
+    branches:
+      - develop
     tags:
       - "*"
 
