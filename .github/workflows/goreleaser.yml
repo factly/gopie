@@ -41,18 +41,18 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
           
-      - name: Build and push Gopie Web
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:${{ env.RELEASE_VERSION }}
-          file: Dockerfile
-
-      # - name: Run GoReleaser
-      #   uses: goreleaser/goreleaser-action@v6
+      # - name: Build and push Gopie Web
+      #   uses: docker/build-push-action@v4
       #   with:
-      #     distribution: goreleaser
-      #     version: '~> v2'
-      #     args: release --clean --skip=validate
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      #     push: true
+      #     tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:${{ env.RELEASE_VERSION }}
+      #     file: Dockerfile
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
