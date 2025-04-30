@@ -1,11 +1,7 @@
 name: Server Release CI
 on:
-  push:
-    branches:
-      - develop
-    tags:
-      - "*"
-
+  release:
+    types: [prereleased]
 jobs:
   release:
     runs-on: ubuntu-latest
