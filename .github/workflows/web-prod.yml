@@ -1,7 +1,7 @@
 name: Web Release CI
 on:
   release:
-    types: [prereleased]
+    types: [released]
 
 jobs:
   release:
