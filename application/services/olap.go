@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -125,7 +126,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
 	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
 		parts := strings.Split(sql, `"`)
-		for i := 0; i < len(parts)-1; i++ {
+		for i := range len(parts) - 1 {
 			if parts[i] == "" && i+1 < len(parts) && parts[i+1] == "" {
 				return nil, fmt.Errorf("invalid SQL: query contains empty identifiers")
 			}
@@ -173,6 +174,31 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		// "total": queryResult.Count,
 		"data": queryResult.Rows,
 	}, nil
+}
+
+// get dataset summary
+func (d *OlapService) GetDatasetSummary(tableName string) (*[]models.DatasetSummary, error) {
+	sql := fmt.Sprintf("summarize %s", tableName)
+	rows, err := d.olap.Query(sql)
+	if err != nil {
+		return nil, err
+	}
+	summaryRes, err := rows.RowsToMap()
+	if err != nil {
+		d.logger.Error("Error converting rows to map", zap.Error(err))
+		return nil, err
+	}
+
+	jsonSummary, _ := json.Marshal(summaryRes)
+
+	var summary []models.DatasetSummary
+	err = json.Unmarshal(jsonSummary, &summary)
+	if err != nil {
+		d.logger.Error("Error unmarshalling dataset summary", zap.Error(err))
+		return nil, err
+	}
+
+	return &summary, nil
 }
 
 type queryResult struct {

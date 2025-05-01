@@ -83,3 +83,23 @@ func (s *PgDatasetStore) CreateFailedUpload(ctx context.Context, datasetID strin
 		CreatedAt: f.CreatedAt.Time,
 	}, nil
 }
+
+func (s *PgDatasetStore) CreateDatasetSummary(ctx context.Context, datasetName string, datasetSummary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error) {
+	summary, err := json.Marshal(datasetSummary)
+	if err != nil {
+		s.logger.Error("Error marshaling dataset summary", zap.Error(err))
+		return nil, err
+	}
+	err = s.q.CreateDatasetSummary(ctx, gen.CreateDatasetSummaryParams{
+		DatasetName: datasetName,
+		Summary:     summary,
+	})
+	if err != nil {
+		s.logger.Error("Error creating dataset summary", zap.Error(err))
+		return nil, err
+	}
+	return &models.DatasetSummaryWithName{
+		DatasetName: datasetName,
+		Summary:     datasetSummary,
+	}, nil
+}

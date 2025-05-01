@@ -41,6 +41,11 @@ type Dataset struct {
 	Columns     []byte
 }
 
+type DatasetSummary struct {
+	DatasetName string
+	Summary     []byte
+}
+
 type FailedDatasetUpload struct {
 	ID        string
 	DatasetID string
