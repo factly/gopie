@@ -382,15 +382,3 @@ func buildOrderByClause(sort string) (string, error) {
 
 	return strings.Join(orderClauses, ", "), nil
 }
-
-// Helper function for escaping SQL values
-func escapeSQLValue(val string) string {
-	return "'" + strings.ReplaceAll(val, "'", "''") + "'"
-}
-
-// Helper function for validating identifiers
-func isValidIdentifier(id string) bool {
-	// Basic validation - can be enhanced based on DuckDB's specific rules
-	match, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, id)
-	return match
-}

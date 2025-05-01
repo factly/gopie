@@ -154,12 +154,18 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
+	go h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+		DatasetID: dataset.ID,
+		ProjectID: project.ID,
+		FilePath:  res.FilePath,
+	})
+
 	h.logger.Info("File upload completed successfully",
 		zap.String("dataset_id", dataset.ID),
 		zap.String("project_id", project.ID))
 
 	// Return success response
-	return ctx.Status(fiber.StatusCreated).JSON(map[string]interface{}{
+	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
 		"data": dataset,
 	})
 }

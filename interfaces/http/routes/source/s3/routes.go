@@ -13,10 +13,11 @@ type httpHandler struct {
 	logger     *logger.Logger
 	olapSvc    *services.OlapService
 	datasetSvc *services.DatasetService
+	aiAgentSvc *services.AIService
 	projectSvc *services.ProjectService
 }
 
-func (h *httpHandler) getMetrics(tableName string) (int, []map[string]interface{}, error) {
+func (h *httpHandler) getMetrics(tableName string) (int, []map[string]any, error) {
 	countResChan := make(chan struct {
 		count int64
 		err   error
@@ -48,14 +49,14 @@ func (h *httpHandler) getMetrics(tableName string) (int, []map[string]interface{
 	}()
 
 	columnsResChan := make(chan struct {
-		columns []map[string]interface{}
+		columns []map[string]any
 		err     error
 	})
 	// Get column descriptions
 	go func() {
 		columns, err := h.olapSvc.ExecuteQuery("desc " + tableName)
 		columnsResChan <- struct {
-			columns []map[string]interface{}
+			columns []map[string]any
 			err     error
 		}{columns, err}
 	}()
@@ -72,8 +73,8 @@ func (h *httpHandler) getMetrics(tableName string) (int, []map[string]interface{
 	return int(countResult.count), columnsRes.columns, nil
 }
 
-func Routes(router fiber.Router, olapSvc *services.OlapService, datasetSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
-	httpHandler := httpHandler{logger, olapSvc, datasetSvc, projectSvc}
+func Routes(router fiber.Router, olapSvc *services.OlapService, datasetSvc *services.DatasetService, projectSvc *services.ProjectService, aiAgent *services.AIService, logger *logger.Logger) {
+	httpHandler := httpHandler{logger, olapSvc, datasetSvc, aiAgent, projectSvc}
 	router.Post("/upload", httpHandler.upload)
 	router.Post("/update", httpHandler.update)
 }
