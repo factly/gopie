@@ -32,6 +32,10 @@ type DatasetStoreRepository interface {
 	CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error)
 	DeleteFailedUploadsByDatasetID(ctx context.Context, datasetID string) error
 	ListFailedUploads(ctx context.Context) ([]*models.FailedDatasetUpload, error)
+
+	CreateDatasetSummary(ctx context.Context, datasetName string, summary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error)
+	DeleteDatasetSummary(ctx context.Context, datasetName string) error
+	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
 }
 
 type ChatStoreRepository interface {

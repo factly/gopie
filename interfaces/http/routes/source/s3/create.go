@@ -122,13 +122,37 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	count, columns, err := h.getMetrics(res.TableName)
+	datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
 	if err != nil {
+		h.logger.Error("Error fetching dataset summary", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Error fetching metrics",
+			"message": "Error fetching dataset summary",
 			"code":    fiber.StatusInternalServerError,
 		})
+	}
+
+	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
+	if err != nil {
+		h.logger.Error("Error creating dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	var columns []map[string]any
+	for _, column := range *datasetSummary {
+		columns = append(columns, map[string]any{
+			"name": column.ColumnName,
+			"type": column.ColumnType,
+		})
+	}
+
+	count := 0
+	if len(*datasetSummary) > 0 {
+		count = int((*datasetSummary)[0].Count)
 	}
 
 	// Create dataset entry for successful upload
@@ -154,11 +178,14 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	go h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: project.ID,
 		FilePath:  res.FilePath,
 	})
+	if err != nil {
+		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error
+	}
 
 	h.logger.Info("File upload completed successfully",
 		zap.String("dataset_id", dataset.ID),
@@ -166,6 +193,9 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 
 	// Return success response
 	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
-		"data": dataset,
+		"data": map[string]any{
+			"dataset": dataset,
+			"summary": summary,
+		},
 	})
 }
