@@ -26,7 +26,7 @@ type DatasetSummary struct {
 	// Count of values
 	Count int64 `json:"count" example:"1000"`
 	// Percentage of null values
-	NullPercentage float64 `json:"null_percentage" example:"2.5"`
+	NullPercentage any `json:"null_percentage" example:"2.5"`
 }
 
 type DatasetSummaryWithName struct {

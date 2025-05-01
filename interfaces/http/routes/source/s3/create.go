@@ -122,37 +122,14 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
+	count, columns, err := h.getMetrics(res.TableName)
 	if err != nil {
-		h.logger.Error("Error fetching dataset summary", zap.Error(err))
+		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Error fetching dataset summary",
+			"message": "Error fetching dataset metrics",
 			"code":    fiber.StatusInternalServerError,
 		})
-	}
-
-	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
-	if err != nil {
-		h.logger.Error("Error creating dataset summary", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	var columns []map[string]any
-	for _, column := range *datasetSummary {
-		columns = append(columns, map[string]any{
-			"name": column.ColumnName,
-			"type": column.ColumnType,
-		})
-	}
-
-	count := 0
-	if len(*datasetSummary) > 0 {
-		count = int((*datasetSummary)[0].Count)
 	}
 
 	// Create dataset entry for successful upload
@@ -174,6 +151,26 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error creating dataset record",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
+	if err != nil {
+		h.logger.Error("Error fetching dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
+	if err != nil {
+		h.logger.Error("Error creating dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset summary",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
