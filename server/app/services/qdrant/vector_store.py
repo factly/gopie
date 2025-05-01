@@ -1,13 +1,14 @@
 import asyncio
 import logging
 from uuid import uuid4
+
 from app.core.config import settings
 from app.core.langchain_config import lc
 from app.services.qdrant.qdrant_setup import (
-    setup_vector_store,
     initialize_qdrant_client,
+    setup_vector_store,
 )
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 
 async def add_documents_to_vector_store(documents, ids=None):
@@ -19,7 +20,6 @@ async def add_documents_to_vector_store(documents, ids=None):
 
     filtered_docs = []
     filtered_ids = []
-
 
     for doc, doc_id in zip(documents, ids):
         project_id = doc.metadata["project_id"]
@@ -58,7 +58,10 @@ async def add_documents_to_vector_store(documents, ids=None):
 
     if filtered_docs:
         await asyncio.get_event_loop().run_in_executor(
-            None, lambda: vector_store.add_documents(documents=filtered_docs, ids=filtered_ids)
+            None,
+            lambda: vector_store.add_documents(
+                documents=filtered_docs, ids=filtered_ids
+            ),
         )
 
 

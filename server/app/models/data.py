@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -11,17 +12,18 @@ class UploadSchemaRequest(BaseModel):
     project_id: str
     dataset_id: str
     file_path: str
-    
+
+
 class Message(BaseModel):
     role: str
     content: str
-
 
 
 class QueryRequest(BaseModel):
     messages: List[Message]
     project_ids: Optional[List[str]] = None
     dataset_ids: Optional[List[str]] = None
+
 
 class Dataset_details(BaseModel):
     id: str

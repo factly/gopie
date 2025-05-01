@@ -80,7 +80,6 @@ async def get_all_datasets() -> List[Dict]:
         List of all datasets
     """
     all_datasets = []
-    return all_datasets
 
     projects = await list_projects()
 
@@ -97,4 +96,4 @@ async def get_all_datasets() -> List[Dict]:
     return all_datasets
 
 
-__tool__ = get_all_datasets
+# __tool__ = get_all_datasets

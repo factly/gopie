@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 from pydantic_settings import BaseSettings
@@ -16,12 +15,12 @@ class Settings(BaseSettings):
     CORS_METHODS: List[str] = ["*"]
     CORS_HEADERS: List[str] = ["*"]
 
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o"
     OPENAI_EMBEDDINGS_MODEL: str = "text-embedding-3-large"
 
-    PORTKEY_API_KEY: str = os.getenv("PORTKEY_API_KEY", "")
-    VIRTUAL_KEY: str = os.getenv("VIRTUAL_KEY", "")
+    PORTKEY_API_KEY: str = ""
+    VIRTUAL_KEY: str = ""
 
     QDRANT_HOST: str = "host.docker.internal"
     QDRANT_COLLECTION: str = "dataset_collection"
@@ -34,11 +33,12 @@ class Settings(BaseSettings):
     HUNTING_API_DESCRIPTION_ENDPOINT: str = (
         "http://host.docker.internal:8003/api/v1/profile/description"
     )
-    FLOWER_API_ENDPOINT: str = os.getenv("FLOWER_API_ENDPOINT", "")
-    GOPIE_API_ENDPOINT: str = os.getenv("GOPIE_API_ENDPOINT", "")
+    FLOWER_API_ENDPOINT: str = ""
+    GOPIE_API_ENDPOINT: str = ""
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
         case_sensitive = True
 
 

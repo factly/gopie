@@ -28,8 +28,6 @@ class EventStatus(Enum):
 
 
 class EventData(BaseModel):
-    """Data structure for event data."""
-
     input: Optional[str] = None
     result: Optional[str] = None
     error: Optional[str] = None
@@ -37,8 +35,6 @@ class EventData(BaseModel):
 
 @dataclass
 class AgentEvent:
-    """Event data structure for agent events."""
-
     event_node: EventNode
     status: EventStatus
     message: str

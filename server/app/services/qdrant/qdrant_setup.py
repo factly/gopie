@@ -6,8 +6,10 @@ from qdrant_client.http.models import Distance, VectorParams
 
 
 def initialize_qdrant_client():
-    client = QdrantClient(url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}", 
-                    check_compatibility=False)
+    client = QdrantClient(
+        url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
+        check_compatibility=False,
+    )
 
     if not collection_exists(client):
         client.create_collection(

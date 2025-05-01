@@ -23,12 +23,6 @@ async def search_schemas(
     """
     Search for schemas using a vector search.
 
-    Args:
-        query: The search query
-        project_id: Optional project ID to filter results
-        dataset_ids: Optional list of dataset IDs to filter results
-        top_k: Number of results to return
-
     Returns:
         List of matching dataset schemas
     """

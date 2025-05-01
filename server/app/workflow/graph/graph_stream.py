@@ -1,8 +1,8 @@
 import json
 import logging
 from typing import AsyncGenerator, List, Optional
-from app.models.data import Message
 
+from app.models.data import Message
 from app.workflow.graph import graph
 
 

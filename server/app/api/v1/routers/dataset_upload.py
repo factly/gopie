@@ -4,7 +4,10 @@ from app.core.session import SingletonAiohttp
 from app.models.data import UploadResponse, UploadSchemaRequest
 from app.services.dataset_info import get_dataset_info
 from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
-from app.services.schema_fetcher import fetch_dataset_schema, initiate_schema_generation
+from app.services.schema_fetcher import (
+    fetch_dataset_schema,
+    initiate_schema_generation,
+)
 from fastapi import APIRouter, HTTPException, status
 
 dataset_router = APIRouter()
@@ -14,6 +17,13 @@ http_session = SingletonAiohttp.get_aiohttp_client()
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
 async def upload_schema(payload: UploadSchemaRequest):
+    """
+    Processes and index dataset schema.
+
+    - `project_id`: The ID of the project where the dataset belongs.
+    - `dataset_id`: The ID of the dataset.
+    - `file_path`: The S3 path of the dataset file.
+    """
     try:
         project_id = payload.project_id
         dataset_id = payload.dataset_id
