@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic_settings import BaseSettings
 
 
@@ -8,19 +6,21 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    LOG_DIR: str = "./server/log"
+    LOG_DIR: str = "./server/logs"
     MAX_RETRY_COUNT: int = 3
 
-    CORS_ORIGINS: List[str] = ["*"]
-    CORS_METHODS: List[str] = ["*"]
-    CORS_HEADERS: List[str] = ["*"]
-
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o"
-    OPENAI_EMBEDDINGS_MODEL: str = "text-embedding-3-large"
+    CORS_ORIGINS: list[str] = ["*"]
+    CORS_METHODS: list[str] = ["*"]
+    CORS_HEADERS: list[str] = ["*"]
 
     PORTKEY_API_KEY: str = ""
-    VIRTUAL_KEY: str = ""
+
+    GEMINI_MODEL: str = "gemini-2.5-pro-preview-03-25"
+    GEMINI_VIRTUAL_KEY: str = ""
+
+    OPENAI_MODEL: str = "gpt-4o"
+    OPENAI_EMBEDDINGS_MODEL: str = "text-embedding-3-large"
+    OPENAI_VIRTUAL_KEY: str = ""
 
     QDRANT_HOST: str = "host.docker.internal"
     QDRANT_COLLECTION: str = "dataset_collection"
