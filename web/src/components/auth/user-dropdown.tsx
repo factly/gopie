@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 
@@ -14,9 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuthSession } from "@/hooks/use-auth-session";
 
 export function UserDropdown() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useAuthSession();
   const isLoading = status === "loading";
   const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 

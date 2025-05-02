@@ -3,7 +3,7 @@ import { JWT } from "next-auth/jwt";
 import ZitadelProvider from "next-auth/providers/zitadel";
 import * as openidClient from "openid-client";
 
-async function refreshAccessToken(token: JWT): Promise<JWT> {
+async function refreshAccessToken(token: JWT): Promise<JWT | null> {
   try {
     const config = await openidClient.discovery(
       new URL(process.env.ZITADEL_ISSUER ?? ""),
@@ -25,11 +25,8 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     };
   } catch (error) {
     console.error("Error during refreshAccessToken", error);
-
-    return {
-      ...token,
-      error: "RefreshAccessTokenError",
-    };
+    // Return null so JWT callback will understand the session is invalid
+    return null;
   }
 }
 
@@ -74,47 +71,69 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         finalToken = token;
       } else {
         if (token.refreshToken) {
-          finalToken = await refreshAccessToken(token);
+          const refreshedToken = await refreshAccessToken(token);
+          if (!refreshedToken) {
+            // If refresh token is invalid, sign the user out
+            return null;
+          }
+          finalToken = refreshedToken;
         } else {
           return null;
         }
       }
 
-      const userInfoEndpoint = `${process.env.ZITADEL_ISSUER}/oidc/v1/userinfo`;
-      const userInfoResponse = await fetch(userInfoEndpoint, {
-        headers: {
-          Authorization: `Bearer ${finalToken.accessToken}`,
-        },
-      });
+      try {
+        const userInfoEndpoint = `${process.env.ZITADEL_ISSUER}/oidc/v1/userinfo`;
+        const userInfoResponse = await fetch(userInfoEndpoint, {
+          headers: {
+            Authorization: `Bearer ${finalToken.accessToken}`,
+          },
+        });
 
-      const userInfo = await userInfoResponse.json();
-      finalToken.user = userInfo;
+        if (!userInfoResponse.ok) {
+          // If userinfo endpoint fails, the token is invalid
+          return null;
+        }
 
-      return finalToken;
+        const userInfo = await userInfoResponse.json();
+        finalToken.user = userInfo;
+
+        return finalToken;
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+        // If we can't fetch user info, invalidate the session
+        return null;
+      }
     },
-    async session({
-      session,
-      token: { user, error: tokenError, accessToken },
-    }) {
+    async session({ session, token }) {
+      // If token is null, return session with proper error
+      if (!token) {
+        return {
+          ...session,
+          user: undefined,
+          error: "RefreshAccessTokenError",
+        };
+      }
+
       session.user = {
         // @ts-expect-error type issue
-        id: user?.id,
+        id: token.user?.id,
         // @ts-expect-error type issue
-        email: user?.email,
+        email: token.user?.email,
         // @ts-expect-error type issue
-        image: user?.image,
+        image: token.user?.image,
         // @ts-expect-error type issue
-        name: user?.name,
+        name: token.user?.name,
         // @ts-expect-error type issue
-        loginName: user?.loginName,
+        loginName: token.user?.loginName,
       };
       // @ts-expect-error type issue
       session.clientId = process.env.ZITADEL_CLIENT_ID;
       // @ts-expect-error type issue
-      session.error = tokenError;
-      if (accessToken) {
+      session.error = token.error;
+      if (token.accessToken) {
         // @ts-expect-error type issue
-        session.accessToken = accessToken;
+        session.accessToken = token.accessToken;
       }
       return session;
     },

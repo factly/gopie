@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useSession } from "next-auth/react";
 import { UserDropdown } from "@/components/auth/user-dropdown";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthSession } from "@/hooks/use-auth-session";
 
 interface AuthStatusProps {
   showName?: boolean;
@@ -18,7 +18,7 @@ export function AuthStatus({
   size = "md",
   className = "",
 }: AuthStatusProps) {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useAuthSession();
   const isLoading = status === "loading";
   const user = session?.user;
   const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
