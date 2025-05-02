@@ -1,9 +1,10 @@
 [project]
+description = "A multidataset-SQL agent for Dataful"
 name = "dataful-agent"
 version = "0.1.0"
-description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
+
 dependencies = [
   "fastapi[standard]>=0.115.12",
   "langchain>=0.3.21",
@@ -18,3 +19,41 @@ dependencies = [
   "python-dotenv>=1.0.1",
   "qdrant-client>=1.13.3",
 ]
+
+[tool.black]
+line-length = 79
+include = '\.pyi?$'
+exclude = '''
+/(
+   .eggs
+  | .git
+  | .venv
+  | .eggs
+  | .cache
+  | __pycache__
+  | _build
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 79
+combine_as_imports = true
+known_first-party = ["app"]
+
+[tool.flake8]
+max-line-length = 79
+exclude = [
+  ".git",
+  ".venv",
+  "__pycache__",
+  "build",
+  "dist",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".tox",
+]
+select = ["E", "W", "F", "C", "B", "N"]
+ignore = ["E203", "W503"]
