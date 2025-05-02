@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Uppy, { UppyFile, Meta } from "@uppy/core";
-import AwsS3 from "@uppy/aws-s3";
-import { Dashboard } from "@uppy/react";
+import { UppyFile, Meta } from "@uppy/core";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +18,7 @@ import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-function sanitizeFileName(name: string): string {
-  // Remove non-alphanumeric characters except for dots and hyphens
-  return name.replace(/[^a-zA-Z0-9.-]/g, "_");
-}
+import { CsvValidationUppy } from "./csv-validation-uppy";
 
 export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -32,45 +26,10 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
   const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
 
-  const uppy = new Uppy({
-    id: "dataset-uploader",
-    restrictions: {
-      maxNumberOfFiles: 1,
-      allowedFileTypes: ["text/csv", ".csv"],
-      requiredMetaFields: ["name"],
-    },
-    autoProceed: false,
-    allowMultipleUploads: false,
-    onBeforeUpload: (files) => {
-      const updatedFiles: {
-        [key: string]: UppyFile<Meta, Record<string, never>>;
-      } = {};
-      Object.keys(files).forEach((fileID) => {
-        const file = files[fileID];
-        const timestamp = new Date().getTime();
-        const sanitizedName = sanitizeFileName(file.name || "");
-        const path = `${projectId}/dataset_${timestamp}_${sanitizedName}`;
-
-        updatedFiles[fileID] = {
-          ...file,
-          name: sanitizedName,
-          meta: {
-            ...file.meta,
-            name: path,
-            projectId,
-            type: "dataset",
-          },
-        };
-      });
-      return updatedFiles;
-    },
-  });
-
-  uppy.use(AwsS3, {
-    endpoint: process.env.NEXT_PUBLIC_COMPANION_URL || "http://localhost:3020",
-  });
-
-  uppy.on("upload-success", async (file, response) => {
+  const handleUploadSuccess = async (
+    file: UppyFile<Meta, Record<string, never>>,
+    response: unknown
+  ) => {
     if (!file) {
       toast.error("No file data available");
       setUploadError("No file data available");
@@ -79,9 +38,11 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
 
     try {
       setUploadError(null);
-      const s3Url = response.uploadURL
-        ? `s3:/${new URL(response.uploadURL).pathname}`
-        : "";
+
+      // Extract s3Url from response
+      const uploadURL = (response as { uploadURL?: string })?.uploadURL;
+      const s3Url = uploadURL ? `s3:/${new URL(uploadURL).pathname}` : "";
+
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
         projectId,
@@ -101,7 +62,6 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
         queryKey: ["datasets"],
       });
       setOpen(false);
-      uppy.cancelAll();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -116,20 +76,8 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
       } else {
         toast.error(`Failed to source dataset: ${errorMessage}`);
       }
-
-      uppy.cancelAll();
     }
-  });
-
-  uppy.on("upload-error", (file, error) => {
-    setUploadError(error.message);
-    toast.error(`Upload failed: ${error.message}`);
-  });
-
-  uppy.on("restriction-failed", (file, error) => {
-    setUploadError(error.message);
-    toast.error(error.message);
-  });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -156,14 +104,12 @@ export function UploadDatasetDialog({ projectId }: { projectId: string }) {
               <AlertDescription>{uploadError}</AlertDescription>
             </Alert>
           )}
-          <Dashboard
-            uppy={uppy}
-            proudlyDisplayPoweredByUppy={false}
-            showRemoveButtonAfterComplete={true}
+
+          <CsvValidationUppy
+            projectId={projectId}
+            onUploadSuccess={handleUploadSuccess}
             height={400}
             width="100%"
-            theme="light"
-            className="!bg-background !border-border !shadow-none rounded-lg"
             metaFields={[
               {
                 id: "description",
