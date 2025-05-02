@@ -177,3 +177,4 @@ TODO.md
 qdrant_storage
 *.html
 tests
+ruff

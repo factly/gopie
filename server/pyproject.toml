@@ -1,7 +1,7 @@
 [project]
-description = "A multidataset-SQL agent for Dataful"
 name = "dataful-agent"
 version = "0.1.0"
+description = "A multidataset-SQL agent for Dataful"
 readme = "README.md"
 requires-python = ">=3.11"
 
@@ -16,7 +16,6 @@ dependencies = [
   "pandas>=2.2.3",
   "portkey-ai>=1.11.1",
   "pydantic>=2.10.6",
-  "python-dotenv>=1.0.1",
   "qdrant-client>=1.13.3",
 ]
 
@@ -25,7 +24,7 @@ line-length = 79
 include = '\.pyi?$'
 exclude = '''
 /(
-   .eggs
+  | .eggs
   | .git
   | .venv
   | .eggs
@@ -41,7 +40,6 @@ exclude = '''
 profile = "black"
 line_length = 79
 combine_as_imports = true
-known_first-party = ["app"]
 
 [tool.flake8]
 max-line-length = 79
