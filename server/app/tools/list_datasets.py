@@ -1,8 +1,7 @@
-from typing import Dict, List
+from langchain_core.tools import tool
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from langchain_core.tools import tool
 
 BASE_URL = settings.GOPIE_API_ENDPOINT
 
@@ -11,7 +10,7 @@ async def list_datasets(
     project_id: str,
     limit: int = 10,
     page: int = 1,
-) -> List[Dict]:
+) -> list[dict]:
     """
     List all datasets for a specific project.
 
@@ -40,7 +39,7 @@ async def list_datasets(
         return []
 
 
-async def list_projects(limit: int = 10, page: int = 1) -> List[Dict]:
+async def list_projects(limit: int = 10, page: int = 1) -> list[dict]:
     """
     List all available projects.
 
@@ -69,7 +68,7 @@ async def list_projects(limit: int = 10, page: int = 1) -> List[Dict]:
 
 
 @tool
-async def get_all_datasets() -> List[Dict]:
+async def get_all_datasets() -> list[dict]:
     """
     Get all datasets from all projects.
 

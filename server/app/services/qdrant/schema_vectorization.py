@@ -3,21 +3,26 @@ import json
 import logging
 from typing import Any
 
-from app.models.data import Dataset_details
+from langchain_core.documents import Document
+
+from app.models.data import DatasetDetails
 from app.services.dataset_info import format_schema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
-from langchain_core.documents import Document
+
+background_tasks = set()
 
 
 def store_schema_in_qdrant(
     schema: Any,
-    dataset_details: Dataset_details,
+    dataset_details: DatasetDetails,
     dataset_id: str,
     project_id: str,
     file_path: str,
 ) -> bool:
     try:
-        formatted_schema = format_schema(schema, project_id, dataset_id, file_path)
+        formatted_schema = format_schema(
+            schema, project_id, dataset_id, file_path
+        )
 
         formatted_schema["name"] = dataset_details.alias
         formatted_schema["dataset_name"] = dataset_details.name
@@ -35,11 +40,17 @@ def store_schema_in_qdrant(
             },
         )
 
-        asyncio.create_task(add_documents_to_vector_store(documents=[document]))
+        task = asyncio.create_task(
+            add_documents_to_vector_store(documents=[document])
+        )
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
+
+        logging.info("Schema indexing task created successfully")
 
         logging.info("Schema indexing task created successfully")
         return True
 
     except Exception as e:
-        logging.error(f"Error storing schema in Qdrant: {str(e)}")
+        logging.error(f"Error storing schema in Qdrant: {e!s}")
         return False

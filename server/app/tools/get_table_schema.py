@@ -1,13 +1,14 @@
-from typing import Any, Dict
+from typing import Any
 
-from app.core.config import settings
-from app.services.qdrant.qdrant_setup import initialize_qdrant_client
 from langchain_core.tools import tool
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
+from app.core.config import settings
+from app.services.qdrant.qdrant_setup import initialize_qdrant_client
+
 
 @tool
-async def get_table_schema(dataset_name: str) -> Dict[str, Any]:
+async def get_table_schema(dataset_name: str) -> dict[str, Any]:
     """
     Get the schema of a specific table from Qdrant database.
 
@@ -38,7 +39,9 @@ async def get_table_schema(dataset_name: str) -> Dict[str, Any]:
         )
 
         if not search_result[0]:
-            return {"error": f"Dataset '{dataset_name}' not found in the database."}
+            return {
+                "error": f"Dataset '{dataset_name}' not found in the database."
+            }
 
         point = search_result[0][0]
 
@@ -46,7 +49,9 @@ async def get_table_schema(dataset_name: str) -> Dict[str, Any]:
         schema = payload.get("metadata", {}).get("schema", None)
 
         if not schema:
-            return {"error": "Schema information not available for this dataset."}
+            return {
+                "error": "Schema information not available for this dataset."
+            }
 
         for column in schema.get("columns_details", []):
             if "stats" in column:
@@ -55,7 +60,7 @@ async def get_table_schema(dataset_name: str) -> Dict[str, Any]:
         return schema
 
     except Exception as e:
-        return {"error": f"Error retrieving schema from Qdrant: {str(e)}"}
+        return {"error": f"Error retrieving schema from Qdrant: {e!s}"}
 
 
 __tool__ = get_table_schema

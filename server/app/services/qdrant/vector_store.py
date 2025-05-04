@@ -2,13 +2,14 @@ import asyncio
 import logging
 from uuid import uuid4
 
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
+
 from app.core.config import settings
 from app.core.langchain_config import lc
 from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 
 async def add_documents_to_vector_store(documents, ids=None):
@@ -21,7 +22,7 @@ async def add_documents_to_vector_store(documents, ids=None):
     filtered_docs = []
     filtered_ids = []
 
-    for doc, doc_id in zip(documents, ids):
+    for doc, doc_id in zip(documents, ids, strict=False):
         project_id = doc.metadata["project_id"]
         dataset_id = doc.metadata["dataset_id"]
         file_path = doc.metadata["file_path"]
@@ -49,7 +50,9 @@ async def add_documents_to_vector_store(documents, ids=None):
 
         if search_result[0]:
             logging.info(
-                f"Document with project_id={project_id}, dataset_id={dataset_id}, file_path={file_path} already exists in Qdrant. Skipping."
+                f"Document with project_id={project_id}, "
+                f"dataset_id={dataset_id}, "
+                f"file_path={file_path} already exists in Qdrant. Skipping."
             )
             continue
 
@@ -83,10 +86,13 @@ def perform_similarity_search(
     """
 
     try:
-        return vector_store.similarity_search(query, k=top_k, filter=query_filter)
+        return vector_store.similarity_search(
+            query, k=top_k, filter=query_filter
+        )
     except Exception as e:
         logging.error(
-            f"Error performing similarity search: {str(e)} | Filter criteria: {query_filter}"
+            f"Error performing similarity search: {e!s} | "
+            f"Filter criteria: {query_filter}"
         )
         if query_filter:
             logging.info("Attempting unfiltered search as fallback...")

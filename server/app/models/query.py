@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, TypedDict
 
 
 @dataclass
@@ -11,13 +11,13 @@ class SubQueryInfo:
 
     query_text: str
     sql_query_used: str
-    sql_query_explanation: Optional[str] = None
-    tables_used: Optional[str] = None
-    query_type: Optional[str] = None
+    sql_query_explanation: str | None = None
+    tables_used: str | None = None
+    query_type: str | None = None
     query_result: Any = None
     tool_used_result: Any = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "query_text": self.query_text,
             "sql_query_used": self.sql_query_used,
@@ -29,17 +29,25 @@ class SubQueryInfo:
         }
 
 
+class QueryInfo(TypedDict, total=False):
+    tables_used: str | None
+    query_type: str | None
+    query_result: Any
+    tool_used_result: Any
+
+
 @dataclass
 class QueryResult:
     """
-    A class to represent the result of a query execution along with its metadata
+    Aggregates the result of user query with the subqueries executed to
+    generate the result.
     """
 
     original_user_query: str
     execution_time: float
     timestamp: datetime
-    error_message: Optional[list[dict]] = None
-    subqueries: List[SubQueryInfo] = field(default_factory=list)
+    error_message: list[dict] | None = None
+    subqueries: list[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
         if not hasattr(self, "timestamp"):
@@ -52,10 +60,7 @@ class QueryResult:
         self,
         query_text: str,
         sql_query_used: str,
-        tables_used: Optional[str] = None,
-        query_type: Optional[str] = None,
-        query_result: Any = None,
-        tool_used_result: Any = None,
+        query_info: QueryInfo | None = None,
     ):
         """
         Add a subquery with detailed information
@@ -63,10 +68,14 @@ class QueryResult:
         subquery_info = SubQueryInfo(
             query_text=query_text,
             sql_query_used=sql_query_used,
-            tables_used=tables_used,
-            query_type=query_type,
-            query_result=query_result,
-            tool_used_result=tool_used_result,
+            tables_used=query_info.get("tables_used") if query_info else None,
+            query_type=query_info.get("query_type") if query_info else None,
+            query_result=(
+                query_info.get("query_result") if query_info else None
+            ),
+            tool_used_result=(
+                query_info.get("tool_used_result") if query_info else None
+            ),
         )
         self.subqueries.append(subquery_info)
 
@@ -82,7 +91,7 @@ class QueryResult:
             self.error_message = []
         self.error_message.append({error_origin_type: error_message})
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "original_user_query": self.original_user_query,
             "execution_time": self.execution_time,

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from openai import BaseModel
 
@@ -28,9 +27,9 @@ class EventStatus(Enum):
 
 
 class EventData(BaseModel):
-    input: Optional[str] = None
-    result: Optional[str] = None
-    error: Optional[str] = None
+    input: str | None = None
+    result: str | None = None
+    error: str | None = None
 
 
 @dataclass

@@ -1,7 +1,6 @@
 import importlib
 import pkgutil
 from pathlib import Path
-from typing import Dict
 
 from langchain_core.tools import StructuredTool
 
@@ -10,12 +9,12 @@ for _, module_name, _ in pkgutil.iter_modules([str(package_dir)]):
     if module_name != "__init__":
         importlib.import_module(f".{module_name}", __package__)
 
-TOOLS: Dict[str, StructuredTool] = {}
+TOOLS: dict[str, StructuredTool] = {}
 
 for module_name in list(locals()):
     module = locals()[module_name]
     if hasattr(module, "__tool__"):
-        tool: StructuredTool = getattr(module, "__tool__")
+        tool: StructuredTool = module.__tool__
         TOOLS[tool.name] = tool
 
 __all__ = ["TOOLS"]

@@ -1,12 +1,14 @@
-from typing import Any, Dict
+from http import HTTPStatus
+from typing import Any
 
 import requests
+
 from app.core.config import settings
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
 
-def execute_sql_query(query: str) -> Dict[str, Any]:
+def execute_sql_query(query: str) -> dict[str, Any]:
     """
     Execute SQL query using the external SQL API
 
@@ -19,20 +21,25 @@ def execute_sql_query(query: str) -> Dict[str, Any]:
     try:
         response = requests.post(SQL_API_ENDPOINT, json={"query": query})
 
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
             error_data = response.json()
-            error_message = error_data.get("message", "Unknown error from SQL API")
+            error_message = error_data.get(
+                "message", "Unknown error from SQL API"
+            )
 
             return {
-                "error": f"SQL API error ({response.status_code}): {error_message}",
+                "error": f"SQL API error ({response.status_code}): "
+                f"{error_message}",
                 "query_executed": query,
             }
 
         result_data = response.json()
 
-        if not result_data or (isinstance(result_data, list) and len(result_data) == 0):
+        if not result_data or (
+            isinstance(result_data, list) and len(result_data) == 0
+        ):
             return {
-                "result": "Query executed successfully but returned no results",
+                "result": "No results found for the query",
                 "query_executed": query,
                 "data": [],
             }
@@ -51,4 +58,7 @@ def execute_sql_query(query: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        return {"error": f"Query execution error: {str(e)}", "query_executed": query}
+        return {
+            "error": f"Query execution error: {e!s}",
+            "query_executed": query,
+        }

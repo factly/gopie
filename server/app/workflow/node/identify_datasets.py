@@ -1,21 +1,27 @@
 import json
 import logging
-from typing import Any, List
+from typing import Any
+
+from langchain_core.output_parsers import JsonOutputParser
 
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.schema import DatasetSchema
 from app.services.qdrant.dataset_search import search_schemas
 from app.workflow.graph.types import State
-from langchain_core.output_parsers import JsonOutputParser
 
 
 def create_llm_prompt(
-    user_query: str, available_datasets_schemas: List[DatasetSchema]
+    user_query: str, available_datasets_schemas: list[DatasetSchema]
 ) -> str:
-    """Create a prompt for the LLM to identify the relevant dataset and required columns"""
+    """
+    Create a prompt for the LLM to identify the relevant dataset and required
+    columns
+    """
     return f"""
-        You are an AI assistant specialized in data analysis. Your role is to help users analyze data by identifying relevant datasets and column values.
+        You are an AI assistant specialized in data analysis. Your role is to
+        help users analyze data by identifying relevant datasets and column
+        values.
 
         USER QUERY:
         "{user_query}"
@@ -24,39 +30,47 @@ def create_llm_prompt(
         {json.dumps(available_datasets_schemas, indent=2)}
 
         INSTRUCTIONS:
-        1. The datasets above have been pre-filtered using semantic search based on relevance to the user query.
+        1. The datasets above have been pre-filtered using semantic search
+           based on relevance to the user query.
 
-        2. Based on the user query, confirm which of these pre-filtered datasets best matches the user's needs.
+        2. Based on the user query, confirm which of these pre-filtered
+           datasets best matches the user's needs.
            - Consider the content, columns, and structure of each dataset
-           - The datasets are already ranked by relevance, but you should still critically evaluate them
-           - You may select multiple datasets if the query spans multiple datasets
-           - You can override the vector search ranking if you have strong reasons
+           - The datasets are already ranked by relevance, but you should
+             still critically evaluate them
+           - You may select multiple datasets if the query spans multiple
+             datasets
+           - You can override the vector search ranking if you have strong
+             reasons
            - If no dataset is suitable, provide clear reasoning why
 
         3. For each selected dataset, identify:
            - The specific columns that will be needed for the analysis
-           - For string columns in datasets list the specific string column values that might be relevant to the query
+           - For string columns in datasets list the specific string
+             column values that might be relevant to the query
            - Don't include the column names that are numeric type
 
         RESPONSE FORMAT:
         Respond in this JSON format:
         {{
             "selected_dataset": ["dataset_name1", "dataset_name2"],
-            "reasoning": "Clear explanation of why these datasets were selected",
+            "reasoning": "Clear explanation of why these datasets were
+                        selected",
             "column_predicted": [
                 {{
                     "dataset": "dataset_name1",
                     "columns": [
                         {{
                             "name": "column_name",
-                            "expected_values": ["value1", "value2", "value3"] // Include if the column contains string values
+                            "expected_values": ["value1", "value2", "value3"]
                         }}
                     ]
                 }}
             ]
         }}
 
-        IMPORTANT: For all dataset references, always use the value from the 'name' field of the dataset (NOT the 'dataset_name' field).
+        IMPORTANT: For all dataset references, always use the value from
+        the 'name' field of the dataset (NOT the 'dataset_name' field).
     """
 
 
@@ -68,7 +82,9 @@ async def identify_datasets(state: State):
     parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
     user_query = (
-        state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
+        state.get("subqueries")[query_index]
+        if state.get("subqueries")
+        else "No input"
     )
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
@@ -87,7 +103,8 @@ async def identify_datasets(state: State):
 
         except Exception as e:
             logging.warning(
-                f"Vector search error: {str(e)}. Unable to retrieve dataset information."
+                f"Vector search error: {e!s}. Unable to retrieve dataset "
+                "information."
             )
 
         if not semantic_searched_datasets:
@@ -96,7 +113,9 @@ async def identify_datasets(state: State):
                 "datasets": None,
                 "messages": [
                     ErrorMessage.from_text(
-                        json.dumps({"error": "No relevant datasets found"}, indent=2)
+                        json.dumps(
+                            {"error": "No relevant datasets found"}, indent=2
+                        )
                     )
                 ],
             }
@@ -117,16 +136,16 @@ async def identify_datasets(state: State):
             if schema.get("name") in selected_datasets
         ]
 
-        name_to_dataset_name_mapping = {}
+        dataset_name_mapping = {}
         for schema in filtered_dataset_schemas:
-            name_to_dataset_name_mapping[schema.get("name")] = schema.get(
+            dataset_name_mapping[schema.get("name")] = schema.get(
                 "dataset_name", schema.get("name")
             )
 
         datasets_info = {
             "column_assumptions": column_assumptions,
             "schemas": filtered_dataset_schemas,
-            "name_to_actual_dataset_name_mapping": name_to_dataset_name_mapping,
+            "dataset_name_mapping": dataset_name_mapping,
         }
 
         return {
@@ -134,17 +153,21 @@ async def identify_datasets(state: State):
             "datasets_info": datasets_info,
             "datasets": selected_datasets,
             "messages": [
-                IntermediateStep.from_text(json.dumps(parsed_content, indent=2))
+                IntermediateStep.from_text(
+                    json.dumps(parsed_content, indent=2)
+                )
             ],
         }
 
     except Exception as e:
-        error_msg = f"Error identifying datasets: {str(e)}"
+        error_msg = f"Error identifying datasets: {e!s}"
         query_result.add_error_message(str(e), "Error identifying datasets")
         return {
             "query_result": query_result,
             "datasets": None,
             "messages": [
-                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+                ErrorMessage.from_text(
+                    json.dumps({"error": error_msg}, indent=2)
+                )
             ],
         }

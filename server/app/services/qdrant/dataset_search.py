@@ -1,5 +1,7 @@
 import logging
-from typing import List, Optional
+
+from langchain_openai import OpenAIEmbeddings
+from qdrant_client import models
 
 from app.core.config import settings
 from app.models.schema import DatasetSchema
@@ -9,17 +11,15 @@ from app.services.qdrant.vector_store import (
     setup_vector_store,
 )
 from app.services.schema_fetcher import fetch_dataset_schema
-from langchain_openai import OpenAIEmbeddings
-from qdrant_client import models
 
 
 async def search_schemas(
     user_query: str,
     embeddings: OpenAIEmbeddings,
-    project_ids: Optional[List[str]] = None,
-    dataset_ids: Optional[List[str]] = None,
+    project_ids: list[str] | None = None,
+    dataset_ids: list[str] | None = None,
     top_k: int = settings.QDRANT_TOP_K,
-) -> List[DatasetSchema]:
+) -> list[DatasetSchema]:
     """
     Search for schemas using a vector search.
 
@@ -77,9 +77,11 @@ async def search_schemas(
 
             schemas.append(formatted_schema)
 
-        logging.info(f"Found {len(schemas)} schemas matching query: {user_query}")
+        logging.info(
+            f"Found {len(schemas)} schemas matching query: {user_query}"
+        )
         return schemas
 
     except Exception as e:
-        logging.error(f"Error searching schemas: {str(e)}")
+        logging.error(f"Error searching schemas: {e!s}")
         return []

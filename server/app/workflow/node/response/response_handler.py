@@ -1,6 +1,8 @@
 from app.models.message import ErrorMessage
 from app.workflow.graph.types import State
 
+MAX_RETRIES = 3
+
 
 def route_response_handler(state: State) -> str:
     """Route to the appropriate response handler based on the state"""
@@ -11,7 +13,7 @@ def route_response_handler(state: State) -> str:
     query_index = state.get("subquery_index", 0)
 
     if isinstance(message, ErrorMessage):
-        if retry_count >= 3:
+        if retry_count >= MAX_RETRIES:
             return "max_iterations_reached"
 
     if len(subqueries) - 1 > query_index:

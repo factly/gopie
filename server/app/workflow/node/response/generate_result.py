@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from app.core.langchain_config import lc
 from app.models.message import AIMessage, ErrorMessage
@@ -7,7 +7,7 @@ from app.models.query import QueryResult
 from app.workflow.graph.types import State
 
 
-async def generate_result(state: State) -> Dict[str, List[Any]]:
+async def generate_result(state: State) -> dict[str, list[Any]]:
     """Generate results of the executed query."""
     query_result = state.get("query_result")
     if query_result:
@@ -16,9 +16,11 @@ async def generate_result(state: State) -> Dict[str, List[Any]]:
         print("=" * 50)
         print(
             json.dumps(
-                query_result.to_dict()
-                if hasattr(query_result, "to_dict")
-                else query_result,
+                (
+                    query_result.to_dict()
+                    if hasattr(query_result, "to_dict")
+                    else query_result
+                ),
                 indent=2,
             )
         )
@@ -68,7 +70,7 @@ async def generate_result(state: State) -> Dict[str, List[Any]]:
 
 async def _handle_conversational_query(
     state: State, query_result: QueryResult
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """Handle conversational or tool-only queries"""
     user_query = query_result.original_user_query
     tool_results = []
@@ -80,7 +82,11 @@ async def _handle_conversational_query(
 
     prompt = f"""
     User Query: "{user_query}"
-    Available Context: {json.dumps(tool_results, indent=2) if tool_results else "No additional context available."}
+    Available Context: {
+        json.dumps(tool_results, indent=2)
+        if tool_results
+        else "No additional context available."
+    }
 
     Instructions:
     - Incorporate tool results naturally if relevant
@@ -97,7 +103,7 @@ async def _handle_conversational_query(
 
 async def _handle_data_query(
     state: State, query_result: QueryResult
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """Handle data analysis queries"""
     user_query = query_result.original_user_query
     results = []
@@ -121,7 +127,8 @@ async def _handle_data_query(
                     else "No explanation provided"
                 )
                 sql_with_explanations.append(
-                    f"SQL: {subquery.sql_query_used}\nExplanation: {explanation}"
+                    f"SQL: {subquery.sql_query_used}\n"
+                    f"Explanation: {explanation}"
                 )
 
     if not results and not tool_used_results:
@@ -131,22 +138,35 @@ async def _handle_data_query(
     Context:
     - Original User Query: "{user_query}"
     - SQL Queries with Explanations:
-      {" ".join(sql_with_explanations) if sql_with_explanations else "No SQL queries were executed."}
+      {
+          " ".join(sql_with_explanations)
+          if sql_with_explanations
+          else "No SQL queries were executed."
+      }
     - Results: {json.dumps(results, indent=2)}
-    - Tool Results: {json.dumps(tool_used_results, indent=2) if tool_used_results else "No additional context available."}
-    - Errors encountered: {json.dumps(errors, indent=2) if errors else "No errors encountered."}
+    - Tool Results: {
+        json.dumps(tool_used_results, indent=2)
+        if tool_used_results
+        else "No additional context available."
+    }
 
     Instructions:
         1. You are answering: "{user_query}"
-        2. Provide direct, concise answers based on the available data, but don't mention that you got information from SQL query results. You should directly answer the original user query.
+        2. Provide direct, concise answers based on the available data,
+           but don't mention that you got information from SQL query results.
+           You should directly answer the original user query.
         3. Present key insights first
         4. Format numbers properly (1,000,000, ₹, etc.)
         5. Include trends and patterns for financial/statistical data
         6. Use clear comparative language
         7. Only use facts from query results
-        8. If there were errors in some parts of the query, acknowledge them briefly but focus on the data that was successfully retrieved
-        9. Be transparent about limitations caused by errors without being negative
-        10. If the data seems insufficient to fully answer the query, clearly state what aspects you can answer and what remains unclear
+        8. If there were errors in some parts of the query,
+           acknowledge them briefly but focus on the data that was
+         successfully retrieved
+        9. Be transparent about limitations caused by errors without
+        being negative
+        10. If the data seems insufficient to fully answer the query,
+        clearly state what aspects you can answer and what remains unclear
     """
 
     response = await lc.llm.ainvoke(prompt)
@@ -156,17 +176,19 @@ async def _handle_data_query(
 
 async def _handle_empty_results(
     user_query: str = "", errors: Any = None
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """Handle empty query results with a more personalized response"""
     prompt = f"""
     The user asked: "{user_query}"
 
-    I need to inform them that I couldn't find any matching data in a helpful way.
+    I need to inform them that I couldn't find any matching data in a
+    helpful way.
 
     Instructions:
     1. Be empathetic but professional
     2. Specifically mention their query topic
-    3. Suggest 2-3 possible alternative approaches or related questions they might try
+    3. Suggest 2-3 possible alternative approaches or related questions they
+       might try
     4. If there were errors, briefly acknowledge them without technical details
     """
 
@@ -175,11 +197,13 @@ async def _handle_empty_results(
             "messages": [
                 AIMessage(
                     content=(
-                        "I analyzed your query but couldn't find matching data. This could be because:\n"
+                        "I analyzed your query but couldn't find matching data"
+                        "This could be because:\n"
                         "- The data isn't in our current datasets\n"
                         "- The query needs rephrasing\n"
                         "- Specific filters might be excluding all results\n\n"
-                        "Could you try rephrasing your question or asking about a different aspect?"
+                        "Could you try rephrasing your question or asking "
+                        "about a different aspect?"
                     )
                 )
             ]

@@ -1,9 +1,11 @@
 import asyncio
 import logging
+from http import HTTPStatus
+
+from fastapi import HTTPException
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from fastapi import HTTPException
 
 http_session = SingletonAiohttp.get_aiohttp_client()
 
@@ -13,7 +15,7 @@ FLOWER_API_ENDPOINT = settings.FLOWER_API_ENDPOINT + "/api/task/result"
 
 
 async def handle_api_response(response, operation_name):
-    if response.status != 200:
+    if response.status != HTTPStatus.OK:
         error_text = await response.text()
         raise HTTPException(
             status_code=response.status,
@@ -26,20 +28,24 @@ async def check_task_status(
     task_id: str, max_retries: int = 10, delay: float = 2.0
 ) -> bool:
     headers = {"accept": "application/json"}
-    FLOWER_API_URL = f"{FLOWER_API_ENDPOINT}/{task_id}"
+    flower_api_url = f"{FLOWER_API_ENDPOINT}/{task_id}"
 
     for _ in range(max_retries):
         try:
-            response = await http_session.get(FLOWER_API_URL, headers=headers)
-            if response.status != 200:
-                logging.warning(f"Failed to get task status: {await response.text()}")
+            response = await http_session.get(flower_api_url, headers=headers)
+            if response.status != HTTPStatus.OK:
+                logging.warning(
+                    f"Failed to get task status: {await response.text()}"
+                )
                 await asyncio.sleep(delay)
                 continue
 
             data = await response.json()
             state = data.get("state", "").upper()
 
-            logging.info(f"Task {task_id} state: {state}, result: {data.get('result')}")
+            logging.info(
+                f"Task {task_id} state: {state}, result: {data.get('result')}"
+            )
 
             if state == "SUCCESS":
                 return True
@@ -49,7 +55,7 @@ async def check_task_status(
             await asyncio.sleep(delay)
 
         except Exception as e:
-            logging.error(f"Error checking task status: {str(e)}")
+            logging.error(f"Error checking task status: {e!s}")
             await asyncio.sleep(delay)
 
     return False
@@ -57,7 +63,10 @@ async def check_task_status(
 
 async def initiate_schema_generation(file_path: str):
     try:
-        headers = {"accept": "application/json", "Content-Type": "application/json"}
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json",
+        }
 
         prefetch_payload = {
             "urls": [file_path],
@@ -70,17 +79,19 @@ async def initiate_schema_generation(file_path: str):
             PREFETCH_API_URL, json=prefetch_payload, headers=headers
         )
 
-        response_data = await handle_api_response(prefetch_response, "Prefetch")
+        response_data = await handle_api_response(
+            prefetch_response, "Prefetch"
+        )
         return response_data
 
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Error in initiate_schema_generation: {str(e)}")
+        logging.error(f"Error in initiate_schema_generation: {e!s}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error in schema generation initiation: {str(e)}",
-        )
+            detail=f"Error in schema generation initiation: {e!s}",
+        ) from e
 
 
 async def fetch_dataset_schema(
@@ -94,14 +105,16 @@ async def fetch_dataset_schema(
             if not task_id:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Invalid prefetch response: missing task_id. Response: {prefetch_data}",
+                    detail=f"Invalid prefetch response: missing task_id. "
+                    f"Response: {prefetch_data}",
                 )
 
             task_success = await check_task_status(task_id)
             if not task_success:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Prefetch task failed or timed out. You can track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
+                    detail=f"Prefetch task failed or timed out. "
+                    f"Track the status at: {FLOWER_API_ENDPOINT}/{task_id}",
                 )
 
         profile_payload = {
@@ -109,7 +122,10 @@ async def fetch_dataset_schema(
             "samples_to_show": 10,
         }
 
-        headers = {"accept": "application/json", "Content-Type": "application/json"}
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json",
+        }
 
         schema_response = await http_session.get(
             PROFILE_API_URL, params=profile_payload, headers=headers
@@ -122,7 +138,7 @@ async def fetch_dataset_schema(
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Unexpected error in fetch_dataset_schema: {str(e)}")
+        logging.error(f"Unexpected error in fetch_dataset_schema: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Error fetching dataset schema: {str(e)}"
-        )
+            status_code=500, detail=f"Error fetching dataset schema: {e!s}"
+        ) from e

@@ -6,8 +6,6 @@ event_dispatcher = AgentEventDispatcher()
 
 
 def create_event_wrapper(name: str, func):
-    """Create an event-wrapped async function for graph nodes."""
-
     async def wrapped_func(state: State):
         try:
             await event_dispatcher.dispatch_event(

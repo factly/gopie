@@ -1,26 +1,30 @@
 import json
 import logging
-from typing import AsyncGenerator, List, Optional
+from collections.abc import AsyncGenerator
 
-from app.models.data import Message
+from app.models.router import Message
 from app.workflow.graph import graph
 
 
 async def stream_graph_updates(
-    messages: List[Message],
-    dataset_ids: Optional[List[str]] = None,
-    project_ids: Optional[List[str]] = None,
+    messages: list[Message],
+    dataset_ids: list[str] | None = None,
+    project_ids: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Stream graph updates for user input with event tracking.
+    """
+    Stream graph updates for user input with event tracking.
 
     Args:
         user_input (str): The user's input query
-        dataset_ids (List[str], optional): Specific dataset IDs to use for the query
+        dataset_ids (List[str], optional): Specific dataset IDs to use for the
+                                           query
 
     Yields:
         str: JSON-formatted event data for streaming
     """
+
     input_state = {
+        # messages are converted to LangChain message format
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
@@ -36,7 +40,7 @@ async def stream_graph_updates(
         error_event = json.dumps(
             {
                 "type": "error",
-                "message": f"Error during streaming: {str(e)}",
+                "message": f"Error during streaming: {e!s}",
                 "data": {"error": str(e)},
             },
             indent=2,

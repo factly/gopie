@@ -1,8 +1,9 @@
-from app.core.config import settings
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
+
+from app.core.config import settings
 
 
 def initialize_qdrant_client():

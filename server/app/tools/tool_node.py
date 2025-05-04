@@ -1,17 +1,23 @@
 import json
 from typing import TYPE_CHECKING
 
-from app.models.event import EventData, EventNode, EventStatus
 from langchain_core.messages import ToolMessage
+
+from app.models.event import EventData, EventNode, EventStatus
 
 if TYPE_CHECKING:
     from app.workflow.events.dispatcher import AgentEventDispatcher
 
 
 class ToolNode:
-    """A node that runs the tools requested in the last AIMessage and returns to the calling node"""
+    """
+    A node that runs the tools requested in the last AIMessage and
+    returns to the calling node
+    """
 
-    def __init__(self, tools: list, event_dispatcher: "AgentEventDispatcher") -> None:
+    def __init__(
+        self, tools: list, event_dispatcher: "AgentEventDispatcher"
+    ) -> None:
         self.tools = {tool.name: tool for tool in tools}
         self.event_dispatcher = event_dispatcher
 
@@ -44,7 +50,9 @@ class ToolNode:
                 event_node=EventNode.TOOL_END,
                 status=EventStatus.COMPLETED,
                 data=EventData(
-                    result=json.dumps({"tool": tool_name, "result": tool_result})
+                    result=json.dumps(
+                        {"tool": tool_name, "result": tool_result}
+                    )
                 ),
             )
 
@@ -58,7 +66,9 @@ class ToolNode:
 
         query_result = state.get("query_result", [])
         query_index = state.get("subquery_index", -1)
-        query_result.subqueries[query_index].tool_used_result = all_tool_results
+        query_result.subqueries[
+            query_index
+        ].tool_used_result = all_tool_results
 
         return {
             "query_result": query_result,

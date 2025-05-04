@@ -1,10 +1,8 @@
-from typing import Optional
-
 import aiohttp
 
 
 class SingletonAiohttp:
-    aiohttp_client: Optional[aiohttp.ClientSession] = None
+    aiohttp_client: aiohttp.ClientSession | None = None
 
     @classmethod
     def get_aiohttp_client(cls) -> aiohttp.ClientSession:

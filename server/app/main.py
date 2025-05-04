@@ -3,13 +3,16 @@ import sys
 import time
 
 import uvicorn
-from app.api.v1.routers.dataset_upload import dataset_router as schema_upload_router
-from app.api.v1.routers.query import router as query_router
-from app.core.config import settings
-from app.core.session import SingletonAiohttp
 from fastapi import FastAPI, Request
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.routers.dataset_upload import (
+    dataset_router as schema_upload_router,
+)
+from app.api.v1.routers.query import router as query_router
+from app.core.config import settings
+from app.core.session import SingletonAiohttp
 
 
 @asynccontextmanager
@@ -59,5 +62,9 @@ app.include_router(
 
 def start():
     uvicorn.run(
-        "app.main:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info",
     )

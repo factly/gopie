@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 
 class AnalysisInfo(TypedDict):
@@ -12,7 +12,7 @@ class ColumnSchema(TypedDict):
     description: str
     type: str
     sample_values: Any
-    non_null_count: Optional[int]
+    non_null_count: int | None
 
 
 class DatasetSchema(TypedDict):
@@ -25,10 +25,10 @@ class DatasetSchema(TypedDict):
     analysis: AnalysisInfo
     row_count: int
     col_count: int
-    columns_details: List[ColumnSchema]
-    columns: List[str]
+    columns_details: list[ColumnSchema]
+    columns: list[str]
 
-    alerts: Optional[List[str]]
-    duplicates: Optional[Any]
-    correlations: Optional[Any]
-    missing_values: Optional[Any]
+    alerts: list[str] | None
+    duplicates: Any | None
+    correlations: Any | None
+    missing_values: Any | None

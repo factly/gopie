@@ -1,9 +1,10 @@
 import json
 
+from langchain_core.output_parsers import JsonOutputParser
+
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
 from app.workflow.graph.types import State
-from langchain_core.output_parsers import JsonOutputParser
 
 
 def create_query_prompt(
@@ -19,10 +20,12 @@ def create_query_prompt(
         Previous attempt failed with this error:
         {error_message}
 
-        Please fix the issues in the query and try again. This is attempt {attempt} of 3.
+        Please fix the issues in the query and try again. This is attempt
+        {attempt} of 3.
         """
     return f"""
-        Given the following natural language query and detailed information about multiple datasets, create an appropriate SQL query.
+        Given the following natural language query and detailed information
+        about multiple datasets, create an appropriate SQL query.
 
         User Query: "{user_query}"
 
@@ -30,18 +33,24 @@ def create_query_prompt(
         {json.dumps(datasets_info, indent=2)}
 
         IMPORTANT - DATASET NAMING:
-        - Each dataset has a 'name' (user-friendly name) and an 'dataset_name' (the real table name in the database)
-        - In your SQL query, you MUST use the dataset_name from the datasets_info
-        - Example: If a dataset is shown as "COVID-19 Cases" to the user, its actual table name might be "ASD_ASDRDasdfaW"
-        - Reference the provided name_to_actual_dataset_name_mapping for the correct mapping
+        - Each dataset has a 'name' (user-friendly name) and an 'dataset_name'
+          (the real table name in the database)
+        - In your SQL query, you MUST use the dataset_name from the
+          datasets_info
+        - Example: If a dataset is shown as "COVID-19 Cases" to the user, its
+          actual table name might be "ASD_ASDRDasdfaW"
+        - Reference the provided `dataset_name_mapping` for the correct mapping
 
         Error Context: {error_context}
 
         IMPORTANT GUIDELINES:
         1. Use the EXACT column names as shown in the dataset information
         2. Create a query that directly addresses the user's question
-        3. If the user's query refers to a time period that doesn't match the dataset format (e.g., asking for 2018 when dataset uses 2018-19), adapt accordingly
-        4. Make sure to handle column names correctly, matching the exact names in the dataset metadata
+        3. If the user's query refers to a time period that doesn't match the
+           dataset format (e.g., asking for 2018 when dataset uses 2018-19),
+           adapt accordingly
+        4. Make sure to handle column names correctly, matching the exact names
+           in the dataset metadata
         5. Use the sample data as reference for the data format and values
         6. If the query requires joining multiple datasets, make sure to:
            - Use appropriate join conditions
@@ -70,7 +79,8 @@ def create_query_prompt(
 async def plan_query(state: State) -> dict:
     """
     Plan the SQL query based on user input and dataset information.
-    Makes a single attempt at query planning, handling various error conditions gracefully.
+    Makes a single attempt at query planning, handling various error
+    conditions gracefully.
     Uses all selected datasets and their relationships.
     """
     try:
@@ -89,10 +99,11 @@ async def plan_query(state: State) -> dict:
         if not selected_datasets:
             raise Exception("No dataset selected for query planning")
 
-        # This error message might be from execute_query node or analyze_dataset node
         last_message = state.get("messages", [])[-1]
         last_error = (
-            str(last_message.content) if isinstance(last_message, ErrorMessage) else ""
+            str(last_message.content)
+            if isinstance(last_message, ErrorMessage)
+            else ""
         )
 
         if not selected_datasets:
@@ -100,7 +111,8 @@ async def plan_query(state: State) -> dict:
 
         if not datasets_info:
             raise Exception(
-                "Could not get preview information for any of the selected datasets"
+                "Could not get preview information for any of the selected "
+                "datasets"
             )
 
         llm_prompt = create_query_prompt(
@@ -121,12 +133,15 @@ async def plan_query(state: State) -> dict:
                 "expected_result",
             ]
             missing_fields = [
-                field for field in required_fields if field not in parsed_response
+                field
+                for field in required_fields
+                if field not in parsed_response
             ]
 
             if missing_fields:
                 raise Exception(
-                    f"Missing required fields in LLM response: {', '.join(missing_fields)}"
+                    f"Missing required fields in LLM response: "
+                    f"{', '.join(missing_fields)}"
                 )
 
             sql_query = parsed_response.get("sql_query", "")
@@ -144,19 +159,25 @@ async def plan_query(state: State) -> dict:
                 "query_result": query_result,
                 "query": sql_query,
                 "messages": [
-                    IntermediateStep.from_text(json.dumps(parsed_response, indent=2))
+                    IntermediateStep.from_text(
+                        json.dumps(parsed_response, indent=2)
+                    )
                 ],
             }
 
         except Exception as parse_error:
-            raise Exception(f"Failed to parse LLM response: {str(parse_error)}")
+            raise Exception(
+                f"Failed to parse LLM response: {parse_error!s}"
+            ) from parse_error
 
     except Exception as e:
         query_result.add_error_message(str(e), "Error in query planning")
-        error_msg = f"Unexpected error in query planning: {str(e)}"
+        error_msg = f"Unexpected error in query planning: {e!s}"
         return {
             "query_result": query_result,
             "messages": [
-                ErrorMessage.from_text(json.dumps({"error": error_msg}, indent=2))
+                ErrorMessage.from_text(
+                    json.dumps({"error": error_msg}, indent=2)
+                )
             ],
         }

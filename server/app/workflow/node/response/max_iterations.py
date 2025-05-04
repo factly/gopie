@@ -7,7 +7,8 @@ from app.workflow.graph.types import State
 
 async def max_iterations_reached(state: State) -> dict:
     """
-    Handle cases where query planning/execution failed after maximum retry attempts
+    Handle cases where query planning/execution failed after maximum retry
+    attempts
     """
     try:
         user_query = state.get("user_query", "")
@@ -24,7 +25,8 @@ async def max_iterations_reached(state: State) -> dict:
         )
 
         explanation_prompt = f"""
-        You're responding to a user whose query has exceeded maximum retry attempts.
+        You're responding to a user whose query has exceeded maximum retry
+        attempts.
 
         User Query: "{user_query}"
 
@@ -45,7 +47,7 @@ async def max_iterations_reached(state: State) -> dict:
         return {
             "messages": [
                 ErrorMessage.from_text(
-                    json.dumps(f"Error in max iterations handler: {str(e)}")
+                    json.dumps(f"Error in max iterations handler: {e!s}")
                 )
             ]
         }

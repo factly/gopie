@@ -2,19 +2,22 @@ from typing import Any
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from app.models.data import Dataset_details
+from app.models.data import DatasetDetails
 from app.models.schema import DatasetSchema
 
 
-async def get_dataset_info(dataset_id, project_id) -> Dataset_details:
+async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
-    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/datasets/{dataset_id}"
+    url = (
+        f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/"
+        f"datasets/{dataset_id}"
+    )
     headers = {"accept": "application/json"}
 
     async with http_session.get(url, headers=headers) as response:
         data = await response.json()
-        return Dataset_details(**data)
+        return DatasetDetails(**data)
 
 
 def format_schema(
@@ -30,12 +33,16 @@ def format_schema(
 
         for column_name, column_values in sample_data.items():
             sample_values = list(column_values.values())[:5]
-            non_null_count = sum(1 for v in column_values.values() if v is not None)
+            non_null_count = sum(
+                1 for v in column_values.values() if v is not None
+            )
             columns_details.append(
                 {
                     "name": column_name,
                     "description": f"Column containing {column_name} data",
-                    "type": variables.get(column_name, {}).get("type", "string"),
+                    "type": variables.get(column_name, {}).get(
+                        "type", "string"
+                    ),
                     "sample_values": sample_values,
                     "non_null_count": non_null_count,
                     "stats": variables.get(column_name, {}),
