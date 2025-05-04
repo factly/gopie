@@ -24,7 +24,7 @@ line-length = 79
 include = '\.pyi?$'
 exclude = '''
 /(
-  | .eggs
+   .eggs
   | .git
   | .venv
   | .eggs
@@ -39,19 +39,3 @@ exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 79
-combine_as_imports = true
-
-[tool.flake8]
-max-line-length = 79
-exclude = [
-  ".git",
-  ".venv",
-  "__pycache__",
-  "build",
-  "dist",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".tox",
-]
-select = ["E", "W", "F", "C", "B", "N"]
-ignore = ["E203", "W503"]

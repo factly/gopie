@@ -1,31 +1,7 @@
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-class UploadResponse(BaseModel):
-    success: bool = Field(..., description="Whether the upload was successful")
-    message: str = Field(..., description="Message about the upload status")
-
-
-class UploadSchemaRequest(BaseModel):
-    project_id: str
-    dataset_id: str
-    file_path: str
-
-
-class Message(BaseModel):
-    role: str
-    content: str
-
-
-class QueryRequest(BaseModel):
-    messages: List[Message]
-    project_ids: Optional[List[str]] = None
-    dataset_ids: Optional[List[str]] = None
-
-
-class Dataset_details(BaseModel):
+class DatasetDetails(BaseModel):
     id: str
     name: str
     alias: str
