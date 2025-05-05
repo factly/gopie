@@ -14,6 +14,7 @@ background_tasks = set()
 
 def store_schema_in_qdrant(
     schema: Any,
+    sample_data: Any,
     dataset_details: DatasetDetails,
     dataset_id: str,
     project_id: str,
@@ -21,12 +22,14 @@ def store_schema_in_qdrant(
 ) -> bool:
     try:
         formatted_schema = format_schema(
-            schema, project_id, dataset_id, file_path
+            schema, sample_data, project_id, dataset_id, file_path
         )
 
         formatted_schema["name"] = dataset_details.alias
         formatted_schema["dataset_name"] = dataset_details.name
         formatted_schema["dataset_description"] = dataset_details.description
+
+        logging.info(f"Formatted schema: {formatted_schema}")
 
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),
@@ -45,8 +48,6 @@ def store_schema_in_qdrant(
         )
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
-
-        logging.info("Schema indexing task created successfully")
 
         logging.info("Schema indexing task created successfully")
         return True

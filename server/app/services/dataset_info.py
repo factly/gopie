@@ -1,9 +1,10 @@
+import logging
 from typing import Any
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
 from app.models.data import DatasetDetails
-from app.models.schema import DatasetSchema
+from app.models.schema import ColumnSchema, DatasetSchema
 
 
 async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
@@ -22,32 +23,40 @@ async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
 
 def format_schema(
     schema: Any,
+    sample_data: Any,
     project_id: str,
     dataset_id: str,
     file_path: str,
 ):
-    columns_details = []
-    if schema.get("samples") and len(schema["samples"]) > 0:
-        sample_data = schema["samples"][0].get("data", {})
-        variables = schema.get("variables", {})
+    columns: list[ColumnSchema] = []
 
-        for column_name, column_values in sample_data.items():
-            sample_values = list(column_values.values())[:5]
-            non_null_count = sum(
-                1 for v in column_values.values() if v is not None
-            )
-            columns_details.append(
-                {
-                    "name": column_name,
-                    "description": f"Column containing {column_name} data",
-                    "type": variables.get(column_name, {}).get(
-                        "type", "string"
-                    ),
-                    "sample_values": sample_values,
-                    "non_null_count": non_null_count,
-                    "stats": variables.get(column_name, {}),
-                }
-            )
+    for _, row in schema.iterrows():
+        column_name = row.get("column_name")
+        column_type = row.get("column_type")
+
+        samples = (
+            sample_data[column_name].tolist()
+            if column_name in sample_data
+            else []
+        )
+
+        column_schema: ColumnSchema = {
+            "column_name": column_name,
+            "column_type": column_type,
+            "min": row.get("min"),
+            "max": row.get("max"),
+            "approx_unique": row.get("approx_unique"),
+            "avg": row.get("avg"),
+            "std": row.get("std"),
+            "q25": row.get("q25"),
+            "q50": row.get("q50"),
+            "q75": row.get("q75"),
+            "count": row.get("count"),
+            "sample_values": samples,
+            "null_percentage": row.get("null_percentage", 0.0),
+        }
+
+        columns.append(column_schema)
 
     formatted_schema: DatasetSchema = {
         "name": "will add it later",
@@ -56,21 +65,8 @@ def format_schema(
         "project_id": project_id,
         "dataset_id": dataset_id,
         "file_path": file_path,
-        "analysis": schema["analysis"],
-        "row_count": schema["table"]["n"],
-        "col_count": schema["table"]["n_var"],
-        "columns": schema["columns"],
-        "columns_details": columns_details,
-        "alerts": schema["alerts"],
-        "duplicates": schema["duplicates"],
-        "correlations": schema["correlations"],
-        "missing_values": schema["missing"],
+        "columns": columns,
     }
 
-    # column_descriptions = generate_column_descriptions(formatted_schema)
-
-    # for column in formatted_schema["columns_details"]:
-    #     if column["name"] in column_descriptions:
-    #         column["description"] = column_descriptions[column["name"]]
-
+    logging.info(f"Formatted schema: {formatted_schema}")
     return formatted_schema

@@ -2,12 +2,14 @@ from http import HTTPStatus
 from typing import Any
 
 import requests
+from langchain_core.tools import tool
 
 from app.core.config import settings
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
 
+@tool
 def execute_sql_query(query: str) -> dict[str, Any]:
     """
     Execute SQL query using the external SQL API
@@ -62,3 +64,6 @@ def execute_sql_query(query: str) -> dict[str, Any]:
             "error": f"Query execution error: {e!s}",
             "query_executed": query,
         }
+
+
+__tool__ = execute_sql_query

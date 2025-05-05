@@ -6,11 +6,11 @@ from qdrant_client import models
 from app.core.config import settings
 from app.models.schema import DatasetSchema
 from app.services.dataset_info import format_schema
+from app.services.duckdb.generate_schema import generate_schema
 from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
 )
-from app.services.schema_fetcher import fetch_dataset_schema
 
 
 async def search_schemas(
@@ -60,11 +60,10 @@ async def search_schemas(
 
         schemas = []
         for doc in results:
-            fetched_schema = await fetch_dataset_schema(
-                doc.metadata["file_path"], {}, check_status=False
-            )
+            fetched_schema, sample_data = generate_schema(doc.metadata["name"])
             formatted_schema = format_schema(
                 fetched_schema,
+                sample_data,
                 doc.metadata["project_id"],
                 doc.metadata["dataset_id"],
                 doc.metadata["file_path"],
