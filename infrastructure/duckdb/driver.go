@@ -1,6 +1,7 @@
 package duckdb
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -192,7 +193,7 @@ func (m *OlapDBDriver) Close() error {
 	return nil
 }
 
-func (m *OlapDBDriver) CreateTable(filePath, tableName, format string) error {
+func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColumnNames map[string]string) error {
 	readSql := ""
 	switch format {
 	case "parquet":
@@ -202,7 +203,7 @@ func (m *OlapDBDriver) CreateTable(filePath, tableName, format string) error {
 		readSql = fmt.Sprintf("select * from read_csv('%s')", filePath)
 		break
 	case "json":
-		readSql = fmt.Sprintf("select * read_json('%s')", filePath)
+		readSql = fmt.Sprintf("select * from read_json('%s')", filePath)
 		break
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
@@ -210,12 +211,48 @@ func (m *OlapDBDriver) CreateTable(filePath, tableName, format string) error {
 
 	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
 
-	_, err := m.db.Exec(sql)
+	tx, err := m.db.BeginTx(context.Background(), nil)
 
-	return err
+	if err != nil {
+		m.logger.Error("error starting transaction", zap.Error(err))
+		return err
+	}
+	_, err = tx.Exec(sql)
+
+	if err != nil {
+		m.logger.Error("error executing query", zap.String("query", sql), zap.Error(err))
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+		}
+		return err
+	}
+
+	if alterColumnNames != nil {
+		for key, value := range alterColumnNames {
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, key, value)
+			_, err = tx.Exec(alterSql)
+			if err != nil {
+				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+				}
+				return err
+			}
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		m.logger.Error("error committing transaction", zap.Error(err))
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+		}
+		return err
+	}
+
+	return nil
 }
 
-func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string) error {
+func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string) error {
 	// Parse S3 path
 	if !strings.HasPrefix(s3Path, "s3://") {
 		return fmt.Errorf("invalid S3 path: must start with s3://")
@@ -234,8 +271,43 @@ func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string) error
 	}
 
 	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
-	_, err := m.db.Exec(sql)
-	return err
+	tx, err := m.db.BeginTx(context.Background(), nil)
+
+	if err != nil {
+		m.logger.Error("error starting transaction", zap.Error(err))
+		return err
+	}
+	_, err = tx.Exec(sql)
+	if err != nil {
+		m.logger.Error("error executing query", zap.String("query", sql), zap.Error(err))
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+		}
+		return err
+	}
+
+	if alterColumnNames != nil {
+		for key, value := range alterColumnNames {
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, key, value)
+			_, err = tx.Exec(alterSql)
+			if err != nil {
+				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+				}
+				return err
+			}
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		m.logger.Error("error committing transaction", zap.Error(err))
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (m *OlapDBDriver) Query(query string) (*models.Result, error) {
