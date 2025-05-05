@@ -31,44 +31,71 @@ class ToolNode:
         all_tool_results = []
 
         for tool_call in message.tool_calls:
-            tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
+            try:
+                tool_name = tool_call["name"]
+                tool_args = tool_call["args"]
 
-            await self.event_dispatcher.dispatch_event(
-                event_node=EventNode.TOOL_START,
-                status=EventStatus.STARTED,
-                data=EventData(
-                    input=json.dumps({"tool": tool_name, "args": tool_args})
-                ),
-            )
-
-            tool_result = await self.tools[tool_name].ainvoke(tool_args)
-
-            all_tool_results.append({"tool": tool_name, "result": tool_result})
-
-            await self.event_dispatcher.dispatch_event(
-                event_node=EventNode.TOOL_END,
-                status=EventStatus.COMPLETED,
-                data=EventData(
-                    result=json.dumps(
-                        {"tool": tool_name, "result": tool_result}
-                    )
-                ),
-            )
-
-            outputs.append(
-                ToolMessage(
-                    content=json.dumps(tool_result),
-                    name=tool_name,
-                    tool_call_id=tool_call["id"],
+                await self.event_dispatcher.dispatch_event(
+                    event_node=EventNode.TOOL_START,
+                    status=EventStatus.STARTED,
+                    data=EventData(
+                        input=json.dumps(
+                            {"tool": tool_name, "args": tool_args}
+                        )
+                    ),
                 )
-            )
 
-        query_result = state.get("query_result", [])
+                if tool_name not in self.tools:
+                    error_message = f"Tool '{tool_name}' not found"
+                    print(error_message)
+                    await self.event_dispatcher.dispatch_event(
+                        event_node=EventNode.TOOL_ERROR,
+                        status=EventStatus.ERROR,
+                        data=EventData(error=error_message),
+                    )
+                    continue
+
+                tool_result = await self.tools[tool_name].ainvoke(tool_args)
+
+                all_tool_results.append(
+                    {"tool": tool_name, "result": tool_result}
+                )
+
+                await self.event_dispatcher.dispatch_event(
+                    event_node=EventNode.TOOL_END,
+                    status=EventStatus.COMPLETED,
+                    data=EventData(
+                        result=json.dumps(
+                            {"tool": tool_name, "result": tool_result}
+                        )
+                    ),
+                )
+
+                outputs.append(
+                    ToolMessage(
+                        content=json.dumps(tool_result),
+                        name=tool_name,
+                        tool_call_id=tool_call["id"],
+                    )
+                )
+            except Exception as e:
+                error_message = f"Error executing tool: {str(e)}"
+                await self.event_dispatcher.dispatch_event(
+                    event_node=EventNode.TOOL_ERROR,
+                    status=EventStatus.ERROR,
+                    data=EventData(error=error_message),
+                )
+
+        query_result = state.get("query_result")
         query_index = state.get("subquery_index", -1)
-        query_result.subqueries[
-            query_index
-        ].tool_used_result = all_tool_results
+
+        if query_result and query_index >= 0:
+            if not query_result.subqueries[query_index].tool_used_result:
+                query_result.subqueries[query_index].tool_used_result = []
+
+            query_result.subqueries[query_index].tool_used_result.extend(
+                all_tool_results
+            )
 
         return {
             "query_result": query_result,
@@ -77,7 +104,6 @@ class ToolNode:
 
 
 def has_tool_calls(message):
-    """Helper function to check if a message has tool calls"""
     if hasattr(message, "tool_calls") and message.tool_calls:
         return True
 

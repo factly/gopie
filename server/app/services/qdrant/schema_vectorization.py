@@ -29,8 +29,6 @@ def store_schema_in_qdrant(
         formatted_schema["dataset_name"] = dataset_details.name
         formatted_schema["dataset_description"] = dataset_details.description
 
-        logging.info(f"Formatted schema: {formatted_schema}")
-
         document = Document(
             page_content=json.dumps(formatted_schema, indent=2),
             metadata={

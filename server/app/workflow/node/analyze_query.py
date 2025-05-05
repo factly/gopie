@@ -76,18 +76,42 @@ async def analyze_query(state: State) -> dict:
         identify datasets if it is a data query
     """
     last_message = state["messages"][-1]
-    query_index = -1
     query_result = state.get("query_result")
-    user_input = (
-        state.get("subqueries")[query_index]
-        if state.get("subqueries")
-        else "No input"
-    )
+
+    tool_call_count = state.get("tool_call_count", 0)
+
+    # Check if we've reached the maximum allowed tool calls
+    if tool_call_count >= 5:
+        error_msg = "Maximum tool call limit reached (5 calls)"
+        query_result.add_error_message(error_msg, "analyze_query")
+
+        return {
+            "query_result": query_result,
+            "query_type": "conversational",
+            "messages": [
+                ErrorMessage.from_text(
+                    json.dumps(
+                        {"error": error_msg, "is_data_query": False}, indent=2
+                    )
+                )
+            ],
+        }
 
     if isinstance(last_message, ToolMessage):
         query_index = state.get("subquery_index", -1)
+        user_input = (
+            state.get("subqueries", ["No input"])[query_index]
+            if state.get("subqueries")
+            else "No input"
+        )
     else:
         query_index = state.get("subquery_index", -1) + 1
+        user_input = (
+            state.get("subqueries", ["No input"])[query_index]
+            if state.get("subqueries")
+            and query_index < len(state.get("subqueries", []))
+            else "No input"
+        )
         query_result.add_subquery(
             query_text=user_input,
             sql_query_used="",
@@ -125,9 +149,12 @@ async def analyze_query(state: State) -> dict:
         if has_tool_calls(response):
             query_result.subqueries[query_index].query_type = "tool_only"
 
+            tool_call_count += 1
+
             return {
                 "query_result": query_result,
                 "subquery_index": query_index,
+                "tool_call_count": tool_call_count,
                 "messages": [
                     (
                         response
@@ -146,6 +173,7 @@ async def analyze_query(state: State) -> dict:
         return {
             "query_result": query_result,
             "subquery_index": query_index,
+            "tool_call_count": tool_call_count,
             "messages": [
                 IntermediateStep.from_text(
                     json.dumps(parsed_content, indent=2)
@@ -161,6 +189,7 @@ async def analyze_query(state: State) -> dict:
         return {
             "query_result": query_result,
             "subquery_index": query_index,
+            "tool_call_count": tool_call_count,
             "messages": [
                 ErrorMessage.from_text(
                     json.dumps({"error": error_msg}, indent=2)
@@ -179,6 +208,11 @@ def route_from_analysis(state: State) -> str:
     Returns:
         String name of the next node to route to
     """
+    # Check if we've reached the tool call limit
+    if state.get("tool_call_count", 0) >= 5 and has_tool_calls(
+        state["messages"][-1]
+    ):
+        return "basic_conversation"
 
     last_message = state["messages"][-1]
     if has_tool_calls(last_message):

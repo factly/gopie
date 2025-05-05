@@ -13,7 +13,7 @@ from app.workflow.graph.types import State
 async def generate_subqueries(state: State):
     messages = state.get("messages", [])
 
-    if isinstance(messages[-1], HumanMessage):
+    if messages and isinstance(messages[-1], HumanMessage):
         user_input = str(messages[-1].content)
     else:
         raise Exception("Last Message must be a user message")
@@ -70,9 +70,10 @@ async def generate_subqueries(state: State):
         parser = JsonOutputParser()
         parsed_content = parser.parse(str(response.content))
 
-        subqueries = None
+        subqueries = parsed_content.get("subqueries", [])
 
         if not subqueries:
+            parsed_content["subqueries"] = [user_input]
             subqueries = [user_input]
 
         return {
@@ -92,8 +93,12 @@ async def generate_subqueries(state: State):
         )
         error_msg = f"Error parsing subqueries: {e!s}"
 
+        default_subqueries = [user_input]
+
         return {
             "user_query": user_input,
+            "subquery_index": -1,
+            "subqueries": default_subqueries,
             "query_result": query_result_object,
             "messages": [
                 ErrorMessage.from_text(

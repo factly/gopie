@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from app.core.config import settings
@@ -68,5 +67,4 @@ def format_schema(
         "columns": columns,
     }
 
-    logging.info(f"Formatted schema: {formatted_schema}")
     return formatted_schema

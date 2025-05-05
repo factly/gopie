@@ -6,6 +6,7 @@ from app.models.event import AgentEvent, EventData, EventNode, EventStatus
 
 def create_progress_message(event_node: EventNode) -> str:
     """Create a user-friendly progress message based on the event type."""
+
     event_messages = {
         EventNode.GENERATE_SUBQUERIES: "Breaking down your query into "
         "manageable parts...",
@@ -37,7 +38,6 @@ class AgentEventDispatcher(BaseCallbackHandler):
     async def dispatch_event(
         self, event_node: EventNode, status: EventStatus, data: EventData
     ) -> None:
-        """Dispatch a custom event."""
         await adispatch_custom_event(
             "dataful_agent",
             {

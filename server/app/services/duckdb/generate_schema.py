@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import Any
 
@@ -18,7 +17,6 @@ def generate_schema(dataset_name: str) -> tuple[Any, Any]:
     )
 
     result = conn.sql(f"SUMMARIZE {dataset_name}").fetchdf()
-    logging.info(f"Raw SUMMARIZE result: {result}")
 
     sample_values_query = f"SELECT * FROM {dataset_name} LIMIT 5"
     sample_data = conn.sql(sample_values_query).fetchdf()

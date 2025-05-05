@@ -1,3 +1,5 @@
+import logging
+
 from langchain_core.tools import tool
 
 from app.core.config import settings
@@ -32,10 +34,11 @@ async def list_datasets(
         async with session.get(
             url, params=params, headers=headers, ssl=False
         ) as response:
+            json_response = await response.json()
             response.raise_for_status()
-            return (await response.json()).get("results", [])
+            return json_response.get("results", [])
     except Exception as e:
-        print(f"Error fetching datasets: {e}")
+        logging.error(f"Error fetching datasets: {e}")
         return []
 
 
@@ -63,7 +66,7 @@ async def list_projects(limit: int = 10, page: int = 1) -> list[dict]:
             response.raise_for_status()
             return (await response.json()).get("results", [])
     except Exception as e:
-        print(f"Error fetching projects: {e}")
+        logging.error(f"Error fetching projects: {e}")
         return []
 
 
@@ -85,12 +88,19 @@ async def get_all_datasets() -> list[dict]:
     for project in projects:
         project_id = project.get("id")
         if project_id:
+            print(f"Project ID: {project_id}")
             datasets = await list_datasets(project_id=project_id)
-            for dataset in datasets:
-                file_extension = ""
-                if dataset.get("format", "") == "csv":
-                    file_extension = ".csv"
-                all_datasets.append(dataset.get("alias", "") + file_extension)
+
+            if datasets:
+                for dataset in datasets:
+                    file_extension = ""
+                    if dataset.get("format", "") == "csv":
+                        file_extension = ".csv"
+                        all_datasets.append(
+                            dataset.get("alias", "") + file_extension
+                        )
+            else:
+                logging.error(f"No datasets found for project {project_id}")
 
     return all_datasets
 
