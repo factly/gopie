@@ -7,6 +7,7 @@ export interface ValidationResult {
   previewRowCount?: number;
   previewData?: unknown[][];
   error?: string;
+  columnMappings?: Record<string, string>;
 }
 
 /**

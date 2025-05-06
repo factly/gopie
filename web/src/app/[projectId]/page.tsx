@@ -3,9 +3,9 @@
 import * as React from "react";
 import { useProject } from "@/lib/queries/project/get-project";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableIcon } from "lucide-react";
+import { TableIcon, UploadIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { UploadDatasetDialog } from "@/components/dataset/upload-dataset-dialog";
+import { Button } from "@/components/ui/button";
 import { DatasetCard } from "@/components/dataset/dataset-card";
 import { motion } from "framer-motion";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
@@ -13,6 +13,7 @@ import { deleteDataset } from "@/lib/mutations/dataset/delete-dataset";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { InlineProjectEditor } from "@/components/project/inline-project-editor";
+import Link from "next/link";
 
 export default function ProjectPage({
   params,
@@ -117,7 +118,12 @@ export default function ProjectPage({
               {datasets?.total || 0}
             </Badge>
           </h2>
-          <UploadDatasetDialog projectId={projectId} />
+          <Link href={`/${projectId}/upload`}>
+            <Button size="sm" className="h-9">
+              <UploadIcon className="mr-2 size-4" />
+              Upload Dataset
+            </Button>
+          </Link>
         </div>
 
         {datasets?.total === 0 ? (
@@ -130,7 +136,12 @@ export default function ProjectPage({
             <p className="text-base text-muted-foreground">
               No datasets added yet
             </p>
-            <UploadDatasetDialog projectId={projectId} />
+            <Link href={`/${projectId}/upload`}>
+              <Button size="sm" className="h-9">
+                <UploadIcon className="mr-2 size-4" />
+                Upload Dataset
+              </Button>
+            </Link>
           </motion.div>
         ) : (
           <motion.div
