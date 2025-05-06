@@ -23,6 +23,8 @@ type uploadRequestBody struct {
 	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
 	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
+	// Column names to be altered
+	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
 }
 
 // @Summary Upload file from S3
@@ -79,7 +81,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("project_id", project.ID))
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "")
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "", body.AlterColumnNames)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
