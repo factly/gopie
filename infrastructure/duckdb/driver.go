@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/google/uuid"
+	"github.com/huandu/go-sqlbuilder"
 	"github.com/marcboeker/go-duckdb"
 	_ "github.com/marcboeker/go-duckdb"
 	"go.uber.org/zap"
@@ -24,6 +24,7 @@ type OlapDBDriver struct {
 	logger *logger.Logger
 }
 
+// NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (repositories.OlapRepository, error) {
 	olap := OlapDBDriver{
 		logger: logger,
@@ -42,12 +43,14 @@ func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *con
 	logger.Info("successfully connected to duckdb",
 		zap.String("db_type", cfg.DB))
 
+	// Run post-connection setup only for local DuckDB instances needing S3 config
 	if cfg.DB == "duckdb" {
 		err = olap.postDuckDbConnect(s3Cfg)
 		if err != nil {
 			logger.Error("failed to run post-connection setup",
 				zap.String("db_type", cfg.DB),
 				zap.Error(err))
+			olap.Close()
 			return nil, err
 		}
 		logger.Info("completed post-connection setup successfully")
@@ -55,6 +58,7 @@ func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *con
 	return &olap, nil
 }
 
+// Connect establishes the database connection.
 func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 	var dsn string
 	if cfg.DB == "motherduck" {
@@ -99,6 +103,14 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 		m.logger.Error("failed to open database connection",
 			zap.String("db_type", cfg.DB),
 			zap.Error(err))
+		return err // Return the original error
+	}
+
+	if err := db.Ping(); err != nil {
+		m.logger.Error("failed to ping database after opening connection",
+			zap.String("db_type", cfg.DB),
+			zap.Error(err))
+		db.Close()
 		return err
 	}
 
@@ -106,221 +118,257 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 	return nil
 }
 
+// postDuckDbConnect runs setup commands after connecting to a local DuckDB instance,
+// primarily for configuring S3 access via the httpfs extension.
 func (m *OlapDBDriver) postDuckDbConnect(s3Cfg *config.S3Config) error {
-	m.logger.Debug("starting post-connection setup")
+	m.logger.Debug("starting post-connection setup for httpfs/S3")
 
-	_, err := m.db.Exec("install httpfs;")
-	if err != nil {
-		m.logger.Error("failed to install httpfs extension",
-			zap.Error(err))
-		return fmt.Errorf("error installing httpfs extension: %w", err)
+	// Using simple Exec as sqlbuilder is not needed for these specific commands.
+	commands := []string{
+		"INSTALL httpfs;",
+		"LOAD httpfs;",
+		fmt.Sprintf("SET s3_access_key_id='%s';", s3Cfg.AccessKey),     // Quote string values
+		fmt.Sprintf("SET s3_secret_access_key='%s';", s3Cfg.SecretKey), // Quote string values
+		fmt.Sprintf("SET s3_endpoint='%s';", s3Cfg.Endpoint),           // Quote string values
+		fmt.Sprintf("SET s3_region='%s';", s3Cfg.Region),               // Quote string values
+		"SET s3_use_ssl=true;",                                         // Use boolean literal
+		fmt.Sprintf("SET s3_use_ssl=%v;", s3Cfg.SSL),                   // Use %v for boolean
+		"SET s3_url_style='path';",                                     // Quote string literal 'path'
 	}
-	m.logger.Debug("httpfs extension installed")
 
-	_, err = m.db.Exec("load httpfs;")
-	if err != nil {
-		m.logger.Error("failed to load httpfs extension",
-			zap.Error(err))
-		return fmt.Errorf("error loading httpfs extension: %w", err)
-	}
-	m.logger.Debug("httpfs extension loaded")
-
-	_, err = m.db.Exec(fmt.Sprintf(("SET s3_access_key_id='%s';"), s3Cfg.AccessKey))
-	if err != nil {
-		m.logger.Error("failed to set S3 access key",
-			zap.Error(err))
-		return fmt.Errorf("error setting s3 access key: %w", err)
-	}
-	m.logger.Debug("S3 access key configured")
-
-	_, err = m.db.Exec(fmt.Sprintf("SET s3_secret_access_key='%s';", s3Cfg.SecretKey))
-	if err != nil {
-		m.logger.Error("failed to set S3 secret key",
-			zap.Error(err))
-		return fmt.Errorf("failed to set S3 secret key: %w", err)
-	}
-	m.logger.Debug("S3 secret key configured")
-
-	if s3Cfg.Endpoint != "" {
-		_, err = m.db.Exec(fmt.Sprintf("SET s3_endpoint='%s';", s3Cfg.Endpoint))
-		if err != nil {
-			m.logger.Error("failed to set S3 endpoint",
-				zap.String("endpoint", s3Cfg.Endpoint),
-				zap.Error(err))
-			return fmt.Errorf("failed to set S3 endpoint: %w", err)
+	filteredCommands := []string{}
+	for _, cmd := range commands {
+		if (strings.Contains(cmd, "s3_endpoint=") && s3Cfg.Endpoint == "") ||
+			(strings.Contains(cmd, "s3_region=") && s3Cfg.Region == "") {
+			continue
 		}
-		m.logger.Debug("S3 endpoint configured",
-			zap.String("endpoint", s3Cfg.Endpoint))
+		filteredCommands = append(filteredCommands, cmd)
 	}
 
-	if s3Cfg.Region != "" {
-		_, err = m.db.Exec(fmt.Sprintf("SET s3_region='%s';", s3Cfg.Region))
+	tx, err := m.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		m.logger.Error("failed to begin transaction for post-connection setup", zap.Error(err))
+		return fmt.Errorf("failed to begin transaction for post-connection setup: %w", err)
+	}
+
+	for _, cmd := range filteredCommands {
+		m.logger.Debug("executing post-connect command", zap.String("command", cmd))
+		_, err := tx.Exec(cmd)
 		if err != nil {
-			m.logger.Error("failed to set S3 region",
-				zap.String("region", s3Cfg.Region),
+			m.logger.Error("failed to execute post-connection command",
+				zap.String("command", cmd),
 				zap.Error(err))
-			return fmt.Errorf("failed to set S3 region: %w", err)
+			if rbErr := tx.Rollback(); rbErr != nil {
+				m.logger.Error("failed to rollback transaction after command failure", zap.Error(rbErr))
+			}
+			return fmt.Errorf("failed executing '%s': %w", cmd, err)
 		}
-		m.logger.Debug("S3 region configured",
-			zap.String("region", s3Cfg.Region))
 	}
 
-	_, err = m.db.Exec("SET s3_url_style='path';")
-	if err != nil {
-		m.logger.Error("failed to set S3 URL style",
-			zap.Error(err))
-		return fmt.Errorf("failed to set S3 URL style: %w", err)
-	}
-	m.logger.Debug("S3 URL style configured")
-
-	_, err = m.db.Exec(fmt.Sprintf("SET s3_use_ssl=%v;", s3Cfg.SSL))
-	if err != nil {
-		m.logger.Error("failed to set S3 SSL config",
-			zap.Error(err))
-		return fmt.Errorf("failed to set S3 SSL config: %w", err)
+	if err := tx.Commit(); err != nil {
+		m.logger.Error("failed to commit transaction for post-connection setup", zap.Error(err))
+		return fmt.Errorf("failed to commit post-connection setup: %w", err)
 	}
 
 	m.logger.Info("S3 configuration completed successfully",
 		zap.String("endpoint", s3Cfg.Endpoint),
-		zap.String("region", s3Cfg.Region))
+		zap.String("region", s3Cfg.Region),
+		zap.Bool("ssl_enabled", s3Cfg.SSL))
 
 	return nil
 }
 
 func (m *OlapDBDriver) Close() error {
 	if m.db != nil {
+		m.logger.Info("closing duckdb connection")
 		return m.db.Close()
 	}
 	return nil
 }
 
 func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColumnNames map[string]string) error {
-	readSql := ""
+	sb := sqlbuilder.NewSelectBuilder()
+	sb.Select("*")
+
+	var readFunc string
+	escapedFilePath := sqlbuilder.Escape(filePath)
+
 	switch format {
 	case "parquet":
-		readSql = fmt.Sprintf("select * from read_parquet('%s')", filePath)
-		break
+		readFunc = fmt.Sprintf("read_parquet('%s')", escapedFilePath)
 	case "csv":
-		readSql = fmt.Sprintf("select * from read_csv('%s')", filePath)
-		break
+		readFunc = fmt.Sprintf("read_csv_auto('%s')", escapedFilePath)
 	case "json":
-		readSql = fmt.Sprintf("select * from read_json('%s')", filePath)
-		break
+		readFunc = fmt.Sprintf("read_json_auto('%s')", escapedFilePath)
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("unsupported format for CreateTable: %s", format)
+	}
+	sb.From(readFunc)
+
+	readSql, readArgs := sb.Build()
+	if len(readArgs) > 0 {
+		m.logger.Error("unexpected arguments generated for read query", zap.Any("args", readArgs))
+		return fmt.Errorf("unexpected arguments in read query construction")
 	}
 
-	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
+	createSql := fmt.Sprintf(`CREATE OR REPLACE TABLE %s AS (%s)`, sqlbuilder.Escape(tableName), readSql)
+
+	m.logger.Debug("preparing to create table", zap.String("query", createSql))
 
 	tx, err := m.db.BeginTx(context.Background(), nil)
-
 	if err != nil {
-		m.logger.Error("error starting transaction", zap.Error(err))
+		m.logger.Error("error starting transaction for CreateTable", zap.Error(err))
 		return err
 	}
-	_, err = tx.Exec(sql)
 
+	_, err = tx.Exec(createSql)
 	if err != nil {
-		m.logger.Error("error executing query", zap.String("query", sql), zap.Error(err))
+		m.logger.Error("error executing create table query", zap.String("query", createSql), zap.Error(err))
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+			m.logger.Error("error rolling back transaction after create failure", zap.Error(rollbackErr))
 		}
-		return err
+		return parseError(fmt.Errorf("failed creating table '%s': %w", tableName, err))
 	}
+	m.logger.Info("successfully created/replaced table", zap.String("tableName", tableName))
 
-	if alterColumnNames != nil {
-		for key, value := range alterColumnNames {
-			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, key, value)
+	if alterColumnNames != nil && len(alterColumnNames) > 0 {
+		m.logger.Debug("renaming columns", zap.String("tableName", tableName), zap.Int("count", len(alterColumnNames)))
+		escapedTableName := sqlbuilder.Escape(tableName)
+		for old, new := range alterColumnNames {
+			escapedOldCol := sqlbuilder.Escape(old)
+			escapedNewCol := sqlbuilder.Escape(new)
+
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN %s TO %s`, escapedTableName, escapedOldCol, escapedNewCol)
+			m.logger.Debug("executing alter query", zap.String("query", alterSql))
+
 			_, err = tx.Exec(alterSql)
 			if err != nil {
-				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
+				m.logger.Error("error executing alter column query", zap.String("query", alterSql), zap.Error(err))
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
-					m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+					m.logger.Error("error rolling back transaction after alter failure", zap.Error(rollbackErr))
 				}
-				return err
+				return parseError(fmt.Errorf("failed renaming column '%s' to '%s' in table '%s': %w", old, new, tableName, err))
 			}
 		}
+		m.logger.Info("successfully renamed columns", zap.String("tableName", tableName))
 	}
 
+	// Commit the transaction
 	if err = tx.Commit(); err != nil {
-		m.logger.Error("error committing transaction", zap.Error(err))
+		m.logger.Error("error committing transaction for CreateTable", zap.Error(err))
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+			m.logger.Warn("error rolling back transaction after commit failure", zap.Error(rollbackErr))
 		}
-		return err
+		return fmt.Errorf("failed to commit transaction for CreateTable: %w", err)
 	}
 
 	return nil
 }
 
+// CreateTableFromS3 creates a table in DuckDB by reading data from an S3 path.
 func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string) error {
-	// Parse S3 path
 	if !strings.HasPrefix(s3Path, "s3://") {
-		return fmt.Errorf("invalid S3 path: must start with s3://")
+		return fmt.Errorf("invalid S3 path: must start with s3://, got %s", s3Path)
 	}
 
-	readSql := ""
+	sb := sqlbuilder.NewSelectBuilder()
+	sb.Select("*")
+
+	var readFunc string
+	escapedS3Path := sqlbuilder.Escape(s3Path)
+
 	switch format {
 	case "parquet":
-		readSql = fmt.Sprintf("SELECT * FROM read_parquet('%s')", s3Path)
+		readFunc = fmt.Sprintf("read_parquet('%s')", escapedS3Path)
 	case "csv":
-		readSql = fmt.Sprintf("SELECT * FROM read_csv('%s')", s3Path)
+		readFunc = fmt.Sprintf("read_csv_auto('%s')", escapedS3Path)
 	case "json":
-		readSql = fmt.Sprintf("SELECT * FROM read_json('%s')", s3Path)
+		readFunc = fmt.Sprintf("read_json_auto('%s')", escapedS3Path)
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("unsupported format for CreateTableFromS3: %s", format)
+	}
+	sb.From(readFunc)
+
+	readSql, readArgs := sb.Build()
+	if len(readArgs) > 0 {
+		m.logger.Error("unexpected arguments generated for S3 read query", zap.Any("args", readArgs))
+		return fmt.Errorf("unexpected arguments in S3 read query construction")
 	}
 
-	sql := fmt.Sprintf(`CREATE OR REPLACE TABLE "%s" AS (%s)`, tableName, readSql)
+	createSql := fmt.Sprintf(`CREATE OR REPLACE TABLE %s AS (%s)`, sqlbuilder.Escape(tableName), readSql)
+
+	m.logger.Debug("preparing to create table from S3", zap.String("query", createSql))
+
 	tx, err := m.db.BeginTx(context.Background(), nil)
-
 	if err != nil {
-		m.logger.Error("error starting transaction", zap.Error(err))
+		m.logger.Error("error starting transaction for CreateTableFromS3", zap.Error(err))
 		return err
 	}
-	_, err = tx.Exec(sql)
+
+	_, err = tx.Exec(createSql)
 	if err != nil {
-		m.logger.Error("error executing query", zap.String("query", sql), zap.Error(err))
+		m.logger.Error("error executing create table from S3 query", zap.String("query", createSql), zap.Error(err))
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+			m.logger.Error("error rolling back transaction after create failure", zap.Error(rollbackErr))
 		}
-		return err
+		return parseError(fmt.Errorf("failed creating table '%s' from S3: %w", tableName, err))
 	}
+	m.logger.Info("successfully created/replaced table from S3", zap.String("tableName", tableName), zap.String("s3Path", s3Path))
 
-	if alterColumnNames != nil {
+	if alterColumnNames != nil && len(alterColumnNames) > 0 {
+		m.logger.Debug("renaming columns", zap.String("tableName", tableName), zap.Int("count", len(alterColumnNames)))
+		escapedTableName := sqlbuilder.Escape(tableName)
 		for key, value := range alterColumnNames {
-			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, quoteIdent(key), value)
+			escapedOldCol := sqlbuilder.Escape(key)
+			escapedNewCol := sqlbuilder.Escape(value)
+
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN %s TO %s`, escapedTableName, escapedOldCol, escapedNewCol)
+			m.logger.Debug("executing alter query", zap.String("query", alterSql))
+
 			_, err = tx.Exec(alterSql)
 			if err != nil {
-				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
+				m.logger.Error("error executing alter column query", zap.String("query", alterSql), zap.Error(err))
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
-					m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+					m.logger.Error("error rolling back transaction after alter failure", zap.Error(rollbackErr))
 				}
-				return err
+				return parseError(fmt.Errorf("failed renaming column '%s' to '%s' in table '%s': %w", key, value, tableName, err))
 			}
 		}
+		m.logger.Info("successfully renamed columns", zap.String("tableName", tableName))
 	}
+
 	if err = tx.Commit(); err != nil {
-		m.logger.Error("error committing transaction", zap.Error(err))
+		m.logger.Error("error committing transaction for CreateTableFromS3", zap.Error(err))
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			m.logger.Error("error rolling back transaction", zap.Error(rollbackErr))
+			m.logger.Warn("error rolling back transaction after commit failure", zap.Error(rollbackErr))
 		}
-		return err
+		return fmt.Errorf("failed to commit transaction for CreateTableFromS3: %w", err)
 	}
 
 	return nil
 }
 
+// Query executes a given SQL query string against the database.
 func (m *OlapDBDriver) Query(query string) (*models.Result, error) {
-	uuid, _ := uuid.NewV7()
+	queryID, _ := uuid.NewV7()
 	start := time.Now()
+	m.logger.Debug("executing user query", zap.String("query ID", queryID.String()), zap.String("query", query))
+
 	rows, err := m.db.Query(query)
+	latencyInMs := time.Since(start).Milliseconds()
+
 	if err != nil {
-		m.logger.Error("error querying motherduck", zap.Error(err))
+		m.logger.Error("error executing query",
+			zap.String("query ID", queryID.String()),
+			zap.String("query", query),
+			zap.Int64("latency_ms", latencyInMs),
+			zap.Error(err))
 		return nil, parseError(err)
 	}
-	latencyInMs := time.Since(start).Milliseconds()
-	m.logger.Debug("query executed", zap.String("query ID", uuid.String()), zap.String("query", query), zap.Int64("latency in ms", latencyInMs))
+
+	m.logger.Info("query executed successfully",
+		zap.String("query ID", queryID.String()),
+		zap.Int64("latency_ms", latencyInMs))
 
 	result := models.Result{
 		Rows: rows,
@@ -330,60 +378,29 @@ func (m *OlapDBDriver) Query(query string) (*models.Result, error) {
 }
 
 func (m *OlapDBDriver) DropTable(tableName string) error {
-	sql := fmt.Sprintf("DROP TABLE %s", tableName)
+	escapedTableName := sqlbuilder.Escape(tableName)
+	sql := fmt.Sprintf("DROP TABLE IF EXISTS %s", escapedTableName) // Use IF EXISTS for idempotency
+	m.logger.Debug("executing drop table query", zap.String("query", sql))
 
 	_, err := m.db.Exec(sql)
+	if err != nil {
+		m.logger.Error("error dropping table", zap.String("tableName", tableName), zap.Error(err))
+		return parseError(fmt.Errorf("failed dropping table '%s': %w", tableName, err))
+	}
 
-	return err
+	m.logger.Info("successfully dropped table", zap.String("tableName", tableName))
+	return nil
 }
 
 func parseError(err error) error {
+	if err == nil {
+		return nil
+	}
+
 	var duckErr *duckdb.Error
 	if errors.As(err, &duckErr) {
-		switch duckErr.Type {
-		case duckdb.ErrorTypeCatalog:
-			return fmt.Errorf("DuckDB catalog error: %w", err)
-		case duckdb.ErrorTypeBinder:
-			return fmt.Errorf("DuckDB binding error (e.g. column not found): %w", err)
-		case duckdb.ErrorTypeParser:
-			return fmt.Errorf("DuckDB syntax error: %w", err)
-		case duckdb.ErrorTypeConstraint:
-			return fmt.Errorf("DuckDB constraint violation: %w", err)
-		case duckdb.ErrorTypeConversion:
-			return fmt.Errorf("DuckDB type conversion error: %w", err)
-		case duckdb.ErrorTypeInvalidInput:
-			return fmt.Errorf("DuckDB invalid input: %w", err)
-		case duckdb.ErrorTypeConnection:
-			return fmt.Errorf("DuckDB connection error: %w", err)
-		}
+		errorTypeMsg := fmt.Sprintf("DuckDB %v error", duckErr.Type)
+		return fmt.Errorf("%s: %w", errorTypeMsg, err)
 	}
 	return err
-}
-
-// quoteIdent will safely turn any input into a properly‐quoted SQL identifier.
-// It handles Go‐style escapes (\"), strips a single pair of outer quotes if present,
-// escapes any internal quotes by doubling them, then wraps in fresh quotes.
-//
-// Examples:
-//
-//	foo       → "foo"
-//	"foo"     → "foo"
-//	f"o"o     → "f""o""o"
-//	"\"bar\"" → "bar"
-func quoteIdent(str string) string {
-	// 0) if it’s a Go‐quoted literal (e.g. "\"name\""), Unquote it:
-	if unq, err := strconv.Unquote(str); err == nil {
-		str = unq
-	}
-
-	// 1) strip exactly one pair of outer double‐quotes, if present
-	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
-		str = str[1 : len(str)-1]
-	}
-
-	// 2) escape any remaining internal " by doubling
-	str = strings.ReplaceAll(str, `"`, `""`)
-
-	// 3) wrap in fresh quotes
-	return `"` + str + `"`
 }
