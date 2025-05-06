@@ -99,3 +99,8 @@ class QueryResult:
             "error_message": self.error_message,
             "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
+
+    def calculate_execution_time(self):
+        if not hasattr(self, "timestamp"):
+            self.timestamp = datetime.now()
+        self.execution_time = (datetime.now() - self.timestamp).total_seconds()

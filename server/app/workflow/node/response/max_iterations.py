@@ -1,5 +1,6 @@
 from app.core.langchain_config import lc
-from app.models.message import AIMessage, ErrorMessage
+from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
+from app.models.query import QueryResult
 from app.workflow.graph.types import State
 
 
@@ -10,6 +11,10 @@ async def max_iterations_reached(state: State) -> dict:
     """
     try:
         user_query = state.get("user_query", "")
+        query_result = state.get("query_result")
+
+        if isinstance(query_result, QueryResult):
+            query_result.calculate_execution_time()
 
         error_content = []
         for message in state.get("messages", []):
@@ -40,7 +45,18 @@ async def max_iterations_reached(state: State) -> dict:
         """
 
         response = await lc.llm.ainvoke(explanation_prompt)
-        return {"messages": [AIMessage(content=response.content)]}
+        return {
+            "messages": [
+                AIMessage(
+                    content=[
+                        FinalQueryOutput(
+                            result=str(response.content),
+                            execution_time=query_result.execution_time,
+                        ).to_dict()
+                    ]
+                ),
+            ]
+        }
     except Exception as e:
         return {
             "messages": [

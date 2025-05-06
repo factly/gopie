@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 from app.core.langchain_config import lc
-from app.models.message import AIMessage, ErrorMessage
+from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
 from app.workflow.graph.types import State
 
@@ -14,6 +14,9 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
 
     query_result = state.get("query_result")
     if query_result:
+        if isinstance(query_result, QueryResult):
+            query_result.calculate_execution_time()
+
         print("\n" + "=" * 50)
         print("AGGREGATED QUERY RESULT")
         print("=" * 50)
@@ -100,7 +103,18 @@ async def _handle_conversational_query(
 
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=response.content)]}
+    return {
+        "messages": [
+            AIMessage(
+                content=[
+                    FinalQueryOutput(
+                        result=str(response.content),
+                        execution_time=query_result.execution_time,
+                    ).to_dict()
+                ]
+            )
+        ]
+    }
 
 
 async def _handle_data_query(
@@ -137,7 +151,7 @@ async def _handle_data_query(
                 )
 
     if not results and not tool_used_results:
-        return await _handle_empty_results(user_query, errors)
+        return await _handle_empty_results(query_result, errors)
 
     prompt = f"""
     Context:
@@ -176,16 +190,29 @@ async def _handle_data_query(
 
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=response.content)]}
+    return {
+        "messages": [
+            AIMessage(
+                content=[
+                    FinalQueryOutput(
+                        result=str(response.content),
+                        execution_time=query_result.execution_time,
+                    ).to_dict()
+                ]
+            )
+        ]
+    }
 
 
 async def _handle_empty_results(
-    user_query: str,
+    query_result: QueryResult,
     errors: Any,
 ) -> dict[str, list[Any]]:
     """
     Handle empty query results with a more personalized response
     """
+
+    user_query = query_result.original_user_query
 
     prompt = f"""
     The user asked: "{user_query}"
@@ -206,4 +233,15 @@ async def _handle_empty_results(
 
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=response.content)]}
+    return {
+        "messages": [
+            AIMessage(
+                content=[
+                    FinalQueryOutput(
+                        result=str(response.content),
+                        execution_time=query_result.execution_time,
+                    ).to_dict()
+                ]
+            )
+        ]
+    }

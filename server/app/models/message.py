@@ -1,3 +1,4 @@
+from attr import dataclass
 from langchain_core.messages import AIMessage
 
 
@@ -23,3 +24,15 @@ class ErrorMessage(AIMessage):
     @classmethod
     def from_json(cls, json_content: dict) -> "ErrorMessage":
         return cls(content=[json_content])
+
+
+@dataclass
+class FinalQueryOutput:
+    result: str
+    execution_time: float
+
+    def to_dict(self) -> dict:
+        return {
+            "result": self.result,
+            "execution_time": self.execution_time,
+        }
