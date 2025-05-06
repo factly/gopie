@@ -7,8 +7,8 @@ import (
 
 type OlapRepository interface {
 	Connect(*config.OlapDBConfig) error
-	CreateTable(filePath, tableName, format string) error
-	CreateTableFromS3(s3Path, tableName, format string) error
+	CreateTable(filePath, tableName, format string, alterColumnNames map[string]string) error
+	CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string) error
 	Query(query string) (*models.Result, error)
 	DropTable(tableName string) error
 	Close() error
