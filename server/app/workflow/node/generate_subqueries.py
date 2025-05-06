@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 from langchain_core.messages import HumanMessage
@@ -21,39 +20,49 @@ async def generate_subqueries(state: State):
     prompt = f"""
       User Query: {user_input}
 
-      Analyze the user query and divide it into logical sub-steps if necessary.
+      Analyze the user query and determine if it needs to be broken down into
+      sub-queries or simply improved.
+
       Follow these guidelines:
 
-      - Break down complex queries that would be difficult to handle in a
-        single SQL query
-      - Only create sub-queries when they're genuinely needed (for different
-        data aspects or computational steps)
-      - If the query is simple enough to handle with one SQL query, return an
-        empty list
-      - Order sub-queries logically: place data retrieval/analysis queries
-        first, followed by queries that depend on previous results
-      - Focus only on the specific entities mentioned in the query (e.g.,
-        only the specified districts, not all districts)
-      - Ensure each sub-query addresses a distinct aspect of the main question
+      1. QUERY ASSESSMENT:
+         - First, determine if the query can be handled in a single agent cycle
+         - Consider complexity, number of distinct data operations, and
+           interdependent steps
 
-      For example, for a query like "Is it a fact that no CSR funds were
-      spent in the five backward districts of Telangana?", you could divide it
-      into this sub-query:
-      "Check if the specified backward districts of Telangana (Jagtial,
-      Peddapalli, Jayashankar Bhupalpally, Nagarkurnool and Jogulamba) have
-      zero CSR funds"
+      2. DECISION CRITERIA:
+         - ONLY break down the query if it's genuinely too complex for a
+           single operation
+         - If the query is straightforward or can be handled in one step,
+           DO NOT break it down
+         - Consider whether the query requires multiple distinct datasets or
+           operations that depend on previous results
 
-      CAUTION: Do not write subqueries that would retrieve the whole tuples
-      of the tables or process entities not explicitly mentioned in the query.
-      Instead, write subqueries that would retrieve only the required values
-      for the specific entities mentioned.
+      3. BREAKDOWN RULES (ONLY if necessary):
+         - Maximum 3 sub-queries allowed
+         - Each sub-query should address a distinct aspect of the main question
+         - Order sub-queries logically: place data retrieval/analysis queries
+           first, followed by queries that depend on previous results
+         - Make each sub-query clear, specific, and focused on a single task
+
+      4. QUERY IMPROVEMENT (if no breakdown needed):
+         - If the original query is unclear or ambiguous but doesn't need
+           breaking down, provide an improved version
+         - Clarify ambiguous terms, specify entities more precisely, or
+           reword for clarity
+         - If the original query is already clear and specific, return it
+           unchanged
 
       RESPONSE FORMAT:
       {{
-        "subqueries": ["subquery1", "subquery2"]
+        "needs_breakdown": true/false,
+        "subqueries": ["subquery1", "subquery2", "subquery3"],
+        "improved_query": "improved version of original query if no breakdown
+                           needed"
       }}
 
-      (Return an empty list if the query doesn't need to be divided)
+      IMPORTANT: Prioritize NOT breaking down queries unless absolutely
+      necessary for successful execution.
     """
 
     response = await lc.llm.ainvoke(prompt)
@@ -70,11 +79,18 @@ async def generate_subqueries(state: State):
         parser = JsonOutputParser()
         parsed_content = parser.parse(str(response.content))
 
-        subqueries = parsed_content.get("subqueries", [])
+        needs_breakdown = parsed_content.get("needs_breakdown", False)
 
-        if not subqueries:
-            parsed_content["subqueries"] = [user_input]
-            subqueries = [user_input]
+        if needs_breakdown:
+            subqueries = parsed_content.get("subqueries", [])
+            if len(subqueries) > 3:
+                subqueries = subqueries[:3]
+
+            if not subqueries:
+                subqueries = [user_input]
+        else:
+            improved_query = parsed_content.get("improved_query", user_input)
+            subqueries = [improved_query]
 
         return {
             "user_query": user_input,
@@ -82,8 +98,12 @@ async def generate_subqueries(state: State):
             "subqueries": subqueries,
             "query_result": query_result_object,
             "messages": [
-                IntermediateStep.from_text(
-                    json.dumps(parsed_content, indent=2)
+                IntermediateStep.from_json(
+                    {
+                        "needs_breakdown": needs_breakdown,
+                        "subqueries": subqueries,
+                        "original_query": user_input,
+                    },
                 )
             ],
         }
@@ -100,9 +120,5 @@ async def generate_subqueries(state: State):
             "subquery_index": -1,
             "subqueries": default_subqueries,
             "query_result": query_result_object,
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": error_msg}, indent=2)
-                )
-            ],
+            "messages": [ErrorMessage.from_json({"error": error_msg})],
         }

@@ -33,9 +33,9 @@ async def stream_graph_updates(
     try:
         async for event in graph.astream_events(input_state, version="v2"):
             if event.get("event", None) == "on_custom_event":
-                formatted_event = event.get("data", {})
+                formatted_event = json.dumps(event.get("data", {}), indent=2)
                 logging.info(formatted_event)
-                yield json.dumps(formatted_event) + "\n\n"
+                yield formatted_event + "\n\n"
     except Exception as e:
         error_event = json.dumps(
             {
