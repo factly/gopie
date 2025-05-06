@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -288,7 +289,7 @@ func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alter
 
 	if alterColumnNames != nil {
 		for key, value := range alterColumnNames {
-			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, key, value)
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, quoteIdent(key), value)
 			_, err = tx.Exec(alterSql)
 			if err != nil {
 				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
@@ -357,4 +358,32 @@ func parseError(err error) error {
 		}
 	}
 	return err
+}
+
+// quoteIdent will safely turn any input into a properly‐quoted SQL identifier.
+// It handles Go‐style escapes (\"), strips a single pair of outer quotes if present,
+// escapes any internal quotes by doubling them, then wraps in fresh quotes.
+//
+// Examples:
+//
+//	foo       → "foo"
+//	"foo"     → "foo"
+//	f"o"o     → "f""o""o"
+//	"\"bar\"" → "bar"
+func quoteIdent(str string) string {
+	// 0) if it’s a Go‐quoted literal (e.g. "\"name\""), Unquote it:
+	if unq, err := strconv.Unquote(str); err == nil {
+		str = unq
+	}
+
+	// 1) strip exactly one pair of outer double‐quotes, if present
+	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
+		str = str[1 : len(str)-1]
+	}
+
+	// 2) escape any remaining internal " by doubling
+	str = strings.ReplaceAll(str, `"`, `""`)
+
+	// 3) wrap in fresh quotes
+	return `"` + str + `"`
 }
