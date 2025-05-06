@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { CsvValidationUppy } from "@/components/dataset/csv-validation-uppy";
 import { useRouter } from "next/navigation";
+import { useColumnNameStore } from "@/lib/stores/columnNameStore";
 
 export default function UploadDatasetPage({
   params,
@@ -26,6 +27,9 @@ export default function UploadDatasetPage({
   const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const getColumnMappings = useColumnNameStore(
+    (state) => state.getColumnMappings
+  );
 
   const handleUploadSuccess = async (
     file: UppyFile<Meta, Record<string, never>>,
@@ -55,15 +59,19 @@ export default function UploadDatasetPage({
       console.log("File metadata:", file.meta);
       console.log("Dataset name being used:", datasetName);
 
+      // Get the column name mappings
+      const alter_column_names = getColumnMappings();
+
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
         projectId,
         alias: datasetName,
         createdBy: "system",
         description: datasetDescription,
+        alter_column_names: alter_column_names,
       });
 
-      if (!res?.data.name) {
+      if (!res?.data.dataset.name) {
         throw new Error("Invalid response from server");
       }
 

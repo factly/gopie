@@ -2,7 +2,13 @@ import { createMutation } from "react-query-kit";
 import { apiClient, Dataset } from "@/lib/api-client";
 
 interface Response {
-  data: Dataset;
+  data: {
+    dataset: Dataset;
+    summary: {
+      dataset_name: string;
+      summary: Record<string, string>[];
+    };
+  };
 }
 
 export const useSourceDataset = createMutation({
@@ -13,12 +19,14 @@ export const useSourceDataset = createMutation({
     alias,
     createdBy,
     description,
+    alter_column_names,
   }: {
     datasetUrl: string;
     projectId: string;
     alias: string;
     createdBy: string;
     description?: string;
+    alter_column_names?: Record<string, string>;
   }) => {
     const res = await apiClient.post("source/s3/upload", {
       body: JSON.stringify({
@@ -27,6 +35,7 @@ export const useSourceDataset = createMutation({
         project_id: projectId,
         alias,
         created_by: createdBy,
+        alter_column_names: alter_column_names,
       }),
     });
 
