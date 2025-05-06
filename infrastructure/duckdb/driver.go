@@ -230,7 +230,7 @@ func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColu
 
 	if alterColumnNames != nil {
 		for key, value := range alterColumnNames {
-			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, tableName, key, value)
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN %s TO "%s"`, tableName, key, value)
 			_, err = tx.Exec(alterSql)
 			if err != nil {
 				m.logger.Error("error executing alter query", zap.String("query", alterSql), zap.Error(err))
