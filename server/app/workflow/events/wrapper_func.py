@@ -12,23 +12,24 @@ def create_event_wrapper(name: str, func):
                 event_node=EventNode[name.upper()],
                 status=EventStatus.STARTED,
                 data=EventData(
-                    input=str(state.get("messages", [])[-1].content),
+                    input=state.get("messages", [])[-1].content,
                 ),
             )
 
             result = await func(state)
 
-            result_content = (
-                result.get("messages", [])[-1].content
-                if isinstance(result, dict) and result.get("messages")
-                else str(result)
-            )
             event_data = EventData(
-                result=result_content,
+                result=(
+                    result.get("messages", [])[-1].content[0]
+                    if isinstance(result.get("messages", [])[-1].content, list)
+                    else result.get("messages", [])[-1].content
+                ),
             )
 
             await event_dispatcher.dispatch_event(
-                EventNode[name.upper()], EventStatus.COMPLETED, event_data
+                event_node=EventNode[name.upper()],
+                status=EventStatus.COMPLETED,
+                data=event_data,
             )
 
             return result
@@ -38,7 +39,9 @@ def create_event_wrapper(name: str, func):
                 error=str(e),
             )
             await event_dispatcher.dispatch_event(
-                EventNode.ERROR, EventStatus.ERROR, error_data
+                event_node=EventNode[name.upper()],
+                status=EventStatus.ERROR,
+                data=error_data,
             )
             raise
 

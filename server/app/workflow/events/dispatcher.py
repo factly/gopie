@@ -18,7 +18,6 @@ def create_progress_message(event_node: EventNode) -> str:
         EventNode.GENERATE_RESULT: "Generating results...",
         EventNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "
         "Stopping...",
-        EventNode.ERROR: "An error occurred",
         EventNode.TOOL_START: "Starting operation...",
         EventNode.TOOL_END: "Completed operation",
         EventNode.TOOL_ERROR: "Error in operation",

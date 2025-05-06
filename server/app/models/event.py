@@ -13,7 +13,6 @@ class EventNode(Enum):
     EXECUTE_QUERY = "execute_query"
     GENERATE_RESULT = "generate_result"
     MAX_ITERATIONS_REACHED = "max_iterations_reached"
-    ERROR = "error"
     TOOL_START = "tool_start"
     TOOL_END = "tool_end"
     TOOL_ERROR = "tool_error"
@@ -27,9 +26,9 @@ class EventStatus(Enum):
 
 
 class EventData(BaseModel):
-    input: str | None = None
-    result: str | None = None
-    error: str | None = None
+    input: str | dict | None = None
+    result: str | dict | None = None
+    error: str | dict | None = None
 
 
 @dataclass
