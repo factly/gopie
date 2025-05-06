@@ -228,7 +228,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/chats.chatRequeryBody"
+                            "$ref": "#/definitions/chats.chatRequestBody"
                         }
                     }
                 ],
@@ -267,6 +267,52 @@
                         "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/chats/agent": {
+            "post": {
+                "description": "Create a streaming chat conversation with an AI agent about datasets or projects",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Chat with AI agent",
+                "parameters": [
+                    {
+                        "description": "Chat request parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chats.chatWithAgentRequeryBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Server-sent events stream started",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -1208,7 +1254,7 @@
                 }
             }
         },
-        "chats.chatRequeryBody": {
+        "chats.chatRequestBody": {
             "description": "Request body for creating or continuing a chat conversation",
             "type": "object",
             "required": [
@@ -1252,6 +1298,40 @@
                             }
                         }
                     }
+                }
+            }
+        },
+        "chats.chatWithAgentRequeryBody": {
+            "description": "Request body for creating a streaming chat conversation with an AI agent",
+            "type": "object",
+            "required": [
+                "user_input"
+            ],
+            "properties": {
+                "dataset_ids": {
+                    "description": "Array of dataset IDs to analyze",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['550e8400-e29b-41d4-a716-446655440000']"
+                    ]
+                },
+                "project_ids": {
+                    "description": "Array of project IDs to analyze",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['550e8400-e29b-41d4-a716-446655440000']"
+                    ]
+                },
+                "user_input": {
+                    "description": "User input/question for the AI agent",
+                    "type": "string",
+                    "example": "What are the trends in this dataset?"
                 }
             }
         },
@@ -1538,10 +1618,18 @@
             "description": "Request body for updating a dataset from S3",
             "type": "object",
             "required": [
+                "alter_column_names",
                 "dataset",
                 "updated_by"
             ],
             "properties": {
+                "alter_column_names": {
+                    "description": "Column names to be altered (optional)",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "dataset": {
                     "description": "Name of the dataset to update",
                     "type": "string",
@@ -1572,6 +1660,7 @@
             "type": "object",
             "required": [
                 "alias",
+                "alter_column_names",
                 "created_by",
                 "file_path",
                 "project_id"
@@ -1582,6 +1671,13 @@
                     "type": "string",
                     "minLength": 3,
                     "example": "sales_data"
+                },
+                "alter_column_names": {
+                    "description": "Column names to be altered",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "created_by": {
                     "description": "User ID of the creator",

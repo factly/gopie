@@ -41,7 +41,7 @@ type chatRequestBody struct {
 // @Tags chats
 // @Accept json
 // @Produce json
-// @Param body body chatRequeryBody true "Chat request parameters"
+// @Param body body chatRequestBody true "Chat request parameters"
 // @Success 201 {object} responses.SuccessResponse{data=models.ChatWithMessages} "Chat created/continued successfully"
 // @Failure 400 {object} responses.ErrorResponse "Invalid request body"
 // @Failure 404 {object} responses.ErrorResponse "Dataset not found"
