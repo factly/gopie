@@ -14,10 +14,6 @@ from app.workflow.graph.types import State
 def create_llm_prompt(
     user_query: str, available_datasets_schemas: list[DatasetSchema]
 ) -> str:
-    """
-    Create a prompt for the LLM to identify the relevant dataset and required
-    columns
-    """
     return f"""
         You are an AI assistant specialized in data analysis. Your role is to
         help users analyze data by identifying relevant datasets and column
@@ -112,10 +108,8 @@ async def identify_datasets(state: State):
                 "query_result": query_result,
                 "datasets": None,
                 "messages": [
-                    ErrorMessage.from_text(
-                        json.dumps(
-                            {"error": "No relevant datasets found"}, indent=2
-                        )
+                    ErrorMessage.from_json(
+                        {"error": "No relevant datasets found"}
                     )
                 ],
             }
@@ -152,11 +146,7 @@ async def identify_datasets(state: State):
             "query_result": query_result,
             "datasets_info": datasets_info,
             "datasets": selected_datasets,
-            "messages": [
-                IntermediateStep.from_text(
-                    json.dumps(parsed_content, indent=2)
-                )
-            ],
+            "messages": [IntermediateStep.from_json(parsed_content)],
         }
 
     except Exception as e:
@@ -165,9 +155,5 @@ async def identify_datasets(state: State):
         return {
             "query_result": query_result,
             "datasets": None,
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": error_msg}, indent=2)
-                )
-            ],
+            "messages": [ErrorMessage.from_json({"error": error_msg})],
         }

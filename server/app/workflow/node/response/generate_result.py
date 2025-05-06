@@ -8,7 +8,10 @@ from app.workflow.graph.types import State
 
 
 async def generate_result(state: State) -> dict[str, list[Any]]:
-    """Generate results of the executed query."""
+    """
+    Generate a response based on the query result
+    """
+
     query_result = state.get("query_result")
     if query_result:
         print("\n" + "=" * 50)
@@ -37,41 +40,40 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
         if not isinstance(query_result, QueryResult):
             return {
                 "messages": [
-                    ErrorMessage.from_text(
-                        json.dumps(
-                            {
-                                "error": "Invalid query result format",
-                                "details": "Expected QueryResult object",
-                            }
-                        )
+                    ErrorMessage.from_json(
+                        {
+                            "error": "Invalid query result format",
+                            "details": "Expected QueryResult object",
+                        }
                     )
                 ]
             }
 
         return (
-            await _handle_data_query(state, query_result)
+            await _handle_data_query(query_result)
             if any_data_query
-            else await _handle_conversational_query(state, query_result)
+            else await _handle_conversational_query(query_result)
         )
     except Exception as e:
         return {
             "messages": [
-                ErrorMessage.from_text(
-                    json.dumps(
-                        {
-                            "error": "Critical error in result generation",
-                            "details": str(e),
-                        }
-                    )
+                ErrorMessage.from_json(
+                    {
+                        "error": "Critical error in result generation",
+                        "details": str(e),
+                    }
                 )
             ]
         }
 
 
 async def _handle_conversational_query(
-    state: State, query_result: QueryResult
+    query_result: QueryResult,
 ) -> dict[str, list[Any]]:
-    """Handle conversational or tool-only queries"""
+    """
+    Handle conversational or tool-only queries
+    """
+
     user_query = query_result.original_user_query
     tool_results = []
 
@@ -98,13 +100,16 @@ async def _handle_conversational_query(
 
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=str(response.content))]}
+    return {"messages": [AIMessage(content=response.content)]}
 
 
 async def _handle_data_query(
-    state: State, query_result: QueryResult
+    query_result: QueryResult,
 ) -> dict[str, list[Any]]:
-    """Handle data analysis queries"""
+    """
+    Handle data analysis queries
+    """
+
     user_query = query_result.original_user_query
     results = []
     tool_used_results = []
@@ -171,18 +176,25 @@ async def _handle_data_query(
 
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=str(response.content))]}
+    return {"messages": [AIMessage(content=response.content)]}
 
 
 async def _handle_empty_results(
-    user_query: str = "", errors: Any = None
+    user_query: str,
+    errors: Any,
 ) -> dict[str, list[Any]]:
-    """Handle empty query results with a more personalized response"""
+    """
+    Handle empty query results with a more personalized response
+    """
+
     prompt = f"""
     The user asked: "{user_query}"
 
     I need to inform them that I couldn't find any matching data in a
     helpful way.
+
+    Errors that occurred:
+    {errors}
 
     Instructions:
     1. Be empathetic but professional
@@ -192,23 +204,6 @@ async def _handle_empty_results(
     4. If there were errors, briefly acknowledge them without technical details
     """
 
-    if not user_query:
-        return {
-            "messages": [
-                AIMessage(
-                    content=(
-                        "I analyzed your query but couldn't find matching data"
-                        "This could be because:\n"
-                        "- The data isn't in our current datasets\n"
-                        "- The query needs rephrasing\n"
-                        "- Specific filters might be excluding all results\n\n"
-                        "Could you try rephrasing your question or asking "
-                        "about a different aspect?"
-                    )
-                )
-            ]
-        }
-
     response = await lc.llm.ainvoke(prompt)
 
-    return {"messages": [AIMessage(content=str(response.content))]}
+    return {"messages": [AIMessage(content=response.content)]}

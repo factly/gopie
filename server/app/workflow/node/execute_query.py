@@ -1,8 +1,7 @@
-import json
 from http import HTTPStatus
+from typing import Any
 
 import requests
-from langchain_core.output_parsers import JsonOutputParser
 
 from app.core.config import settings
 from app.core.langchain_config import lc
@@ -10,6 +9,58 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.workflow.graph.types import State
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
+
+
+async def execute_sql(
+    query: str,
+) -> dict[str, Any] | list[dict[str, Any]]:
+    """
+    Execute a SQL query against the SQL API
+
+    Args:
+        query: The SQL query to execute
+
+    Returns:
+        Query results or error information
+    """
+    try:
+        payload = {"query": query}
+        response = requests.post(SQL_API_ENDPOINT, json=payload)
+        if response.status_code != HTTPStatus.OK:
+            error_data = response.json()
+            error_message = error_data.get(
+                "message", "Unknown error from SQL API"
+            )
+            if response.status_code == HTTPStatus.BAD_REQUEST:
+                return {"error": f"Invalid SQL query: {error_message}"}
+            elif response.status_code == HTTPStatus.FORBIDDEN:
+                return {"error": f"Non-SELECT statement: {error_message}"}
+            elif response.status_code == HTTPStatus.NOT_FOUND:
+                return {"error": f"Table not found: {error_message}"}
+            else:
+                error = (
+                    f"SQL API error ({response.status_code}): {error_message}"
+                )
+                return {"error": error}
+
+        result_data = response.json()
+
+        if not result_data or (
+            isinstance(result_data, list) and len(result_data) == 0
+        ):
+            return {"result": "No results found for the query"}
+
+        result_records = result_data
+        if not isinstance(result_data, list):
+            if "data" in result_data:
+                result_records = result_data["data"]
+            else:
+                result_records = [result_data]
+
+        return result_records
+
+    except Exception as e:
+        return {"error": f"Query execution error: {e!s}"}
 
 
 async def execute_query(state: State) -> dict:
@@ -33,69 +84,21 @@ async def execute_query(state: State) -> dict:
         if not last_message or isinstance(last_message, ErrorMessage):
             raise ValueError("No valid query plan found in messages")
 
-        content = (
-            last_message.content
-            if isinstance(last_message.content, str)
-            else json.dumps(last_message.content)
-        )
-
-        parser = JsonOutputParser()
-        query_plan = parser.parse(content)
+        query_plan = last_message.content[0]
 
         if not query_plan:
             raise ValueError("Failed to parse query plan from message")
 
-        sql_query = query_plan.get("sql_query") or query_plan.get(
-            "sample_query"
-        )
+        sql_query = query_plan.get("sql_query")
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
-        payload = {"query": sql_query}
-        response = requests.post(SQL_API_ENDPOINT, json=payload)
-        if response.status_code != HTTPStatus.OK:
-            error_data = response.json()
-            error_message = error_data.get(
-                "message", "Unknown error from SQL API"
-            )
-            if response.status_code == HTTPStatus.BAD_REQUEST:
-                raise ValueError(f"Invalid SQL query: {error_message}")
-            elif response.status_code == HTTPStatus.FORBIDDEN:
-                raise ValueError(f"Non-SELECT statement: {error_message}")
-            elif response.status_code == HTTPStatus.NOT_FOUND:
-                raise ValueError(f"Table not found: {error_message}")
-            else:
-                raise ValueError(
-                    f"SQL API error ({response.status_code}): {error_message}"
-                )
+        result = await execute_sql(sql_query)
 
-        result_data = response.json()
+        if isinstance(result, dict) and "error" in result:
+            raise ValueError(result["error"])
 
-        if not result_data or (
-            isinstance(result_data, list) and len(result_data) == 0
-        ):
-            no_results_data = {
-                "result": "No results found for the query",
-                "query_executed": sql_query,
-            }
-
-            query_result.subqueries[query_index].query_result = []
-
-            return {
-                "query_result": query_result,
-                "messages": [
-                    IntermediateStep.from_text(
-                        json.dumps(no_results_data, indent=2)
-                    )
-                ],
-            }
-
-        result_records = result_data
-        if not isinstance(result_data, list):
-            if "data" in result_data:
-                result_records = result_data["data"]
-            else:
-                result_records = [result_data]
+        result_records = result
 
         result_dict = {
             "result": "Query executed successfully",
@@ -108,9 +111,7 @@ async def execute_query(state: State) -> dict:
 
         return {
             "query_result": query_result,
-            "messages": [
-                IntermediateStep.from_text(json.dumps(result_dict, indent=2))
-            ],
+            "messages": [IntermediateStep.from_json(result_dict)],
         }
 
     except Exception as e:
@@ -119,11 +120,7 @@ async def execute_query(state: State) -> dict:
 
         return {
             "query_result": query_result,
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": error_msg}, indent=2)
-                )
-            ],
+            "messages": [ErrorMessage.from_json({"error": error_msg})],
             "retry_count": state.get("retry_count", 0) + 1,
         }
 

@@ -89,10 +89,8 @@ async def analyze_query(state: State) -> dict:
             "query_result": query_result,
             "query_type": "conversational",
             "messages": [
-                ErrorMessage.from_text(
-                    json.dumps(
-                        {"error": error_msg, "is_data_query": False}, indent=2
-                    )
+                ErrorMessage.from_json(
+                    {"error": error_msg, "is_data_query": False}
                 )
             ],
         }
@@ -137,9 +135,7 @@ async def analyze_query(state: State) -> dict:
             return {
                 "query_result": query_result,
                 "query_type": "conversational",
-                "messages": [
-                    ErrorMessage.from_text(json.dumps(error_data, indent=2))
-                ],
+                "messages": [ErrorMessage.from_json(error_data)],
             }
 
         prompt = create_llm_prompt(user_input, tools_results)
@@ -174,11 +170,7 @@ async def analyze_query(state: State) -> dict:
             "query_result": query_result,
             "subquery_index": query_index,
             "tool_call_count": tool_call_count,
-            "messages": [
-                IntermediateStep.from_text(
-                    json.dumps(parsed_content, indent=2)
-                )
-            ],
+            "messages": [IntermediateStep.from_json(parsed_content)],
         }
 
     except Exception as e:
@@ -190,11 +182,7 @@ async def analyze_query(state: State) -> dict:
             "query_result": query_result,
             "subquery_index": query_index,
             "tool_call_count": tool_call_count,
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": error_msg}, indent=2)
-                )
-            ],
+            "messages": [ErrorMessage.from_json({"error": error_msg})],
         }
 
 

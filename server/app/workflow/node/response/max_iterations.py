@@ -1,5 +1,3 @@
-import json
-
 from app.core.langchain_config import lc
 from app.models.message import AIMessage, ErrorMessage
 from app.workflow.graph.types import State
@@ -16,7 +14,7 @@ async def max_iterations_reached(state: State) -> dict:
         error_content = []
         for message in state.get("messages", []):
             if isinstance(message, ErrorMessage):
-                error_content.append(message.content)
+                error_content.append(message.content[0])
 
         error_summary = (
             "\n".join(error_content)
@@ -42,12 +40,12 @@ async def max_iterations_reached(state: State) -> dict:
         """
 
         response = await lc.llm.ainvoke(explanation_prompt)
-        return {"messages": [AIMessage(content=str(response.content))]}
+        return {"messages": [AIMessage(content=response.content)]}
     except Exception as e:
         return {
             "messages": [
-                ErrorMessage.from_text(
-                    json.dumps(f"Error in max iterations handler: {e!s}")
+                ErrorMessage.from_json(
+                    {"error": f"Error in max iterations handler: {e!s}"}
                 )
             ]
         }

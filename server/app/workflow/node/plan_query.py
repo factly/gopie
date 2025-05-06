@@ -10,10 +10,9 @@ from app.workflow.graph.types import State
 def create_query_prompt(
     user_query: str,
     datasets_info: dict,
-    error_message: str = "",
+    error_message: str | dict,
     attempt: int = 1,
 ) -> str:
-    """Create a prompt for the LLM to generate a SQL query"""
     error_context = ""
     if error_message and attempt > 1:
         error_context = f"""
@@ -101,7 +100,7 @@ async def plan_query(state: State) -> dict:
 
         last_message = state.get("messages", [])[-1]
         last_error = (
-            str(last_message.content)
+            last_message.content[0]
             if isinstance(last_message, ErrorMessage)
             else ""
         )
@@ -158,11 +157,7 @@ async def plan_query(state: State) -> dict:
             return {
                 "query_result": query_result,
                 "query": sql_query,
-                "messages": [
-                    IntermediateStep.from_text(
-                        json.dumps(parsed_response, indent=2)
-                    )
-                ],
+                "messages": [IntermediateStep.from_json(parsed_response)],
             }
 
         except Exception as parse_error:
@@ -175,9 +170,5 @@ async def plan_query(state: State) -> dict:
         error_msg = f"Unexpected error in query planning: {e!s}"
         return {
             "query_result": query_result,
-            "messages": [
-                ErrorMessage.from_text(
-                    json.dumps({"error": error_msg}, indent=2)
-                )
-            ],
+            "messages": [ErrorMessage.from_json({"error": error_msg})],
         }
