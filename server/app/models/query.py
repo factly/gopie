@@ -16,6 +16,8 @@ class SubQueryInfo:
     query_type: str | None = None
     query_result: Any = None
     tool_used_result: Any = None
+    contains_large_results: bool = False
+    summary: dict | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -26,6 +28,8 @@ class SubQueryInfo:
             "query_type": self.query_type,
             "query_result": self.query_result,
             "tool_used_result": self.tool_used_result,
+            "contains_large_results": self.contains_large_results,
+            "summary": self.summary,
         }
 
 

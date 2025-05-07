@@ -17,6 +17,8 @@ class EventNode(Enum):
     TOOL_END = "tool_end"
     TOOL_ERROR = "tool_error"
     TOOLS = "tools"
+    EXTRACT_SUMMARY = "extract_summary"
+    VALIDATE_QUERY_RESULT = "validate_query_result"
 
 
 class EventStatus(Enum):

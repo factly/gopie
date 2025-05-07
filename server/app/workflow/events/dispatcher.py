@@ -16,6 +16,8 @@ def create_progress_message(event_node: EventNode) -> str:
         EventNode.PLAN_QUERY: "Planning the database query...",
         EventNode.EXECUTE_QUERY: "Executing the query...",
         EventNode.GENERATE_RESULT: "Generating results...",
+        EventNode.EXTRACT_SUMMARY: "Extracting summary...",
+        EventNode.VALIDATE_QUERY_RESULT: "Validating query result...",
         EventNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "
         "Stopping...",
         EventNode.TOOL_START: "Starting operation...",
