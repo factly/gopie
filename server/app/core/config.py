@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     PORTKEY_API_KEY: str = ""
 
-    GEMINI_MODEL: str = "gemini-2.5-pro-preview-03-25"
+    GEMINI_MODEL: str = "gemini-2.5-pro-preview-05-06"
     GEMINI_VIRTUAL_KEY: str = ""
 
     OPENAI_MODEL: str = "gpt-4o"
