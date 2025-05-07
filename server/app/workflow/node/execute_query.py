@@ -134,7 +134,8 @@ async def route_query_replan(state: State) -> str:
         state: The current state containing messages and retry information
 
     Returns:
-        Routing decision: "replan" or "generate_result"
+        Routing decision: "replan", "reidentify_datasets", or
+        "validate_result"
     """
     last_message = state["messages"][-1]
     retry_count = state.get("retry_count", 0)
@@ -154,7 +155,7 @@ async def route_query_replan(state: State) -> str:
                 If it's need to reidentify the datasets, please return
                 "reidentify_datasets"
                 If it's need to replan the query, please return "replan"
-                If it's no problem, please return "response_router"
+                If it's no problem, please return "validate_query_result"
 
                 Think through this step-by-step:
                 1. Analyze the error message
@@ -171,6 +172,6 @@ async def route_query_replan(state: State) -> str:
         elif "replan" in response_text:
             return "replan"
         else:
-            return "response_router"
+            return "validate_query_result"
 
-    return "response_router"
+    return "validate_query_result"
