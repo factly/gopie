@@ -1,7 +1,9 @@
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
+from app.core.system_prompt import SYSTEM_PROMPT
 from app.tools import TOOLS
 
 
@@ -43,7 +45,14 @@ class LangchainConfig:
             model=config.embeddings_model,
         )
 
-        self.llm = model.bind_tools(list(TOOLS.values()))
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", SYSTEM_PROMPT),
+                ("human", "{input}"),
+            ]
+        )
+
+        self.llm = prompt | model.bind_tools(list(TOOLS.values()))
 
 
 lc = LangchainConfig(ModelConfig())
