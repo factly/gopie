@@ -11,9 +11,7 @@ def create_event_wrapper(name: str, func):
             await event_dispatcher.dispatch_event(
                 event_node=EventNode[name.upper()],
                 status=EventStatus.STARTED,
-                data=EventData(
-                    input=parse_data(state.get("messages", [])[-1].content)
-                ),
+                data=EventData(),
             )
 
             result = await func(state)
@@ -44,7 +42,7 @@ def create_event_wrapper(name: str, func):
     return wrapped_func
 
 
-def parse_data(data: list | str) -> dict | str:
+def parse_data(data: list | str | None) -> dict | str | None:
     if isinstance(data, list):
         return data[0]
     return data

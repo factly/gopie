@@ -1,4 +1,3 @@
-import json
 from typing import TYPE_CHECKING
 
 from langchain_core.messages import ToolMessage
@@ -38,11 +37,7 @@ class ToolNode:
                 await self.event_dispatcher.dispatch_event(
                     event_node=EventNode.TOOL_START,
                     status=EventStatus.STARTED,
-                    data=EventData(
-                        input=json.dumps(
-                            {"tool": tool_name, "args": tool_args}
-                        )
-                    ),
+                    data=EventData(),
                 )
 
                 if tool_name not in self.tools:
@@ -65,15 +60,13 @@ class ToolNode:
                     event_node=EventNode.TOOL_END,
                     status=EventStatus.COMPLETED,
                     data=EventData(
-                        result=json.dumps(
-                            {"tool": tool_name, "result": tool_result}
-                        )
+                        result={"tool": tool_name, "result": tool_result}
                     ),
                 )
 
                 outputs.append(
                     ToolMessage(
-                        content=json.dumps(tool_result),
+                        content=tool_result,
                         name=tool_name,
                         tool_call_id=tool_call["id"],
                     )
