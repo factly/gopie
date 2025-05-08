@@ -392,6 +392,12 @@ func (m *OlapDBDriver) DropTable(tableName string) error {
 	return nil
 }
 
+// CreateTableFromPostgres creates a table in DuckDB by executing a query on a Postgres database
+func (m *OlapDBDriver) CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error {
+	// TODO
+	return nil
+}
+
 func parseError(err error) error {
 	if err == nil {
 		return nil

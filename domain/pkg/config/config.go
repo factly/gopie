@@ -34,15 +34,16 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server   ServerConfig
-	S3       S3Config
-	Logger   LoggerConfig
-	OlapDB   OlapDBConfig
-	PortKey  PortKeyConfig
-	Meterus  MeterusConfig
-	Postgres PostgresConfig
-	Zitadel  ZitadelConfig
-	AIAgent  AIAgentConfig
+	Server        ServerConfig
+	S3            S3Config
+	Logger        LoggerConfig
+	OlapDB        OlapDBConfig
+	PortKey       PortKeyConfig
+	Meterus       MeterusConfig
+	Postgres      PostgresConfig
+	Zitadel       ZitadelConfig
+	AIAgent       AIAgentConfig
+	EncryptionKey string
 }
 
 type OlapDBConfig struct {
@@ -221,6 +222,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
+	viper.SetDefault("GOPIE_ENCRYPTION_KEY", "default32bytesencryptionkey12345")
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -280,6 +282,7 @@ func LoadConfig() (*GopieConfig, error) {
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
+		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
 	fmt.Println("===>>> ", viper.GetString("GOPIE_AIAGENT_URL"))
 
