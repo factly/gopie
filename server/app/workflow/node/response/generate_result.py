@@ -101,7 +101,7 @@ async def _handle_conversational_query(
     - Focus on direct, helpful answers
     """
 
-    response = await lc.llm.ainvoke(prompt)
+    response = await lc.llm.ainvoke({"input": prompt})
 
     return {
         "messages": [
@@ -188,7 +188,7 @@ async def _handle_data_query(
         clearly state what aspects you can answer and what remains unclear
     """
 
-    response = await lc.llm.ainvoke(prompt)
+    response = await lc.llm.ainvoke({"input": prompt})
 
     return {
         "messages": [
@@ -231,7 +231,7 @@ async def _handle_empty_results(
     4. If there were errors, briefly acknowledge them without technical details
     """
 
-    response = await lc.llm.ainvoke(prompt)
+    response = await lc.llm.ainvoke({"input": prompt})
 
     return {
         "messages": [

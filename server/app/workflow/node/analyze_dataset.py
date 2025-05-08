@@ -24,7 +24,10 @@ async def analyze_dataset(state: State) -> dict:
                 "No column assumptions found in the datasets_info."
             )
 
-        column_mappings = await match_column_values(column_assumptions)
+        dataset_name_mapping = datasets_info.get("dataset_name_mapping", {})
+        column_mappings = await match_column_values(
+            column_assumptions, dataset_name_mapping
+        )
 
         datasets_info["correct_column_requirements"] = column_mappings
         datasets_info.pop("column_assumptions", None)

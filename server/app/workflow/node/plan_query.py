@@ -118,7 +118,7 @@ async def plan_query(state: State) -> dict:
             user_query, datasets_info, last_error, retry_count + 1
         )
 
-        response = await lc.llm.ainvoke(llm_prompt)
+        response = await lc.llm.ainvoke({"input": llm_prompt})
         response_content = str(response.content)
 
         parser = JsonOutputParser()

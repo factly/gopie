@@ -135,7 +135,7 @@ async def route_query_replan(state: State) -> str:
 
     Returns:
         Routing decision: "replan", "reidentify_datasets", or
-        "validate_result"
+        "validate_query_result"
     """
     last_message = state["messages"][-1]
     retry_count = state.get("retry_count", 0)
@@ -145,7 +145,8 @@ async def route_query_replan(state: State) -> str:
         and retry_count < settings.MAX_RETRY_COUNT
     ):
         response = await lc.llm.ainvoke(
-            f"""
+            {
+                "input": f"""
                 I got an error when executing the query:
                 "{last_message.content}"
 
@@ -163,6 +164,7 @@ async def route_query_replan(state: State) -> str:
                 3. Check if it's a query syntax issue
                 4. Decide on the appropriate action
             """
+            }
         )
 
         response_text = str(response.content).lower()

@@ -44,7 +44,7 @@ async def max_iterations_reached(state: State) -> dict:
         Be concise, empathetic and constructive in your response.
         """
 
-        response = await lc.llm.ainvoke(explanation_prompt)
+        response = await lc.llm.ainvoke({"input": explanation_prompt})
         return {
             "messages": [
                 AIMessage(

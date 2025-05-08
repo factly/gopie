@@ -115,7 +115,7 @@ async def identify_datasets(state: State):
             }
 
         prompt = create_llm_prompt(user_query, semantic_searched_datasets)
-        response: Any = await lc.llm.ainvoke(prompt)
+        response: Any = await lc.llm.ainvoke({"input": prompt})
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

@@ -65,7 +65,7 @@ async def generate_subqueries(state: State):
       necessary for successful execution.
     """
 
-    response = await lc.llm.ainvoke(prompt)
+    response = await lc.llm.ainvoke({"input": prompt})
 
     query_result_object = QueryResult(
         original_user_query=user_input,

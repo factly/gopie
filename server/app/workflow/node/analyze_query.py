@@ -139,7 +139,7 @@ async def analyze_query(state: State) -> dict:
             }
 
         prompt = create_llm_prompt(user_input, tools_results)
-        response: Any = await lc.llm.ainvoke(prompt)
+        response: Any = await lc.llm.ainvoke({"input": prompt})
         parser = JsonOutputParser()
 
         if has_tool_calls(response):
