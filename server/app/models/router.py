@@ -9,7 +9,6 @@ class UploadResponse(BaseModel):
 class UploadSchemaRequest(BaseModel):
     project_id: str
     dataset_id: str
-    file_path: str
 
 
 class Message(BaseModel):
@@ -21,3 +20,5 @@ class QueryRequest(BaseModel):
     messages: list[Message]
     project_ids: list[str] | None = None
     dataset_ids: list[str] | None = None
+    chat_id: str | None = None
+    trace_id: str | None = None

@@ -9,7 +9,6 @@ router = APIRouter()
 
 @router.get("/")
 async def root():
-    """Entry point for the application."""
     return {"message": "Welcome to the Database Agent API"}
 
 
@@ -25,6 +24,8 @@ async def query(request: QueryRequest):
                                 these projects.
     - `dataset_ids` (optional): List of individual dataset IDs to query
                                 directly.
+    - `chat_id` (optional): Unique identifier for the chat session.
+    - `trace_id` (optional): Unique identifier for tracing the query execution
     """
 
     return StreamingResponse(
@@ -32,6 +33,8 @@ async def query(request: QueryRequest):
             request.messages,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
+            chat_id=request.chat_id,
+            trace_id=request.trace_id,
         ),
         media_type="text/event-stream",
     )
