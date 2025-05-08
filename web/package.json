@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "prepare-wasm": "node src/scripts/copy-wasm-files.mjs",
+    "dev": "bun run prepare-wasm && next dev",
+    "build": "bun run prepare-wasm && next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.1-dev132.0",
+    "@duckdb/duckdb-wasm-shell": "^1.29.1-dev132.0",
     "@hookform/resolvers": "^3.9.1",
     "@livekit/agents-plugin-silero": "^0.5.4",
     "@livekit/components-core": "^0.12.1",

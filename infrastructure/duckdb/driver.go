@@ -322,7 +322,7 @@ func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alter
 			escapedOldCol := sqlbuilder.Escape(key)
 			escapedNewCol := sqlbuilder.Escape(value)
 
-			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN %s TO %s`, escapedTableName, escapedOldCol, escapedNewCol)
+			alterSql := fmt.Sprintf(`ALTER TABLE %s RENAME COLUMN "%s" TO "%s"`, escapedTableName, escapedOldCol, escapedNewCol)
 			m.logger.Debug("executing alter query", zap.String("query", alterSql))
 
 			_, err = tx.Exec(alterSql)
