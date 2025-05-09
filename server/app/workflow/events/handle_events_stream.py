@@ -65,14 +65,13 @@ def handle_events_stream(
         chunk = event.get("data", {}).get("chunk", {})
 
         if (
-            chunk
-            and chunk.content  # type: ignore
-            and (
-                graph_node == AgentNode.GENERATE_RESULT.value
-                or graph_node == AgentNode.MAX_ITERATIONS_REACHED.value
-            )
+            graph_node == AgentNode.GENERATE_RESULT.value
+            or graph_node == AgentNode.MAX_ITERATIONS_REACHED.value
         ):
-            content = chunk.content  # type: ignore
+            if chunk and chunk.content:  # type: ignore
+                content = chunk.content  # type: ignore
+            else:
+                content = ""
             role = Role.AI
         else:
             role = Role.INTERMEDIATE

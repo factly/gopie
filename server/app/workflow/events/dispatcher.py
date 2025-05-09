@@ -15,7 +15,10 @@ def create_progress_message(agent_node: AgentNode) -> str:
         AgentNode.GENERATE_SUBQUERIES: "Breaking down your query into "
         "manageable parts...",
         AgentNode.IDENTIFY_DATASETS: "Identifying relevant datasets...",
+        AgentNode.ANALYZE_DATASETS: "Analyzing datasets...",
+        AgentNode.ANALYZE_QUERY: "Analyzing the query...",
         AgentNode.PLAN_QUERY: "Planning the database query...",
+        AgentNode.VALIDATE_QUERY_RESULT: "Validating the query result...",
         AgentNode.EXECUTE_QUERY: "Executing the query...",
         AgentNode.GENERATE_RESULT: "Generating results...",
         AgentNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "

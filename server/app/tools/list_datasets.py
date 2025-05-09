@@ -88,7 +88,6 @@ async def get_all_datasets() -> list[dict]:
     for project in projects:
         project_id = project.get("id")
         if project_id:
-            print(f"Project ID: {project_id}")
             datasets = await list_datasets(project_id=project_id)
 
             if datasets:
@@ -99,8 +98,6 @@ async def get_all_datasets() -> list[dict]:
                         all_datasets.append(
                             dataset.get("alias", "") + file_extension
                         )
-            else:
-                logging.error(f"No datasets found for project {project_id}")
 
     return all_datasets
 

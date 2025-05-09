@@ -126,6 +126,7 @@ async def _handle_data_query(
 
     user_query = query_result.original_user_query
     results = []
+    summary = []
     tool_used_results = []
     sql_with_explanations = []
     errors = query_result.error_message
@@ -134,6 +135,9 @@ async def _handle_data_query(
         for subquery in query_result.subqueries:
             if subquery.query_result:
                 results.append(subquery.query_result)
+
+            if subquery.summary:
+                summary.append(subquery.summary)
 
             if subquery.tool_used_result:
                 tool_used_results.append(subquery.tool_used_result)
@@ -163,6 +167,7 @@ async def _handle_data_query(
           else "No SQL queries were executed."
       }
     - Results: {json.dumps(results, indent=2)}
+    - Summary: {json.dumps(summary, indent=2)}
     - Tool Results: {
         json.dumps(tool_used_results, indent=2)
         if tool_used_results

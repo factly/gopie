@@ -1,317 +1,283 @@
-from typing import Any
+import logging
+from typing import Any, Dict, List, Set
 
 from app.workflow.node.execute_query import execute_sql
 
 
 async def match_column_values(
-    column_assumption: list[dict[str, Any]],
-) -> dict[str, Any]:
+    column_assumptions: List[Dict[str, Any]],
+    dataset_name_mapping: Dict[str, str],
+) -> Dict[str, Any]:
     """
-    Match assumed column values with actual dataset values using SQL queries.
+    Match column values against expected values and find similar values
+    when exact matches aren't found.
 
     Args:
-        column_assumption: List of dictionaries containing dataset and column
-                          assumptions
+        column_assumptions: List of dictionaries containing dataset and columns
+            Each dict has 'dataset' and 'columns' keys, where 'columns' is a
+            list of dictionaries with 'name' and 'expected_values' keys.
+        dataset_name_mapping: Mapping of user-friendly dataset names to actual
+            table names
 
     Returns:
-        Dictionary with column mapping results
+        Dictionary with matched columns, verified values, and suggestions
     """
-    column_mappings = []
+    logging.info(
+        f"Starting column value matching with {len(column_assumptions)} "
+        "dataset assumptions"
+    )
+    logging.debug(f"Column assumptions: {column_assumptions}")
+    logging.debug(f"Dataset name mapping: {dataset_name_mapping}")
 
-    for dataset_info in column_assumption:
-        dataset_name = dataset_info.get("dataset")
-
-        if not dataset_name:
-            continue
-
-        if dataset_name.endswith(".csv"):
-            dataset_name = dataset_name[:-4]
-
-        dataset_mapping = {"dataset": dataset_name, "columns": []}
-
-        for column_info in dataset_info.get("columns", []):
-            column_name = column_info.get("name")
-            expected_values = column_info.get("expected_values", [])
-
-            if not column_name or not expected_values:
-                continue
-
-            column_result = await verify_column_existence(
-                dataset_name, column_name
-            )
-
-            if "error" in column_result:
-                dataset_mapping["columns"].append(column_result)
-                continue
-
-            # Process expected values
-            column_result["expected_name"] = column_name
-            column_result["name"] = column_name
-
-            # Get exact and similar matches for the expected values
-            value_matches = await find_matching_values(
-                dataset_name, column_name, expected_values
-            )
-
-            column_result.update(value_matches)
-            dataset_mapping["columns"].append(column_result)
-
-        column_mappings.append(dataset_mapping)
-
-    return {"column_mappings": column_mappings}
-
-
-async def verify_column_existence(
-    dataset_name: str, column_name: str
-) -> dict[str, Any]:
-    """
-    Verify if a column exists in the dataset using SQL query.
-
-    Args:
-        dataset_name: Name of the dataset
-        column_name: Name of the column to verify
-
-    Returns:
-        Dictionary indicating if the column exists or not
-    """
-    try:
-        # Query to check if column exists in table
-        sql_query = f"SELECT {column_name} FROM {dataset_name} LIMIT 1"
-
-        response = await execute_sql(sql_query)
-
-        if isinstance(response, dict) and "error" in response:
-            return {
-                "name": column_name,
-                "error": f"Column not found in dataset: {response['error']}",
-            }
-
-        return {"name": column_name}
-
-    except Exception as e:
-        return {
-            "name": column_name,
-            "error": f"Error verifying column: {str(e)}",
-        }
-
-
-async def find_matching_values(
-    dataset_name: str, column_name: str, expected_values: list[str]
-) -> dict[str, Any]:
-    """
-    Find exact and similar matches for expected values using SQL queries.
-
-    Args:
-        dataset_name: Name of the dataset
-        column_name: Name of the column to check
-        expected_values: List of expected values to match
-
-    Returns:
-        Dictionary with exact matches and similar matches
-    """
     result = {
-        "correct_values": [],
-        "not_found_values": [],
-        "similar_values": {},
+        "verified_columns": [],
+        "unverified_columns": [],
+        "value_matches": {},
+        "value_suggestions": {},
+        "column_mappings": {},
     }
 
-    # Get column statistics for processing
-    stats = await get_column_stats(dataset_name, column_name)
+    if not column_assumptions or not dataset_name_mapping:
+        logging.warning("Empty column assumptions or dataset mapping provided")
+        return result
 
-    if stats.get("error"):
-        return {"error": stats["error"]}
+    # Process each dataset assumption
+    for dataset_assumption in column_assumptions:
+        dataset_name = dataset_assumption.get("dataset")
+        columns = dataset_assumption.get("columns", [])
 
-    result["total_unique_values"] = stats["count"]
-
-    # Check for exact matches first
-    exact_matches = await find_exact_matches(
-        dataset_name, column_name, expected_values
-    )
-
-    for value in expected_values:
-        if value in exact_matches:
-            result["correct_values"].append(value)
-        else:
-            # If no exact match, look for similar values
-            similar = await find_similar_values(
-                dataset_name, column_name, value
+        if not dataset_name or dataset_name not in dataset_name_mapping:
+            logging.warning(
+                f"Dataset '{dataset_name}' not found in mapping, skipping"
             )
+            continue
 
-            if similar:
-                # Limit to 20 similar values
-                result["similar_values"][value] = similar[:20]
-                # Use the closest match as the correct value
-                result["correct_values"].append(similar[0])
-            else:
-                result["not_found_values"].append(value)
+        actual_table = dataset_name_mapping[dataset_name]
 
-    if result["total_unique_values"] > 100:
-        suggestion = (
-            "Large number of unique values. Consider filtering or grouping."
-        )
-        result["suggestion"] = suggestion
+        # Process each column in this dataset
+        for col_idx, column_obj in enumerate(columns):
+            column_name = column_obj.get("name")
+            expected_values = column_obj.get("expected_values", [])
+
+            if not column_name:
+                logging.warning(
+                    f"Skipping column {col_idx+1}: No column name provided"
+                )
+                continue
+
+            # Assume column exists and add to verified columns
+            result["verified_columns"].append(column_name)
+
+            # Verify expected values if provided
+            if expected_values:
+                await verify_column_values(
+                    column_name,
+                    # Use the same column name without verification
+                    column_name,
+                    expected_values,
+                    actual_table,
+                    result,
+                )
+
+    logging.info(
+        f"Column value matching completed: "
+        f"{len(result['verified_columns'])} verified columns, "
+        f"{len(result['unverified_columns'])} unverified columns"
+    )
+    return result
+
+
+async def get_all_columns(
+    dataset_name_mapping: Dict[str, str],
+) -> Dict[str, Set[str]]:
+    """Get all column names from all tables in the dataset mapping."""
+    result = {}
+
+    for _, actual_table in dataset_name_mapping.items():
+        try:
+            query = f"""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = '{actual_table}'
+            """
+            columns_result = await execute_sql(query)
+
+            if isinstance(columns_result, list) and columns_result:
+                result[actual_table] = {
+                    col["column_name"]
+                    for col in columns_result
+                    if "column_name" in col
+                }
+                logging.debug(
+                    f"Found {len(result[actual_table])} columns for "
+                    f"table '{actual_table}'"
+                )
+        except Exception as e:
+            logging.error(
+                f"Error getting columns for table '{actual_table}': {str(e)}",
+                exc_info=True,
+            )
 
     return result
 
 
-async def get_column_stats(
-    dataset_name: str, column_name: str
-) -> dict[str, Any]:
+def find_similar_column_names(
+    column_name: str, columns: Set[str]
+) -> List[str]:
+    """Find columns with names similar to the given column name."""
+    similar_columns = []
+
+    col_lower = column_name.lower()
+    name_parts = col_lower.split("_")
+
+    for col in columns:
+        target_lower = col.lower()
+        # Check for similarity
+        if (
+            col_lower in target_lower
+            or target_lower in col_lower
+            or any(word in target_lower for word in name_parts)
+        ):
+            similar_columns.append(col)
+
+    return similar_columns
+
+
+async def verify_column_values(
+    original_column: str,
+    verified_column: str,
+    expected_values: List[str],
+    table_name: str,
+    result: Dict[str, Any],
+) -> None:
     """
-    Get column statistics using SQL query.
-
-    Args:
-        dataset_name: Name of the dataset
-        column_name: Name of the column
-
-    Returns:
-        Dictionary with column statistics
+    Verify expected values against the column and collect matches/suggestions.
     """
-    try:
-        sql_query = f"""
-            SELECT COUNT(DISTINCT {column_name}) AS count
-            FROM {dataset_name}
-        """
 
-        response = await execute_sql(sql_query)
-
-        if isinstance(response, dict) and "error" in response:
-            return {"error": response["error"]}
-
-        if isinstance(response, list) and len(response) > 0:
-            return {"count": response[0].get("count", 0)}
-
-        return {"count": 0}
-
-    except Exception as e:
-        return {"error": f"Error getting column statistics: {str(e)}"}
-
-
-async def find_exact_matches(
-    dataset_name: str, column_name: str, expected_values: list[str]
-) -> list[str]:
-    """
-    Find exact matches for expected values using SQL query.
-
-    Args:
-        dataset_name: Name of the dataset
-        column_name: Name of the column
-        expected_values: List of expected values to match
-
-    Returns:
-        List of matched values
-    """
-    if not expected_values:
-        return []
-
-    # Escape single quotes in values for SQL
-    escaped_values = [value.replace("'", "''") for value in expected_values]
-    values_str = ", ".join(escaped_values)
-
-    sql_query = (
-        f"SELECT DISTINCT {column_name} "
-        f"FROM {dataset_name} "
-        f"WHERE {column_name} IN ({values_str})"
+    logging.info(
+        f"Verifying {len(expected_values)} values for '{verified_column}'"
     )
 
+    matches = []
+    suggestions = {}
+
+    for value in expected_values:
+        # Try exact match
+        exact_match = await check_exact_match(
+            value, verified_column, table_name
+        )
+
+        if exact_match:
+            matches.append(value)
+        else:
+            # Try approximate matches
+            similar = await find_similar_values(
+                value, verified_column, table_name
+            )
+            if similar:
+                suggestions[value] = similar
+
+    # Store results
+    if matches:
+        result["value_matches"][original_column] = matches
+
+    if suggestions:
+        if original_column not in result["value_suggestions"]:
+            result["value_suggestions"][original_column] = {}
+
+        result["value_suggestions"][original_column][
+            "similar_values"
+        ] = suggestions
+
+
+async def check_exact_match(
+    value: str, column_name: str, table_name: str
+) -> bool:
+    """Check if the value exactly matches any value in the column."""
     try:
-        response = await execute_sql(sql_query)
+        safe_value = value.replace("'", "''")
+        query = f"""
+        SELECT COUNT(*) as count
+        FROM {table_name}
+        WHERE LOWER({column_name}) = LOWER('{safe_value}')
+        """
+        result = await execute_sql(query)
 
-        if isinstance(response, list):
-            return [
-                row.get(column_name, "")
-                for row in response
-                if column_name in row
-            ]
+        if (
+            isinstance(result, list)
+            and result
+            and result[0].get("count", 0) > 0
+        ):
+            logging.info(f"Exact match found for '{value}' in '{column_name}'")
+            return True
+    except Exception as e:
+        logging.error(
+            f"Error checking exact match for '{value}' in "
+            f"'{table_name}.{column_name}': {str(e)}",
+            exc_info=True,
+        )
 
-        return []
-
-    except Exception:
-        matches = []
-        for value in expected_values:
-            try:
-                escaped_value = value.replace("'", "''")
-                sql_query = (
-                    f"SELECT DISTINCT {column_name} "
-                    f"FROM {dataset_name} "
-                    f"WHERE {column_name} = '{escaped_value}' "
-                    f"LIMIT 1"
-                )
-
-                response = await execute_sql(sql_query)
-
-                if isinstance(response, list) and len(response) > 0:
-                    matches.append(value)
-
-            except Exception:
-                continue
-
-        return matches
+    return False
 
 
 async def find_similar_values(
-    dataset_name: str, column_name: str, value: str, max_results: int = 20
-) -> list[str]:
-    """
-    Find similar values for a given value using SQL LIKE patterns.
-
-    Args:
-        dataset_name: Name of the dataset
-        column_name: Name of the column
-        value: Value to find similar matches for
-        max_results: Maximum number of similar results to return
-
-    Returns:
-        List of similar values
-    """
-    # Try multiple patterns to find similar values
-    patterns = []
-
-    # Handle spaces vs underscores conversion
-    modified_value = value.replace(" ", "_")
-    patterns.append(modified_value)
-    patterns.append(value.replace("_", " "))
-
-    # Create LIKE patterns for partial matches
-    terms = value.split()
-    if len(terms) > 1:
-        # Match first few words
-        patterns.append(f"{terms[0]}%")
-        if len(terms) > 2:
-            patterns.append(f"{terms[0]} {terms[1]}%")
-
-    # Add wildcard patterns
-    patterns.append(f"%{value}%")
-
+    value: str, column_name: str, table_name: str
+) -> List[str]:
+    """Find values in the column similar to the expected value."""
     similar_values = []
 
-    for pattern in patterns:
-        if len(similar_values) >= max_results:
-            break
+    try:
+        safe_value = value.replace("'", "''")
 
-        escaped_pattern = pattern.replace("'", "''")
-        sql_query = (
-            f"SELECT DISTINCT {column_name} "
-            f"FROM {dataset_name} "
-            f"WHERE {column_name} LIKE '{escaped_pattern}' "
-            f"LIMIT {max_results}"
+        # Try LIKE search
+        query = f"""
+        SELECT DISTINCT {column_name}
+        FROM {table_name}
+        WHERE {column_name} IS NOT NULL
+          AND (
+            LOWER({column_name}) LIKE LOWER('%{safe_value}%')
+            OR
+            LOWER('{safe_value}') LIKE LOWER(CONCAT('%', {column_name}, '%'))
+          )
+        LIMIT 5
+        """
+        result = await execute_sql(query)
+
+        if isinstance(result, list) and result:
+            for row in result:
+                if column_name in row:
+                    similar_values.append(row[column_name])
+
+        # If no results, try word-by-word matching
+        if not similar_values:
+            words = safe_value.split()
+            for word in words:
+                if len(word) < 3:  # Skip short words
+                    continue
+
+                query = f"""
+                SELECT DISTINCT {column_name}
+                FROM {table_name}
+                WHERE {column_name} IS NOT NULL
+                  AND LOWER({column_name}) LIKE LOWER('%{word}%')
+                LIMIT 5
+                """
+                word_result = await execute_sql(query)
+
+                if isinstance(word_result, list) and word_result:
+                    for row in word_result:
+                        if column_name in row:
+                            similar_values.append(row[column_name])
+    except Exception as e:
+        logging.error(
+            f"Error finding similar values for '{value}' in "
+            f"'{table_name}.{column_name}': {str(e)}",
+            exc_info=True,
         )
 
-        try:
-            response = await execute_sql(sql_query)
+    if similar_values:
+        logging.info(
+            f"Found {len(similar_values)} similar values for '{value}'"
+        )
 
-            if isinstance(response, list):
-                new_values = [
-                    row.get(column_name, "")
-                    for row in response
-                    if column_name in row
-                ]
-                # Add new values not already found
-                for val in new_values:
-                    if val and val not in similar_values:
-                        similar_values.append(val)
-
-        except Exception:
-            continue
-
-    return similar_values[:max_results]
+    return list(set(similar_values))

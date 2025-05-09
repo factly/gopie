@@ -17,7 +17,7 @@ def is_result_too_large(result: Any) -> tuple[bool, str]:
     """
     try:
         if isinstance(result, list):
-            if len(result) > 4:
+            if len(result) > 200:
                 return True, f"Query returned too many records: {len(result)}"
 
             result_json = json.dumps(result)
