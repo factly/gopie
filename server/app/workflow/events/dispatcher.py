@@ -1,32 +1,29 @@
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.callbacks.manager import adispatch_custom_event
 
-from app.models.event import AgentEvent, EventData, EventNode, EventStatus
+from app.models.chat import (
+    AgentNode,
+    ChatTextChunk,
+    ChunkType,
+    StructuredChatStreamChunk,
+    ToolMessage,
+)
 
 
-def create_progress_message(event_node: EventNode) -> str:
-    """Create a user-friendly progress message based on the event type."""
-
+def create_progress_message(agent_node: AgentNode) -> str:
     event_messages = {
-        EventNode.GENERATE_SUBQUERIES: "Breaking down your query into "
+        AgentNode.GENERATE_SUBQUERIES: "Breaking down your query into "
         "manageable parts...",
-        EventNode.IDENTIFY_DATASETS: "Identifying relevant datasets...",
-        EventNode.ANALYZE_QUERY: "Analyzing your query...",
-        EventNode.ANALYZE_DATASET: "Analyzing dataset structure...",
-        EventNode.PLAN_QUERY: "Planning the database query...",
-        EventNode.EXECUTE_QUERY: "Executing the query...",
-        EventNode.GENERATE_RESULT: "Generating results...",
-        EventNode.EXTRACT_SUMMARY: "Extracting summary...",
-        EventNode.VALIDATE_QUERY_RESULT: "Validating query result...",
-        EventNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "
+        AgentNode.IDENTIFY_DATASETS: "Identifying relevant datasets...",
+        AgentNode.PLAN_QUERY: "Planning the database query...",
+        AgentNode.EXECUTE_QUERY: "Executing the query...",
+        AgentNode.GENERATE_RESULT: "Generating results...",
+        AgentNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "
         "Stopping...",
-        EventNode.TOOL_START: "Starting operation...",
-        EventNode.TOOL_END: "Completed operation",
-        EventNode.TOOL_ERROR: "Error in operation",
-        EventNode.TOOLS: "Using tools...",
+        AgentNode.TOOLS: "Executing tool...",
+        AgentNode.UNKNOWN: "Processing...",
     }
 
-    return event_messages.get(event_node, "Processing...")
+    return event_messages.get(agent_node, "Processing...")
 
 
 class AgentEventDispatcher(BaseCallbackHandler):
@@ -34,32 +31,53 @@ class AgentEventDispatcher(BaseCallbackHandler):
 
     def __init__(self):
         super().__init__()
-        self.events: list[AgentEvent] = []
 
-    async def dispatch_event(
-        self, event_node: EventNode, status: EventStatus, data: EventData
-    ) -> None:
-        await adispatch_custom_event(
-            "dataful_agent",
-            {
-                "event_node": event_node.value,
-                "status": status.value,
-                "message": create_progress_message(event_node),
-                "event_data": data.model_dump(),
-            },
-        )
-        self.events.append(
-            AgentEvent(
-                event_node=event_node,
-                status=status,
-                message=create_progress_message(event_node),
-                data=data,
+    def dispatch_event(
+        self,
+        agent_node: AgentNode,
+        chunk_type: ChunkType,
+        role: str,
+        chat_id: str | None = None,
+        trace_id: str | None = None,
+        content: str | None = None,
+        datasets_used: list[str] | None = None,
+        generated_sql_query: str | None = None,
+        tool_category: str | None = None,
+    ) -> StructuredChatStreamChunk:
+        """
+        Dispatch an event with the appropriate chunk type and content.
+
+        Args:
+            agent_node: The current node in the agent workflow
+            chat_id: Unique identifier for the chat session
+            trace_id: Unique identifier for the trace (optional)
+            chunk_type: Type of chunk (START, STREAM, END, BODY)
+            content: Content to be displayed
+            datasets_used: List of datasets used in the query
+            generated_sql_query: Generated SQL query if applicable
+            tool_category: Tool category if the message is from a tool
+        """
+        if content is None:
+            content = create_progress_message(agent_node)
+
+        if tool_category:
+            message = ToolMessage(
+                role=role,
+                content=content,
+                type=chunk_type,
+                category=tool_category,
             )
+        else:
+            message = ChatTextChunk(
+                role=role, content=content, type=chunk_type
+            )
+
+        chunk = StructuredChatStreamChunk(
+            chat_id=chat_id,
+            trace_id=trace_id,
+            message=message,
+            datasets_used=datasets_used,
+            generate_sql_query=generated_sql_query,
         )
 
-    def get_events(self) -> list[AgentEvent]:
-        return self.events
-
-    def clear_events(self) -> None:
-        """Clear all recorded events."""
-        self.events = []
+        return chunk

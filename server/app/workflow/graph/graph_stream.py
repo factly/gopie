@@ -1,8 +1,11 @@
 import json
 import logging
-from collections.abc import AsyncGenerator
+import uuid
 
+from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
+from app.workflow.events.dispatcher import AgentEventDispatcher
+from app.workflow.events.handle_events_stream import handle_events_stream
 from app.workflow.graph import graph
 
 
@@ -10,39 +13,67 @@ async def stream_graph_updates(
     messages: list[Message],
     dataset_ids: list[str] | None = None,
     project_ids: list[str] | None = None,
-) -> AsyncGenerator[str, None]:
+    chat_id: str | None = None,
+    trace_id: str | None = None,
+):
     """
     Stream graph updates for user input with event tracking.
 
     Args:
-        user_input (str): The user's input query
-        dataset_ids (List[str], optional): Specific dataset IDs to use for the
-                                           query
+        messages: A list of messages in the conversation
+        dataset_ids: Specific dataset IDs to use for the query
+        project_ids: Specific project IDs to use for the query
+        chat_id: Unique identifier for the chat session
+        trace_id: Optional trace ID for tracking
 
     Yields:
-        str: JSON-formatted event data for streaming
+        str: JSON-formatted event data for streaming in SSE format
     """
+    if not trace_id:
+        trace_id = str(uuid.uuid4())
 
     input_state = {
-        # messages are converted to LangChain message format
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
     }
 
     try:
-        async for event in graph.astream_events(input_state, version="v2"):
-            if event.get("event", None) == "on_custom_event":
-                formatted_event = json.dumps(event.get("data", {}), indent=2)
-                logging.info(formatted_event)
-                yield formatted_event + "\n\n"
+        async for event in graph.astream_events(
+            input_state,
+            version="v2",
+        ):
+            extracted_event_data = handle_events_stream(event)
+
+            agent_event_dispatcher = AgentEventDispatcher()
+
+            if extracted_event_data.role:
+                chunk = agent_event_dispatcher.dispatch_event(
+                    chat_id=chat_id,
+                    trace_id=trace_id,
+                    role=extracted_event_data.role,
+                    agent_node=extracted_event_data.graph_node,
+                    chunk_type=extracted_event_data.type,
+                    content=extracted_event_data.content,
+                    datasets_used=extracted_event_data.datasets_used,
+                    generated_sql_query=(
+                        extracted_event_data.generate_sql_query
+                    ),
+                    tool_category=extracted_event_data.category,
+                )
+
+                yield "data: " + json.dumps(
+                    chunk.model_dump(mode="json"), indent=2
+                ) + "\n \n"
+
     except Exception as e:
-        error_event = json.dumps(
-            {
-                "type": "error",
-                "message": f"Error during streaming: {e!s}",
-                "data": {"error": str(e)},
-            },
-            indent=2,
+        error = Error(
+            type="error",
+            message="Sorry, something went wrong. Please try again later",
         )
-        yield error_event + "\n\n"
+        output = StructuredChatStreamChunk(
+            chat_id=chat_id,
+            error=error,
+        )
+        yield "data: " + json.dumps(output.model_dump()) + "\n \n"
+        logging.exception(e)

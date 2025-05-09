@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -11,11 +11,8 @@ class AgentNode(Enum):
     EXECUTE_QUERY = "execute_query"
     GENERATE_RESULT = "generate_result"
     MAX_ITERATIONS_REACHED = "max_iterations_reached"
-    TOOL = "tool"
-
-
-class ToolCategory(Enum):
-    LIST_DATASETS = "list_datasets"
+    TOOLS = "tools"
+    UNKNOWN = "unknown"
 
 
 class ChunkType(Enum):
@@ -37,7 +34,17 @@ class ChatTextChunk(BaseModel):
 
 
 class ToolMessage(ChatTextChunk):
-    category: Any
+    category: str
+
+
+class EventChunkData(BaseModel):
+    role: Literal["ai", "system"] | None
+    graph_node: AgentNode
+    content: str | None
+    type: ChunkType
+    category: str | None
+    datasets_used: list[str] | None = None
+    generate_sql_query: str | None = None
 
 
 class StructuredChatStreamChunk(BaseModel):

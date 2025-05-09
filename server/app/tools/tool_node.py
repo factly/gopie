@@ -1,11 +1,4 @@
-from typing import TYPE_CHECKING
-
 from langchain_core.messages import ToolMessage
-
-from app.models.event import EventData, EventNode, EventStatus
-
-if TYPE_CHECKING:
-    from app.workflow.events.dispatcher import AgentEventDispatcher
 
 
 class ToolNode:
@@ -14,11 +7,8 @@ class ToolNode:
     returns to the calling node
     """
 
-    def __init__(
-        self, tools: list, event_dispatcher: "AgentEventDispatcher"
-    ) -> None:
+    def __init__(self, tools: list) -> None:
         self.tools = {tool.name: tool for tool in tools}
-        self.event_dispatcher = event_dispatcher
 
     async def __call__(self, state: dict):
         if messages := state.get("messages", []):
@@ -34,34 +24,15 @@ class ToolNode:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
 
-                await self.event_dispatcher.dispatch_event(
-                    event_node=EventNode.TOOL_START,
-                    status=EventStatus.STARTED,
-                    data=EventData(),
-                )
-
                 if tool_name not in self.tools:
                     error_message = f"Tool '{tool_name}' not found"
                     print(error_message)
-                    await self.event_dispatcher.dispatch_event(
-                        event_node=EventNode.TOOL_ERROR,
-                        status=EventStatus.ERROR,
-                        data=EventData(error=error_message),
-                    )
                     continue
 
                 tool_result = await self.tools[tool_name].ainvoke(tool_args)
 
                 all_tool_results.append(
                     {"tool": tool_name, "result": tool_result}
-                )
-
-                await self.event_dispatcher.dispatch_event(
-                    event_node=EventNode.TOOL_END,
-                    status=EventStatus.COMPLETED,
-                    data=EventData(
-                        result={"tool": tool_name, "result": tool_result}
-                    ),
                 )
 
                 outputs.append(
@@ -73,11 +44,7 @@ class ToolNode:
                 )
             except Exception as e:
                 error_message = f"Error executing tool: {str(e)}"
-                await self.event_dispatcher.dispatch_event(
-                    event_node=EventNode.TOOL_ERROR,
-                    status=EventStatus.ERROR,
-                    data=EventData(error=error_message),
-                )
+                print(error_message)
 
         query_result = state.get("query_result")
         query_index = state.get("subquery_index", -1)
