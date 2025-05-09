@@ -38,6 +38,9 @@ async def stream_graph_updates(
         "project_ids": project_ids,
     }
 
+    _datasets_cache = None
+    _query_cache = None
+
     try:
         async for event in graph.astream_events(
             input_state,
@@ -48,6 +51,16 @@ async def stream_graph_updates(
             agent_event_dispatcher = AgentEventDispatcher()
 
             if extracted_event_data.role:
+                if extracted_event_data.datasets_used:
+                    _datasets_cache = extracted_event_data.datasets_used
+                if extracted_event_data.generate_sql_query:
+                    _query_cache = extracted_event_data.generate_sql_query
+
+                if _datasets_cache:
+                    extracted_event_data.datasets_used = _datasets_cache
+                if _query_cache:
+                    extracted_event_data.generate_sql_query = _query_cache
+
                 chunk = agent_event_dispatcher.dispatch_event(
                     chat_id=chat_id,
                     trace_id=trace_id,

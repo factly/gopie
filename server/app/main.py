@@ -13,12 +13,10 @@ from app.api.v1.routers.dataset_upload import (
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from app.utils.generate_graph import visualize_graph
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    visualize_graph()
     SingletonAiohttp.get_aiohttp_client()
     yield
     await SingletonAiohttp.close_aiohttp_client()

@@ -46,7 +46,7 @@ def is_result_too_large(result: Any) -> tuple[bool, str]:
         return False, ""
 
 
-async def validate_query_result(state: State) -> dict[str, Any]:
+async def validate_query_result(state: State) -> dict:
     """
     Validate if the current subquery result is small enough for LLM processing.
     If too large, mark the subquery as containing large results.

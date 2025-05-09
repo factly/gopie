@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 
+# This nodes are used to streaming purposes
 class AgentNode(Enum):
     GENERATE_SUBQUERIES = "generate_subqueries"
     IDENTIFY_DATASETS = "identify_datasets"
@@ -27,8 +27,14 @@ class Error(BaseModel):
     message: str
 
 
+class Role(Enum):
+    AI = "ai"
+    SYSTEM = "system"
+    INTERMEDIATE = "intermediate"
+
+
 class ChatTextChunk(BaseModel):
-    role: str
+    role: Role
     content: str
     type: ChunkType
 
@@ -38,7 +44,7 @@ class ToolMessage(ChatTextChunk):
 
 
 class EventChunkData(BaseModel):
-    role: Literal["ai", "system"] | None
+    role: Role | None
     graph_node: AgentNode
     content: str | None
     type: ChunkType

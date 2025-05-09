@@ -1,5 +1,6 @@
 import json
 
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 
 from app.core.langchain_config import lc
@@ -154,6 +155,14 @@ async def plan_query(state: State) -> dict:
                 query_index
             ].sql_query_explanation = sql_query_explanation
 
+            await adispatch_custom_event(
+                "dataful-agent",
+                {
+                    "content": "Generated SQL query",
+                    "query": sql_query,
+                },
+            )
+
             return {
                 "query_result": query_result,
                 "query": sql_query,
@@ -168,6 +177,15 @@ async def plan_query(state: State) -> dict:
     except Exception as e:
         query_result.add_error_message(str(e), "Error in query planning")
         error_msg = f"Unexpected error in query planning: {e!s}"
+
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "Error in query planning",
+                "query": None,
+            },
+        )
+
         return {
             "query_result": query_result,
             "messages": [ErrorMessage.from_json({"error": error_msg})],

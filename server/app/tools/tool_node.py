@@ -23,13 +23,22 @@ class ToolNode:
             try:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
+                tool_config = {
+                    "tags": ["chain_tool", "display"],
+                    "metadata": {
+                        "tool_text": f"Using {tool_name}",
+                        "tool_category": tool_name,
+                    },
+                }
 
                 if tool_name not in self.tools:
                     error_message = f"Tool '{tool_name}' not found"
                     print(error_message)
                     continue
 
-                tool_result = await self.tools[tool_name].ainvoke(tool_args)
+                tool_result = await self.tools[tool_name].ainvoke(
+                    tool_args, config=tool_config
+                )
 
                 all_tool_results.append(
                     {"tool": tool_name, "result": tool_result}

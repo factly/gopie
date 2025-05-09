@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any
 
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 
 from app.core.langchain_config import lc
@@ -104,6 +105,14 @@ async def identify_datasets(state: State):
             )
 
         if not semantic_searched_datasets:
+            await adispatch_custom_event(
+                "datasets_identified",
+                {
+                    "content": "No relevant datasets found",
+                    "datasets": None,
+                },
+            )
+
             return {
                 "query_result": query_result,
                 "datasets": None,
@@ -142,6 +151,14 @@ async def identify_datasets(state: State):
             "dataset_name_mapping": dataset_name_mapping,
         }
 
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "Datasets identified",
+                "datasets": selected_datasets,
+            },
+        )
+
         return {
             "query_result": query_result,
             "datasets_info": datasets_info,
@@ -152,6 +169,15 @@ async def identify_datasets(state: State):
     except Exception as e:
         error_msg = f"Error identifying datasets: {e!s}"
         query_result.add_error_message(str(e), "Error identifying datasets")
+
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "Error identifying datasets",
+                "datasets": None,
+            },
+        )
+
         return {
             "query_result": query_result,
             "datasets": None,

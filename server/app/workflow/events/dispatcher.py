@@ -4,6 +4,7 @@ from app.models.chat import (
     AgentNode,
     ChatTextChunk,
     ChunkType,
+    Role,
     StructuredChatStreamChunk,
     ToolMessage,
 )
@@ -36,7 +37,7 @@ class AgentEventDispatcher(BaseCallbackHandler):
         self,
         agent_node: AgentNode,
         chunk_type: ChunkType,
-        role: str,
+        role: Role,
         chat_id: str | None = None,
         trace_id: str | None = None,
         content: str | None = None,
