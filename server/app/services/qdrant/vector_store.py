@@ -25,7 +25,6 @@ async def add_documents_to_vector_store(documents, ids=None):
     for doc, doc_id in zip(documents, ids, strict=False):
         project_id = doc.metadata["project_id"]
         dataset_id = doc.metadata["dataset_id"]
-        file_path = doc.metadata["file_path"]
 
         search_result = client.scroll(
             collection_name=settings.QDRANT_COLLECTION,
@@ -39,10 +38,6 @@ async def add_documents_to_vector_store(documents, ids=None):
                         key="metadata.dataset_id",
                         match=MatchValue(value=dataset_id),
                     ),
-                    FieldCondition(
-                        key="metadata.file_path",
-                        match=MatchValue(value=file_path),
-                    ),
                 ]
             ),
             limit=1,
@@ -52,7 +47,6 @@ async def add_documents_to_vector_store(documents, ids=None):
             logging.info(
                 f"Document with project_id={project_id}, "
                 f"dataset_id={dataset_id}, "
-                f"file_path={file_path} already exists in Qdrant. Skipping."
             )
             continue
 

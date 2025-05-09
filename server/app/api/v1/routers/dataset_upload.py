@@ -18,12 +18,10 @@ async def upload_schema(payload: UploadSchemaRequest):
 
     - `project_id`: The ID of the project where the dataset belongs.
     - `dataset_id`: The ID of the dataset.
-    - `file_path`: The S3 path of the dataset file.
     """
     try:
         project_id = payload.project_id
         dataset_id = payload.dataset_id
-        file_path = payload.file_path
 
         dataset_details = await get_dataset_info(dataset_id, project_id)
         dataset_schema, sample_data = generate_schema(dataset_details.alias)
@@ -34,7 +32,6 @@ async def upload_schema(payload: UploadSchemaRequest):
             dataset_details,
             dataset_id,
             project_id,
-            file_path,
         )
         if not success:
             raise HTTPException(

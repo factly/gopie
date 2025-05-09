@@ -25,7 +25,6 @@ def format_schema(
     sample_data: Any,
     project_id: str,
     dataset_id: str,
-    file_path: str,
 ):
     columns: list[ColumnSchema] = []
 
@@ -63,7 +62,6 @@ def format_schema(
         "dataset_description": "will add it later",
         "project_id": project_id,
         "dataset_id": dataset_id,
-        "file_path": file_path,
         "columns": columns,
     }
 

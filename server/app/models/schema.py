@@ -29,5 +29,4 @@ class DatasetSchema(TypedDict):
     dataset_description: str
     project_id: str
     dataset_id: str
-    file_path: str
     columns: list[ColumnSchema]

@@ -18,11 +18,10 @@ def store_schema_in_qdrant(
     dataset_details: DatasetDetails,
     dataset_id: str,
     project_id: str,
-    file_path: str,
 ) -> bool:
     try:
         formatted_schema = format_schema(
-            schema, sample_data, project_id, dataset_id, file_path
+            schema, sample_data, project_id, dataset_id
         )
 
         formatted_schema["name"] = dataset_details.alias
@@ -37,7 +36,6 @@ def store_schema_in_qdrant(
                 "dataset_description": dataset_details.description,
                 "dataset_id": dataset_id,
                 "project_id": project_id,
-                "file_path": file_path,
             },
         )
 

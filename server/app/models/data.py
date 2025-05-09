@@ -6,7 +6,6 @@ class DatasetDetails(BaseModel):
     name: str
     alias: str
     description: str
-    file_path: str
     format: str
     row_count: int
     size: int

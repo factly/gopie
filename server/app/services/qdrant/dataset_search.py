@@ -66,7 +66,6 @@ async def search_schemas(
                 sample_data,
                 doc.metadata["project_id"],
                 doc.metadata["dataset_id"],
-                doc.metadata["file_path"],
             )
             formatted_schema["name"] = doc.metadata["name"]
             formatted_schema["dataset_name"] = doc.metadata["dataset_name"]
