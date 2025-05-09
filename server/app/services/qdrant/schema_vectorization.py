@@ -6,7 +6,7 @@ from typing import Any
 from langchain_core.documents import Document
 
 from app.models.data import DatasetDetails
-from app.services.dataset_info import format_schema
+from app.services.gopie.dataset_info import format_schema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
 
 background_tasks = set()

@@ -7,7 +7,6 @@ services:
       - "8000:8000"
     volumes:
       - ./server/app:/code/app
-      - ./data:/code/data
       - ./graph:/code/graph
     env_file:
       - ./server/.env

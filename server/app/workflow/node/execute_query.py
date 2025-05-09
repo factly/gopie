@@ -1,66 +1,8 @@
-from http import HTTPStatus
-from typing import Any
-
-import requests
-
 from app.core.config import settings
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
+from app.utils.sql_executor import execute_sql
 from app.workflow.graph.types import State
-
-SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
-
-
-async def execute_sql(
-    query: str,
-) -> dict[str, Any] | list[dict[str, Any]]:
-    """
-    Execute a SQL query against the SQL API
-
-    Args:
-        query: The SQL query to execute
-
-    Returns:
-        Query results or error information
-    """
-    try:
-        payload = {"query": query}
-        response = requests.post(SQL_API_ENDPOINT, json=payload)
-        if response.status_code != HTTPStatus.OK:
-            error_data = response.json()
-            error_message = error_data.get(
-                "message", "Unknown error from SQL API"
-            )
-            if response.status_code == HTTPStatus.BAD_REQUEST:
-                return {"error": f"Invalid SQL query: {error_message}"}
-            elif response.status_code == HTTPStatus.FORBIDDEN:
-                return {"error": f"Non-SELECT statement: {error_message}"}
-            elif response.status_code == HTTPStatus.NOT_FOUND:
-                return {"error": f"Table not found: {error_message}"}
-            else:
-                error = (
-                    f"SQL API error ({response.status_code}): {error_message}"
-                )
-                return {"error": error}
-
-        result_data = response.json()
-
-        if not result_data or (
-            isinstance(result_data, list) and len(result_data) == 0
-        ):
-            return {"result": "No results found for the query"}
-
-        result_records = result_data
-        if not isinstance(result_data, list):
-            if "data" in result_data:
-                result_records = result_data["data"]
-            else:
-                result_records = [result_data]
-
-        return result_records
-
-    except Exception as e:
-        return {"error": f"Query execution error: {e!s}"}
 
 
 async def execute_query(state: State) -> dict:

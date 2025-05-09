@@ -26,11 +26,25 @@ def format_schema(
     project_id: str,
     dataset_id: str,
 ):
+    """
+    Format the schema data into a standardized structure.
+
+    Args:
+        schema: The schema data containing the 'summary' field with column info
+        sample_data: Sample data for the dataset
+        project_id: The project ID
+        dataset_id: The dataset ID
+
+    Returns:
+        A formatted DatasetSchema object
+    """
     columns: list[ColumnSchema] = []
 
-    for _, row in schema.iterrows():
-        column_name = row.get("column_name")
-        column_type = row.get("column_type")
+    schema_data = schema["summary"]
+    columns_data = schema_data.get("summary", [])
+
+    for column_data in columns_data:
+        column_name = column_data.get("column_name")
 
         samples = (
             sample_data[column_name].tolist()
@@ -40,18 +54,18 @@ def format_schema(
 
         column_schema: ColumnSchema = {
             "column_name": column_name,
-            "column_type": column_type,
-            "min": row.get("min"),
-            "max": row.get("max"),
-            "approx_unique": row.get("approx_unique"),
-            "avg": row.get("avg"),
-            "std": row.get("std"),
-            "q25": row.get("q25"),
-            "q50": row.get("q50"),
-            "q75": row.get("q75"),
-            "count": row.get("count"),
+            "column_type": column_data.get("column_type", ""),
+            "min": column_data.get("min"),
+            "max": column_data.get("max"),
+            "approx_unique": column_data.get("approx_unique"),
+            "avg": column_data.get("avg"),
+            "std": column_data.get("std"),
+            "q25": column_data.get("q25"),
+            "q50": column_data.get("q50"),
+            "q75": column_data.get("q75"),
+            "count": column_data.get("count"),
             "sample_values": samples,
-            "null_percentage": row.get("null_percentage", 0.0),
+            "null_percentage": column_data.get("null_percentage", {}),
         }
 
         columns.append(column_schema)

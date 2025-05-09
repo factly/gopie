@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
-from app.services.dataset_info import get_dataset_info
-from app.services.duckdb.generate_schema import generate_schema
+from app.services.gopie.dataset_info import get_dataset_info
+from app.services.gopie.generate_schema import generate_schema
 from app.services.qdrant.schema_vectorization import store_schema_in_qdrant
 
 dataset_router = APIRouter()
@@ -24,7 +24,9 @@ async def upload_schema(payload: UploadSchemaRequest):
         dataset_id = payload.dataset_id
 
         dataset_details = await get_dataset_info(dataset_id, project_id)
-        dataset_schema, sample_data = generate_schema(dataset_details.alias)
+        dataset_schema, sample_data = await generate_schema(
+            dataset_details.name
+        )
 
         success = store_schema_in_qdrant(
             dataset_schema,

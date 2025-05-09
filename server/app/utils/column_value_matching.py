@@ -1,13 +1,13 @@
 import logging
-from typing import Any, Dict, List, Set
+from typing import Any
 
-from app.workflow.node.execute_query import execute_sql
+from app.utils.sql_executor import execute_sql
 
 
 async def match_column_values(
-    column_assumptions: List[Dict[str, Any]],
-    dataset_name_mapping: Dict[str, str],
-) -> Dict[str, Any]:
+    column_assumptions: list[dict[str, Any]],
+    dataset_name_mapping: dict[str, str],
+) -> dict[str, Any]:
     """
     Match column values against expected values and find similar values
     when exact matches aren't found.
@@ -88,8 +88,8 @@ async def match_column_values(
 
 
 async def get_all_columns(
-    dataset_name_mapping: Dict[str, str],
-) -> Dict[str, Set[str]]:
+    dataset_name_mapping: dict[str, str],
+) -> dict[str, set[str]]:
     """Get all column names from all tables in the dataset mapping."""
     result = {}
 
@@ -122,8 +122,8 @@ async def get_all_columns(
 
 
 def find_similar_column_names(
-    column_name: str, columns: Set[str]
-) -> List[str]:
+    column_name: str, columns: set[str]
+) -> list[str]:
     """Find columns with names similar to the given column name."""
     similar_columns = []
 
@@ -146,9 +146,9 @@ def find_similar_column_names(
 async def verify_column_values(
     original_column: str,
     verified_column: str,
-    expected_values: List[str],
+    expected_values: list[str],
     table_name: str,
-    result: Dict[str, Any],
+    result: dict[str, Any],
 ) -> None:
     """
     Verify expected values against the column and collect matches/suggestions.
@@ -222,7 +222,7 @@ async def check_exact_match(
 
 async def find_similar_values(
     value: str, column_name: str, table_name: str
-) -> List[str]:
+) -> list[str]:
     """Find values in the column similar to the expected value."""
     similar_values = []
 

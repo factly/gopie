@@ -5,8 +5,8 @@ from qdrant_client import models
 
 from app.core.config import settings
 from app.models.schema import DatasetSchema
-from app.services.dataset_info import format_schema
-from app.services.duckdb.generate_schema import generate_schema
+from app.services.gopie.dataset_info import format_schema
+from app.services.gopie.generate_schema import generate_schema
 from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
@@ -60,7 +60,9 @@ async def search_schemas(
 
         schemas = []
         for doc in results:
-            fetched_schema, sample_data = generate_schema(doc.metadata["name"])
+            fetched_schema, sample_data = await generate_schema(
+                doc.metadata["dataset_name"]
+            )
             formatted_schema = format_schema(
                 fetched_schema,
                 sample_data,

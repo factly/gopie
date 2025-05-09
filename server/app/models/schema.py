@@ -10,17 +10,17 @@ class AnalysisInfo(TypedDict):
 class ColumnSchema(TypedDict):
     column_name: str
     column_type: str
-    min: int
-    max: int
+    min: Any
+    max: Any
     approx_unique: int
-    avg: float
-    std: float
-    q25: float
-    q50: float
-    q75: float
+    avg: Any
+    std: Any
+    q25: Any
+    q50: Any
+    q75: Any
     count: int
     sample_values: list[Any]
-    null_percentage: float
+    null_percentage: dict
 
 
 class DatasetSchema(TypedDict):
