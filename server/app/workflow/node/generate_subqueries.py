@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -45,20 +46,17 @@ async def generate_subqueries(state: State):
            first, followed by queries that depend on previous results
          - Make each sub-query clear, specific, and focused on a single task
 
-      4. QUERY IMPROVEMENT (if no breakdown needed):
-         - If the original query is unclear or ambiguous but doesn't need
-           breaking down, provide an improved version
-         - Clarify ambiguous terms, specify entities more precisely, or
-           reword for clarity
-         - If the original query is already clear and specific, return it
-           unchanged
+      5. EXPLANATION:
+         - Provide a very brief explanation (1-2 sentences) of what you did
+           with the query
+         - Explain whether you broke it down and why, or how you improved it
+         - Keep it simple and client-friendly
 
       RESPONSE FORMAT:
       {{
         "needs_breakdown": true/false,
         "subqueries": ["subquery1", "subquery2", "subquery3"],
-        "improved_query": "improved version of original query if no breakdown
-                           needed"
+        "explanation": "Brief explanation of actions taken"
       }}
 
       IMPORTANT: Prioritize NOT breaking down queries unless absolutely
@@ -70,7 +68,6 @@ async def generate_subqueries(state: State):
     query_result_object = QueryResult(
         original_user_query=user_input,
         timestamp=datetime.now(),
-        error_message=None,
         execution_time=0,
         subqueries=[],
     )
@@ -80,6 +77,7 @@ async def generate_subqueries(state: State):
         parsed_content = parser.parse(str(response.content))
 
         needs_breakdown = parsed_content.get("needs_breakdown", False)
+        explanation = parsed_content.get("explanation", "")
 
         if needs_breakdown:
             subqueries = parsed_content.get("subqueries", [])
@@ -89,8 +87,14 @@ async def generate_subqueries(state: State):
             if not subqueries:
                 subqueries = [user_input]
         else:
-            improved_query = parsed_content.get("improved_query", user_input)
-            subqueries = [improved_query]
+            subqueries = [user_input]
+
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": explanation,
+            },
+        )
 
         return {
             "user_query": user_input,
@@ -108,11 +112,7 @@ async def generate_subqueries(state: State):
             ],
         }
     except Exception as e:
-        query_result_object.add_error_message(
-            str(e), "Error parsing subqueries in generate_subqueries"
-        )
         error_msg = f"Error parsing subqueries: {e!s}"
-
         default_subqueries = [user_input]
 
         return {

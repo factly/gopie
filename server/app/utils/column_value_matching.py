@@ -30,8 +30,6 @@ async def match_column_values(
     logging.debug(f"Dataset name mapping: {dataset_name_mapping}")
 
     result = {
-        "verified_columns": [],
-        "unverified_columns": [],
         "value_matches": {},
         "value_suggestions": {},
         "column_mappings": {},
@@ -41,7 +39,6 @@ async def match_column_values(
         logging.warning("Empty column assumptions or dataset mapping provided")
         return result
 
-    # Process each dataset assumption
     for dataset_assumption in column_assumptions:
         dataset_name = dataset_assumption.get("dataset")
         columns = dataset_assumption.get("columns", [])
@@ -54,7 +51,6 @@ async def match_column_values(
 
         actual_table = dataset_name_mapping[dataset_name]
 
-        # Process each column in this dataset
         for col_idx, column_obj in enumerate(columns):
             column_name = column_obj.get("name")
             expected_values = column_obj.get("expected_values", [])
@@ -65,14 +61,9 @@ async def match_column_values(
                 )
                 continue
 
-            # Assume column exists and add to verified columns
-            result["verified_columns"].append(column_name)
-
-            # Verify expected values if provided
             if expected_values:
                 await verify_column_values(
                     column_name,
-                    # Use the same column name without verification
                     column_name,
                     expected_values,
                     actual_table,
@@ -80,9 +71,8 @@ async def match_column_values(
                 )
 
     logging.info(
-        f"Column value matching completed: "
-        f"{len(result['verified_columns'])} verified columns, "
-        f"{len(result['unverified_columns'])} unverified columns"
+        f"Column value matching completed with "
+        f"{len(result['value_matches'])} value matches"
     )
     return result
 

@@ -14,10 +14,16 @@ class SubQueryInfo:
     sql_query_explanation: str | None = None
     tables_used: str | None = None
     query_type: str | None = None
+    error_message: list[dict] | None = None
     query_result: Any = None
     tool_used_result: Any = None
     contains_large_results: bool = False
     summary: dict | None = None
+
+    def add_error_message(self, error_message: str, error_origin_type: str):
+        if self.error_message is None:
+            self.error_message = []
+        self.error_message.append({error_origin_type: error_message})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -30,6 +36,7 @@ class SubQueryInfo:
             "tool_used_result": self.tool_used_result,
             "contains_large_results": self.contains_large_results,
             "summary": self.summary,
+            "error_message": self.error_message,
         }
 
 
@@ -50,15 +57,11 @@ class QueryResult:
     original_user_query: str
     execution_time: float
     timestamp: datetime
-    error_message: list[dict] | None = None
     subqueries: list[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
         if not hasattr(self, "timestamp"):
             self.timestamp = datetime.now()
-
-    def has_error(self) -> bool:
-        return self.error_message is not None and len(self.error_message) > 0
 
     def add_subquery(
         self,
@@ -89,18 +92,15 @@ class QueryResult:
 
     def add_error_message(self, error_message: str, error_origin_type: str):
         """
-        Add an error message to the query result
+        Add an error message to the current subquery
         """
-        if self.error_message is None:
-            self.error_message = []
-        self.error_message.append({error_origin_type: error_message})
+        self.subqueries[-1].add_error_message(error_message, error_origin_type)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "original_user_query": self.original_user_query,
             "execution_time": self.execution_time,
             "timestamp": self.timestamp.isoformat(),
-            "error_message": self.error_message,
             "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
 

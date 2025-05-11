@@ -8,8 +8,6 @@ class AgentNode(Enum):
     GENERATE_SUBQUERIES = "generate_subqueries"
     IDENTIFY_DATASETS = "identify_datasets"
     ANALYZE_DATASETS = "analyze_datasets"
-    ANALYZE_QUERY = "analyze_query"
-    VALIDATE_QUERY_RESULT = "validate_query_result"
     PLAN_QUERY = "plan_query"
     EXECUTE_QUERY = "execute_query"
     GENERATE_RESULT = "generate_result"

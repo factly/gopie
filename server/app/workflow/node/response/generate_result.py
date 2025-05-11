@@ -129,7 +129,7 @@ async def _handle_data_query(
     summary = []
     tool_used_results = []
     sql_with_explanations = []
-    errors = query_result.error_message
+    errors = []
 
     if query_result.has_subqueries():
         for subquery in query_result.subqueries:
@@ -141,6 +141,9 @@ async def _handle_data_query(
 
             if subquery.tool_used_result:
                 tool_used_results.append(subquery.tool_used_result)
+
+            if subquery.error_message:
+                errors.extend(subquery.error_message)
 
             if subquery.sql_query_used:
                 explanation = (

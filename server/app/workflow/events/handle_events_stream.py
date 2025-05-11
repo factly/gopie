@@ -91,7 +91,7 @@ def handle_events_stream(
 
     if event_type == "on_custom_event":
         role = Role.INTERMEDIATE
-        type = ChunkType.STREAM
+        type = ChunkType.BODY
 
         event_data = event.get("data", {})
         content = event_data.get("content", "")
