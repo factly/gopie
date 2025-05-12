@@ -11,7 +11,7 @@ def initialize_qdrant_client():
         client = QdrantClient(":memory:")
     else:
         client = QdrantClient(
-            url=f"https://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
+            url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
             check_compatibility=False,
         )
     
