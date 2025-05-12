@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 from app.core.langchain_config import lc
@@ -17,20 +18,9 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
         if isinstance(query_result, QueryResult):
             query_result.calculate_execution_time()
 
-        print("\n" + "=" * 50)
-        print("AGGREGATED QUERY RESULT")
-        print("=" * 50)
-        print(
-            json.dumps(
-                (
-                    query_result.to_dict()
-                    if hasattr(query_result, "to_dict")
-                    else query_result
-                ),
-                indent=2,
-            )
+        logging.info(
+            f"query_result: {json.dumps(query_result.to_dict(), indent=2)}"
         )
-        print("=" * 50 + "\n")
 
     any_data_query = False
     if isinstance(query_result, QueryResult) and query_result.has_subqueries():

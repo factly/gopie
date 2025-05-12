@@ -36,6 +36,7 @@ class LangchainConfig:
             base_url=PORTKEY_GATEWAY_URL,
             default_headers=config.gemini_headers,
             model=config.gemini_model,
+            streaming=True,
         )
 
         self.embeddings_model = OpenAIEmbeddings(

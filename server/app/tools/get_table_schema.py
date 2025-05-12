@@ -63,4 +63,14 @@ async def get_table_schema(dataset_name: str) -> dict[str, Any]:
         return {"error": f"Error retrieving schema from Qdrant: {e!s}"}
 
 
+def get_dynamic_tool_text(args: dict) -> str:
+    base_text = "Retrieving table schema information"
+    dataset_name = args.get("dataset_name", "")
+    if dataset_name:
+        return f"{base_text} for '{dataset_name}'"
+    return base_text
+
+
 __tool__ = get_table_schema
+__tool_category__ = "Data Exploration"
+__get_dynamic_tool_text__ = get_dynamic_tool_text
