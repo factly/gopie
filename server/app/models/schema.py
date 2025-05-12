@@ -9,6 +9,7 @@ class AnalysisInfo(TypedDict):
 
 class ColumnSchema(TypedDict):
     column_name: str
+    column_description: str
     column_type: str
     min: Any
     max: Any

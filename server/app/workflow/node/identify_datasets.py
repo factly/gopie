@@ -8,7 +8,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.schema import DatasetSchema
-from app.services.qdrant.dataset_search import search_schemas
+from app.services.qdrant.schema_search import search_schemas
 from app.workflow.graph.types import State
 
 

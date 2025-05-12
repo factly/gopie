@@ -28,7 +28,7 @@ async def upload_schema(payload: UploadSchemaRequest):
             dataset_details.name
         )
 
-        success = store_schema_in_qdrant(
+        success = await store_schema_in_qdrant(
             dataset_schema,
             sample_data,
             dataset_details,

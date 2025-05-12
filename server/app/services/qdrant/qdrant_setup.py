@@ -13,6 +13,7 @@ else:
         check_compatibility=False,
     )
 
+
 def initialize_qdrant_client():
     if not collection_exists(client):
         client.create_collection(
