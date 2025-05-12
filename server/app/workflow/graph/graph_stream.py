@@ -63,12 +63,10 @@ async def stream_graph_updates(
                 )
 
                 logging.info(
-                    json.dumps(chunk.model_dump(mode="json"), indent=2)
+                    json.dumps(chunk.model_dump(mode="json"))
                 )
 
-                yield "data: " + json.dumps(
-                    chunk.model_dump(mode="json"), indent=2
-                ) + "\n \n"
+                yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"
 
     except Exception as e:
         error = Error(
@@ -79,5 +77,5 @@ async def stream_graph_updates(
             chat_id=chat_id,
             error=error,
         )
-        yield "data: " + json.dumps(output.model_dump()) + "\n \n"
+        yield "data: " + json.dumps(output.model_dump(mode="json")) + "\n \n"
         logging.exception(e)
