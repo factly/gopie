@@ -2,7 +2,7 @@ from typing import Any
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from server.app.services.gopie.sql_executor import execute_sql
+from app.services.gopie.sql_executor import execute_sql
 
 
 async def generate_schema(dataset_name: str) -> tuple[Any, Any]:
