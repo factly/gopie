@@ -12,6 +12,7 @@ dependencies = [
   "langchain-openai>=0.3.9",
   "langchain-qdrant>=0.2.0",
   "langgraph>=0.3.18",
+  "langsmith>=0.3.42",
   "logging>=0.4.9.6",
   "pandas>=2.2.3",
   "portkey-ai>=1.11.1",
