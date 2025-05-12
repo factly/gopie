@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from app.utils.sql_executor import execute_sql
+from server.app.services.gopie.sql_executor import execute_sql
 
 
 async def match_column_values(

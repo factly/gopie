@@ -1,8 +1,8 @@
 from app.core.config import settings
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
-from app.utils.sql_executor import execute_sql
 from app.workflow.graph.types import State
+from server.app.services.gopie.sql_executor import execute_sql
 
 
 async def execute_query(state: State) -> dict:

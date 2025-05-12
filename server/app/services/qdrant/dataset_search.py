@@ -63,6 +63,7 @@ async def search_schemas(
             fetched_schema, sample_data = await generate_schema(
                 doc.metadata["dataset_name"]
             )
+
             formatted_schema = format_schema(
                 fetched_schema,
                 sample_data,

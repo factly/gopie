@@ -23,6 +23,7 @@ async def execute_sql(
         payload = {"query": query}
 
         http_session = SingletonAiohttp.get_aiohttp_client()
+        result_data = None
 
         async with http_session.post(
             SQL_API_ENDPOINT, json=payload
@@ -45,7 +46,7 @@ async def execute_sql(
                     )
                     return {"error": error}
 
-        result_data = await response.json()
+            result_data = await response.json()
 
         if not result_data or (
             isinstance(result_data, list) and len(result_data) == 0

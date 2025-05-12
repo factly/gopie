@@ -22,16 +22,16 @@ async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
 
 def format_schema(
     schema: Any,
-    sample_data: Any,
+    sample_data: list[dict[str, Any]],
     project_id: str,
     dataset_id: str,
-):
+) -> DatasetSchema:
     """
     Format the schema data into a standardized structure.
 
     Args:
         schema: The schema data containing the 'summary' field with column info
-        sample_data: Sample data for the dataset
+        sample_data: Sample data for the dataset as a list of dictionaries
         project_id: The project ID
         dataset_id: The dataset ID
 
@@ -39,18 +39,18 @@ def format_schema(
         A formatted DatasetSchema object
     """
     columns: list[ColumnSchema] = []
-
-    schema_data = schema["summary"]
-    columns_data = schema_data.get("summary", [])
+    columns_data = schema.get("summary", [])
 
     for column_data in columns_data:
         column_name = column_data.get("column_name")
 
-        samples = (
-            sample_data[column_name].tolist()
-            if column_name in sample_data
-            else []
-        )
+        samples = []
+        if sample_data and isinstance(sample_data, list):
+            samples = [
+                item.get(column_name)
+                for item in sample_data
+                if column_name in item
+            ]
 
         column_schema: ColumnSchema = {
             "column_name": column_name,
