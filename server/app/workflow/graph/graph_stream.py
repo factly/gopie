@@ -5,7 +5,7 @@ import uuid
 from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
-from app.workflow.events.handle_events_stream import handle_events_stream
+from app.workflow.events.handle_events_stream import EventStreamHandler
 from app.workflow.graph import graph
 
 
@@ -38,12 +38,16 @@ async def stream_graph_updates(
         "project_ids": project_ids,
     }
 
+    event_stream_handler = EventStreamHandler()
+
     try:
         async for event in graph.astream_events(
             input_state,
             version="v2",
         ):
-            extracted_event_data = handle_events_stream(event)
+            extracted_event_data = event_stream_handler.handle_events_stream(
+                event
+            )
 
             agent_event_dispatcher = AgentEventDispatcher()
 
@@ -62,11 +66,11 @@ async def stream_graph_updates(
                     tool_category=extracted_event_data.category,
                 )
 
-                logging.info(
-                    json.dumps(chunk.model_dump(mode="json"))
-                )
+                logging.info(json.dumps(chunk.model_dump(mode="json")))
 
-                yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"
+                yield "data: " + json.dumps(
+                    chunk.model_dump(mode="json")
+                ) + "\n \n"
 
     except Exception as e:
         error = Error(
