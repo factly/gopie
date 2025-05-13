@@ -143,6 +143,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/summary/{tableName}": {
+            "get": {
+                "description": "Retrieves a summary of the specified dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dataset"
+                ],
+                "summary": "Get dataset summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the table to get summary for",
+                        "name": "tableName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset summary information",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid query or table not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/chats": {
             "get": {
                 "description": "Get all chats associated with a specific dataset with pagination",

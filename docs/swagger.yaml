@@ -449,6 +449,38 @@ paths:
       summary: Upload file from S3
       tags:
       - s3
+  /summary/{tableName}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a summary of the specified dataset
+      parameters:
+      - description: Name of the table to get summary for
+        in: path
+        name: tableName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset summary information
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invalid query or table not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get dataset summary
+      tags:
+      - dataset
   /v1/api/chats:
     get:
       consumes:

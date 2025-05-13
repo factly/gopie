@@ -7,6 +7,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary Get dataset summary
+// @Description Retrieves a summary of the specified dataset
+// @Tags dataset
+// @Accept json
+// @Produce json
+// @Param tableName path string true "Name of the table to get summary for"
+// @Success 200 {object} map[string]interface{} "Dataset summary information"
+// @Failure 404 {object} map[string]interface{} "Invalid query or table not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /summary/{tableName} [get]
 func (h *httpHandler) summary(ctx *fiber.Ctx) error {
 	tableName := ctx.Params("tableName")
 
