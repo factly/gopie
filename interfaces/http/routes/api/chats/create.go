@@ -219,15 +219,17 @@ func convertRowsToCSV(rows []map[string]any) string {
 	return buf.String()
 }
 
-// chatWithAgentRequeryBody represents the request body for chat interaction with an AI agent
+// chatWithAgentRequestBody represents the request body for chat interaction with an AI agent
 // @Description Request body for creating a streaming chat conversation with an AI agent
-type chatWithAgentRequeryBody struct {
+type chatWithAgentRequestBody struct {
 	// Array of dataset IDs to analyze
 	DatasetIDs []string `json:"dataset_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
 	// Array of project IDs to analyze
 	ProjectIDs []string `json:"project_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
 	// User input/question for the AI agent
-	UserInput string `json:"user_input" validate:"required" example:"What are the trends in this dataset?"`
+	Prompt string `json:"prompt" validate:"required" example:"What are the trends in this dataset?"`
+	// Chat ID for the conversation (optional)
+	ChatID string `json:"chat_id" validate:"omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Chat with AI agent
@@ -242,7 +244,7 @@ type chatWithAgentRequeryBody struct {
 // @Router /v1/api/chats/agent [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	// Parse the request body using Fiber's BodyParser
-	var body chatWithAgentRequeryBody
+	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).SendString("Invalid request body")
 	}
@@ -251,7 +253,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	if len(body.DatasetIDs) == 0 && len(body.ProjectIDs) == 0 {
 		return ctx.Status(fiber.StatusBadRequest).SendString("At least one dataset_id or project_id is required")
 	}
-	if body.UserInput == "" {
+	if body.Prompt == "" {
 		return ctx.Status(fiber.StatusBadRequest).SendString("user_input is required")
 	}
 
@@ -269,13 +271,13 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	params := &models.AIAgentChatParams{
 		ProjectIDs: body.ProjectIDs,
 		DatasetIDs: body.DatasetIDs,
-		UserInput:  body.UserInput,
+		UserInput:  body.Prompt,
 		DataChan:   dataChan,
 		ErrChan:    errChan,
 	}
 
 	ctx.Status(fiber.StatusOK).Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-		go h.chatSvc.ChatWithAiAgent(ctx.UserContext(), params)
+		go h.chatSvc.ChatWithAiAgent(ctx.Context(), params)
 
 		h.logger.Debug("SSE connection established")
 
@@ -305,8 +307,6 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				if errors.Is(err, io.EOF) {
 					// End of data from service
 					h.logger.Debug("Chat completed successfully")
-					fmt.Fprintf(w, "data: {\"event_node\":\"close\"}\n\n")
-					w.Flush()
 					return
 				}
 

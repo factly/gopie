@@ -281,7 +281,6 @@ func LoadConfig() (*GopieConfig, error) {
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 	}
-	fmt.Println("===>>> ", viper.GetString("GOPIE_AIAGENT_URL"))
 
 	var err error
 	if config, err = validateConfig(config); err != nil {
