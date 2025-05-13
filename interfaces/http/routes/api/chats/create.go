@@ -237,7 +237,7 @@ type chatWithAgentRequestBody struct {
 // @Tags chats
 // @Accept json
 // @Produce text/event-stream
-// @Param body body chatWithAgentRequeryBody true "Chat request parameters"
+// @Param body body chatWithAgentRequestBody true "Chat request parameters"
 // @Success 200 {string} string "Server-sent events stream started"
 // @Failure 400 {string} string "Invalid request body"
 // @Failure 500 {string} string "Internal server error"
