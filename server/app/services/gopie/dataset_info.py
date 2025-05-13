@@ -54,6 +54,7 @@ def format_schema(
 
         column_schema: ColumnSchema = {
             "column_name": column_name,
+            "column_description": "",
             "column_type": column_data.get("column_type", ""),
             "min": column_data.get("min"),
             "max": column_data.get("max"),

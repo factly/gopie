@@ -58,11 +58,12 @@ class ToolNode:
                         "tool_text": tool_text,
                         "tool_category": tool_category,
                     },
-                    "callbacks": state.get("callbacks", None),
                 }
 
                 tool_result = None
-                async for event in tool.astream(tool_args, config=tool_config):
+                async for event in tool.astream_events(
+                    tool_args, config=tool_config
+                ):
                     if event["event"] == "on_tool_end":
                         tool_result = event["data"]["output"]
 

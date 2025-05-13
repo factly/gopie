@@ -18,7 +18,7 @@ def create_llm_prompt(user_query: str, tool_results: list):
         USER QUERY:
         "{user_query}"
 
-        TOOL RESULTS:
+        TOOL RESULTS from previous tool calls:
         {json.dumps(tool_results)}
 
         INSTRUCTIONS:

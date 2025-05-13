@@ -31,18 +31,15 @@ async def generate_column_descriptions(
     descriptions for columns in a dataset.
 
     Below is the schema information for columns in this dataset. For each
-    column, generate a brief description (1-2 sentences) that explains
-    what the column represents, its data type, and any notable
-    characteristics based on the statistics provided.
+    column, generate a brief description that explains what the column
+    represents.
 
     dataset_schema: {dataset_schema}
 
     INSTRUCTIONS:
-    1. Generate a concise, informative description for each column
-    2. Include the data type and range/distribution information when relevant
-    3. Make each description clear and useful for someone analyzing this data
-    4. Focus on what the column represents in business/domain terms
-    5. Keep descriptions to 1-2 sentences maximum
+    1. Generate a concise description for each column, strictly under 10 words
+    2. Focus only on what the column represents functionally
+    3. Do NOT include data types, statistics, or null information
 
     Return your response as a JSON object with column names as keys and
     descriptions as values.
@@ -55,7 +52,10 @@ async def generate_column_descriptions(
     try:
         chain = prompt | lc.llm | JsonOutputParser()
         response = await chain.ainvoke(
-            {"dataset_schema": schema, "example_format": example_format}
+            {
+                "dataset_schema": schema,
+                "example_format": example_format,
+            }
         )
 
         return response

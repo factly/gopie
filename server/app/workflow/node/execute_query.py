@@ -35,12 +35,10 @@ async def execute_query(state: State) -> dict:
         if not sql_query:
             raise ValueError("No SQL query found in plan")
 
-        result = await execute_sql(sql_query)
+        result_records = await execute_sql(sql_query)
 
-        if isinstance(result, dict) and "error" in result:
-            raise ValueError(result["error"])
-
-        result_records = result
+        if not result_records:
+            raise ValueError("No results found for the query")
 
         result_dict = {
             "result": "Query executed successfully",

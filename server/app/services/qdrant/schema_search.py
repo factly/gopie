@@ -1,4 +1,3 @@
-import json
 import logging
 
 from langchain_openai import OpenAIEmbeddings
@@ -81,8 +80,6 @@ async def search_schemas(
                 column["column_description"] = doc.metadata[
                     "column_descriptions"
                 ][column["column_name"]]
-
-            logging.info(json.dumps(formatted_schema, indent=2))
 
             schemas.append(formatted_schema)
 
