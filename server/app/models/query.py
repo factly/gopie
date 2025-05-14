@@ -15,6 +15,7 @@ class SubQueryInfo:
     tables_used: str | None = None
     query_type: str | None = None
     error_message: list[dict] | None = None
+    retry_count: int = 0
     query_result: Any = None
     tool_used_result: Any = None
     contains_large_results: bool = False
@@ -37,6 +38,7 @@ class SubQueryInfo:
             "contains_large_results": self.contains_large_results,
             "summary": self.summary,
             "error_message": self.error_message,
+            "retry_count": self.retry_count,
         }
 
 

@@ -68,23 +68,24 @@ class EventStreamHandler:
 
         if event_type == "on_chat_model_start":
             role = self.get_chat_role(graph_node)
-
             content = ""
             type = ChunkType.START
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
 
+            role = self.get_chat_role(graph_node)
+
             if (
-                graph_node == AgentNode.GENERATE_RESULT.value
-                or graph_node == AgentNode.MAX_ITERATIONS_REACHED.value
+                chunk
+                and chunk.content
+                and (
+                    graph_node == AgentNode.STREAM_UPDATES.value
+                    or graph_node == AgentNode.GENERATE_RESULT.value
+                )
             ):
-                if chunk and chunk.content:  # type: ignore
-                    content = chunk.content  # type: ignore
-                else:
-                    content = ""
-                role = Role.AI
+                content = chunk.content
             else:
-                role = Role.INTERMEDIATE
+                content = ""
 
             type = ChunkType.STREAM
         elif event_type == "on_chat_model_end":
@@ -113,9 +114,6 @@ class EventStreamHandler:
         )
 
     def get_chat_role(self, node: str) -> Role:
-        if node in [
-            AgentNode.GENERATE_RESULT.value,
-            AgentNode.MAX_ITERATIONS_REACHED.value,
-        ]:
+        if node in AgentNode.GENERATE_RESULT.value:
             return Role.AI
         return Role.INTERMEDIATE

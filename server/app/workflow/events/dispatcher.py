@@ -17,7 +17,7 @@ def create_progress_message(agent_node: AgentNode) -> str:
         AgentNode.IDENTIFY_DATASETS: "Identifying relevant datasets...",
         AgentNode.ANALYZE_DATASETS: "Analyzing datasets...",
         AgentNode.PLAN_QUERY: "Planning the database query...",
-        AgentNode.EXECUTE_QUERY: "Executing the query...",
+        AgentNode.STREAM_UPDATES: "Streaming updates...",
         AgentNode.GENERATE_RESULT: "Generating results...",
         AgentNode.MAX_ITERATIONS_REACHED: "Max iterations reached. "
         "Stopping...",

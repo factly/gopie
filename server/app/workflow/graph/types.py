@@ -12,7 +12,6 @@ class State(TypedDict):
     subqueries: list[str]
     subquery_index: int
     datasets_info: dict
-    retry_count: int
     user_query: str
     messages: Annotated[list, add_messages]
     query_result: QueryResult

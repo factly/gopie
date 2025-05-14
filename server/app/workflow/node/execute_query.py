@@ -57,11 +57,11 @@ async def execute_query(state: State) -> dict:
     except Exception as e:
         error_msg = f"Query execution error: {e!s}"
         query_result.add_error_message(error_msg, "Query execution")
+        query_result.subqueries[query_index].retry_count += 1
 
         return {
             "query_result": query_result,
             "messages": [ErrorMessage.from_json({"error": error_msg})],
-            "retry_count": state.get("retry_count", 0) + 1,
         }
 
 
@@ -78,32 +78,35 @@ async def route_query_replan(state: State) -> str:
         "validate_query_result"
     """
     last_message = state["messages"][-1]
-    retry_count = state.get("retry_count", 0)
+    query_result = state.get("query_result", None)
+    query_index = state.get("subquery_index", 0)
 
     if (
         isinstance(last_message, ErrorMessage)
-        and retry_count < settings.MAX_RETRY_COUNT
+        and query_result.subqueries[query_index].retry_count
+        < settings.MAX_RETRY_COUNT
     ):
         response = await lc.llm.ainvoke(
             {
                 "input": f"""
-                I got an error when executing the query:
-                "{last_message.content}"
+                    I got an error when executing the query:
+                    "{last_message.content}"
 
-                Can you please tell whether this error can be solved by
-                replanning the query? or it's need to reidentify the datasets?
+                    Can you please tell whether this error can be solved by
+                    replanning the query? or it's need to reidentify the
+                    datasets?
 
-                If it's need to reidentify the datasets, please return
-                "reidentify_datasets"
-                If it's need to replan the query, please return "replan"
-                If it's no problem, please return "validate_query_result"
+                    If it's need to reidentify the datasets, please return
+                    "reidentify_datasets"
+                    If it's need to replan the query, please return "replan"
+                    If it's no problem, please return "validate_query_result"
 
-                Think through this step-by-step:
-                1. Analyze the error message
-                2. Determine if it's a schema/dataset issue
-                3. Check if it's a query syntax issue
-                4. Decide on the appropriate action
-            """
+                    Think through this step-by-step:
+                    1. Analyze the error message
+                    2. Determine if it's a schema/dataset issue
+                    3. Check if it's a query syntax issue
+                    4. Decide on the appropriate action
+                """
             }
         )
 

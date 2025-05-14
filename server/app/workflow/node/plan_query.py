@@ -31,11 +31,10 @@ async def plan_query(state: State) -> dict:
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
 
-        retry_count = state.get("retry_count", 0)
-
         if not selected_datasets:
             raise Exception("No dataset selected for query planning")
 
+        retry_count = query_result.subqueries[query_index].retry_count
         error_messages = query_result.subqueries[query_index].error_message
 
         if not selected_datasets:
