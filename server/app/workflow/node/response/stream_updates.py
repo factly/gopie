@@ -1,6 +1,7 @@
 import json
 import logging
 
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -87,11 +88,21 @@ async def check_further_execution_requirement(state: State) -> str:
     if not reached_max_retries:
         return "next_sub_query"
 
+    await adispatch_custom_event(
+        "dataful-agent",
+        {
+            "content": "do not stream",
+        },
+    )
+
+    last_stream_message = state.get("messages", [])[-1]
+
     dependency_analysis_prompt = f"""
         I need to analyze whether further subqueries should be executed
         despite a failed subquery.
 
         Original User Query: "{query_result.original_user_query}"
+        Last Stream Message: "{last_stream_message.content}"
 
         Failed Subquery ({query_index + 1}/{len(query_result.subqueries)}):
         "{current_subquery.query_text}"
@@ -114,18 +125,34 @@ async def check_further_execution_requirement(state: State) -> str:
 
         Return only a single JSON object with this format:
         {{
-            "continue_execution": true/false,
+            "continue_execution": boolean (true or false, not a string),
             "reasoning": "Brief explanation of your decision"
         }}
+
+        IMPORTANT: The "continue_execution" value MUST be a boolean
+        (true/false), not a string. Do not wrap it in quotes.
     """
 
     response = await lc.llm.ainvoke({"input": dependency_analysis_prompt})
+
+    await adispatch_custom_event(
+        "dataful-agent",
+        {
+            "content": "continue streaming",
+        },
+    )
+
     try:
         result = JsonOutputParser().parse(str(response.content))
 
-        if result.get("continue_execution", False):
+        logging.info(f"Result: {result}")
+
+        continue_execution = result.get("continue_execution", False)
+
+        if continue_execution:
             return "next_sub_query"
         else:
             return "end_execution"
-    except Exception:
+    except Exception as e:
+        logging.error(f"Error parsing LLM response: {str(e)}")
         return "end_execution"

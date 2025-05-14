@@ -69,8 +69,8 @@ graph_builder.add_conditional_edges(
     "stream_updates",
     check_further_execution_requirement,
     {
-        "next_sub_query": "analyze_query",
         "end_execution": END,
+        "next_sub_query": "analyze_query",
     },
 )
 

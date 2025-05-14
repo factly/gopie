@@ -1,4 +1,5 @@
 import json
+import logging
 from enum import Enum
 
 from langchain_core.runnables.schema import StreamEvent
@@ -21,6 +22,7 @@ class CustomJSONEncoder(json.JSONEncoder):
 class EventStreamHandler:
     def __init__(self):
         self._tool_start = False
+        self._stream_content = True
 
     def handle_events_stream(
         self,
@@ -30,6 +32,10 @@ class EventStreamHandler:
         event_type = event["event"]
         graph_node = event.get("metadata", {}).get("langgraph_node", "unknown")
 
+        logging.info(
+            f"graph_node: {graph_node} stream_content: {self._stream_content}"
+        )
+
         role = None
         content = None
         type = ChunkType.BODY
@@ -37,7 +43,26 @@ class EventStreamHandler:
         datasets_used = None
         generate_sql_query = None
 
-        if graph_node not in [node.value for node in AgentNode]:
+        if event_type == "on_custom_event":
+            event_data = event.get("data", {})
+            content = event_data.get("content", "")
+
+            if content == "do not stream":
+                self._stream_content = False
+            elif content == "continue streaming":
+                self._stream_content = True
+                return EventChunkData(
+                    role=role,
+                    graph_node=AgentNode.UNKNOWN,
+                    content=content,
+                    type=type,
+                    category=category,
+                )
+
+        if (
+            graph_node not in [node.value for node in AgentNode]
+            or not self._stream_content
+        ):
             return EventChunkData(
                 role=role,
                 graph_node=AgentNode.UNKNOWN,
@@ -84,8 +109,6 @@ class EventStreamHandler:
                 )
             ):
                 content = chunk.content
-            else:
-                content = ""
 
             type = ChunkType.STREAM
         elif event_type == "on_chat_model_end":
@@ -114,6 +137,9 @@ class EventStreamHandler:
         )
 
     def get_chat_role(self, node: str) -> Role:
-        if node in AgentNode.GENERATE_RESULT.value:
+        if node in [
+            AgentNode.GENERATE_RESULT.value,
+            AgentNode.STREAM_UPDATES.value,
+        ]:
             return Role.AI
         return Role.INTERMEDIATE

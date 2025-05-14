@@ -1,3 +1,5 @@
+from langchain_core.callbacks.manager import adispatch_custom_event
+
 from app.core.config import settings
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
@@ -49,6 +51,12 @@ async def execute_query(state: State) -> dict:
         query_result.subqueries[query_index].sql_query_used = sql_query
         query_result.subqueries[query_index].query_result = result_records
 
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "SQL Query executed successfully",
+            },
+        )
         return {
             "query_result": query_result,
             "messages": [IntermediateStep.from_json(result_dict)],
@@ -59,6 +67,12 @@ async def execute_query(state: State) -> dict:
         query_result.add_error_message(error_msg, "Query execution")
         query_result.subqueries[query_index].retry_count += 1
 
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "Something went wrong while executing the query",
+            },
+        )
         return {
             "query_result": query_result,
             "messages": [ErrorMessage.from_json({"error": error_msg})],
@@ -81,16 +95,29 @@ async def route_query_replan(state: State) -> str:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
 
+    subquery_errors = query_result.subqueries[query_index].error_message
+
     if (
         isinstance(last_message, ErrorMessage)
         and query_result.subqueries[query_index].retry_count
         < settings.MAX_RETRY_COUNT
     ):
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "do not stream",
+            },
+        )
+
         response = await lc.llm.ainvoke(
             {
                 "input": f"""
                     I got an error when executing the query:
-                    "{last_message.content}"
+                    {last_message.content}
+
+                    This are error message either from previous retrys or the
+                    current try.
+                    {subquery_errors}
 
                     Can you please tell whether this error can be solved by
                     replanning the query? or it's need to reidentify the
@@ -108,6 +135,13 @@ async def route_query_replan(state: State) -> str:
                     4. Decide on the appropriate action
                 """
             }
+        )
+
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "continue streaming",
+            },
         )
 
         response_text = str(response.content).lower()
