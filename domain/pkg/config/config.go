@@ -60,8 +60,9 @@ type DuckDBConfig struct {
 }
 
 type MotherDuckConfig struct {
-	DBName string
-	Token  string
+	DBName       string
+	Token        string
+	HelperDBPath string
 }
 
 type PortKeyConfig struct {
@@ -170,8 +171,9 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 
 	case "motherduck":
 		config.OlapDB.MotherDuck = &MotherDuckConfig{
-			DBName: viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
-			Token:  viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
+			DBName:       viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
+			Token:        viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
+			HelperDBPath: viper.GetString("GOPIE_MOTHERDUCK_HELPER_DB_PATH"),
 		}
 		validations = append(validations,
 			validation{config.OlapDB.MotherDuck.DBName, "MotherDuck DB name"},
@@ -221,6 +223,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
+	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_PATH", "./motherduck/gopie.db")
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -281,7 +284,6 @@ func LoadConfig() (*GopieConfig, error) {
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 	}
-	fmt.Println("===>>> ", viper.GetString("GOPIE_AIAGENT_URL"))
 
 	var err error
 	if config, err = validateConfig(config); err != nil {
