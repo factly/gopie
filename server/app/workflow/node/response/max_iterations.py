@@ -28,20 +28,20 @@ async def max_iterations_reached(state: State) -> dict:
         )
 
         explanation_prompt = f"""
-        You're responding to a user whose query has exceeded maximum retry
-        attempts.
+            You're responding to a user whose query has exceeded maximum retry
+            attempts.
 
-        User Query: "{user_query}"
+            User Query: "{user_query}"
 
-        Technical Issues Encountered:
-        {error_summary}
+            Technical Issues Encountered:
+            {error_summary}
 
-        Please:
-        1. Explain in simple terms why the query couldn't be processed
-        2. Suggest 2-3 specific ways to rephrase or modify their question
-        3. Provide alternative approaches if applicable
+            Please:
+            1. Explain in simple terms why the query couldn't be processed
+            2. Suggest 2-3 specific ways to rephrase or modify their question
+            3. Provide alternative approaches if applicable
 
-        Be concise, empathetic and constructive in your response.
+            Be concise, empathetic and constructive in your response.
         """
 
         response = await lc.llm.ainvoke({"input": explanation_prompt})

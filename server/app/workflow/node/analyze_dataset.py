@@ -15,6 +15,10 @@ async def analyze_dataset(state: State) -> dict:
     - Suggests similar values when exact matches aren't found
     """
     try:
+        last_message = state["messages"][-1]
+        if isinstance(last_message, ErrorMessage):
+            pass
+
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
 

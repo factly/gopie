@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any
 
@@ -7,68 +6,9 @@ from langchain_core.output_parsers import JsonOutputParser
 
 from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
-from app.models.schema import DatasetSchema
 from app.services.qdrant.schema_search import search_schemas
 from app.workflow.graph.types import State
-
-
-def create_llm_prompt(
-    user_query: str, available_datasets_schemas: list[DatasetSchema]
-) -> str:
-    return f"""
-        You are an AI assistant specialized in data analysis. Your role is to
-        help users analyze data by identifying relevant datasets and column
-        values.
-
-        USER QUERY:
-        "{user_query}"
-
-        PRE-FILTERED DATASETS SCHEMAS (ordered by relevance):
-        {json.dumps(available_datasets_schemas, indent=2)}
-
-        INSTRUCTIONS:
-        1. The datasets above have been pre-filtered using semantic search
-           based on relevance to the user query.
-
-        2. Based on the user query, confirm which of these pre-filtered
-           datasets best matches the user's needs.
-           - Consider the content, columns, and structure of each dataset
-           - The datasets are already ranked by relevance, but you should
-             still critically evaluate them
-           - You may select multiple datasets if the query spans multiple
-             datasets
-           - You can override the vector search ranking if you have strong
-             reasons
-           - If no dataset is suitable, provide clear reasoning why
-
-        3. For each selected dataset, identify:
-           - The specific columns that will be needed for the analysis
-           - For string columns in datasets list the specific string
-             column values that might be relevant to the query
-           - Don't include the column names that are numeric type
-
-        RESPONSE FORMAT:
-        Respond in this JSON format:
-        {{
-            "selected_dataset": ["dataset_name1", "dataset_name2"],
-            "reasoning": "Clear explanation of why these datasets were
-                        selected",
-            "column_predicted": [
-                {{
-                    "dataset": "dataset_name1",
-                    "columns": [
-                        {{
-                            "name": "column_name",
-                            "expected_values": ["value1", "value2", "value3"]
-                        }}
-                    ]
-                }}
-            ]
-        }}
-
-        IMPORTANT: For all dataset references, always use the value from
-        the 'name' field of the dataset (NOT the 'dataset_name' field).
-    """
+from app.workflow.prompts.prompt_selector import get_prompt
 
 
 async def identify_datasets(state: State):
@@ -123,8 +63,13 @@ async def identify_datasets(state: State):
                 ],
             }
 
-        prompt = create_llm_prompt(user_query, semantic_searched_datasets)
-        response: Any = await lc.llm.ainvoke({"input": prompt})
+        llm_prompt = get_prompt(
+            "identify_datasets",
+            user_query=user_query,
+            available_datasets_schemas=semantic_searched_datasets,
+        )
+
+        response: Any = await lc.llm.ainvoke({"input": llm_prompt})
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

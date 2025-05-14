@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -8,57 +7,7 @@ from app.core.langchain_config import lc
 from app.models.message import ErrorMessage, IntermediateStep
 from app.tools.tool_node import has_tool_calls
 from app.workflow.graph.types import State
-
-
-def create_llm_prompt(user_query: str, tool_results: list):
-    return f"""
-        You are an AI assistant specialized in data analysis.
-        Your role is to help users analyze data by determining query types.
-
-        USER QUERY:
-        "{user_query}"
-
-        TOOL RESULTS from previous tool calls:
-        {json.dumps(tool_results)}
-
-        INSTRUCTIONS:
-        1. Classify this query into ONE of these types:
-            - "data_query": Requires SQL execution on datasets
-            (e.g., analysis, trends, statistics, filtered data)
-            - "conversational": General conversation not requiring
-                                data or tools
-            - "tool_only": Can be answered using available tools without SQL
-
-        2. For data queries:
-            - These require accessing and analyzing datasets with SQL
-            - Examples: "Show me sales trends",
-              "What's the average price?", "Compare metrics across regions"
-
-        3. For conversational queries:
-            - General questions, greetings, or casual conversation
-            - No dataset analysis or tools required
-
-        4. For tool-only queries:
-            - If the query can be answered directly with
-              tool calls without dataset analysis, make those tool calls
-            - Try to call all necessary tools at once to answer the query
-            - Can be answered with tools but don't require SQL processing
-            - Examples: Questions about available datasets, \
-              schema information, metadata, tool-specific questions or can be
-              answered with the available tools
-
-        If there is a need of calling a tool to answer the query,
-        please call the tool(s) and dont return in the requested format
-        and directly make a tool call
-
-        RESPONSE FORMAT:
-        Respond in this JSON format:
-        {{
-            "query_type": "data_query|conversational|tool_only",
-            "reasoning": "Clear explanation of classification decision",
-            "data_query": true|false,
-        }}
-        """
+from app.workflow.prompts.prompt_selector import get_prompt
 
 
 async def analyze_query(state: State) -> dict:
@@ -138,7 +87,11 @@ async def analyze_query(state: State) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
-        prompt = create_llm_prompt(user_input, tools_results)
+        prompt = get_prompt(
+            "analyze_query",
+            user_query=user_input,
+            tool_results=tools_results,
+        )
         response: Any = await lc.llm.ainvoke({"input": prompt})
         parser = JsonOutputParser()
 
