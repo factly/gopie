@@ -110,11 +110,4 @@ class ToolNode:
 def has_tool_calls(message):
     if hasattr(message, "tool_calls") and message.tool_calls:
         return True
-
-    if (
-        hasattr(message, "additional_kwargs")
-        and "tool_calls" in message.additional_kwargs
-    ):
-        return True
-
     return False

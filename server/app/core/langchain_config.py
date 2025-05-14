@@ -1,3 +1,5 @@
+import uuid
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
@@ -8,7 +10,7 @@ from app.tools import TOOLS
 
 
 class ModelConfig:
-    def __init__(self):
+    def __init__(self, trace_id=None):
         portkey_api_key = settings.PORTKEY_API_KEY
 
         self.model = settings.OPENAI_MODEL
@@ -18,12 +20,18 @@ class ModelConfig:
         self.gemini_model = settings.GEMINI_MODEL
         gemini_virtual_key = settings.GEMINI_VIRTUAL_KEY
 
+        self.trace_id = trace_id or str(uuid.uuid4())
+
         self.gemini_headers = createHeaders(
-            api_key=portkey_api_key, virtual_key=gemini_virtual_key
+            api_key=portkey_api_key,
+            virtual_key=gemini_virtual_key,
+            trace_id=self.trace_id,
         )
 
         self.openai_headers = createHeaders(
-            api_key=portkey_api_key, virtual_key=openai_virtual_key
+            api_key=portkey_api_key,
+            virtual_key=openai_virtual_key,
+            trace_id=self.trace_id,
         )
 
 

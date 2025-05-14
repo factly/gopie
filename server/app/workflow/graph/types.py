@@ -16,3 +16,4 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     query_result: QueryResult
     tool_call_count: int
+    trace_id: str

@@ -36,6 +36,7 @@ async def stream_graph_updates(
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
+        "trace_id": trace_id,
     }
 
     event_stream_handler = EventStreamHandler()
