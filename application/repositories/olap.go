@@ -12,4 +12,5 @@ type OlapRepository interface {
 	Query(query string) (*models.Result, error)
 	DropTable(tableName string) error
 	Close() error
+	CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error
 }

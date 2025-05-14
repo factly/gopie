@@ -19,18 +19,21 @@ type Querier interface {
 	CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error)
 	// Chat Messages Operations
 	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
+	CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error)
 	CreateDataset(ctx context.Context, arg CreateDatasetParams) (Dataset, error)
 	CreateDatasetSummary(ctx context.Context, arg CreateDatasetSummaryParams) error
 	CreateFailedDatasetUpload(ctx context.Context, arg CreateFailedDatasetUploadParams) (FailedDatasetUpload, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DeleteChat(ctx context.Context, id pgtype.UUID) error
 	DeleteChatMessage(ctx context.Context, arg DeleteChatMessageParams) error
+	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
 	DeleteDataset(ctx context.Context, id string) error
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, id string) error
 	GetChat(ctx context.Context, id pgtype.UUID) (GetChatRow, error)
 	GetChatMessagesCount(ctx context.Context, chatID pgtype.UUID) (int64, error)
+	GetDatabaseSource(ctx context.Context, id pgtype.UUID) (DatabaseSource, error)
 	GetDataset(ctx context.Context, id string) (Dataset, error)
 	GetDatasetByName(ctx context.Context, name string) (Dataset, error)
 	GetDatasetChatsCount(ctx context.Context, datasetID pgtype.UUID) (int64, error)
@@ -42,6 +45,7 @@ type Querier interface {
 	GetProjectsCount(ctx context.Context) (int64, error)
 	GetUserChatsCount(ctx context.Context, createdBy pgtype.Text) (int64, error)
 	ListChatMessages(ctx context.Context, arg ListChatMessagesParams) ([]ChatMessage, error)
+	ListDatabaseSources(ctx context.Context, arg ListDatabaseSourcesParams) ([]DatabaseSource, error)
 	ListDatasetChats(ctx context.Context, arg ListDatasetChatsParams) ([]ListDatasetChatsRow, error)
 	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
 	ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error)
@@ -50,6 +54,7 @@ type Querier interface {
 	SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error)
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	UpdateChat(ctx context.Context, arg UpdateChatParams) (Chat, error)
+	UpdateDatabaseSource(ctx context.Context, arg UpdateDatabaseSourceParams) (DatabaseSource, error)
 	UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 }

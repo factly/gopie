@@ -1,0 +1,108 @@
+package database
+
+import (
+	"fmt"
+
+	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
+	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
+)
+
+// createRequestBody represents the request body for creating a database source
+// @Description Request body for creating a database source dataset
+type createRequestBody struct {
+	// Driver of the database
+	Driver string `json:"driver" validate:"required,oneof=postgres mysql" example:"postgres"`
+	// Connection string for the Postgres database
+	ConnectionString string `json:"connection_string" validate:"required" example:"postgres://username:password@localhost:5432/database"`
+	// SQL query to execute
+	SQLQuery string `json:"sql_query" validate:"required" example:"SELECT * FROM users"`
+	// Description of the dataset
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"User data from our production database"`
+	// ID of the project to add the dataset to
+	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// User ID of the creator
+	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// Alias of the dataset
+	Alias string `json:"alias" validate:"required,min=3" example:"users_data"`
+}
+
+// @Summary Create dataset from Postgres
+// @Description Create a new dataset from a Postgres database query
+// @Tags database
+// @Accept json
+// @Produce json
+// @Param body body createRequestBody true "Create request parameters"
+// @Success 201 {object} responses.SuccessResponse{data=models.Dataset}
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body or database connection error"
+// @Failure 404 {object} responses.ErrorResponse "Project not found"
+// @Failure 500 {object} responses.ErrorResponse "Internal server error"
+// @Router /source/database/create [post]
+func (h *httpHandler) create(ctx *fiber.Ctx) error {
+	// Get request body from context
+	var body createRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		h.logger.Info("Error parsing request body", zap.Error(err))
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid request body format",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	err := pkg.ValidateRequest(h.logger, &body)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	// Check if project exists
+	project, err := h.projectSvc.Details(body.ProjectID)
+	if err != nil {
+		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   "Project not found",
+				"message": fmt.Sprintf("Project with ID %s not found", body.ProjectID),
+				"code":    fiber.StatusNotFound,
+			})
+		}
+		h.logger.Error("Error fetching project", zap.Error(err), zap.String("project_id", body.ProjectID))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error validating project",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	h.logger.Info("Creating database source dataset", zap.String("project_id", project.ID))
+
+	// Create the database source
+	dbSourceParams := &models.CreateDatabaseSourceParams{
+		ConnectionString: body.ConnectionString,
+		SQLQuery:         body.SQLQuery,
+		Alias:            body.Alias,
+		Description:      body.Description,
+		ProjectID:        project.ID,
+		CreatedBy:        body.CreatedBy,
+		Driver:           body.Driver,
+	}
+
+	_, err = h.dbSourceSvc.Create(dbSourceParams)
+	if err != nil {
+		h.logger.Error("Error creating database source", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating database source",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	// TODO: implement further
+	return nil
+}

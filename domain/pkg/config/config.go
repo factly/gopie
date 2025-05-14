@@ -34,15 +34,16 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server   ServerConfig
-	S3       S3Config
-	Logger   LoggerConfig
-	OlapDB   OlapDBConfig
-	PortKey  PortKeyConfig
-	Meterus  MeterusConfig
-	Postgres PostgresConfig
-	Zitadel  ZitadelConfig
-	AIAgent  AIAgentConfig
+	Server        ServerConfig
+	S3            S3Config
+	Logger        LoggerConfig
+	OlapDB        OlapDBConfig
+	PortKey       PortKeyConfig
+	Meterus       MeterusConfig
+	Postgres      PostgresConfig
+	Zitadel       ZitadelConfig
+	AIAgent       AIAgentConfig
+	EncryptionKey string
 }
 
 type OlapDBConfig struct {
@@ -283,6 +284,7 @@ func LoadConfig() (*GopieConfig, error) {
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
+		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
 
 	var err error
