@@ -1,7 +1,7 @@
 ---
 config:
   flowchart:
-    curve: linear
+    curve: basis
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
@@ -11,10 +11,10 @@ graph TD;
 	plan_query(plan_query)
 	execute_query(execute_query)
 	generate_result(generate_result)
-	max_iterations_reached(max_iterations_reached)
 	analyze_dataset(analyze_dataset)
 	validate_query_result(validate_query_result)
 	extract_summary(extract_summary)
+	stream_updates(stream_updates)
 	tools(tools)
 	route_response(route_response)
 	__end__([<p>__end__</p>]):::last
@@ -30,14 +30,14 @@ graph TD;
 	generate_subqueries --> analyze_query;
 	identify_datasets --> analyze_dataset;
 	plan_query --> execute_query;
-	route_response -. &nbsp;next_sub_query&nbsp; .-> analyze_query;
 	route_response -. &nbsp;large_sql_output&nbsp; .-> extract_summary;
 	route_response -.-> generate_result;
-	route_response -.-> max_iterations_reached;
+	route_response -.-> stream_updates;
+	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;
+	stream_updates -. &nbsp;next_sub_query&nbsp; .-> analyze_query;
 	tools --> analyze_query;
 	validate_query_result --> route_response;
 	generate_result --> __end__;
-	max_iterations_reached --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
