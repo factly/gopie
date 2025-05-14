@@ -4,7 +4,10 @@ from typing import Any
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 
-from app.core.langchain_config import lc
+from app.core.langchain_config import (
+    get_embeddings_model_with_trace,
+    get_llm_with_trace,
+)
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
 from app.workflow.graph.types import State
@@ -28,11 +31,16 @@ async def identify_datasets(state: State):
     project_ids = state.get("project_ids", [])
 
     try:
+        llm = get_llm_with_trace(state.get("trace_id"))
+        embeddings_model = get_embeddings_model_with_trace(
+            state.get("trace_id")
+        )
+
         semantic_searched_datasets = []
         try:
             dataset_schemas = await search_schemas(
                 user_query,
-                lc.embeddings_model,
+                embeddings_model,
                 dataset_ids=dataset_ids,
                 project_ids=project_ids,
             )
@@ -69,7 +77,8 @@ async def identify_datasets(state: State):
             available_datasets_schemas=semantic_searched_datasets,
         )
 
-        response: Any = await lc.llm.ainvoke({"input": llm_prompt})
+        llm = get_llm_with_trace(state.get("trace_id"))
+        response: Any = await llm.ainvoke({"input": llm_prompt})
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

@@ -1,7 +1,7 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.core.config import settings
-from app.core.langchain_config import lc
+from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.types import State
@@ -109,7 +109,9 @@ async def route_query_replan(state: State) -> str:
             },
         )
 
-        response = await lc.llm.ainvoke(
+        llm = get_llm_with_trace(state.get("trace_id"))
+
+        response = await llm.ainvoke(
             {
                 "input": f"""
                     I got an error when executing the query:

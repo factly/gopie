@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any
 
-from app.core.langchain_config import lc
+from app.core.langchain_config import get_llm_with_trace
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
 from app.workflow.graph.types import State
@@ -43,9 +43,9 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
             }
 
         return (
-            await _handle_data_query(query_result)
+            await _handle_data_query(state, query_result)
             if any_data_query
-            else await _handle_conversational_query(query_result)
+            else await _handle_conversational_query(state, query_result)
         )
     except Exception as e:
         return {
@@ -61,6 +61,7 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
 
 
 async def _handle_conversational_query(
+    state: State,
     query_result: QueryResult,
 ) -> dict[str, list[Any]]:
     """
@@ -91,7 +92,8 @@ async def _handle_conversational_query(
     - Focus on direct, helpful answers
     """
 
-    response = await lc.llm.ainvoke({"input": prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": prompt})
 
     return {
         "messages": [
@@ -108,6 +110,7 @@ async def _handle_conversational_query(
 
 
 async def _handle_data_query(
+    state: State,
     query_result: QueryResult,
 ) -> dict[str, list[Any]]:
     """
@@ -148,7 +151,7 @@ async def _handle_data_query(
                 )
 
     if not results and not tool_used_results:
-        return await _handle_empty_results(query_result, errors)
+        return await _handle_empty_results(state, query_result, errors)
 
     prompt = f"""
     Context:
@@ -186,7 +189,8 @@ async def _handle_data_query(
         clearly state what aspects you can answer and what remains unclear
     """
 
-    response = await lc.llm.ainvoke({"input": prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": prompt})
 
     return {
         "messages": [
@@ -203,6 +207,7 @@ async def _handle_data_query(
 
 
 async def _handle_empty_results(
+    state: State,
     query_result: QueryResult,
     errors: Any,
 ) -> dict[str, list[Any]]:
@@ -229,7 +234,8 @@ async def _handle_empty_results(
     4. If there were errors, briefly acknowledge them without technical details
     """
 
-    response = await lc.llm.ainvoke({"input": prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": prompt})
 
     return {
         "messages": [

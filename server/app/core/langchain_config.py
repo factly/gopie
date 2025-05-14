@@ -65,3 +65,11 @@ class LangchainConfig:
 
 
 lc = LangchainConfig(ModelConfig())
+
+
+def get_llm_with_trace(trace_id=None):
+    return LangchainConfig(ModelConfig(trace_id=trace_id)).llm
+
+
+def get_embeddings_model_with_trace(trace_id=None):
+    return LangchainConfig(ModelConfig(trace_id=trace_id)).embeddings_model

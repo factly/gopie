@@ -5,7 +5,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 
-from app.core.langchain_config import lc
+from app.core.langchain_config import get_llm_with_trace
 from app.workflow.graph.types import State
 
 
@@ -66,7 +66,8 @@ async def stream_updates(state: State) -> dict:
         Your response should be informative and forward-looking.
         """
 
-    response = await lc.llm.ainvoke({"input": stream_update_prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": stream_update_prompt})
 
     logging.info(f"Stream updates response: {response.content}")
 
@@ -133,7 +134,8 @@ async def check_further_execution_requirement(state: State) -> str:
         (true/false), not a string. Do not wrap it in quotes.
     """
 
-    response = await lc.llm.ainvoke({"input": dependency_analysis_prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": dependency_analysis_prompt})
 
     await adispatch_custom_event(
         "dataful-agent",

@@ -4,7 +4,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 
-from app.core.langchain_config import lc
+from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult
 from app.workflow.graph.types import State
@@ -21,7 +21,8 @@ async def generate_subqueries(state: State):
 
     llm_prompt = get_prompt("generate_subqueries", user_input=user_input)
 
-    response = await lc.llm.ainvoke({"input": llm_prompt})
+    llm = get_llm_with_trace(state.get("trace_id"))
+    response = await llm.ainvoke({"input": llm_prompt})
 
     query_result_object = QueryResult(
         original_user_query=user_input,
