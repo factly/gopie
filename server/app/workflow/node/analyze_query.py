@@ -2,15 +2,16 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 
-from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
 from app.tools.tool_node import has_tool_calls
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
 
-async def analyze_query(state: State) -> dict:
+async def analyze_query(state: State, config: RunnableConfig) -> dict:
     """
     Analyze the user query and the identified datasets to determine:
     1. If this is a data query requiring dataset processing
@@ -92,7 +93,7 @@ async def analyze_query(state: State) -> dict:
             user_query=user_input,
             tool_results=tools_results,
         )
-        llm = get_llm_with_trace(state.get("trace_id"))
+        llm = model_provider(config=config).get_llm()
         response: Any = await llm.ainvoke({"input": prompt})
         parser = JsonOutputParser()
 

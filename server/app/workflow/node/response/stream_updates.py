@@ -4,12 +4,13 @@ import logging
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 
-from app.core.langchain_config import get_llm_with_trace
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 
 
-async def stream_updates(state: State) -> dict:
+async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
 
@@ -66,7 +67,7 @@ async def stream_updates(state: State) -> dict:
         Your response should be informative and forward-looking.
         """
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": stream_update_prompt})
 
     logging.info(f"Stream updates response: {response.content}")
@@ -74,7 +75,9 @@ async def stream_updates(state: State) -> dict:
     return {"messages": [AIMessage(content=response.content)]}
 
 
-async def check_further_execution_requirement(state: State) -> str:
+async def check_further_execution_requirement(
+    state: State, config: RunnableConfig
+) -> str:
     """
     Determines if further execution is required based on the current state.
     Returns a string indicating the next step: "next_sub_query" or
@@ -134,7 +137,7 @@ async def check_further_execution_requirement(state: State) -> str:
         (true/false), not a string. Do not wrap it in quotes.
     """
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": dependency_analysis_prompt})
 
     await adispatch_custom_event(

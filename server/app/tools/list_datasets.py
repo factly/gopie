@@ -92,14 +92,18 @@ async def get_all_datasets() -> list[dict]:
 
             if datasets:
                 for dataset in datasets:
-                    file_extension = ""
                     if dataset.get("format", "") == "csv":
-                        file_extension = ".csv"
-                        all_datasets.append(
-                            dataset.get("alias", "") + file_extension
-                        )
+                        alias = dataset.get("alias", "")
+                        dataset_name = f"{alias}.csv"
+                        all_datasets.append(dataset_name)
 
     return all_datasets
 
 
-# __tool__ = get_all_datasets
+def get_dynamic_tool_text(args: dict) -> str:
+    return "Listing all available datasets"
+
+
+__tool__ = get_all_datasets
+__get_dynamic_tool_text__ = get_dynamic_tool_text
+__tool_category__ = "Data Discovery"

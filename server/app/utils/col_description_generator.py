@@ -3,8 +3,8 @@ import logging
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.core.langchain_config import lc
 from app.models.schema import DatasetSchema
+from app.utils.model_provider import ModelProvider
 
 
 async def generate_column_descriptions(
@@ -48,9 +48,10 @@ async def generate_column_descriptions(
     """
 
     prompt = ChatPromptTemplate.from_template(template)
+    model_provider = ModelProvider()
 
     try:
-        chain = prompt | lc.llm | JsonOutputParser()
+        chain = prompt | model_provider.get_llm() | JsonOutputParser()
         response = await chain.ainvoke(
             {
                 "dataset_schema": schema,

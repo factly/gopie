@@ -3,15 +3,16 @@ from datetime import datetime
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 
-from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
 
-async def generate_subqueries(state: State):
+async def generate_subqueries(state: State, config: RunnableConfig):
     messages = state.get("messages", [])
 
     if messages and isinstance(messages[-1], HumanMessage):
@@ -21,7 +22,7 @@ async def generate_subqueries(state: State):
 
     llm_prompt = get_prompt("generate_subqueries", user_input=user_input)
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": llm_prompt})
 
     query_result_object = QueryResult(

@@ -5,15 +5,17 @@ from uuid import uuid4
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
-from app.core.langchain_config import lc
 from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
+from app.utils.model_provider import ModelProvider
 
 
 async def add_documents_to_vector_store(documents, ids=None):
-    vector_store = setup_vector_store(lc.embeddings_model)
+    model_provider = ModelProvider()
+
+    vector_store = setup_vector_store(model_provider.get_embeddings_model())
     client = initialize_qdrant_client()
 
     if ids is None:

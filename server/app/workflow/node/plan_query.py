@@ -1,13 +1,14 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 
-from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
 
-async def plan_query(state: State) -> dict:
+async def plan_query(state: State, config: RunnableConfig) -> dict:
     """
     Plan the SQL query based on user input and dataset information.
     This function generates a SQL query that addresses the user's question
@@ -54,7 +55,7 @@ async def plan_query(state: State) -> dict:
             attempt=retry_count + 1,
         )
 
-        llm = get_llm_with_trace(state.get("trace_id"))
+        llm = model_provider(config=config).get_llm()
         response = await llm.ainvoke({"input": llm_prompt})
         response_content = str(response.content)
 

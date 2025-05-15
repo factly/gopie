@@ -2,13 +2,17 @@ import json
 import logging
 from typing import Any
 
-from app.core.langchain_config import get_llm_with_trace
+from langchain_core.runnables import RunnableConfig
+
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 
 
-async def generate_result(state: State) -> dict[str, list[Any]]:
+async def generate_result(
+    state: State, config: RunnableConfig
+) -> dict[str, list[Any]]:
     """
     Generate a response based on the query result
     """
@@ -43,9 +47,9 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
             }
 
         return (
-            await _handle_data_query(state, query_result)
+            await _handle_data_query(query_result, config)
             if any_data_query
-            else await _handle_conversational_query(state, query_result)
+            else await _handle_conversational_query(query_result, config)
         )
     except Exception as e:
         return {
@@ -61,8 +65,8 @@ async def generate_result(state: State) -> dict[str, list[Any]]:
 
 
 async def _handle_conversational_query(
-    state: State,
     query_result: QueryResult,
+    config: RunnableConfig,
 ) -> dict[str, list[Any]]:
     """
     Handle conversational or tool-only queries
@@ -92,7 +96,7 @@ async def _handle_conversational_query(
     - Focus on direct, helpful answers
     """
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": prompt})
 
     return {
@@ -110,8 +114,8 @@ async def _handle_conversational_query(
 
 
 async def _handle_data_query(
-    state: State,
     query_result: QueryResult,
+    config: RunnableConfig,
 ) -> dict[str, list[Any]]:
     """
     Handle data analysis queries
@@ -151,7 +155,7 @@ async def _handle_data_query(
                 )
 
     if not results and not tool_used_results:
-        return await _handle_empty_results(state, query_result, errors)
+        return await _handle_empty_results(query_result, errors, config)
 
     prompt = f"""
     Context:
@@ -189,7 +193,7 @@ async def _handle_data_query(
         clearly state what aspects you can answer and what remains unclear
     """
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider.get_llm()
     response = await llm.ainvoke({"input": prompt})
 
     return {
@@ -207,9 +211,9 @@ async def _handle_data_query(
 
 
 async def _handle_empty_results(
-    state: State,
     query_result: QueryResult,
     errors: Any,
+    config: RunnableConfig,
 ) -> dict[str, list[Any]]:
     """
     Handle empty query results with a more personalized response
@@ -234,7 +238,7 @@ async def _handle_empty_results(
     4. If there were errors, briefly acknowledge them without technical details
     """
 
-    llm = get_llm_with_trace(state.get("trace_id"))
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": prompt})
 
     return {

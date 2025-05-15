@@ -1,9 +1,10 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
-from app.core.langchain_config import get_llm_with_trace
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 
 
@@ -79,7 +80,7 @@ async def execute_query(state: State) -> dict:
         }
 
 
-async def route_query_replan(state: State) -> str:
+async def route_query_replan(state: State, config: RunnableConfig) -> str:
     """
     Determine whether to replan the query or generate results based on
     execution status
@@ -109,7 +110,7 @@ async def route_query_replan(state: State) -> str:
             },
         )
 
-        llm = get_llm_with_trace(state.get("trace_id"))
+        llm = model_provider(config=config).get_llm()
 
         response = await llm.ainvoke(
             {

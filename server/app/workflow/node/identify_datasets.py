@@ -3,18 +3,16 @@ from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 
-from app.core.langchain_config import (
-    get_embeddings_model_with_trace,
-    get_llm_with_trace,
-)
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
+from app.utils.model_provider import model_provider
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
 
-async def identify_datasets(state: State):
+async def identify_datasets(state: State, config: RunnableConfig):
     """
     Identify relevant dataset based on natural language query.
     Uses Qdrant vector search to find the most relevant datasets first.
@@ -31,10 +29,8 @@ async def identify_datasets(state: State):
     project_ids = state.get("project_ids", [])
 
     try:
-        llm = get_llm_with_trace(state.get("trace_id"))
-        embeddings_model = get_embeddings_model_with_trace(
-            state.get("trace_id")
-        )
+        llm = model_provider(config=config).get_llm()
+        embeddings_model = model_provider(config=config).get_embeddings_model()
 
         semantic_searched_datasets = []
         try:
@@ -77,7 +73,6 @@ async def identify_datasets(state: State):
             available_datasets_schemas=semantic_searched_datasets,
         )
 
-        llm = get_llm_with_trace(state.get("trace_id"))
         response: Any = await llm.ainvoke({"input": llm_prompt})
 
         response_content = str(response.content)
