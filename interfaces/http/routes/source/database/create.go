@@ -2,12 +2,15 @@ package database
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"go.uber.org/zap"
+	"vitess.io/vitess/go/vt/sqlparser"
 )
 
 // createRequestBody represents the request body for creating a database source
@@ -57,6 +60,16 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Invalid request body",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	err = h.parseSQLQuery(body.SQLQuery, body.Driver)
+	if err != nil {
+		h.logger.Error("Error parsing SQL query", zap.Error(err))
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Invalid SQL query",
 			"code":    fiber.StatusBadRequest,
 		})
 	}
@@ -180,4 +193,64 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		"summary": summary,
 		"source":  source,
 	})
+}
+
+// parse and validate sql query
+func (h *httpHandler) parseSQLQuery(sqlQuery, driver string) error {
+	// First check if the query starts with SELECT (case insensitive)
+	trimmedQuery := strings.TrimSpace(sqlQuery)
+	if !strings.HasPrefix(strings.ToUpper(trimmedQuery), "SELECT") {
+		h.logger.Error("SQL query must be a SELECT statement")
+		return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
+	}
+
+	if driver == "postgres" {
+		parseResult, err := pg_query.Parse(sqlQuery)
+		if err != nil {
+			h.logger.Error("Error parsing PostgreSQL query", zap.Error(err))
+			return fmt.Errorf("invalid SQL query: %w", err)
+		}
+
+		if len(parseResult.GetStmts()) == 0 {
+			h.logger.Error("No statements found in SQL query")
+			return fmt.Errorf("invalid SQL query: no statements found")
+		}
+
+		// Check if the query is a SELECT statement for PostgreSQL
+		stmt := parseResult.GetStmts()[0]
+		if stmt.GetStmt().GetSelectStmt() == nil {
+			h.logger.Error("SQL query must be a SELECT statement")
+			return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
+		}
+
+		return nil
+	} else if driver == "mysql" {
+		// For MySQL, use the vitess parser
+		parser, err := sqlparser.New(sqlparser.Options{})
+		if err != nil {
+			h.logger.Error("Error creating SQL parser", zap.Error(err))
+			return fmt.Errorf("invalid SQL query: %w", err)
+		}
+
+		parseResult, err := parser.Parse(sqlQuery)
+		if err != nil {
+			h.logger.Error("Error parsing SQL query", zap.Error(err))
+			return fmt.Errorf("invalid SQL query: %w", err)
+		}
+
+		if parseResult == nil {
+			h.logger.Error("No result from SQL parser")
+			return fmt.Errorf("invalid SQL query: parsing returned no result")
+		}
+
+		// Check if the query is a SELECT statement
+		if _, ok := parseResult.(*sqlparser.Select); !ok {
+			h.logger.Error("SQL query must be a SELECT statement")
+			return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("unsupported database driver: %s", driver)
 }
