@@ -17,7 +17,9 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/marcboeker/go-duckdb"
 	_ "github.com/marcboeker/go-duckdb" // DB driver
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"go.uber.org/zap"
+	"vitess.io/vitess/go/vt/sqlparser"
 )
 
 type OlapDBDriver struct {
@@ -442,11 +444,22 @@ func (m *OlapDBDriver) CreateTableFromMySql(connectionString, sqlQuery, tableNam
 
 func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQuery, tableName string) error {
 	pgDBAlias := fmt.Sprintf("pg_ext_%s", pkg.RandomString(10))
+	parseResult, _ := pg_query.Parse(sqlQuery)
+	m.logger.Debug("parsed SQL query", zap.String("query", sqlQuery))
+	rawSmt := parseResult.GetStmts()[0]
+	stmtNode := rawSmt.GetStmt()
+	walkAndQualifyUnqualifiedTablesForPg(stmtNode, pgDBAlias)
+	sqlQuery, err := pg_query.Deparse(parseResult)
+	if err != nil {
+		m.logger.Error("failed to deparse SQL query", zap.String("query", sqlQuery), zap.Error(err))
+		return fmt.Errorf("deparsing SQL query: %w", err)
+	}
+	m.logger.Debug("deparsed SQL query", zap.String("query", sqlQuery))
 
 	// 1. ATTACH statement
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
 
-	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", attachSQL))
+	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias))
 	if _, err := m.helperDB.Exec(attachSQL); err != nil {
 		m.logger.Error("Failed to attach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(err))
 		return fmt.Errorf("attaching PostgreSQL database (alias: %s): %w", pgDBAlias, err)
@@ -506,12 +519,22 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 
 func (m *OlapDBDriver) createTableFromPostgresDuckDB(connectionString, sqlQuery, tableName string) error {
 	pgDBAlias := fmt.Sprintf("pg_ext_%s", pkg.RandomString(10))
-
+	parseResult, _ := pg_query.Parse(sqlQuery)
+	m.logger.Debug("parsed SQL query", zap.String("query", sqlQuery))
+	rawSmt := parseResult.GetStmts()[0]
+	stmtNode := rawSmt.GetStmt()
+	walkAndQualifyUnqualifiedTablesForPg(stmtNode, pgDBAlias)
+	sqlQuery, err := pg_query.Deparse(parseResult)
+	if err != nil {
+		m.logger.Error("failed to deparse SQL query", zap.String("query", sqlQuery), zap.Error(err))
+		return fmt.Errorf("deparsing SQL query: %w", err)
+	}
+	m.logger.Debug("deparsed SQL query", zap.String("query", sqlQuery))
 	// 1. ATTACH statement
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
 
-	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", attachSQL))
-	if _, err := m.helperDB.Exec(attachSQL); err != nil {
+	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias))
+	if _, err := m.db.Exec(attachSQL); err != nil {
 		m.logger.Error("Failed to attach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(err))
 		return fmt.Errorf("attaching PostgreSQL database (alias: %s): %w", pgDBAlias, err)
 	}
@@ -521,7 +544,7 @@ func (m *OlapDBDriver) createTableFromPostgresDuckDB(connectionString, sqlQuery,
 	defer func() {
 		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, pgDBAlias)
 		m.logger.Debug("Executing DETACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", detachSQLCmd))
-		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
+		if _, err := m.db.Exec(detachSQLCmd); err != nil {
 			detachError = err
 			m.logger.Error("Failed to detach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(detachError))
 		} else {
@@ -542,7 +565,7 @@ func (m *OlapDBDriver) createTableFromPostgresDuckDB(connectionString, sqlQuery,
 		zap.String("sql", createTableSQL),
 	)
 
-	_, createErr := m.helperDB.Exec(createTableSQL)
+	_, createErr := m.db.Exec(createTableSQL)
 	if createErr != nil {
 		m.logger.Error("Failed to create table from PostgreSQL data",
 			zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
@@ -566,7 +589,12 @@ func (m *OlapDBDriver) createTableFromPostgresDuckDB(connectionString, sqlQuery,
 }
 
 func (m *OlapDBDriver) createTableFromMysqlMotherDuck(connectionString, sqlQuery, tableName string) error {
-	mySQLDBAlias := fmt.Sprintf("mysql_ext_%s", pkg.RandomString(10))
+	mySQLDBAlias := fmt.Sprintf("ysql_ext_%s", pkg.RandomString(10))
+	parser, _ := sqlparser.New(sqlparser.Options{})
+	parseResult, _ := parser.Parse(sqlQuery)
+	node := parseResult.(*sqlparser.Select)
+	WalkAndQualifyUnqualifiedTablesForMySQL(node, mySQLDBAlias)
+	sqlQuery = sqlparser.String(node)
 
 	// 1. ATTACH statement for MySQL
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE MYSQL)`, connectionString, mySQLDBAlias)
@@ -631,6 +659,11 @@ func (m *OlapDBDriver) createTableFromMysqlMotherDuck(connectionString, sqlQuery
 // createTableFromMysqlDuckDB creates a table in local DuckDB by selecting data from an attached MySQL database.
 func (m *OlapDBDriver) createTableFromMysqlDuckDB(connectionString, sqlQuery, tableName string) error {
 	mySQLDBAlias := fmt.Sprintf("mysql_ext_%s", pkg.RandomString(10))
+	parser, _ := sqlparser.New(sqlparser.Options{})
+	parseResult, _ := parser.Parse(sqlQuery)
+	node := parseResult.(*sqlparser.Select)
+	WalkAndQualifyUnqualifiedTablesForMySQL(node, mySQLDBAlias)
+	sqlQuery = sqlparser.String(node)
 
 	// 1. ATTACH statement for MySQL
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE MYSQL)`, connectionString, mySQLDBAlias)

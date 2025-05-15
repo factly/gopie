@@ -82,24 +82,6 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 
 	h.logger.Info("Creating database source dataset", zap.String("project_id", project.ID))
 
-	// validate select SQL Query
-	valid, err := pkg.HasMultipleStatements(body.SQLQuery)
-	if err != nil {
-		h.logger.Error("Error parsing sql query", zap.String("sql_query", body.SQLQuery))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error parsing sql query",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
-	if !valid {
-		h.logger.Error("Error not a valid sql query", zap.String("sql_query", body.SQLQuery))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error not a valid sql query",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
-
 	tableName := fmt.Sprintf("gp_%s", pkg.RandomString(13))
 
 	if body.Driver == "postgres" {
@@ -143,7 +125,59 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
+	count, columns, err := h.getMetrics(tableName)
+	if err != nil {
+		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", tableName))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching dataset metrics",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
+		Name:        tableName,
+		Description: body.Description,
+		ProjectID:   project.ID,
+		Columns:     columns,
+		Format:      body.Driver,
+		RowCount:    count,
+		Alias:       body.Alias,
+		CreatedBy:   body.CreatedBy,
+		UpdatedBy:   body.CreatedBy,
+	})
+	if err != nil {
+		h.logger.Error("Error creating dataset record", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset record",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	datasetSummary, err := h.olapSvc.GetDatasetSummary(tableName)
+	if err != nil {
+		h.logger.Error("Error fetching dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	summary, err := h.datasetSvc.CreateDatasetSummary(tableName, datasetSummary)
+	if err != nil {
+		h.logger.Error("Error creating dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": source,
+		"dataset": dataset,
+		"summary": summary,
+		"source":  source,
 	})
 }
