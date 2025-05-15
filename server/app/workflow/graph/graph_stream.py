@@ -2,6 +2,8 @@ import json
 import logging
 import uuid
 
+from langchain_core.runnables import RunnableConfig
+
 from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
@@ -15,6 +17,7 @@ async def stream_graph_updates(
     project_ids: list[str] | None = None,
     chat_id: str | None = None,
     trace_id: str | None = None,
+    model_id: str | None = None,
 ):
     """
     Stream graph updates for user input with event tracking.
@@ -25,6 +28,7 @@ async def stream_graph_updates(
         project_ids: Specific project IDs to use for the query
         chat_id: Unique identifier for the chat session
         trace_id: Optional trace ID for tracking
+        model_id: Optional model ID for selecting the reasoning model
 
     Yields:
         str: JSON-formatted event data for streaming in SSE format
@@ -36,15 +40,22 @@ async def stream_graph_updates(
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
-        "trace_id": trace_id,
     }
 
     event_stream_handler = EventStreamHandler()
+
+    config = RunnableConfig(
+        configurable={
+            "model_id": model_id,
+            "trace_id": trace_id,
+        },
+    )
 
     try:
         async for event in graph.astream_events(
             input_state,
             version="v2",
+            config=config,
         ):
             extracted_event_data = event_stream_handler.handle_events_stream(
                 event

@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.tools import TOOL_METADATA, TOOLS
 from app.tools.tool_node import ToolNode
-from app.workflow.graph.types import State
+from app.workflow.graph.types import ConfigSchema, State
 from app.workflow.node.analyze_dataset import analyze_dataset
 from app.workflow.node.analyze_query import analyze_query, route_from_analysis
 from app.workflow.node.execute_query import execute_query, route_query_replan
@@ -18,7 +18,7 @@ from app.workflow.node.response.stream_updates import (
 )
 from app.workflow.node.validate_query_result import validate_query_result
 
-graph_builder = StateGraph(State)
+graph_builder = StateGraph(State, config_schema=ConfigSchema)
 
 graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("identify_datasets", identify_datasets)

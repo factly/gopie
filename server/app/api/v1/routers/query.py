@@ -21,11 +21,12 @@ async def query(request: QueryRequest):
     - `messages`: A list of user-assistant messages forming the conversation
                   history.
     - `project_ids` (optional): List of project IDs. Include all datasets under
-                                these projects.
+                                the projects.
     - `dataset_ids` (optional): List of individual dataset IDs to query
                                 directly.
     - `chat_id` (optional): Unique identifier for the chat session.
     - `trace_id` (optional): Unique identifier for tracing the query execution
+    - `model_id` (optional): ID of the model to use for reasoning
     """
 
     return StreamingResponse(
@@ -35,6 +36,7 @@ async def query(request: QueryRequest):
             project_ids=request.project_ids,
             chat_id=request.chat_id,
             trace_id=request.trace_id,
+            model_id=request.model_id,
         ),
         media_type="text/event-stream",
     )

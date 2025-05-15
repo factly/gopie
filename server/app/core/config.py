@@ -15,10 +15,10 @@ class Settings(BaseSettings):
 
     PORTKEY_API_KEY: str = ""
 
-    GEMINI_MODEL: str = "gemini-2.5-pro-preview-05-06"
+    DEFAULT_GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_VIRTUAL_KEY: str = ""
 
-    OPENAI_MODEL: str = "gpt-4o"
+    DEFAULT_OPENAI_MODEL: str = "gpt-4o"
     OPENAI_EMBEDDINGS_MODEL: str = "text-embedding-3-large"
     OPENAI_VIRTUAL_KEY: str = ""
 
