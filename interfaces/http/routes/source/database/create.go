@@ -82,6 +82,46 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 
 	h.logger.Info("Creating database source dataset", zap.String("project_id", project.ID))
 
+	// validate select SQL Query
+	valid, err := pkg.HasMultipleStatements(body.SQLQuery)
+	if err != nil {
+		h.logger.Error("Error parsing sql query", zap.String("sql_query", body.SQLQuery))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error parsing sql query",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+	if !valid {
+		h.logger.Error("Error not a valid sql query", zap.String("sql_query", body.SQLQuery))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error not a valid sql query",
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	tableName := fmt.Sprintf("gp_%s", pkg.RandomString(13))
+
+	if body.Driver == "postgres" {
+		err := h.olapSvc.CreateTableFromPostgres(body.ConnectionString, body.SQLQuery, tableName)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error creating table from postgres",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+	} else {
+		err := h.olapSvc.CreateTableFromMySql(body.ConnectionString, body.SQLQuery, tableName)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error creating table from mysql",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+	}
+
 	// Create the database source
 	dbSourceParams := &models.CreateDatabaseSourceParams{
 		ConnectionString: body.ConnectionString,
@@ -93,7 +133,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		Driver:           body.Driver,
 	}
 
-	_, err = h.dbSourceSvc.Create(dbSourceParams)
+	source, err := h.dbSourceSvc.Create(dbSourceParams)
 	if err != nil {
 		h.logger.Error("Error creating database source", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -103,6 +143,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: implement further
-	return nil
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"data": source,
+	})
 }

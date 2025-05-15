@@ -1,4 +1,4 @@
-package sources
+package database_source
 
 import (
 	"context"
@@ -47,7 +47,6 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 		SqlQuery:         params.SQLQuery,
 		Driver:           params.Driver,
 	})
-
 	if err != nil {
 		s.logger.Error("Error creating database source", zap.Error(err))
 		return nil, err
@@ -66,7 +65,6 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 func (s *DatabaseSourceStore) Get(ctx context.Context, id string) (*models.DatabaseSource, error) {
 	parseUUID, _ := uuid.Parse(id)
 	row, err := s.q.GetDatabaseSource(ctx, pgtype.UUID{Bytes: parseUUID, Valid: true})
-
 	if err != nil {
 		s.logger.Error("Error getting database source", zap.Error(err))
 		return nil, err
@@ -87,35 +85,10 @@ func (s *DatabaseSourceStore) Get(ctx context.Context, id string) (*models.Datab
 	}, nil
 }
 
-// Update updates a database source
-func (s *DatabaseSourceStore) Update(ctx context.Context, params models.UpdateDatabaseSourceParams) (*models.DatabaseSource, error) {
-	parseUUID, _ := uuid.Parse(params.ID)
-	row, err := s.q.UpdateDatabaseSource(ctx, gen.UpdateDatabaseSourceParams{
-		ID:               pgtype.UUID{Bytes: parseUUID, Valid: true},
-		ConnectionString: params.ConnectionString,
-		SqlQuery:         params.SQLQuery,
-		Driver:           params.Driver,
-	})
-
-	if err != nil {
-		s.logger.Error("Error updating database source", zap.Error(err))
-		return nil, err
-	}
-
-	return &models.DatabaseSource{
-		ID:               row.ID.String(),
-		ConnectionString: row.ConnectionString,
-		SQLQuery:         row.SqlQuery,
-		CreatedAt:        row.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:        row.UpdatedAt.Time.Format(time.RFC3339),
-	}, nil
-}
-
 // Delete deletes a database source
 func (s *DatabaseSourceStore) Delete(ctx context.Context, id string) error {
 	parseUUID, _ := uuid.Parse(id)
 	err := s.q.DeleteDatabaseSource(ctx, pgtype.UUID{Bytes: parseUUID, Valid: true})
-
 	if err != nil {
 		s.logger.Error("Error deleting database source", zap.Error(err))
 		return err
@@ -130,7 +103,6 @@ func (s *DatabaseSourceStore) List(ctx context.Context, limit, offset int) ([]*m
 		Limit:  int32(limit),
 		Offset: int32(offset),
 	})
-
 	if err != nil {
 		s.logger.Error("Error listing database sources", zap.Error(err))
 		return nil, err

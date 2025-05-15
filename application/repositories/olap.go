@@ -13,4 +13,5 @@ type OlapRepository interface {
 	DropTable(tableName string) error
 	Close() error
 	CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error
+	CreateTableFromMySql(connectionString, sqlQuery, tableName string) error
 }

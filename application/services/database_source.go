@@ -35,12 +35,6 @@ func (s *DatabaseSourceService) Get(id string) (*models.DatabaseSource, error) {
 	return s.dbSourceRepo.Get(context.Background(), id)
 }
 
-// Update updates a database source
-func (s *DatabaseSourceService) Update(params *models.UpdateDatabaseSourceParams) (*models.DatabaseSource, error) {
-	s.logger.Info("Updating database source", zap.String("id", params.ID))
-	return s.dbSourceRepo.Update(context.Background(), *params)
-}
-
 // Delete deletes a database source
 func (s *DatabaseSourceService) Delete(id string) error {
 	s.logger.Info("Deleting database source", zap.String("id", id))

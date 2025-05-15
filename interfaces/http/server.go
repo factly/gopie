@@ -14,9 +14,9 @@ import (
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
+	"github.com/factly/gopie/infrastructure/postgres/store/database_source"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
-	"github.com/factly/gopie/infrastructure/postgres/store/sources"
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
@@ -73,7 +73,7 @@ func ServeHttp() error {
 	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
 	datasetStore := datasets.NewPostgresDatasetStore(store.GetDB(), logger)
 	chatStore := chats.NewChatStoreRepository(store.GetDB(), logger)
-	dbSourceStore := sources.NewDatabaseSourceStore(store.GetDB(), logger, config)
+	dbSourceStore := database_source.NewDatabaseSourceStore(store.GetDB(), logger, config)
 	aiAgentRepo := aiagent.NewAIAgent(config.AIAgent.Url, logger)
 
 	olapService := services.NewOlapService(olap, source, logger)

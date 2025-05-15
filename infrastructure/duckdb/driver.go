@@ -10,6 +10,7 @@ import (
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/google/uuid"
@@ -20,8 +21,10 @@ import (
 )
 
 type OlapDBDriver struct {
-	db     *sql.DB
-	logger *logger.Logger
+	db       *sql.DB
+	logger   *logger.Logger
+	olapType string // "duckdb" or "motherduck"
+	dbName   string
 	// Only used for MotherDuck
 	helperDB *sql.DB
 }
@@ -44,6 +47,10 @@ func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *con
 	}
 	logger.Info("successfully connected to duckdb",
 		zap.String("db_type", cfg.DB))
+
+	if cfg.DB == "motherduck" {
+		olap.dbName = cfg.MotherDuck.DBName
+	}
 
 	// Run post-connection setup only for local DuckDB instances needing S3 config
 	if cfg.DB == "duckdb" {
@@ -97,6 +104,7 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 // buildDSN constructs the DSN string for DuckDB or MotherDuck.
 func (m *OlapDBDriver) buildDSN(cfg *config.OlapDBConfig) (string, error) {
 	if cfg.DB == "motherduck" {
+		m.olapType = "motherduck"
 		if cfg.MotherDuck.DBName == "" || cfg.MotherDuck.Token == "" {
 			m.logger.Error("motherduck configuration incomplete",
 				zap.Bool("db_name_missing", cfg.MotherDuck.DBName == ""),
@@ -111,7 +119,7 @@ func (m *OlapDBDriver) buildDSN(cfg *config.OlapDBConfig) (string, error) {
 		return dsn, nil
 	}
 
-	// Assuming "duckdb"
+	m.olapType = "duckdb"
 	dsn := cfg.DuckDB.Path
 	params := []string{}
 
@@ -417,7 +425,269 @@ func (m *OlapDBDriver) DropTable(tableName string) error {
 
 // CreateTableFromPostgres creates a table in DuckDB by executing a query on a Postgres database
 func (m *OlapDBDriver) CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error {
-	// TODO
+	if m.olapType == "motherduck" {
+		return m.createTableFromPostgresMotherDuck(connectionString, sqlQuery, tableName)
+	} else {
+		return m.createTableFromPostgresDuckDB(connectionString, sqlQuery, tableName)
+	}
+}
+
+func (m *OlapDBDriver) CreateTableFromMySql(connectionString, sqlQuery, tableName string) error {
+	if m.olapType == "motherduck" {
+		return m.createTableFromMysqlMotherDuck(connectionString, sqlQuery, tableName)
+	} else {
+		return m.createTableFromMysqlDuckDB(connectionString, sqlQuery, tableName)
+	}
+}
+
+func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQuery, tableName string) error {
+	pgDBAlias := fmt.Sprintf("pg_ext_%s", pkg.RandomString(10))
+
+	// 1. ATTACH statement
+	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
+
+	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", attachSQL))
+	if _, err := m.helperDB.Exec(attachSQL); err != nil {
+		m.logger.Error("Failed to attach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(err))
+		return fmt.Errorf("attaching PostgreSQL database (alias: %s): %w", pgDBAlias, err)
+	}
+	m.logger.Info("Successfully attached PostgreSQL database", zap.String("alias", pgDBAlias))
+
+	var detachError error
+	defer func() {
+		// DETACH is also specific
+		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, pgDBAlias) // Quoted alias
+		m.logger.Debug("Executing DETACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", detachSQLCmd))
+		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
+			detachError = err
+			m.logger.Error("Failed to detach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(detachError))
+		} else {
+			m.logger.Info("Successfully detached PostgreSQL database", zap.String("alias", pgDBAlias))
+		}
+	}()
+
+	// 2. CREATE TABLE ... AS ... statement
+	quotedTargetSchema := fmt.Sprintf("\"%s\"", m.dbName)
+	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
+
+	createTableSQL := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s AS %s`,
+		quotedTargetSchema,
+		quotedTargetTableName,
+		sqlQuery,
+	)
+
+	m.logger.Debug("Executing CREATE TABLE AS SELECT SQL",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+		zap.String("sql", createTableSQL),
+	)
+
+	_, createErr := m.helperDB.Exec(createTableSQL)
+	if createErr != nil {
+		m.logger.Error("Failed to create table from PostgreSQL data",
+			zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+			zap.Error(createErr),
+		)
+		return fmt.Errorf("creating table %s.%s using SQL query (%s): %w", quotedTargetSchema, quotedTargetTableName, sqlQuery, createErr)
+	}
+
+	m.logger.Info("Successfully created table",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+	)
+
+	if detachError != nil {
+		m.logger.Warn("Table created successfully, but a non-critical error occurred during PostgreSQL detach",
+			zap.String("alias", pgDBAlias),
+			zap.Error(detachError),
+		)
+	}
+
+	return nil
+}
+
+func (m *OlapDBDriver) createTableFromPostgresDuckDB(connectionString, sqlQuery, tableName string) error {
+	pgDBAlias := fmt.Sprintf("pg_ext_%s", pkg.RandomString(10))
+
+	// 1. ATTACH statement
+	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
+
+	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", attachSQL))
+	if _, err := m.helperDB.Exec(attachSQL); err != nil {
+		m.logger.Error("Failed to attach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(err))
+		return fmt.Errorf("attaching PostgreSQL database (alias: %s): %w", pgDBAlias, err)
+	}
+	m.logger.Info("Successfully attached PostgreSQL database", zap.String("alias", pgDBAlias))
+
+	var detachError error
+	defer func() {
+		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, pgDBAlias)
+		m.logger.Debug("Executing DETACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", detachSQLCmd))
+		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
+			detachError = err
+			m.logger.Error("Failed to detach PostgreSQL database", zap.String("alias", pgDBAlias), zap.Error(detachError))
+		} else {
+			m.logger.Info("Successfully detached PostgreSQL database", zap.String("alias", pgDBAlias))
+		}
+	}()
+
+	// 2. CREATE TABLE ... AS ... statement
+	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
+
+	createTableSQL := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s AS %s`,
+		quotedTargetTableName,
+		sqlQuery,
+	)
+
+	m.logger.Debug("Executing CREATE TABLE AS SELECT SQL",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+		zap.String("sql", createTableSQL),
+	)
+
+	_, createErr := m.helperDB.Exec(createTableSQL)
+	if createErr != nil {
+		m.logger.Error("Failed to create table from PostgreSQL data",
+			zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+			zap.Error(createErr),
+		)
+		return fmt.Errorf("creating table %s using SQL query (%s): %w", quotedTargetTableName, sqlQuery, createErr)
+	}
+
+	m.logger.Info("Successfully created table",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+	)
+
+	if detachError != nil {
+		m.logger.Warn("Table created successfully, but a non-critical error occurred during PostgreSQL detach",
+			zap.String("alias", pgDBAlias),
+			zap.Error(detachError),
+		)
+	}
+
+	return nil
+}
+
+func (m *OlapDBDriver) createTableFromMysqlMotherDuck(connectionString, sqlQuery, tableName string) error {
+	mySQLDBAlias := fmt.Sprintf("mysql_ext_%s", pkg.RandomString(10))
+
+	// 1. ATTACH statement for MySQL
+	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE MYSQL)`, connectionString, mySQLDBAlias)
+
+	m.logger.Debug("Executing ATTACH SQL for MySQL", zap.String("alias", mySQLDBAlias), zap.String("sql", attachSQL))
+	if _, err := m.helperDB.Exec(attachSQL); err != nil {
+		m.logger.Error("Failed to attach MySQL database", zap.String("alias", mySQLDBAlias), zap.Error(err))
+		return fmt.Errorf("attaching MySQL database (alias: %s): %w", mySQLDBAlias, err)
+	}
+	m.logger.Info("Successfully attached MySQL database", zap.String("alias", mySQLDBAlias))
+
+	var detachError error
+	defer func() {
+		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, mySQLDBAlias)
+		m.logger.Debug("Executing DETACH SQL for MySQL", zap.String("alias", mySQLDBAlias), zap.String("sql", detachSQLCmd))
+		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
+			detachError = err // Capture detach error to return after table creation attempt
+			m.logger.Error("Failed to detach MySQL database", zap.String("alias", mySQLDBAlias), zap.Error(detachError))
+		} else {
+			m.logger.Info("Successfully detached MySQL database", zap.String("alias", mySQLDBAlias))
+		}
+	}()
+
+	// 2. CREATE TABLE ... AS ... statement for MotherDuck
+	quotedTargetSchema := fmt.Sprintf("\"%s\"", m.dbName)
+	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
+
+	createTableSQL := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s AS %s`,
+		quotedTargetSchema,
+		quotedTargetTableName,
+		sqlQuery,
+	)
+
+	m.logger.Debug("Executing CREATE TABLE AS SELECT SQL from MySQL",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+		zap.String("sql", createTableSQL),
+	)
+
+	_, createErr := m.helperDB.Exec(createTableSQL)
+	if createErr != nil {
+		m.logger.Error("Failed to create table from MySQL data in MotherDuck",
+			zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+			zap.Error(createErr),
+		)
+		return fmt.Errorf("creating table %s.%s from MySQL query (%s): %w", quotedTargetSchema, quotedTargetTableName, sqlQuery, createErr)
+	}
+
+	m.logger.Info("Successfully created table in MotherDuck from MySQL data",
+		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, tableName)),
+	)
+
+	if detachError != nil {
+		m.logger.Warn("Table created successfully, but a non-critical error occurred during MySQL detach",
+			zap.String("alias", mySQLDBAlias),
+			zap.Error(detachError),
+		)
+	}
+
+	return nil
+}
+
+// createTableFromMysqlDuckDB creates a table in local DuckDB by selecting data from an attached MySQL database.
+func (m *OlapDBDriver) createTableFromMysqlDuckDB(connectionString, sqlQuery, tableName string) error {
+	mySQLDBAlias := fmt.Sprintf("mysql_ext_%s", pkg.RandomString(10))
+
+	// 1. ATTACH statement for MySQL
+	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE MYSQL)`, connectionString, mySQLDBAlias)
+
+	m.logger.Debug("Executing ATTACH SQL for MySQL", zap.String("alias", mySQLDBAlias), zap.String("sql", attachSQL))
+	if _, err := m.helperDB.Exec(attachSQL); err != nil {
+		m.logger.Error("Failed to attach MySQL database", zap.String("alias", mySQLDBAlias), zap.Error(err))
+		return fmt.Errorf("attaching MySQL database (alias: %s): %w", mySQLDBAlias, err)
+	}
+	m.logger.Info("Successfully attached MySQL database", zap.String("alias", mySQLDBAlias))
+
+	var detachError error
+	defer func() {
+		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, mySQLDBAlias)
+		m.logger.Debug("Executing DETACH SQL for MySQL", zap.String("alias", mySQLDBAlias), zap.String("sql", detachSQLCmd))
+		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
+			detachError = err
+			m.logger.Error("Failed to detach MySQL database", zap.String("alias", mySQLDBAlias), zap.Error(detachError))
+		} else {
+			m.logger.Info("Successfully detached MySQL database", zap.String("alias", mySQLDBAlias))
+		}
+	}()
+
+	// 2. CREATE TABLE ... AS ... statement for local DuckDB
+	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
+
+	// sqlQuery needs to be a DuckDB query string that can select from the attached MySQL database
+	createTableSQL := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s AS %s`,
+		quotedTargetTableName,
+		sqlQuery,
+	)
+
+	m.logger.Debug("Executing CREATE TABLE AS SELECT SQL from MySQL",
+		zap.String("target", tableName),
+		zap.String("sql", createTableSQL),
+	)
+
+	_, createErr := m.helperDB.Exec(createTableSQL)
+	if createErr != nil {
+		m.logger.Error("Failed to create table from MySQL data in DuckDB",
+			zap.String("target", tableName),
+			zap.Error(createErr),
+		)
+		return fmt.Errorf("creating table %s from MySQL query (%s): %w", quotedTargetTableName, sqlQuery, createErr)
+	}
+
+	m.logger.Info("Successfully created table in DuckDB from MySQL data",
+		zap.String("target", tableName),
+	)
+
+	if detachError != nil {
+		m.logger.Warn("Table created successfully, but a non-critical error occurred during MySQL detach",
+			zap.String("alias", mySQLDBAlias),
+			zap.Error(detachError),
+		)
+	}
+
 	return nil
 }
 
@@ -432,4 +702,3 @@ func parseError(err error) error {
 	}
 	return err
 }
-

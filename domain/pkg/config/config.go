@@ -126,6 +126,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
+		{config.EncryptionKey, "encryption key"},
 		// {config.Zitadel.Protocol, "zitadel protocol"},
 		// {config.Zitadel.Domain, "zitadel domain"},
 		// {config.Zitadel.ProjectID, "zitadel project id"},

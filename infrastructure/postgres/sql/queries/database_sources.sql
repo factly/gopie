@@ -11,16 +11,6 @@ INSERT INTO database_sources (
 SELECT * FROM database_sources
 WHERE id = $1;
 
--- name: UpdateDatabaseSource :one
-UPDATE database_sources
-SET 
-    connection_string = COALESCE($2, connection_string),
-    sql_query = COALESCE($3, sql_query),
-    driver = COALESCE($4, driver),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING *;
-
 -- name: DeleteDatabaseSource :exec
 DELETE FROM database_sources
 WHERE id = $1;
