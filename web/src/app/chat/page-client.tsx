@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   useEffect,
   useRef,
@@ -9,7 +10,7 @@ import {
   useMemo,
 } from "react";
 import { useChatMessages } from "@/lib/queries/chat";
-import { useCreateChat } from "@/lib/mutations/chat";
+import { useDeleteChat, useChatWithAgent } from "@/lib/mutations/chat";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,12 +36,24 @@ import { cn } from "@/lib/utils";
 import { useProjects } from "@/lib/queries/project/list-projects";
 import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { fetchChats } from "@/lib/queries/chat/list-chats";
-import { useDeleteChat } from "@/lib/mutations/chat";
 import { useQueryClient } from "@tanstack/react-query";
-import { Chat } from "@/lib/api-client";
-import React from "react";
+import { Chat, Project, Dataset } from "@/lib/api-client";
 
-// Chat history component now used in the History tab
+interface StreamEvent {
+  role: "intermediate" | "ai";
+  content: string;
+}
+
+interface CachedDatasetsData {
+  results: Dataset[];
+  total_count?: number;
+}
+
+interface DatasetsFetcherResponse {
+  results: Dataset[];
+  total_count?: number;
+}
+
 const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
@@ -62,15 +75,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     })[]
   >([]);
 
-  // Fetch all projects
   const { data: projectsData } = useProjects({
     variables: { limit: 100 },
   });
 
-  // Delete chat mutation
   const deleteChat = useDeleteChat();
 
-  // Fetch all chats across all datasets and projects
   useEffect(() => {
     async function fetchAllChats() {
       if (!projectsData?.results?.length) return;
@@ -85,27 +95,20 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       })[] = [];
 
       try {
-        // For each project, fetch its datasets using the React Query client directly
         const datasetPromises = projects.map(async (project) => {
           try {
             const queryKey = [
               "datasets",
               { projectId: project.id, limit: 100 },
             ];
-            // Check cache first
-            const cachedData = queryClient.getQueryData(queryKey);
+            const cachedData =
+              queryClient.getQueryData<CachedDatasetsData>(queryKey);
 
-            // Safely handle cached data with type assertion
-            if (
-              cachedData &&
-              typeof cachedData === "object" &&
-              "results" in cachedData
-            ) {
+            if (cachedData && cachedData.results) {
               return { projectId: project.id, data: cachedData };
             }
 
-            // If not in cache, fetch it
-            const data = await queryClient.fetchQuery({
+            const data = await queryClient.fetchQuery<DatasetsFetcherResponse>({
               queryKey,
               queryFn: async () => {
                 const result = await useDatasets.fetcher({
@@ -128,20 +131,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
         const datasetResults = await Promise.all(datasetPromises);
 
-        // For each dataset, fetch its chats
         for (const result of datasetResults) {
           const projectId = result.projectId;
           const data = result.data;
           const project = projects.find((p) => p.id === projectId);
 
-          // Properly type guard for data.results
-          if (
-            !project ||
-            !data ||
-            typeof data !== "object" ||
-            !("results" in data) ||
-            !Array.isArray(data.results)
-          ) {
+          if (!project || !data || !Array.isArray(data.results)) {
             continue;
           }
 
@@ -153,7 +148,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
               );
 
               if (chatsResponse.data.results) {
-                // Add project and dataset info to each chat
                 const chatsWithContext = chatsResponse.data.results.map(
                   (chat: Chat) => ({
                     ...chat,
@@ -174,7 +168,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
           }
         }
 
-        // Sort chats by updated_at date (newest first)
         allChatsArray.sort((a, b) => {
           return (
             new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -183,7 +176,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
         setAllChats(allChatsArray);
 
-        // If a chat is already selected, find and set its dataset context
         if (selectedChatId) {
           const selectedChat = allChatsArray.find(
             (chat) => chat.id === selectedChatId
@@ -227,17 +219,22 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync(chatId);
-
-      // Update local state
       setAllChats((prev) => {
         const chatToDelete = prev.find((chat) => chat.id === chatId);
-        if (chatToDelete) {
-          selectChatForDataset(chatToDelete.datasetId, null, null);
+        if (chatToDelete && chatToDelete.datasetId === selectedChatId) {
+          selectChatForDataset(null, null, null);
         }
         return prev.filter((chat) => chat.id !== chatId);
       });
-
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      if (selectedChatId === chatId) {
+        selectChatForDataset(null, null, null);
+        setSelectedContexts([]);
+        setLinkedDatasetId(null);
+        await queryClient.invalidateQueries({
+          queryKey: ["chat-messages", { chatId }],
+        });
+      }
       toast.success("Chat deleted successfully");
     } catch {
       toast.error("Failed to delete chat");
@@ -248,15 +245,16 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     chatId: string,
     chatName: string,
     datasetId?: string,
-    datasetName?: string
+    datasetName?: string,
+    projectId?: string
   ) => {
-    if (datasetId && datasetName) {
+    if (datasetId && datasetName && projectId) {
       setSelectedContexts([
         {
           id: datasetId,
           type: "dataset",
           name: datasetName,
-          projectId: "",
+          projectId: projectId,
         },
       ]);
       selectChatForDataset(datasetId, chatId, chatName || "New Chat");
@@ -269,12 +267,11 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setActiveTab("chat");
   };
 
-  // Clear linked dataset ID when no chat is selected
   useEffect(() => {
     if (!selectedChatId) {
       setLinkedDatasetId(null);
     }
-  }, [selectedChatId]);
+  }, [selectedChatId, setLinkedDatasetId]);
 
   if (isLoading) {
     return (
@@ -343,12 +340,13 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       chat.id,
                       chat.name || "New Chat",
                       chat.datasetId,
-                      chat.datasetName
+                      chat.datasetName,
+                      chat.projectId
                     )
                   }
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <div className="font-medium text-foreground/90 text-sm truncate max-w-[80%]">
+                    <div className="font-medium text-foreground/90 text-sm truncate max-w-[calc(100%-60px)]">
                       {chat.name || "New Chat"}
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -384,16 +382,16 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     </div>
   );
 });
+ChatHistoryList.displayName = "ChatHistoryList";
 
 interface OptimisticMessage {
   id: string;
-  content: string;
-  role: "user" | "assistant";
+  content: string | StreamEvent[];
+  role: "user" | "assistant" | "intermediate" | "ai";
   created_at: string;
   isLoading?: boolean;
 }
 
-// Extract ChatInput as a separate component outside the main ChatPage
 interface ChatInputProps {
   sendMessage: (message: string) => Promise<void>;
   isSending: boolean;
@@ -420,12 +418,10 @@ const ChatInput = React.memo(
   }: ChatInputProps) => {
     const [inputValue, setInputValue] = useState(initialValue);
 
-    // Use callbacks to prevent recreation on every render
     const handleSendMessage = useCallback(
       (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim() || isSending) return;
-
         sendMessage(inputValue);
         setInputValue("");
       },
@@ -473,7 +469,6 @@ const ChatInput = React.memo(
 );
 ChatInput.displayName = "ChatInput";
 
-// Memoize ChatView component to prevent unnecessary rerenders
 interface ChatViewProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
@@ -483,7 +478,7 @@ interface ChatViewProps {
   allMessages: Array<{
     id: string;
     content: string;
-    role: string;
+    role: "user" | "assistant" | "intermediate" | "ai";
     created_at: string;
   }>;
   selectedContexts: ContextItem[];
@@ -502,7 +497,9 @@ const ChatView = React.memo(
     <div className="flex-1 overflow-hidden relative">
       <div
         className={`z-10 absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background via-background to-transparent pointer-events-none ${
-          allMessages.length > 0 ? "opacity-100" : "opacity-0"
+          allMessages.length > 0 || optimisticMessages.length > 0
+            ? "opacity-100"
+            : "opacity-0"
         } transition-opacity duration-300`}
       />
       <ScrollArea
@@ -511,7 +508,9 @@ const ChatView = React.memo(
         onScroll={handleScroll}
       >
         <div className="pb-32 pt-8">
-          {isLoadingMessages && !optimisticMessages.length ? (
+          {isLoadingMessages &&
+          !optimisticMessages.length &&
+          allMessages.length === 0 ? (
             <div className="space-y-4">
               <Skeleton className="h-16 w-3/4" />
               <Skeleton className="h-20 w-full" />
@@ -535,18 +534,18 @@ const ChatView = React.memo(
                   key={message.id}
                   id={message.id}
                   content={message.content}
-                  role={message.role as "user" | "assistant"}
+                  role={
+                    message.role as "user" | "assistant" | "intermediate" | "ai"
+                  }
                   createdAt={message.created_at}
                   chatId={selectedChatId || undefined}
-                  isLatest={
-                    message.id === allMessages[allMessages.length - 1]?.id
-                  }
+                  isLatest={false}
                   datasetId={
                     selectedContexts.find((ctx) => ctx.type === "dataset")?.id
                   }
                 />
               ))}
-              {optimisticMessages.map((message) => (
+              {optimisticMessages.map((message, index) => (
                 <ChatMessage
                   key={message.id}
                   id={message.id}
@@ -555,6 +554,10 @@ const ChatView = React.memo(
                   createdAt={message.created_at}
                   isLoading={message.isLoading}
                   chatId={selectedChatId || undefined}
+                  isLatest={
+                    index === optimisticMessages.length - 1 &&
+                    message.role !== "user"
+                  }
                   datasetId={
                     selectedContexts.find((ctx) => ctx.type === "dataset")?.id
                   }
@@ -572,7 +575,6 @@ const ChatView = React.memo(
 );
 ChatView.displayName = "ChatView";
 
-// Create a new ChatPageContent component that uses useSearchParams
 function ChatPageClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -583,7 +585,8 @@ function ChatPageClient() {
 
   const { setOpen } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, selectedChatTitle, selectChat } = useChatStore();
+  const { selectedChatId, selectedChatTitle, selectChatForDataset } =
+    useChatStore();
   const [isSending, setIsSending] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
@@ -598,7 +601,8 @@ function ChatPageClient() {
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
 
-  // Set initial contexts from URL parameters
+  const chatWithAgent = useChatWithAgent();
+
   useEffect(() => {
     if (contextData) {
       try {
@@ -614,72 +618,55 @@ function ChatPageClient() {
     }
   }, [contextData]);
 
-  // Fetch all projects for dataset context lookup
   const { data: projectsData } = useProjects({
     variables: { limit: 100 },
   });
 
-  // Set dataset context when a chat is selected
   useEffect(() => {
     if (selectedChatId && projectsData?.results?.length) {
-      // Find the chat in the history to get its dataset information
       const findChatDataset = async () => {
         try {
-          // For each project, get datasets using the queryClient
-          const datasetPromises = projectsData.results.map(async (project) => {
-            try {
-              const queryKey = [
-                "datasets",
-                { projectId: project.id, limit: 100 },
-              ];
-              // Check cache first
-              const cachedData = queryClient.getQueryData(queryKey);
-
-              // Safely handle cached data with type assertion
-              if (
-                cachedData &&
-                typeof cachedData === "object" &&
-                "results" in cachedData
-              ) {
-                return { project, data: cachedData };
-              }
-
-              // If not in cache, fetch it
-              const data = await queryClient.fetchQuery({
-                queryKey,
-                queryFn: async () => {
-                  const result = await useDatasets.fetcher({
-                    projectId: project.id,
-                    limit: 100,
+          const datasetPromises = projectsData.results.map(
+            async (project: Project) => {
+              try {
+                const queryKey = [
+                  "datasets",
+                  { projectId: project.id, limit: 100 },
+                ];
+                const cachedData =
+                  queryClient.getQueryData<CachedDatasetsData>(queryKey);
+                if (cachedData && cachedData.results) {
+                  return { project, data: cachedData };
+                }
+                const data =
+                  await queryClient.fetchQuery<DatasetsFetcherResponse>({
+                    queryKey,
+                    queryFn: async () => {
+                      const result = await useDatasets.fetcher({
+                        projectId: project.id,
+                        limit: 100,
+                      });
+                      return result;
+                    },
                   });
-                  return result;
-                },
-              });
-
-              return { project, data };
-            } catch (error) {
-              console.error(
-                `Failed to fetch datasets for project ${project.id}:`,
-                error
-              );
-              return { project, data: { results: [] } };
+                return { project, data };
+              } catch (error) {
+                console.error(
+                  `Failed to fetch datasets for project ${project.id}:`,
+                  error
+                );
+                return { project, data: { results: [] } };
+              }
             }
-          });
+          );
 
           const datasetResults = await Promise.all(datasetPromises);
 
-          // For each dataset, check if our chat belongs to it
           for (const result of datasetResults) {
             const project = result.project;
             const data = result.data;
 
-            // Properly type guard for data.results
-            if (
-              !data ||
-              typeof data !== "object" ||
-              !("results" in data) ||
-              !Array.isArray(data.results)
-            ) {
+            if (!data || !Array.isArray(data.results)) {
               continue;
             }
 
@@ -692,7 +679,6 @@ function ChatPageClient() {
 
                 if (!chatsResponse?.data?.results?.length) continue;
 
-                // If we find our chat, set the dataset context and exit
                 const chatFound = chatsResponse.data.results.find(
                   (chat: Chat) => chat.id === selectedChatId
                 );
@@ -704,8 +690,6 @@ function ChatPageClient() {
                     name: dataset.alias,
                     projectId: project.id,
                   };
-
-                  // Set this as the only context, replacing any existing ones
                   setSelectedContexts([datasetContext]);
                   setLinkedDatasetId(dataset.id);
                   return;
@@ -722,23 +706,261 @@ function ChatPageClient() {
           console.error("Error finding dataset for chat:", error);
         }
       };
-
       findChatDataset();
     }
   }, [selectedChatId, projectsData, queryClient]);
 
-  // Reset SQL executions when chat changes
   useEffect(() => {
     resetExecutedQueries();
   }, [selectedChatId, resetExecutedQueries]);
 
-  // Close sidebar only on initial mount
   useEffect(() => {
     setOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setOpen]);
 
-  // Handle initial message if provided in URL params
+  const sendMessage = useCallback(
+    async (message: string) => {
+      if (!message.trim()) return;
+      setIsSending(true);
+      const optimisticId = Date.now().toString();
+      const currentChatId = selectedChatId;
+
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${optimisticId}`,
+          content: message,
+          role: "user",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${optimisticId}`,
+          content: [],
+          role: "assistant",
+          created_at: new Date().toISOString(),
+          isLoading: true,
+        },
+      ]);
+
+      try {
+        const datasetIds = selectedContexts
+          .filter((ctx) => ctx.type === "dataset")
+          .map((ctx) => ctx.id);
+        const projectIds = selectedContexts
+          .filter((ctx) => ctx.type === "project")
+          .map((ctx) => ctx.id);
+
+        const response = await chatWithAgent.mutateAsync({
+          chatId: currentChatId || undefined,
+          datasetIds,
+          projectIds,
+          prompt: message,
+        });
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let newChatIdFromStream: string | null = null;
+        let newChatNameFromStream: string | null = null;
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const jsonStr = line.substring(5).trim();
+                if (jsonStr === "[DONE]") continue;
+                if (!jsonStr) continue;
+
+                try {
+                  const data = JSON.parse(jsonStr);
+                  let newContent = "";
+                  let responseRole = data.role || "assistant";
+
+                  if (
+                    responseRole === "intermediate" ||
+                    responseRole === "ai"
+                  ) {
+                    // Keep role
+                  } else if (responseRole !== "user") {
+                    responseRole = "assistant";
+                  }
+
+                  if (data.choices && data.choices[0]?.delta?.content) {
+                    newContent = data.choices[0].delta.content;
+                    if (data.choices[0].delta.role) {
+                      responseRole = data.choices[0].delta.role;
+                    }
+                  } else if (data.content) {
+                    newContent = data.content;
+                  } else if (data.message?.content) {
+                    newContent = data.message.content;
+                    if (data.message.role) responseRole = data.message.role;
+                  } else if (data.text) {
+                    newContent = data.text;
+                  } else if (typeof data === "string") {
+                    newContent = data;
+                  }
+
+                  let eventRoleForStream: "intermediate" | "ai" | null = null;
+                  if (responseRole === "intermediate") {
+                    eventRoleForStream = "intermediate";
+                  } else if (
+                    responseRole === "ai" ||
+                    responseRole === "assistant"
+                  ) {
+                    eventRoleForStream = "ai";
+                  }
+
+                  if (eventRoleForStream && newContent) {
+                    const currentEvent: StreamEvent = {
+                      role: eventRoleForStream,
+                      content: newContent,
+                    };
+                    setOptimisticMessages((prev) =>
+                      prev.map((msg) =>
+                        msg.id === `assistant-${optimisticId}`
+                          ? {
+                              ...msg,
+                              content: Array.isArray(msg.content)
+                                ? [...msg.content, currentEvent]
+                                : [currentEvent],
+                            }
+                          : msg
+                      )
+                    );
+                  }
+
+                  if (!currentChatId && data.chat_id && !newChatIdFromStream) {
+                    newChatIdFromStream = data.chat_id;
+                    newChatNameFromStream =
+                      data.name || message.substring(0, 30) + "...";
+                  }
+                } catch (e) {
+                  console.error(
+                    "Error parsing SSE JSON:",
+                    e,
+                    "Raw line:",
+                    jsonStr
+                  );
+                }
+              } else if (line.trim()) {
+                console.log("Received non-SSE line:", line);
+              }
+            }
+          }
+        }
+
+        if (buffer.startsWith("data: ")) {
+          const jsonStr = buffer.substring(5).trim();
+          if (jsonStr && jsonStr !== "[DONE]") {
+            try {
+              const data = JSON.parse(jsonStr);
+              let newContent = "";
+              let responseRole = data.role || "assistant";
+              if (data.choices && data.choices[0]?.delta?.content) {
+                newContent = data.choices[0].delta.content;
+                if (data.choices[0].delta.role)
+                  responseRole = data.choices[0].delta.role;
+              } else if (data.content) newContent = data.content;
+              else if (data.message?.content) {
+                newContent = data.message.content;
+                if (data.message.role) responseRole = data.message.role;
+              } else if (data.text) newContent = data.text;
+              else if (typeof data === "string") newContent = data;
+
+              let eventRoleForStream: "intermediate" | "ai" | null = null;
+              if (responseRole === "intermediate")
+                eventRoleForStream = "intermediate";
+              else if (responseRole === "ai" || responseRole === "assistant")
+                eventRoleForStream = "ai";
+
+              if (eventRoleForStream && newContent) {
+                const currentEvent: StreamEvent = {
+                  role: eventRoleForStream,
+                  content: newContent,
+                };
+                setOptimisticMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === `assistant-${optimisticId}`
+                      ? {
+                          ...msg,
+                          content: Array.isArray(msg.content)
+                            ? [...msg.content, currentEvent]
+                            : [currentEvent],
+                        }
+                      : msg
+                  )
+                );
+              }
+            } catch (e) {
+              console.error(
+                "Error parsing remaining SSE JSON:",
+                e,
+                "Raw buffer:",
+                jsonStr
+              );
+            }
+          }
+        }
+
+        setOptimisticMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === `assistant-${optimisticId}`
+              ? { ...msg, isLoading: false }
+              : msg
+          )
+        );
+
+        if (newChatIdFromStream && newChatNameFromStream) {
+          const datasetIdForNewChat =
+            selectedContexts.find((ctx) => ctx.type === "dataset")?.id || null;
+          selectChatForDataset(
+            datasetIdForNewChat,
+            newChatIdFromStream,
+            newChatNameFromStream
+          );
+        }
+
+        await queryClient.invalidateQueries({
+          queryKey: [
+            "chat-messages",
+            { chatId: currentChatId || newChatIdFromStream },
+          ],
+        });
+        await queryClient.invalidateQueries({ queryKey: ["chats"] });
+
+        setActiveTab("chat");
+      } catch (error) {
+        console.error("Error sending message:", error);
+        toast.error("Failed to send message");
+        setOptimisticMessages((prev) =>
+          prev.filter((msg) => !msg.id.endsWith(optimisticId))
+        );
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [
+      selectedChatId,
+      selectedContexts,
+      chatWithAgent,
+      queryClient,
+      selectChatForDataset,
+      setActiveTab,
+    ]
+  );
+
   useEffect(() => {
     if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
       const datasetContext = selectedContexts.find(
@@ -747,8 +969,6 @@ function ChatPageClient() {
       if (datasetContext) {
         sendMessage(initialMessage);
         setInitialMessageSent(true);
-
-        // Clean up URL
         const params = new URLSearchParams(searchParams.toString());
         params.delete("initialMessage");
         params.delete("contextData");
@@ -759,22 +979,14 @@ function ChatPageClient() {
     initialMessage,
     initialMessageSent,
     selectedContexts,
+    sendMessage,
     router,
     searchParams,
   ]);
 
-  // Log when linked dataset changes
-  useEffect(() => {
-    if (linkedDatasetId) {
-      console.log(`Dataset linked to current chat: ${linkedDatasetId}`);
-    }
-  }, [linkedDatasetId]);
-
-  // Queries
   const {
     data: messagesData,
     isLoading: isLoadingMessages,
-    refetch: refetchMessages,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
@@ -786,114 +998,119 @@ function ChatPageClient() {
     enabled: !!selectedChatId,
   });
 
-  // Combine all pages of messages
   const allMessages = useMemo(() => {
     const messages =
       messagesData?.pages.flatMap((page) => page.data.results) ?? [];
-    return messages.sort((a, b) => {
+    const processedMessages = messages.map((message) => ({
+      ...message,
+      role: ["user", "assistant", "intermediate", "ai"].includes(message.role)
+        ? (message.role as "user" | "assistant" | "intermediate" | "ai")
+        : "assistant",
+    }));
+    return processedMessages.sort((a, b) => {
       const timeA = new Date(a.created_at).getTime();
       const timeB = new Date(b.created_at).getTime();
-      if (timeA === timeB) {
-        // If timestamps are equal, show user message first
-        return a.role === "user" ? -1 : 1;
-      }
+      if (timeA === timeB) return a.role === "user" ? -1 : 1;
       return timeA - timeB;
     });
   }, [messagesData?.pages]);
 
-  // Flag to show SQL button - only if we have messages containing SQL
   const showSqlButton = useMemo(() => {
+    const checkContentForSql = (content: string | StreamEvent[]): boolean => {
+      if (typeof content === "string") {
+        return content.toLowerCase().includes("sql");
+      } else if (Array.isArray(content)) {
+        return content.some(
+          (event) =>
+            event.role === "ai" && event.content.toLowerCase().includes("sql")
+        );
+      }
+      return false;
+    };
     return (
       selectedChatId &&
-      allMessages.some((msg) => msg.content.toLowerCase().includes("sql"))
+      (allMessages.some((msg) => checkContentForSql(msg.content)) ||
+        optimisticMessages.some(
+          (msg) => msg.role !== "user" && checkContentForSql(msg.content)
+        ))
     );
-  }, [selectedChatId, allMessages]);
+  }, [selectedChatId, allMessages, optimisticMessages]);
 
-  // Track latest assistant message for voice mode
   useEffect(() => {
-    if (allMessages.length > 0) {
-      const assistantMessages = allMessages.filter(
-        (msg) => msg.role === "assistant"
-      );
-      if (assistantMessages.length > 0) {
-        const lastAssistantMessage =
-          assistantMessages[assistantMessages.length - 1];
-        setLatestAssistantMessage(lastAssistantMessage.content);
+    let lastAssistantText: string | null = null;
+    const assistantMessagesFromApi = allMessages.filter(
+      (msg) => msg.role === "assistant" || msg.role === "ai"
+    );
+    if (assistantMessagesFromApi.length > 0) {
+      const lastApiMsgContent =
+        assistantMessagesFromApi[assistantMessagesFromApi.length - 1].content;
+      if (typeof lastApiMsgContent === "string") {
+        lastAssistantText = lastApiMsgContent;
       }
     }
-  }, [allMessages]);
 
-  // Also check optimistic messages to detect when an assistant response is being received
-  useEffect(() => {
-    const assistantOptimisticMessages = optimisticMessages.filter(
-      (msg) => msg.role === "assistant" && !msg.isLoading
+    const optimisticAssistantMsg = optimisticMessages.find(
+      (msg) => (msg.role === "assistant" || msg.role === "ai") && !msg.isLoading
     );
-
-    if (assistantOptimisticMessages.length > 0) {
-      const lastOptimisticAssistant =
-        assistantOptimisticMessages[assistantOptimisticMessages.length - 1];
-      if (lastOptimisticAssistant.content) {
-        setLatestAssistantMessage(lastOptimisticAssistant.content);
-      }
+    if (
+      optimisticAssistantMsg &&
+      Array.isArray(optimisticAssistantMsg.content)
+    ) {
+      lastAssistantText = optimisticAssistantMsg.content
+        .filter((e) => e.role === "ai")
+        .map((e) => e.content)
+        .join("");
+    } else if (
+      optimisticAssistantMsg &&
+      typeof optimisticAssistantMsg.content === "string"
+    ) {
+      lastAssistantText = optimisticAssistantMsg.content;
     }
-  }, [optimisticMessages]);
 
-  // Clear latest assistant message when sending a new message
+    setLatestAssistantMessage(lastAssistantText);
+  }, [allMessages, optimisticMessages]);
+
   useEffect(() => {
     if (isSending) {
       setLatestAssistantMessage(null);
     }
   }, [isSending]);
 
-  // Clear optimistic messages automatically when changing chats
   useEffect(() => {
     setOptimisticMessages([]);
   }, [selectedChatId]);
 
-  // Add an effect to clear optimistic messages when the real messages arrive
   useEffect(() => {
     if (!isSending && messagesData && optimisticMessages.length > 0) {
-      // If we have messages data and we're not sending anymore,
-      // clear any optimistic messages that might be stuck
       setOptimisticMessages([]);
     }
   }, [messagesData, isSending, optimisticMessages.length]);
 
-  // Mutations
-  const createChat = useCreateChat();
-
-  // Automatically switch to chat tab when a chat is selected
   useEffect(() => {
     if (selectedChatId) {
       setActiveTab("chat");
     }
-  }, [selectedChatId]);
+  }, [selectedChatId, setActiveTab]);
 
-  // Handle scroll to load more
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const viewport = event.currentTarget;
-      const isNearTop = viewport.scrollTop < 100;
-
-      if (isNearTop && hasNextPage && !isFetchingNextPage) {
+      if (viewport.scrollTop < 100 && hasNextPage && !isFetchingNextPage) {
         fetchNextPage();
       }
     },
     [hasNextPage, isFetchingNextPage, fetchNextPage]
   );
 
-  // Scroll to bottom whenever new messages are added (but not when loading previous messages)
   useLayoutEffect(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
       );
       if (viewport) {
-        // Only auto-scroll if we're already near the bottom
         const isNearBottom =
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
           100;
-
         if (isNearBottom || !isFetchingNextPage) {
           requestAnimationFrame(() => {
             viewport.scrollTop = viewport.scrollHeight;
@@ -903,115 +1120,6 @@ function ChatPageClient() {
     }
   }, [allMessages, optimisticMessages, isFetchingNextPage]);
 
-  // Modified to use useCallback to minimize rerenders when dependencies don't change
-  const sendMessage = useCallback(
-    async (message: string) => {
-      if (!message.trim() || isSending) return;
-
-      // Require at least one dataset in the context
-      const datasetContext = selectedContexts.find(
-        (ctx: ContextItem) => ctx.type === "dataset"
-      );
-      if (!datasetContext) {
-        toast.error(
-          "Please select at least one dataset in the context before sending a message"
-        );
-        return;
-      }
-
-      setIsSending(true);
-      const optimisticId = Date.now().toString();
-      const chatId = selectedChatId;
-
-      try {
-        // Add optimistic user message
-        setOptimisticMessages((prev) => [
-          ...prev,
-          {
-            id: `user-${optimisticId}`,
-            content: message,
-            role: "user",
-            created_at: new Date().toISOString(),
-          },
-        ]);
-
-        // Add optimistic loading message for assistant
-        setOptimisticMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant-${optimisticId}`,
-            content: "",
-            role: "assistant",
-            created_at: new Date().toISOString(),
-            isLoading: true,
-          },
-        ]);
-
-        // For now, we'll use the first dataset ID from the context
-        // This is a temporary solution until the backend is updated
-        const firstDatasetId = selectedContexts.find(
-          (ctx) => ctx.type === "dataset"
-        )?.id;
-
-        // Need to maintain backward compatibility with the API
-        // until the backend is updated to support the new context format
-        const result = await createChat.mutateAsync({
-          chatId: chatId || undefined,
-          datasetId: firstDatasetId, // Will be removed later when backend is updated
-          messages: [{ role: "user", content: message }],
-        });
-
-        await queryClient.invalidateQueries({
-          queryKey: ["chat-messages"],
-        });
-
-        if (result.data.id) {
-          // If new chat was created, select it
-          if (!chatId) {
-            selectChat(
-              result.data.id,
-              result.data.name ||
-                result.data.messages[0]?.content.substring(0, 30) + "..."
-            );
-          }
-
-          // First try to force refetch to get the real messages
-          await refetchMessages();
-
-          // Give the UI a moment to process the real messages, then remove optimistic ones
-          setTimeout(() => {
-            if (!isSending) {
-              setOptimisticMessages([]);
-            }
-          }, 150);
-
-          // Switch to chat tab when a new chat is created or a message is sent
-          setActiveTab("chat");
-        }
-      } catch (error) {
-        console.error("Error sending message:", error);
-        toast.error("Failed to send message");
-
-        // Remove optimistic messages on error
-        setOptimisticMessages((prev) =>
-          prev.filter((msg) => !msg.id.includes(optimisticId.toString()))
-        );
-      } finally {
-        setIsSending(false);
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    },
-    [
-      isSending,
-      selectedContexts,
-      selectedChatId,
-      createChat,
-      queryClient,
-      refetchMessages,
-      selectChat,
-    ]
-  );
-
   const handleSelectContext = useCallback((context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
   }, []);
@@ -1020,7 +1128,6 @@ function ChatPageClient() {
     setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
   }, []);
 
-  // Function to handle voice message sending
   const handleSendVoiceMessage = useCallback(
     async (message: string) => {
       await sendMessage(message);
@@ -1028,35 +1135,25 @@ function ChatPageClient() {
     [sendMessage]
   );
 
-  // Add a ref for the SQL panel
   const sqlPanelRef = useRef<HTMLDivElement>(null);
   const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
-  // Update the SQL panel width when the panel is resized
   useEffect(() => {
     if (!isOpen) {
       setSqlPanelWidth(0);
       return;
     }
-
     const updateWidth = () => {
       if (sqlPanelRef.current) {
         setSqlPanelWidth(sqlPanelRef.current.clientWidth);
       }
     };
-
-    // Initial width
     updateWidth();
-
-    // Add resize observer to detect panel width changes
     const resizeObserver = new ResizeObserver(updateWidth);
     if (sqlPanelRef.current) {
       resizeObserver.observe(sqlPanelRef.current);
     }
-
-    // Also update on window resize
     window.addEventListener("resize", updateWidth);
-
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateWidth);
@@ -1093,7 +1190,7 @@ function ChatPageClient() {
                   size="sm"
                   className="mr-2"
                   onClick={() => {
-                    selectChat(null, null);
+                    selectChatForDataset(null, null, null);
                     setLinkedDatasetId(null);
                     setActiveTab("chat");
                   }}
@@ -1155,7 +1252,6 @@ function ChatPageClient() {
           )}
         </ResizablePanelGroup>
       </div>
-      {/* Fixed chat input at the bottom */}
       {activeTab === "chat" && (
         <div className="fixed bottom-0 left-0 right-0 z-10 w-full">
           <div
