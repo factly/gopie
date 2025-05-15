@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routers.dataset_upload import (
     dataset_router as schema_upload_router,
 )
+from app.api.v1.routers.models import router as models_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
@@ -62,6 +63,9 @@ app.add_middleware(
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(
     schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"]
+)
+app.include_router(
+    models_router, prefix=f"{settings.API_V1_STR}/models", tags=["models"]
 )
 
 
