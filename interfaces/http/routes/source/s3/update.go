@@ -21,6 +21,8 @@ type updateRequestBody struct {
 	Dataset string `json:"dataset" validate:"required" example:"sales_data_table"`
 	// User ID of the updater
 	UpdatedBy string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	// Column names to be altered (optional)
+	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
 }
 
 // @Summary Update dataset from S3
@@ -82,7 +84,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(ctx.Context(), filePath, d.Name)
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), filePath, d.Name, body.AlterColumnNames)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
@@ -126,7 +128,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		zap.String("dataset_id", dataset.ID))
 
 	// Return success response
-	return ctx.Status(fiber.StatusCreated).JSON(map[string]interface{}{
+	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
 		"data": dataset,
 	})
 }

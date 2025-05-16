@@ -10,12 +10,13 @@ import (
 )
 
 type ChatService struct {
-	store repositories.ChatStoreRepository
-	ai    repositories.AiChatRepository
+	store   repositories.ChatStoreRepository
+	ai      repositories.AiChatRepository
+	aiAgent repositories.AIAgentRepository
 }
 
-func NewChatService(store repositories.ChatStoreRepository, ai repositories.AiChatRepository) *ChatService {
-	return &ChatService{store, ai}
+func NewChatService(store repositories.ChatStoreRepository, ai repositories.AiChatRepository, aiAgent repositories.AIAgentRepository) *ChatService {
+	return &ChatService{store, ai, aiAgent}
 }
 
 func (service *ChatService) DeleteChat(id string) error {
@@ -104,4 +105,8 @@ func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models
 	return &models.ChatWithMessages{
 		Messages: params.Messages,
 	}, nil
+}
+
+func (service *ChatService) ChatWithAiAgent(ctx context.Context, params *models.AIAgentChatParams) {
+	service.aiAgent.Chat(ctx, params)
 }

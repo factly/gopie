@@ -20,6 +20,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	router.Get("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
 	router.Get("/schemas/:tableName", httpHandler.schemas)
+	router.Get("/summary/:tableName", httpHandler.summary)
 }
 
 func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {

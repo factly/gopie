@@ -9,9 +9,9 @@ interface ListDatasetsParams {
   query?: string;
 }
 
-async function fetchDatasets({
+export async function fetchDatasets({
   projectId,
-  limit = 10,
+  limit = 100,
   page = 1,
   query,
 }: ListDatasetsParams): Promise<PaginatedResponse<Dataset>> {
@@ -34,7 +34,7 @@ async function fetchDatasets({
     }
 
     const response = await apiClient.get(
-      `v1/api/projects/${projectId}/datasets/?${searchParams}`,
+      `v1/api/projects/${projectId}/datasets/?${searchParams}`
     );
     return response.json();
   } catch (error) {

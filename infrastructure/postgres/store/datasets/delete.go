@@ -32,3 +32,15 @@ func (s *PgDatasetStore) DeleteFailedUploadsByDatasetID(ctx context.Context, dat
 	}
 	return nil
 }
+
+func (s *PgDatasetStore) DeleteDatasetSummary(ctx context.Context, datasetName string) error {
+	err := s.q.DeleteDatasetSummary(ctx, datasetName)
+	if err != nil {
+		s.logger.Error("Error deleting dataset summary", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrRecordNotFound
+		}
+		return err
+	}
+	return nil
+}

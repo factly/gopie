@@ -27,7 +27,7 @@ definitions:
     required:
     - query
     type: object
-  chats.chatRequeryBody:
+  chats.chatRequestBody:
     description: Request body for creating or continuing a chat conversation
     properties:
       chat_id:
@@ -61,6 +61,31 @@ definitions:
         type: array
     required:
     - messages
+    type: object
+  chats.chatWithAgentRequeryBody:
+    description: Request body for creating a streaming chat conversation with an AI
+      agent
+    properties:
+      dataset_ids:
+        description: Array of dataset IDs to analyze
+        example:
+        - '[''550e8400-e29b-41d4-a716-446655440000'']'
+        items:
+          type: string
+        type: array
+      project_ids:
+        description: Array of project IDs to analyze
+        example:
+        - '[''550e8400-e29b-41d4-a716-446655440000'']'
+        items:
+          type: string
+        type: array
+      user_input:
+        description: User input/question for the AI agent
+        example: What are the trends in this dataset?
+        type: string
+    required:
+    - user_input
     type: object
   datasets.updateDatasetParams:
     properties:
@@ -271,6 +296,11 @@ definitions:
   s3.updateRequestBody:
     description: Request body for updating a dataset from S3
     properties:
+      alter_column_names:
+        additionalProperties:
+          type: string
+        description: Column names to be altered (optional)
+        type: object
       dataset:
         description: Name of the dataset to update
         example: sales_data_table
@@ -291,6 +321,7 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
+    - alter_column_names
     - dataset
     - updated_by
     type: object
@@ -302,6 +333,11 @@ definitions:
         example: sales_data
         minLength: 3
         type: string
+      alter_column_names:
+        additionalProperties:
+          type: string
+        description: Column names to be altered
+        type: object
       created_by:
         description: User ID of the creator
         example: 550e8400-e29b-41d4-a716-446655440000
@@ -323,11 +359,12 @@ definitions:
         type: string
     required:
     - alias
+    - alter_column_names
     - created_by
     - file_path
     - project_id
     type: object
-host: localhost:8081
+host: localhost:8000
 info:
   contact: {}
   description: GoPie API documentation
@@ -412,6 +449,38 @@ paths:
       summary: Upload file from S3
       tags:
       - s3
+  /summary/{tableName}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a summary of the specified dataset
+      parameters:
+      - description: Name of the table to get summary for
+        in: path
+        name: tableName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset summary information
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invalid query or table not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get dataset summary
+      tags:
+      - dataset
   /v1/api/chats:
     get:
       consumes:
@@ -469,7 +538,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/chats.chatRequeryBody'
+          $ref: '#/definitions/chats.chatRequestBody'
       produces:
       - application/json
       responses:
@@ -596,6 +665,37 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Delete chat message
+      tags:
+      - chats
+  /v1/api/chats/agent:
+    post:
+      consumes:
+      - application/json
+      description: Create a streaming chat conversation with an AI agent about datasets
+        or projects
+      parameters:
+      - description: Chat request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/chats.chatWithAgentRequeryBody'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Server-sent events stream started
+          schema:
+            type: string
+        "400":
+          description: Invalid request body
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Chat with AI agent
       tags:
       - chats
   /v1/api/nl2sql:

@@ -75,3 +75,26 @@ func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string) (
 		Columns:     columns,
 	}, nil
 }
+
+func (s *PgDatasetStore) GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error) {
+	d, err := s.q.GetDatasetSummary(ctx, datasetName)
+	if err != nil {
+		s.logger.Error("Error fetching dataset summary", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	summary := []models.DatasetSummary{}
+	err = json.Unmarshal([]byte(d.Summary), &summary)
+	if err != nil {
+		s.logger.Error("Error unmarshaling dataset summary", zap.Error(err))
+		return nil, err
+	}
+
+	return &models.DatasetSummaryWithName{
+		DatasetName: d.DatasetName,
+		Summary:     &summary,
+	}, nil
+}

@@ -4,6 +4,12 @@ import { auth } from "@/lib/auth";
 
 // This middleware protects all routes
 export async function middleware(request: NextRequest) {
+  // Skip authentication if disable auth is enabled
+  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true") {
+    console.log("Auth is disabled, skipping middleware");
+    return NextResponse.next();
+  }
+
   const session = await auth();
 
   // If the user is not authenticated and trying to access a protected route

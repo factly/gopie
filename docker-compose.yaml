@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=gopie
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -53,7 +53,7 @@ services:
       - GOPIE_S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - GOPIE_S3_SECRET_KEY=${MINIO_SECRET_KEY}
       - GOPIE_S3_REGION=${MINIO_REGION}
-      - GOPIE_S3_ENDPOINT=${MINIO_ENDPOINT}
+      - GOPIE_S3_ENDPOINT=${GOPIE_S3_ENDPOINT}
       - GOPIE_LOGGER_LEVEL=${GOPIE_LOGGER_LEVEL}
       - GOPIE_LOGGER_FILE=${GOPIE_LOGGER_FILE}
       - GOPIE_LOGGER_MODE=${GOPIE_LOGGER_MODE}
@@ -69,6 +69,12 @@ services:
       - GOPIE_POSTGRES_DB=${POSTGRES_DB}
       - GOPIE_POSTGRES_USER=${POSTGRES_USER}
       - GOPIE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - GOPIE_OLAPDB_DBTYPE=${GOPIE_OLAPDB_DBTYPE}
+      - GOPIE_OLAPDB_ACCESS_MODE=${GOPIE_OLAPDB_ACCESS_MODE}
+      - GOPIE_OLAPDB_PATH=${GOPIE_OLAPDB_PATH}
+      - GOPIE_OLAPDB_CPU=${GOPIE_OLAPDB_CPU}
+      - GOPIE_OLAPDB_MEMORY_LIMIT=${GOPIE_OLAPDB_MEMORY_LIMIT}
+      - GOPIE_OLAPDB_STORAGE_LIMIT=${GOPIE_OLAPDB_STORAGE_LIMIT}
       - GOPIE_ZITADEL_DOMAIN=${ZITADEL_DOMAIN}
       - GOPIE_ZITADEL_INSECURE_PORT=${ZITADEL_INSECURE_PORT}
       - GOPIE_ZITADEL_PROTOCOL=${ZITADEL_PROTOCOL}
@@ -95,7 +101,7 @@ services:
   gopie-web:
     build:
       context: ./web
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     environment:
       - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
       - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
@@ -113,7 +119,7 @@ services:
       - "3000:3000"
     restart: unless-stopped
     networks:
-      - gopie      
+      - gopie
 
   #########################################################################
   #####                        MINIO                                #######
@@ -133,7 +139,7 @@ services:
       - gopie
     command: server -console-address :9002 /export
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -182,9 +188,9 @@ services:
   livekit-server:
     image: livekit/livekit-server:latest
     ports:
-      - "7880:7880"      # WebRTC traffic
-      - "7881:7881"      # RTMP traffic
-      - "7882:7882"      # WHIP/WHEP
+      - "7880:7880" # WebRTC traffic
+      - "7881:7881" # RTMP traffic
+      - "7882:7882" # WHIP/WHEP
     environment:
       - "LIVEKIT_KEYS=devkey: secret"
       - LIVEKIT_REDIS_HOST=livekit-redis

@@ -12,7 +12,7 @@ type PgDatasetStore struct {
 	logger *logger.Logger
 }
 
-func NewPostgresDatasetStore(db interface{}, logger *logger.Logger) repositories.DatasetStoreRepository {
+func NewPostgresDatasetStore(db any, logger *logger.Logger) repositories.DatasetStoreRepository {
 	return &PgDatasetStore{
 		q:      gen.New(db.(*pgxpool.Pool)),
 		logger: logger,

@@ -9,7 +9,6 @@ import {
   NetworkIcon,
   ChevronDown,
   PanelLeftIcon,
-  HomeIcon,
   HashIcon,
   CalendarIcon,
   TextIcon,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   Sidebar,
@@ -50,6 +50,7 @@ import { CommandSearch } from "@/components/search/command-search";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { SidebarUser } from "@/components/auth/sidebar-user";
+import { ProjectsSidebar } from "./project-sidebar";
 
 export function AppSidebar() {
   const router = useRouter();
@@ -59,7 +60,12 @@ export function AppSidebar() {
   const projectId = params?.projectId as string;
   const datasetId = params?.datasetId as string;
 
-  const { data: projects } = useProjects();
+  const { data: projects } = useProjects({
+    variables: {
+      limit: 100,
+    },
+  });
+
   const { data: project } = useProject(
     projectId
       ? {
@@ -68,6 +74,7 @@ export function AppSidebar() {
         }
       : { enabled: false }
   );
+
   const { data: datasets } = useDatasets({
     variables: {
       projectId,
@@ -132,7 +139,7 @@ export function AppSidebar() {
         {isSidebarOpen ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -140,12 +147,25 @@ export function AppSidebar() {
                   onClick={() => router.push("/")}
                   title="Back to Home"
                 >
-                  <HomeIcon className="h-4 w-4" />
+                  <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
                 </Button>
                 <span className="font-semibold">GoPie</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Chat"
+                  onClick={() => router.push("/chat")}
+                >
+                  <MessageSquareIcon
+                    className={`h-4 w-4 ${
+                      pathname === "/chat" ? "text-primary" : ""
+                    }`}
+                  />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -175,7 +195,20 @@ export function AppSidebar() {
               onClick={() => router.push("/")}
               title="Back to Home"
             >
-              <HomeIcon className="h-4 w-4" />
+              <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="Chat"
+              onClick={() => router.push("/chat")}
+            >
+              <MessageSquareIcon
+                className={`h-4 w-4 ${
+                  pathname === "/chat" ? "text-primary" : ""
+                }`}
+              />
             </Button>
             <Button
               variant="ghost"
@@ -200,73 +233,78 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Projects Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
-            <span className="truncate font-medium">
-              {project?.name || "Select Project"}
-            </span>
-            {project && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 px-2 text-xs flex items-center gap-1 group-data-[collapsed=true]:w-8 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:h-8"
-                  >
-                    <span className="group-data-[collapsed=true]:hidden">
-                      Switch
-                    </span>
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px]">
-                  {projects?.results.map((p) => (
-                    <DropdownMenuItem
-                      key={p.id}
-                      onSelect={() => router.push(`/${p.id}`)}
+        {/* Projects list for chat page */}
+        <ProjectsSidebar isSidebarOpen={isSidebarOpen} />
+
+        {/* Projects Navigation (for non-chat pages) */}
+        {pathname !== "/chat" && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center justify-between">
+              <span className="truncate font-medium">
+                {project?.name || "Select Project"}
+              </span>
+              {project && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-2 text-xs flex items-center gap-1 group-data-[collapsed=true]:w-8 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:h-8"
                     >
-                      <span className="truncate">{p.name}</span>
-                      {p.id === project.id && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          Current
-                        </span>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      <span className="group-data-[collapsed=true]:hidden">
+                        Switch
+                      </span>
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[200px]">
+                    {projects?.results?.map((p) => (
+                      <DropdownMenuItem
+                        key={p.id}
+                        onSelect={() => router.push(`/${p.id}`)}
+                      >
+                        <span className="truncate">{p.name}</span>
+                        {p.id === project.id && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            Current
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </SidebarGroupLabel>
+            {project && (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(`/${projectId}`, true)}
+                    >
+                      <Link href={`/${projectId}`}>
+                        <TableIcon className="h-4 w-4" />
+                        <span>Datasets</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(`/${projectId}/schemas`, true)}
+                    >
+                      <Link href={`/${projectId}/schemas`}>
+                        <DatabaseIcon className="h-4 w-4" />
+                        <span>Relationships</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
             )}
-          </SidebarGroupLabel>
-          {project && (
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(`/${projectId}`, true)}
-                  >
-                    <Link href={`/${projectId}`}>
-                      <TableIcon className="h-4 w-4" />
-                      <span>Datasets</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(`/${projectId}/schemas`, true)}
-                  >
-                    <Link href={`/${projectId}/schemas`}>
-                      <DatabaseIcon className="h-4 w-4" />
-                      <span>Relationships</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          )}
-        </SidebarGroup>
+          </SidebarGroup>
+        )}
 
         {/* Datasets Navigation */}
         {datasetId && datasets?.results && (

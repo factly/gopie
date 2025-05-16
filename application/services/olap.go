@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -27,7 +28,7 @@ func NewOlapService(olap repositories.OlapRepository, source repositories.Source
 	}
 }
 
-func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name string) (*models.UploadDatasetResult, error) {
+func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name string, alterColumnNames map[string]string) (*models.UploadDatasetResult, error) {
 	tableName := name
 	if tableName == "" {
 		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
@@ -36,7 +37,7 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	parts := strings.Split(s3Path, "/")
 	formatParts := strings.Split(parts[len(parts)-1], ".")
 	format := formatParts[len(formatParts)-1]
-	err := d.olap.CreateTableFromS3(s3Path, tableName, format)
+	err := d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames)
 	return &models.UploadDatasetResult{
 		FilePath:  s3Path,
 		Format:    format,
@@ -45,7 +46,7 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	}, err
 }
 
-func (d *OlapService) IngestFile(ctx context.Context, filepath string, name string) (*models.UploadDatasetResult, error) {
+func (d *OlapService) IngestFile(ctx context.Context, filepath string, name string, alterColumnNames map[string]string) (*models.UploadDatasetResult, error) {
 	// parse filepath to bucketname and path
 	// s3://bucketname/path/to/file
 	bucket, path, err := parseFilepath(filepath)
@@ -76,7 +77,7 @@ func (d *OlapService) IngestFile(ctx context.Context, filepath string, name stri
 		Size:      int(size),
 	}
 
-	err = d.olap.CreateTable(filepath, tableName, format)
+	err = d.olap.CreateTable(filepath, tableName, format, alterColumnNames)
 	if err != nil {
 		return &res, err
 	}
@@ -125,7 +126,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
 	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
 		parts := strings.Split(sql, `"`)
-		for i := 0; i < len(parts)-1; i++ {
+		for i := range len(parts) - 1 {
 			if parts[i] == "" && i+1 < len(parts) && parts[i+1] == "" {
 				return nil, fmt.Errorf("invalid SQL: query contains empty identifiers")
 			}
@@ -173,6 +174,31 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		// "total": queryResult.Count,
 		"data": queryResult.Rows,
 	}, nil
+}
+
+// get dataset summary
+func (d *OlapService) GetDatasetSummary(tableName string) (*[]models.DatasetSummary, error) {
+	sql := fmt.Sprintf("summarize %s", tableName)
+	rows, err := d.olap.Query(sql)
+	if err != nil {
+		return nil, err
+	}
+	summaryRes, err := rows.RowsToMap()
+	if err != nil {
+		d.logger.Error("Error converting rows to map", zap.Error(err))
+		return nil, err
+	}
+
+	jsonSummary, _ := json.Marshal(summaryRes)
+
+	var summary []models.DatasetSummary
+	err = json.Unmarshal(jsonSummary, &summary)
+	if err != nil {
+		d.logger.Error("Error unmarshalling dataset summary", zap.Error(err))
+		return nil, err
+	}
+
+	return &summary, nil
 }
 
 type queryResult struct {

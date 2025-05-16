@@ -23,6 +23,8 @@ type uploadRequestBody struct {
 	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
 	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
+	// Column names to be altered
+	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
 }
 
 // @Summary Upload file from S3
@@ -79,7 +81,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("project_id", project.ID))
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "")
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "", body.AlterColumnNames)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
@@ -124,9 +126,10 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 
 	count, columns, err := h.getMetrics(res.TableName)
 	if err != nil {
+		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Error fetching metrics",
+			"message": "Error fetching dataset metrics",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -154,12 +157,44 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
+	datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
+	if err != nil {
+		h.logger.Error("Error fetching dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
+	if err != nil {
+		h.logger.Error("Error creating dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+		DatasetID: dataset.ID,
+		ProjectID: project.ID,
+		FilePath:  res.FilePath,
+	})
+	if err != nil {
+		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error
+	}
+
 	h.logger.Info("File upload completed successfully",
 		zap.String("dataset_id", dataset.ID),
 		zap.String("project_id", project.ID))
 
 	// Return success response
-	return ctx.Status(fiber.StatusCreated).JSON(map[string]interface{}{
-		"data": dataset,
+	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
+		"data": map[string]any{
+			"dataset": dataset,
+			"summary": summary,
+		},
 	})
 }

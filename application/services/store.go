@@ -95,3 +95,15 @@ func (services *DatasetService) ListFailedUploads() ([]*models.FailedDatasetUplo
 func (services *DatasetService) DeleteFailedUploadsByDatasetID(datasetID string) error {
 	return services.datasetRepo.DeleteFailedUploadsByDatasetID(context.Background(), datasetID)
 }
+
+func (services *DatasetService) CreateDatasetSummary(datasetName string, summary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error) {
+	return services.datasetRepo.CreateDatasetSummary(context.Background(), datasetName, summary)
+}
+
+func (services *DatasetService) DeleteDatasetSummary(datasetName string) error {
+	return services.datasetRepo.DeleteDatasetSummary(context.Background(), datasetName)
+}
+
+func (services *DatasetService) GetDatasetSummary(datasetName string) (*models.DatasetSummaryWithName, error) {
+	return services.datasetRepo.GetDatasetSummary(context.Background(), datasetName)
+}

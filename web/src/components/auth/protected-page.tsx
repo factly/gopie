@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSession } from "next-auth/react";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { redirect } from "next/navigation";
 
 interface ProtectedPageProps {
@@ -9,29 +9,23 @@ interface ProtectedPageProps {
 }
 
 export function ProtectedPage({ children }: ProtectedPageProps) {
-  const { status } = useSession();
+  const { status, data: session } = useAuthSession();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
-  // Client-side authentication check
-  React.useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/api/auth/signin");
-    }
-  }, [status]);
+  // Allow access if auth is disabled
+  if (isAuthDisabled) {
+    return <>{children}</>;
+  }
 
-  // Show loading state while session is loading
+  // Show loading state
   if (status === "loading") {
-    return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="animate-pulse text-lg font-medium">Loading...</div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
-  // Don't render anything when unauthenticated (will redirect)
-  if (status === "unauthenticated") {
-    return null;
+  // Redirect to login if not authenticated
+  if (!session?.user) {
+    redirect("/api/auth/signin");
   }
 
-  // Render children when authenticated
   return <>{children}</>;
 }

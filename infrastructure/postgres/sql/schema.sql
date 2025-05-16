@@ -56,3 +56,8 @@ create table if not exists chat_messages(
     role text not null, -- 'user' or 'assistant'
     created_at timestamp with time zone not null default now()
 );
+
+create table if not exists dataset_summary (
+    dataset_name text not null references datasets(name) on delete cascade,
+    summary jsonb not null
+);

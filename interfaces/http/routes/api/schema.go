@@ -24,10 +24,10 @@ func (h *httpHandler) schemas(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error getting table schema", zap.Error(err))
 		if strings.HasPrefix(err.Error(), "DuckDB") {
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   err.Error(),
-				"message": "Invalid query",
-				"code":    fiber.StatusBadRequest,
+				"message": "Dataset not found",
+				"code":    fiber.StatusNotFound,
 			})
 		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

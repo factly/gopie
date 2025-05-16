@@ -11,7 +11,7 @@ import (
 type updateDatasetParams struct {
 	Description string `json:"description,omitempty"`
 	Alias       string `json:"alias,omitempty"`
-	UpdateBy    string `json:"updated_by" validate:"required"`
+	UpdatedBy   string `json:"updated_by" validate:"required"`
 }
 
 // @Summary Update dataset
@@ -30,8 +30,8 @@ type updateDatasetParams struct {
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 
-	body := new(updateDatasetParams)
-	if err := ctx.BodyParser(body); err != nil {
+	var body updateDatasetParams
+	if err := ctx.BodyParser(&body); err != nil {
 		h.logger.Info("Error parsing request body", zap.Error(err))
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
@@ -48,7 +48,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	_, err = h.datasetsSvc.Details(datasetID)
+	existingDataset, err := h.datasetsSvc.Details(datasetID)
 	if err != nil {
 		h.logger.Error("Error updating dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -68,7 +68,12 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	dataset, err := h.datasetsSvc.Update(datasetID, &models.UpdateDatasetParams{
 		Description: body.Description,
 		Alias:       body.Alias,
-		UpdatedBy:   body.UpdateBy,
+		UpdatedBy:   body.UpdatedBy,
+		Columns:     existingDataset.Columns,
+		Format:      existingDataset.Format,
+		FilePath:    existingDataset.FilePath,
+		RowCount:    existingDataset.RowCount,
+		Size:        existingDataset.Size,
 	})
 
 	if err != nil {

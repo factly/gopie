@@ -9,7 +9,7 @@ interface ListProjectsParams {
 }
 
 async function fetchProjects({
-  limit = 10,
+  limit = 100,
   page = 1,
   query,
 }: ListProjectsParams = {}): Promise<PaginatedResponse<Project>> {

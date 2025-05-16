@@ -12,11 +12,10 @@ import {
 import { useChatMessages } from "@/lib/queries/chat";
 import { useCreateChat } from "@/lib/mutations/chat";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Send, MessageSquarePlus, Table2 } from "lucide-react";
+import { Table2, MessageSquarePlus } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "@/components/chat/message";
@@ -27,10 +26,14 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
-import { ChatHistory } from "@/components/chat/chat-history";
+import { ChatTabs } from "@/components/chat/chat-tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
+import { ChatHistory } from "@/components/chat/chat-history";
+import { MentionInput } from "@/components/chat/mention-input";
+import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
+import { useDataset } from "@/lib/queries/dataset/get-dataset";
 
 interface ChatPageProps {
   params: Promise<{
@@ -50,40 +53,56 @@ interface OptimisticMessage {
 export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const params = use(paramsPromise);
   const { setOpen } = useSidebar();
-  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, setSelectedChatId } = useChatStore();
+  const { getSelectedChatForDataset, selectChatForDataset } = useChatStore();
+  const { id: selectedChatId, title: selectedChatTitle } =
+    getSelectedChatForDataset(params.datasetId);
   const [isSending, setIsSending] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
   >([]);
-  const { isOpen, results, setIsOpen } = useSqlStore();
+  const { isOpen, setIsOpen } = useSqlStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
     string | null
   >(null);
 
   const [inputValue, setInputValue] = useState("");
-  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
+
+  // Fetch current dataset information
+  const { data: datasetData } = useDataset({
+    variables: {
+      projectId: params.projectId,
+      datasetId: params.datasetId,
+    },
+    enabled: !!params.projectId && !!params.datasetId,
+  });
+
+  // Add dataset to context by default when dataset data is available
+  useEffect(() => {
+    if (datasetData && params.projectId) {
+      const datasetContext: ContextItem = {
+        id: params.datasetId,
+        type: "dataset",
+        name: datasetData.alias || `Dataset ${params.datasetId}`,
+        projectId: params.projectId,
+      };
+
+      setSelectedContexts((prev) => {
+        if (!prev.some((ctx) => ctx.id === params.datasetId)) {
+          return [...prev, datasetContext];
+        }
+        return prev;
+      });
+    }
+  }, [datasetData, params.datasetId, params.projectId]);
 
   // Close sidebar only on initial mount
   useEffect(() => {
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array means it only runs once on mount
-
-  // Maintain focus and cursor position when inputValue changes
-  useEffect(() => {
-    if (shouldMaintainFocus && inputRef.current) {
-      inputRef.current.focus();
-
-      // Restore cursor position if we have it
-      if (cursorPosition !== null) {
-        inputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    }
-  }, [inputValue, shouldMaintainFocus, cursorPosition]);
+  }, []);
 
   // Queries
   const {
@@ -115,6 +134,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
       return timeA - timeB;
     });
   }, [messagesData?.pages]);
+
+  // Flag to show SQL button - only if we have messages containing SQL
+  const showSqlButton = useMemo(() => {
+    return (
+      selectedChatId &&
+      allMessages.some((msg) => msg.content.toLowerCase().includes("sql"))
+    );
+  }, [selectedChatId, allMessages]);
 
   // Track latest assistant message for voice mode
   useEffect(() => {
@@ -207,72 +234,110 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value && !inputValue) return;
-    if (isSending) return;
-
-    const message = inputRef.current?.value || inputValue;
-    await sendMessage(message);
-  };
-
-  // Extracted send message logic for reuse in voice mode
-  const sendMessage = async (message: string) => {
-    if (!message || isSending) return;
-
-    setIsSending(true);
-
-    // Add optimistic user message
-    const optimisticUserMessage: OptimisticMessage = {
-      id: Date.now().toString(),
-      content: message,
-      role: "user",
-      created_at: new Date().toISOString(),
-    };
-    setOptimisticMessages((prev) => [...prev, optimisticUserMessage]);
-
-    // Add optimistic loading message for assistant
-    const optimisticLoadingMessage: OptimisticMessage = {
-      id: Date.now().toString() + "-loading",
-      content: "",
-      role: "assistant",
-      created_at: new Date().toISOString(),
-      isLoading: true,
-    };
-    setOptimisticMessages((prev) => [...prev, optimisticLoadingMessage]);
-
-    // Clear input immediately
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-    setInputValue("");
+    if (!inputValue.trim() || isSending) return;
 
     try {
-      if (!selectedChatId) {
+      await sendMessage(inputValue);
+      setInputValue("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    }
+  };
+
+  const sendMessage = async (message: string) => {
+    if (!message.trim() || isSending) return;
+
+    setIsSending(true);
+    const optimisticId = Date.now().toString();
+    let chatId = selectedChatId;
+
+    try {
+      // Collect context information for the backend
+      // Note: We're preparing this but the backend may not use it yet
+      const contextData =
+        selectedContexts.length > 0
+          ? selectedContexts.map((ctx) => ({
+              id: ctx.id,
+              type: ctx.type,
+              projectId: ctx.projectId || undefined,
+            }))
+          : [];
+
+      // Add optimistic user message
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${optimisticId}`,
+          content: message,
+          role: "user",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      // Add optimistic loading message for assistant
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${optimisticId}`,
+          content: "",
+          role: "assistant",
+          created_at: new Date().toISOString(),
+          isLoading: true,
+        },
+      ]);
+
+      // Create a new chat or use existing one
+      if (!chatId) {
         const result = await createChat.mutateAsync({
           datasetId: params.datasetId,
           messages: [{ role: "user", content: message }],
+          // Backend will need to be updated to use contextData
         });
-        setSelectedChatId(result.data.id);
+        chatId = result.data.id;
+        selectChatForDataset(
+          params.datasetId,
+          chatId,
+          message.substring(0, 40) + "..."
+        );
+
+        // Log the contexts for debugging
+        if (contextData.length > 0) {
+          console.log("Sending contexts:", contextData);
+        }
       } else {
+        // Send message to existing chat
         await createChat.mutateAsync({
-          chatId: selectedChatId,
           datasetId: params.datasetId,
+          chatId: chatId,
           messages: [{ role: "user", content: message }],
+          // Backend will need to be updated to use contextData
         });
+
+        // Log the contexts for debugging
+        if (contextData.length > 0) {
+          console.log("Sending contexts:", contextData);
+        }
+
+        // Refresh messages to get the response
+        await refetchMessages();
       }
-      // Clear optimistic messages after successful response
-      setOptimisticMessages([]);
-      await refetchMessages();
-    } catch {
+
+      // Remove ALL optimistic messages related to this interaction after successful API call
+      setOptimisticMessages((prev) =>
+        prev.filter((msg) => !msg.id.includes(optimisticId.toString()))
+      );
+    } catch (error) {
       toast.error("Failed to send message");
-      // Remove the loading message on error
-      setOptimisticMessages((prev) => prev.slice(0, -1));
+      console.error(error);
+      // Clean up optimistic messages in case of error
+      setOptimisticMessages((prev) =>
+        prev.filter((msg) => !msg.id.includes(optimisticId.toString()))
+      );
+      throw error; // Re-throw to handle in caller
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleStartNewChat = () => {
-    setSelectedChatId(null);
   };
 
   // Sort optimistic messages by time
@@ -287,208 +352,248 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
     });
   }, [optimisticMessages]);
 
-  const isEmpty = !allMessages.length && !optimisticMessages.length;
+  // Handle context selection
+  const handleSelectContext = (context: ContextItem) => {
+    setSelectedContexts((prev) => [...prev, context]);
+  };
+
+  // Handle context removal but prevent removing the current dataset
+  const handleRemoveContext = (contextId: string) => {
+    // Don't allow removing the current dataset
+    if (contextId === params.datasetId) return;
+
+    setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
+  };
 
   const ChatInput = () => {
     return (
-      <form onSubmit={handleSendMessage} className="flex gap-2">
-        <Input
-          ref={inputRef}
-          placeholder="Type your message..."
-          className="flex-1"
-          disabled={isSending || isVoiceModeActive}
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            setCursorPosition(e.target.selectionStart);
-          }}
-          onFocus={() => setShouldMaintainFocus(true)}
-          onBlur={() => setShouldMaintainFocus(false)}
-          onClick={(e) => {
-            setCursorPosition(e.currentTarget.selectionStart);
-          }}
-          onKeyUp={(e) => {
-            setCursorPosition(e.currentTarget.selectionStart);
-          }}
-        />
-        {!isVoiceModeActive && (
-          <>
-            <ChatHistory datasetId={params.datasetId} />
-          </>
-        )}
-        <Button
-          id="send-message-button"
-          type="submit"
-          disabled={isSending || isVoiceModeActive}
-          size="icon"
-        >
-          {isSending ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-      </form>
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex gap-2 items-center">
+            <ContextPicker
+              selectedContexts={selectedContexts}
+              onSelectContext={handleSelectContext}
+              onRemoveContext={handleRemoveContext}
+              currentDatasetId={params.datasetId}
+              currentProjectId={params.projectId}
+              triggerClassName="h-11 w-11 rounded-full"
+              lockableContextIds={[params.datasetId]}
+            />
+            <MentionInput
+              value={inputValue}
+              onChange={setInputValue}
+              onSubmit={handleSendMessage}
+              disabled={isSending}
+              placeholder="Type your message... (use @ to mention datasets or projects)"
+              selectedContexts={selectedContexts}
+              onSelectContext={handleSelectContext}
+              onRemoveContext={handleRemoveContext}
+              className="flex-1"
+              showSendButton={true}
+              isSending={isSending}
+              actionButtons={
+                <>
+                  {!selectedChatId && (
+                    <ChatHistory
+                      datasetId={params.datasetId}
+                      variant="ghost"
+                      className="mr-0.5"
+                    />
+                  )}
+                  <VoiceModeToggle
+                    isActive={isVoiceModeActive}
+                    onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                    className="h-9 w-9 flex-shrink-0 rounded-full mr-0.5"
+                    variant="ghost"
+                  />
+                </>
+              }
+            />
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="h-screen flex w-full bg-background">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={isOpen ? 40 : 100} minSize={30}>
-          <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="border-b bg-background p-4 flex items-center justify-between">
-              <h2 className="font-semibold">Chat</h2>
-              <div className="flex items-center gap-2">
-                {!isOpen && results && selectedChatId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsOpen(true)}
-                    className="gap-2"
-                  >
-                    <Table2 className="h-4 w-4" />
-                    Show Results
-                  </Button>
+        <ResizablePanel minSize={30}>
+          <div className="flex h-full flex-col overflow-hidden">
+            <div className="border-b bg-background/80 backdrop-blur-sm z-10 shadow-sm p-4 flex justify-between items-center">
+              <h1 className="font-semibold flex items-center gap-2">
+                {selectedChatId ? (
+                  <span className="truncate max-w-60 text-foreground/90">
+                    {selectedChatTitle || "New Chat"}
+                  </span>
+                ) : (
+                  <span className="text-foreground/90">New Chat</span>
                 )}
-                <VoiceModeToggle
-                  isActive={isVoiceModeActive}
-                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-                />
+              </h1>
+
+              <div className="flex gap-2 items-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleStartNewChat}
-                  className="gap-2"
+                  onClick={() =>
+                    selectChatForDataset(params.datasetId, null, null)
+                  }
+                  className="gap-1.5 h-9 font-medium shadow-sm"
                 >
-                  <MessageSquarePlus className="h-4 w-4" />
+                  <MessageSquarePlus className="h-3.5 w-3.5" />
                   New Chat
                 </Button>
+                {showSqlButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="gap-1.5 h-9 font-medium shadow-sm"
+                  >
+                    <Table2 className="h-3.5 w-3.5" />
+                    {isOpen ? "Hide Results" : "Show Results"}
+                  </Button>
+                )}
               </div>
             </div>
 
-            <div className="relative flex-1">
-              <AnimatePresence mode="wait">
-                {isEmpty ? (
-                  <motion.div
-                    className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                  >
-                    <div className="text-center space-y-2 mb-4">
-                      <h1 className="text-2xl font-semibold">
-                        Welcome to GoPie Chat
-                      </h1>
-                      <p className="text-muted-foreground">
-                        Start a conversation by typing a message below
-                      </p>
-                    </div>
-                    <div className="w-full max-w-2xl">
-                      <ChatInput />
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    className="absolute inset-0 flex flex-col"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {/* Messages */}
-                    <ScrollArea
-                      ref={scrollRef}
-                      className="flex-1 p-4"
-                      onScroll={handleScroll}
-                    >
-                      {isLoadingMessages && !isFetchingNextPage ? (
-                        <div className="space-y-4">
-                          {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-20 w-full" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Loading more indicator */}
-                          {isFetchingNextPage && (
-                            <div className="flex justify-center py-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                            </div>
-                          )}
-
-                          {/* Real messages */}
-                          {allMessages.map((message, index) => (
-                            <ChatMessage
-                              key={message.id}
-                              id={message.id}
-                              content={message.content}
-                              role={message.role}
-                              createdAt={message.created_at}
-                              chatId={selectedChatId || undefined}
-                              isLatest={
-                                index === allMessages.length - 1 &&
-                                !sortedOptimisticMessages.length
-                              }
-                              datasetId={params.datasetId}
-                            />
-                          ))}
-
-                          {/* Optimistic messages */}
-                          {sortedOptimisticMessages.map((message, index) => (
-                            <ChatMessage
-                              key={message.id}
-                              id={message.id}
-                              content={message.content}
-                              role={message.role}
-                              createdAt={message.created_at}
-                              isLoading={message.isLoading}
-                              isLatest={
-                                index === sortedOptimisticMessages.length - 1 &&
-                                !message.isLoading
-                              }
-                              datasetId={params.datasetId}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-
-                    {/* Input Area */}
+            {selectedChatId ? (
+              <ChatTabs datasetId={params.datasetId}>
+                <div className="relative flex-1">
+                  <AnimatePresence mode="wait">
                     <motion.div
-                      className="border-t bg-background p-4"
-                      initial={{ y: 100 }}
-                      animate={{ y: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
-                      }}
+                      className="absolute inset-0 flex flex-col"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <ChatInput />
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      {/* Messages */}
+                      <ScrollArea
+                        ref={scrollRef}
+                        className="flex-1 px-4 py-6"
+                        onScroll={handleScroll}
+                      >
+                        {isLoadingMessages && !isFetchingNextPage ? (
+                          <div className="space-y-6 px-2">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                              <Skeleton key={i} className="h-24 w-full" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-6 px-2">
+                            {/* Loading more indicator */}
+                            {isFetchingNextPage && (
+                              <div className="flex justify-center py-3">
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                              </div>
+                            )}
 
-              {/* Voice Mode Component - Moved inside the chat panel */}
-              <VoiceMode
-                isActive={isVoiceModeActive}
-                onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-                onSendMessage={sendMessage}
-                latestAssistantMessage={latestAssistantMessage}
-                datasetId={params.datasetId}
-                isWaitingForResponse={isSending}
-              />
-            </div>
+                            {/* Real messages */}
+                            {allMessages.map((message, index) => (
+                              <ChatMessage
+                                key={message.id}
+                                id={message.id}
+                                content={message.content}
+                                role={message.role}
+                                createdAt={message.created_at}
+                                chatId={selectedChatId || undefined}
+                                isLatest={
+                                  index === allMessages.length - 1 &&
+                                  !sortedOptimisticMessages.length
+                                }
+                                datasetId={params.datasetId}
+                              />
+                            ))}
+
+                            {/* Optimistic messages */}
+                            {sortedOptimisticMessages.map((message, index) => (
+                              <ChatMessage
+                                key={message.id}
+                                id={message.id}
+                                content={message.content}
+                                role={message.role}
+                                createdAt={message.created_at}
+                                isLoading={message.isLoading}
+                                isLatest={
+                                  index ===
+                                    sortedOptimisticMessages.length - 1 &&
+                                  !message.isLoading
+                                }
+                                datasetId={params.datasetId}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+
+                      {/* Input Area */}
+                      <motion.div
+                        className="border-t bg-background/80 backdrop-blur-sm p-4 shadow-sm"
+                        initial={{ y: 100 }}
+                        animate={{ y: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 20,
+                        }}
+                      >
+                        <div className="max-w-5xl mx-auto w-full">
+                          <ChatInput />
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Voice Mode Component */}
+                  <VoiceMode
+                    isActive={isVoiceModeActive}
+                    onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                    onSendMessage={sendMessage}
+                    latestAssistantMessage={latestAssistantMessage}
+                    datasetId={params.datasetId}
+                    isWaitingForResponse={isSending}
+                  />
+                </div>
+              </ChatTabs>
+            ) : (
+              <div className="relative flex-1">
+                <motion.div
+                  className="absolute inset-0 flex flex-col items-center justify-center p-4 gap-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  <div className="text-center space-y-3 mb-6">
+                    <h1 className="text-3xl font-semibold text-foreground">
+                      Welcome to GoPie Chat
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                      Start a conversation by typing a message below
+                    </p>
+                  </div>
+                  <div className="w-full max-w-3xl px-4">
+                    <ChatInput />
+                  </div>
+                </motion.div>
+
+                {/* Voice Mode Component */}
+                <VoiceMode
+                  isActive={isVoiceModeActive}
+                  onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+                  onSendMessage={sendMessage}
+                  latestAssistantMessage={latestAssistantMessage}
+                  datasetId={params.datasetId}
+                  isWaitingForResponse={isSending}
+                />
+              </div>
+            )}
           </div>
         </ResizablePanel>
         {isOpen && (
           <>
             <ResizableHandle />
-            <ResizablePanel defaultSize={60} minSize={40}>
+            <ResizablePanel defaultSize={70} minSize={30}>
               <SqlResults />
             </ResizablePanel>
           </>

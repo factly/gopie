@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
 import { TTSButton } from "./tts-button";
 
@@ -71,51 +71,59 @@ export function ChatMessage({
   datasetId,
 }: ChatMessageProps) {
   const executeSql = useDatasetSql();
-  const { setResults, setIsOpen } = useSqlStore();
-  const hasAutoExecuted = useRef(false);
+  const { setResults, setIsOpen, markQueryAsExecuted } = useSqlStore();
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const handleRunQuery = async (query: string) => {
-    setIsExecuting(true);
-    try {
-      const result = await executeSql.mutateAsync(query);
-      setResults({
-        data: result.data ?? [],
-        total: result.data?.length ?? 0,
-        query,
-        chatId,
-      });
-      setIsOpen(true);
-    } catch (error) {
-      setResults({
-        data: [],
-        total: 0,
-        error:
-          error instanceof Error ? error.message : "Failed to execute query",
-        query,
-        chatId,
-      });
-      setIsOpen(true);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
+  const handleRunQuery = useCallback(
+    async (query: string) => {
+      setIsExecuting(true);
+      try {
+        const result = await executeSql.mutateAsync(query);
+        setResults({
+          data: result.data ?? [],
+          total: result.data?.length ?? 0,
+          query,
+          chatId,
+        });
+        setIsOpen(true);
+      } catch (error) {
+        setResults({
+          data: [],
+          total: 0,
+          error:
+            error instanceof Error ? error.message : "Failed to execute query",
+          query,
+          chatId,
+        });
+        setIsOpen(true);
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [executeSql, setResults, setIsOpen, chatId]
+  );
 
   // Auto-execute SQL queries from assistant only if it's the latest message
   useEffect(() => {
-    if (
-      !isLoading &&
-      role === "assistant" &&
-      isLatest &&
-      !hasAutoExecuted.current
-    ) {
+    if (!isLoading && role === "assistant" && isLatest) {
       const parsed = parseMessageContent(content);
       if (parsed.type === "sql") {
-        hasAutoExecuted.current = true;
-        handleRunQuery(parsed.content);
+        // Only execute if this query hasn't been executed before
+        const shouldExecute = markQueryAsExecuted(id, parsed.content);
+        if (shouldExecute) {
+          handleRunQuery(parsed.content);
+        }
       }
     }
-  }, [content, isLoading, role, isLatest]);
+  }, [
+    content,
+    isLoading,
+    role,
+    isLatest,
+    handleRunQuery,
+    id,
+    markQueryAsExecuted,
+  ]);
 
   return (
     <div
@@ -126,9 +134,11 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "flex items-start gap-3 rounded-2xl px-4 py-2.5",
+          "flex items-start gap-3 rounded-2xl px-4 py-3",
           "w-fit max-w-[90%] min-w-0",
-          role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/50"
+          role === "user"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "bg-muted shadow-sm border border-border/10"
         )}
         id={`message-${id}`}
         data-message-role={role}
@@ -160,7 +170,7 @@ export function ChatMessage({
                           <SqlPreview value={parsed.content} />
                           <div className="absolute top-2 right-2 flex items-center gap-2">
                             {isExecuting && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">
                                 <span className="h-2 w-2 rounded-full bg-primary/50 animate-pulse" />
                                 Running...
                               </div>
@@ -188,11 +198,11 @@ export function ChatMessage({
                     <div
                       className={cn(
                         "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                        "[&_code]:whitespace-pre-wrap [&_code]:break-words",
-                        "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre",
+                        "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                        "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
                         role === "user"
                           ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
-                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-2"
+                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
                       )}
                     >
                       <ReactMarkdown>{parsed.content}</ReactMarkdown>

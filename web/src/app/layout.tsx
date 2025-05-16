@@ -20,6 +20,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GoPie",
   description: "GoPie",
+  icons: {
+    icon: "/gopie.svg",
+    apple: "/gopie.svg"
+  }
 };
 
 export default function RootLayout({
