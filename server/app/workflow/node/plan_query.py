@@ -83,6 +83,9 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
             sql_query = parsed_response.get("sql_query", "")
             sql_query_explanation = parsed_response.get("explanation", "")
+            formatted_sql_query = parsed_response.get(
+                "formatted_sql_query", sql_query
+            )
 
             if not sql_query:
                 raise Exception("Failed in parsing SQL query")
@@ -96,7 +99,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                 "dataful-agent",
                 {
                     "content": "Generated SQL query",
-                    "query": sql_query,
+                    "query": formatted_sql_query,
                 },
             )
 

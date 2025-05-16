@@ -73,9 +73,20 @@ def create_query_prompt(
         7. For text comparisons, use LOWER() function on both sides to ensure
            case-insensitive matching
 
+        SQL FORMATTING REQUIREMENTS:
+        You must provide two versions of the SQL query:
+        1. "sql_query": A simple version for execution
+        2. "formatted_sql_query": A well-formatted version for UI display with:
+           - SQL keywords in UPPERCASE
+           - Each major clause on a new line
+           - Proper indentation for readability
+           - Consistent spacing around operators
+
         Respond in this JSON format:
         {{
             "sql_query": "the SQL query to fetch the required data",
+            "formatted_sql_query": "the well-formatted SQL query for UI
+                                    display",
             "explanation": "brief explanation of what the query does",
             "tables_used": ["list of tables needed"],
             "joins_required": [
