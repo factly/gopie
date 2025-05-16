@@ -51,7 +51,7 @@ class EventChunkData(BaseModel):
     type: ChunkType
     category: str | None
     datasets_used: list[str] | None = None
-    generate_sql_query: str | None = None
+    generated_sql_query: str | None = None
 
 
 class StructuredChatStreamChunk(BaseModel):
@@ -59,7 +59,7 @@ class StructuredChatStreamChunk(BaseModel):
     trace_id: str | None = None
     message: ChatTextChunk | ToolMessage | None = None
     datasets_used: list[str] | None = None
-    generate_sql_query: str | None = None
+    generated_sql_query: str | None = None
     error: Error | None = None
 
     model_config = ConfigDict(coerce_numbers_to_str=True, extra="forbid")

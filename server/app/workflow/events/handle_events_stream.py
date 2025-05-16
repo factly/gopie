@@ -23,6 +23,7 @@ class EventStreamHandler:
     def __init__(self):
         self._tool_start = False
         self._stream_content = True
+        self._intermediate_stream_sent = False
 
     def handle_events_stream(
         self,
@@ -41,7 +42,7 @@ class EventStreamHandler:
         type = ChunkType.BODY
         category = None
         datasets_used = None
-        generate_sql_query = None
+        generated_sql_query = None
 
         if event_type == "on_custom_event":
             event_data = event.get("data", {})
@@ -95,10 +96,25 @@ class EventStreamHandler:
             role = self.get_chat_role(graph_node)
             content = ""
             type = ChunkType.START
+
+            if role == Role.INTERMEDIATE:
+                self._intermediate_stream_sent = False
+
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
-
             role = self.get_chat_role(graph_node)
+
+            if role == Role.INTERMEDIATE:
+                if self._intermediate_stream_sent:
+                    return EventChunkData(
+                        role=None,
+                        graph_node=AgentNode.UNKNOWN,
+                        content=None,
+                        type=ChunkType.BODY,
+                        category=None,
+                    )
+                else:
+                    self._intermediate_stream_sent = True
 
             if (
                 chunk
@@ -111,9 +127,9 @@ class EventStreamHandler:
                 content = chunk.content
 
             type = ChunkType.STREAM
+
         elif event_type == "on_chat_model_end":
             role = self.get_chat_role(graph_node)
-
             content = ""
             type = ChunkType.END
 
@@ -124,7 +140,7 @@ class EventStreamHandler:
             event_data = event.get("data", {})
             content = event_data.get("content", "")
             datasets_used = event_data.get("datasets", [])
-            generate_sql_query = event_data.get("query", "")
+            generated_sql_query = event_data.get("query", "")
 
         return EventChunkData(
             role=role,
@@ -133,7 +149,7 @@ class EventStreamHandler:
             type=type,
             category=category,
             datasets_used=datasets_used,
-            generate_sql_query=generate_sql_query,
+            generated_sql_query=generated_sql_query,
         )
 
     def get_chat_role(self, node: str) -> Role:

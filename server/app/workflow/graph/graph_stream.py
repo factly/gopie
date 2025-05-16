@@ -73,7 +73,7 @@ async def stream_graph_updates(
                     content=extracted_event_data.content,
                     datasets_used=extracted_event_data.datasets_used,
                     generated_sql_query=(
-                        extracted_event_data.generate_sql_query
+                        extracted_event_data.generated_sql_query
                     ),
                     tool_category=extracted_event_data.category,
                 )

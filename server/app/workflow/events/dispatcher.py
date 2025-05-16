@@ -79,7 +79,7 @@ class AgentEventDispatcher(BaseCallbackHandler):
             trace_id=trace_id,
             message=message,
             datasets_used=datasets_used,
-            generate_sql_query=generated_sql_query,
+            generated_sql_query=generated_sql_query,
         )
 
         return chunk
