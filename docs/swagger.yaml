@@ -62,10 +62,14 @@ definitions:
     required:
     - messages
     type: object
-  chats.chatWithAgentRequeryBody:
+  chats.chatWithAgentRequestBody:
     description: Request body for creating a streaming chat conversation with an AI
       agent
     properties:
+      chat_id:
+        description: Chat ID for the conversation (optional)
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       dataset_ids:
         description: Array of dataset IDs to analyze
         example:
@@ -80,12 +84,12 @@ definitions:
         items:
           type: string
         type: array
-      user_input:
+      prompt:
         description: User input/question for the AI agent
         example: What are the trends in this dataset?
         type: string
     required:
-    - user_input
+    - prompt
     type: object
   datasets.updateDatasetParams:
     properties:
@@ -679,7 +683,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/chats.chatWithAgentRequeryBody'
+          $ref: '#/definitions/chats.chatWithAgentRequestBody'
       produces:
       - text/event-stream
       responses:

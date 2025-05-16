@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,7 +22,12 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	reqBody := map[string]any{
 		"project_ids": params.ProjectIDs,
 		"dataset_ids": params.DatasetIDs,
-		"user_input":  params.UserInput,
+		"messages": []map[string]any{
+			{
+				"role":    "user",
+				"content": params.UserInput,
+			},
+		},
 	}
 
 	reqBodyBuf, _ := json.Marshal(reqBody)
@@ -95,6 +101,9 @@ func (a *aiAgent) handleChatStream(_ context.Context, body io.ReadCloser, dataCh
 				continue
 			}
 
+			// remove data: prefix
+			line = bytes.TrimPrefix(line, []byte("data: "))
+
 			var partialResponse SSEEvent
 			if err := json.Unmarshal(line, &partialResponse); err != nil {
 				a.logger.Error("Error in unmarshalling SSE event", zap.Error(err))
@@ -102,22 +111,21 @@ func (a *aiAgent) handleChatStream(_ context.Context, body io.ReadCloser, dataCh
 				return
 			}
 
-			if partialResponse.EventData.Error != nil {
-				// Safe type assertion with check
-				if errorStr, ok := partialResponse.EventData.Error.(string); ok {
-					a.logger.Error("Error in SSE event", zap.String("error", errorStr))
-					errChan <- fmt.Errorf("error in SSE event: %s", errorStr)
+			if partialResponse.Error != nil {
+				if partialResponse.Error.Message != "" {
+					a.logger.Error("Error in SSE event", zap.String("error", partialResponse.Error.Message))
+					errChan <- fmt.Errorf("error in SSE event: %s", partialResponse.Error)
 				} else {
-					a.logger.Error("Error in SSE event", zap.Any("error", partialResponse.EventData.Error))
-					errChan <- fmt.Errorf("error in SSE event: %v", partialResponse.EventData.Error)
+					a.logger.Error("Error in SSE event", zap.Any("error", errors.New("unknown error")))
+					errChan <- fmt.Errorf("error in SSE event: %v", errors.New("unknown error"))
 				}
 				return
 			}
 
 			a.logger.Debug("Received SSE event",
-				zap.String("event_node", partialResponse.EventNode),
-				zap.String("status", partialResponse.Status),
-				zap.String("message", partialResponse.Message),
+				zap.String("event_node", partialResponse.ChatID),
+				zap.String("status", partialResponse.TraceID),
+				zap.String("message", partialResponse.Message.Content),
 				zap.Duration("time_since_last_message", timeSinceLastMessage))
 
 			dataChan <- line

@@ -345,7 +345,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/chats.chatWithAgentRequeryBody"
+                            "$ref": "#/definitions/chats.chatWithAgentRequestBody"
                         }
                     }
                 ],
@@ -1354,13 +1354,18 @@ const docTemplate = `{
                 }
             }
         },
-        "chats.chatWithAgentRequeryBody": {
+        "chats.chatWithAgentRequestBody": {
             "description": "Request body for creating a streaming chat conversation with an AI agent",
             "type": "object",
             "required": [
-                "user_input"
+                "prompt"
             ],
             "properties": {
+                "chat_id": {
+                    "description": "Chat ID for the conversation (optional)",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "dataset_ids": {
                     "description": "Array of dataset IDs to analyze",
                     "type": "array",
@@ -1381,7 +1386,7 @@ const docTemplate = `{
                         "['550e8400-e29b-41d4-a716-446655440000']"
                     ]
                 },
-                "user_input": {
+                "prompt": {
                     "description": "User input/question for the AI agent",
                     "type": "string",
                     "example": "What are the trends in this dataset?"

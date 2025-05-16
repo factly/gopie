@@ -3,18 +3,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Database, Download } from "lucide-react";
 import { cn, downloadCsv } from "@/lib/utils";
-import { useChatStore } from "@/lib/stores/chat-store";
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
 
 export function SqlResults() {
   const { results, isOpen, setIsOpen } = useSqlStore();
-  const params = useParams();
-  const datasetId = params?.datasetId as string;
-
-  // Get the selected chat ID for the current dataset
-  const { getSelectedChatForDataset } = useChatStore();
-  const { id: selectedChatId } = getSelectedChatForDataset(datasetId);
 
   const handleDownload = () => {
     if (!results?.data?.length) return;
@@ -24,44 +15,7 @@ export function SqlResults() {
     );
   };
 
-  // Close results when no chat is selected
-  useEffect(() => {
-    if (!selectedChatId) {
-      setIsOpen(false);
-    }
-  }, [selectedChatId, setIsOpen]);
-
   if (!isOpen) return null;
-
-  // Only show results for current chat
-  if (results && results.chatId !== selectedChatId) {
-    return (
-      <div className="flex h-full flex-col bg-muted/50">
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium">SQL Results</h3>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setIsOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <ScrollArea className="flex-1 p-4">
-          <div className="flex h-full min-h-screen items-center justify-center">
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-              <Database className="h-12 w-12 opacity-20" />
-              <p className="text-sm font-medium">No results for current chat</p>
-              <p className="text-xs">Run a query to see results here</p>
-            </div>
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full flex-col bg-muted/50">

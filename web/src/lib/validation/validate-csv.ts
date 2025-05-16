@@ -49,7 +49,7 @@ export async function validateCsvWithDuckDb(
     try {
       // First try to read the CSV with auto-detection to check for parsing errors
       const validationResults = await conn.query(`
-        SELECT * FROM read_csv_auto('${virtualFileName}', header=true, sample_size=1000)
+        SELECT * FROM read_csv_auto('${virtualFileName}', header=true)
         LIMIT 5
       `);
 
