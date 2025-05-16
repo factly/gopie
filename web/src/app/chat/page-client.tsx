@@ -42,6 +42,8 @@ import { Chat, Project, Dataset } from "@/lib/api-client";
 interface StreamEvent {
   role: "intermediate" | "ai";
   content: string;
+  datasets_used?: string[];
+  generated_sql_query?: string;
 }
 
 interface CachedDatasetsData {
@@ -52,6 +54,24 @@ interface CachedDatasetsData {
 interface DatasetsFetcherResponse {
   results: Dataset[];
   total_count?: number;
+}
+
+// Helper function to derive datasets and SQL from stream events
+function deriveEnhancementsFromStream(streamEvents: StreamEvent[]): {
+  datasets: string[];
+  sql: string | null;
+} {
+  const allDatasets = new Set<string>();
+  let latestSql: string | null = null;
+  streamEvents.forEach((event) => {
+    if (event.datasets_used) {
+      event.datasets_used.forEach((dataset) => allDatasets.add(dataset));
+    }
+    if (event.generated_sql_query) {
+      latestSql = event.generated_sql_query;
+    }
+  });
+  return { datasets: Array.from(allDatasets), sql: latestSql };
 }
 
 const ChatHistoryList = React.memo(function ChatHistoryList({
@@ -480,8 +500,13 @@ interface ChatViewProps {
     content: string;
     role: "user" | "assistant" | "intermediate" | "ai";
     created_at: string;
+    chat_id?: string;
   }>;
   selectedContexts: ContextItem[];
+  enhancementsForFinalizedMessages: Map<
+    string,
+    { datasets: string[]; sql: string | null }
+  >;
 }
 
 const ChatView = React.memo(
@@ -493,6 +518,7 @@ const ChatView = React.memo(
     selectedChatId,
     allMessages,
     selectedContexts,
+    enhancementsForFinalizedMessages,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative">
       <div
@@ -542,6 +568,12 @@ const ChatView = React.memo(
                   isLatest={false}
                   datasetId={
                     selectedContexts.find((ctx) => ctx.type === "dataset")?.id
+                  }
+                  finalizedDatasets={
+                    enhancementsForFinalizedMessages.get(message.id)?.datasets
+                  }
+                  finalizedSqlQuery={
+                    enhancementsForFinalizedMessages.get(message.id)?.sql
                   }
                 />
               ))}
@@ -600,6 +632,23 @@ function ChatPageClient() {
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
+
+  // State to hold details from the most recently completed AI stream
+  const [lastCompletedStreamDetails, setLastCompletedStreamDetails] = useState<{
+    optimisticId: string;
+    chatId: string;
+    derivedDatasets: string[];
+    derivedSql: string | null;
+    // traceId?: string | null; // Future: if trace_id can be used for matching
+  } | null>(null);
+
+  // State to store enhancements for finalized messages, keyed by backend message ID
+  const [
+    enhancementsForFinalizedMessages,
+    setEnhancementsForFinalizedMessages,
+  ] = useState<Map<string, { datasets: string[]; sql: string | null }>>(
+    new Map()
+  );
 
   const chatWithAgent = useChatWithAgent();
 
@@ -826,6 +875,8 @@ function ChatPageClient() {
                     const currentEvent: StreamEvent = {
                       role: eventRoleForStream,
                       content: newContent,
+                      datasets_used: data.datasets_used,
+                      generated_sql_query: data.generated_sql_query,
                     };
                     setOptimisticMessages((prev) =>
                       prev.map((msg) =>
@@ -889,6 +940,8 @@ function ChatPageClient() {
                 const currentEvent: StreamEvent = {
                   role: eventRoleForStream,
                   content: newContent,
+                  datasets_used: data.datasets_used,
+                  generated_sql_query: data.generated_sql_query,
                 };
                 setOptimisticMessages((prev) =>
                   prev.map((msg) =>
@@ -914,13 +967,32 @@ function ChatPageClient() {
           }
         }
 
-        setOptimisticMessages((prev) =>
-          prev.map((msg) =>
+        // Stream finished, capture derived datasets/SQL for the optimistic message
+        setOptimisticMessages((prev) => {
+          const currentOptMsg = prev.find(
+            (msg) => msg.id === `assistant-${optimisticId}`
+          );
+          if (
+            currentOptMsg &&
+            Array.isArray(currentOptMsg.content) &&
+            currentOptMsg.content.length > 0
+          ) {
+            const { datasets, sql } = deriveEnhancementsFromStream(
+              currentOptMsg.content as StreamEvent[]
+            );
+            setLastCompletedStreamDetails({
+              optimisticId: `assistant-${optimisticId}`,
+              chatId: currentChatId || newChatIdFromStream || "", // Ensure chatId is string
+              derivedDatasets: datasets,
+              derivedSql: sql,
+            });
+          }
+          return prev.map((msg) =>
             msg.id === `assistant-${optimisticId}`
               ? { ...msg, isLoading: false }
               : msg
-          )
-        );
+          );
+        });
 
         if (newChatIdFromStream && newChatNameFromStream) {
           const datasetIdForNewChat =
@@ -1014,6 +1086,41 @@ function ChatPageClient() {
       return timeA - timeB;
     });
   }, [messagesData?.pages]);
+
+  // Effect to associate completed stream data with a finalized message
+  useEffect(() => {
+    if (lastCompletedStreamDetails && allMessages.length > 0) {
+      const { chatId, derivedDatasets, derivedSql } =
+        lastCompletedStreamDetails;
+
+      // Attempt to find the corresponding message in allMessages
+      // Match if the stream's chatID is the currently selectedChatId
+      if (selectedChatId === chatId) {
+        const potentialMatches = allMessages.filter(
+          (msg) =>
+            (msg.role === "assistant" || msg.role === "ai") &&
+            // msg.chat_id === chatId && // No longer needed, selectedChatId is the context
+            !enhancementsForFinalizedMessages.has(msg.id)
+        );
+
+        if (potentialMatches.length > 0) {
+          const matchedMessage = potentialMatches[potentialMatches.length - 1]; // Take the most recent
+          setEnhancementsForFinalizedMessages((prev) =>
+            new Map(prev).set(matchedMessage.id, {
+              datasets: derivedDatasets,
+              sql: derivedSql,
+            })
+          );
+          setLastCompletedStreamDetails(null); // Consume the details
+        }
+      }
+    }
+  }, [
+    allMessages,
+    lastCompletedStreamDetails,
+    enhancementsForFinalizedMessages,
+    selectedChatId, // Added selectedChatId dependency
+  ]);
 
   const showSqlButton = useMemo(() => {
     const checkContentForSql = (content: string | StreamEvent[]): boolean => {
@@ -1224,6 +1331,9 @@ function ChatPageClient() {
                     selectedChatId={selectedChatId}
                     allMessages={allMessages}
                     selectedContexts={selectedContexts}
+                    enhancementsForFinalizedMessages={
+                      enhancementsForFinalizedMessages
+                    }
                   />
                 </div>
               </TabsContent>

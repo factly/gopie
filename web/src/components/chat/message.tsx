@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Database,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ReactMarkdown from "react-markdown";
 import { SqlPreview } from "@/components/dataset/sql/sql-preview";
+import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import {
@@ -41,6 +43,8 @@ interface MessageContent {
 interface StreamEvent {
   role: "intermediate" | "ai";
   content: string;
+  datasets_used?: string[];
+  generated_sql_query?: string;
 }
 
 function parseMessageContent(content: string): MessageContent {
@@ -75,6 +79,8 @@ interface ChatMessageProps {
   chatId?: string;
   isLatest?: boolean;
   datasetId?: string;
+  finalizedDatasets?: string[]; // New prop
+  finalizedSqlQuery?: string | null | undefined; // Changed to allow null
 }
 
 export function ChatMessage({
@@ -87,6 +93,8 @@ export function ChatMessage({
   chatId,
   isLatest,
   datasetId,
+  finalizedDatasets, // New prop
+  finalizedSqlQuery, // New prop
 }: ChatMessageProps) {
   const executeSql = useDatasetSql();
   const {
@@ -97,30 +105,35 @@ export function ChatMessage({
   const [isExecuting, setIsExecuting] = useState(false);
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(
     role === "intermediate" && typeof content === "string" ? true : false
-  ); // Default open for string intermediate messages
+  );
   const [isThoughtProcessOpen, setIsThoughtProcessOpen] = useState(
     Array.isArray(content) &&
       content.some((event) => event.role === "intermediate")
   );
+  const [displayDatasets, setDisplayDatasets] = useState<string[]>([]);
+  const [displaySqlQuery, setDisplaySqlQuery] = useState<string | null>(null);
 
-  // Effect to update isThoughtProcessOpen when content changes (relevant if content can change type after mount)
   useEffect(() => {
     if (Array.isArray(content)) {
-      setIsThoughtProcessOpen(
-        content.some((event) => event.role === "intermediate")
-      );
+      const allStreamDatasets = new Set<string>();
+      let latestStreamSql: string | null = null;
+      content.forEach((event: StreamEvent) => {
+        if (event.datasets_used) {
+          event.datasets_used.forEach((dataset) =>
+            allStreamDatasets.add(dataset)
+          );
+        }
+        if (event.generated_sql_query) {
+          latestStreamSql = event.generated_sql_query;
+        }
+      });
+      setDisplayDatasets(Array.from(allStreamDatasets));
+      setDisplaySqlQuery(latestStreamSql);
     } else {
-      // If content is not an array, this collapsible isn't relevant, ensure it's closed or in a defined state
-      setIsThoughtProcessOpen(false);
+      setDisplayDatasets(finalizedDatasets || []);
+      setDisplaySqlQuery(finalizedSqlQuery || null);
     }
-  }, [content]);
-
-  // Effect to update isCollapsibleOpen for string intermediate messages when props change
-  useEffect(() => {
-    setIsCollapsibleOpen(
-      role === "intermediate" && typeof content === "string" ? true : false
-    );
-  }, [role, content]);
+  }, [content, finalizedDatasets, finalizedSqlQuery]);
 
   const handleRunQuery = useCallback(
     async (query: string) => {
@@ -154,21 +167,13 @@ export function ChatMessage({
   useEffect(() => {
     if (!isLoading && (role === "assistant" || role === "ai") && isLatest) {
       let sqlToExecute: string | null = null;
-      if (typeof content === "string") {
+
+      if (displaySqlQuery) {
+        sqlToExecute = displaySqlQuery;
+      } else if (typeof content === "string") {
         const parsed = parseMessageContent(content);
         if (parsed.type === "sql") {
           sqlToExecute = parsed.content;
-        }
-      } else if (Array.isArray(content)) {
-        const aiEvents = content.filter((event) => event.role === "ai");
-        const finalAiContentString = aiEvents
-          .map((event) => event.content)
-          .join("");
-        if (finalAiContentString) {
-          const parsed = parseMessageContent(finalAiContentString);
-          if (parsed.type === "sql") {
-            sqlToExecute = parsed.content;
-          }
         }
       }
 
@@ -187,6 +192,7 @@ export function ChatMessage({
     handleRunQuery,
     id,
     markQueryAsExecuted,
+    displaySqlQuery,
   ]);
 
   const styleRole =
@@ -281,8 +287,55 @@ export function ChatMessage({
               </Collapsible>
             ) : (
               <>
-                <div className="text-sm break-words">
-                  {parsed.type === "sql" ? (
+                <div className="text-sm break-words space-y-3">
+                  {/* Always render text content if available and not SQL type (unless displaySqlQuery handles it) */}
+                  {parsed.type === "text" && parsed.content && (
+                    <div
+                      className={cn(
+                        "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
+                        "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                        "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
+                        styleRole === "user"
+                          ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
+                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
+                      )}
+                    >
+                      <ReactMarkdown>{parsed.content}</ReactMarkdown>
+                    </div>
+                  )}
+
+                  {/* Render SQL Editor if displaySqlQuery is available */}
+                  {displaySqlQuery && datasetId ? (
+                    <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Suggested SQL Query:
+                      </p>
+                      <SqlEditor
+                        value={displaySqlQuery}
+                        onChange={() => {
+                          /* no-op for display only */
+                        }}
+                        datasetId={datasetId}
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRunQuery(displaySqlQuery)}
+                          disabled={isExecuting}
+                          className="mt-2"
+                        >
+                          {isExecuting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Play className="mr-2 h-4 w-4" />
+                          )}
+                          Run Suggested Query
+                        </Button>
+                      </div>
+                    </div>
+                  ) : /* Fallback to SqlPreview if no displaySqlQuery but content is SQL type */
+                  parsed.type === "sql" && !displaySqlQuery ? (
                     <div className="min-w-[400px] w-full max-w-[800px] text-base">
                       <div className="relative">
                         <SqlPreview value={parsed.content} />
@@ -310,20 +363,22 @@ export function ChatMessage({
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                        "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
-                        "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
-                        styleRole === "user"
-                          ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
-                          : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
-                      )}
-                    >
-                      <ReactMarkdown>{parsed.content}</ReactMarkdown>
-                    </div>
-                  )}
+                  ) : null}
+
+                  {/* If content was parsed as SQL but we rendered displaySqlQuery instead, 
+                     still show original text part if it exists and differs from displaySqlQuery and is not just the SQL again */}
+                  {parsed.type === "sql" &&
+                    displaySqlQuery &&
+                    parsed.content !== displaySqlQuery && (
+                      <div
+                        className={cn(
+                          "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed mt-2 text-xs text-muted-foreground italic",
+                          "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed"
+                        )}
+                      >
+                        <ReactMarkdown>{`(Original AI response also included: "${parsed.content}")`}</ReactMarkdown>
+                      </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <span
@@ -452,8 +507,65 @@ export function ChatMessage({
           {(finalAiContentString ||
             (isLoading && styleRole === "assistant")) && (
             <div className="flex-1 min-w-0 w-full pt-1">
-              <div className="text-sm break-words">
-                {parsedFinalAiContent.type === "sql" && finalAiContentString ? (
+              <div className="text-sm break-words space-y-3">
+                {/* Always render AI text content if available */}
+                {finalAiContentString && (
+                  <div
+                    className={cn(
+                      "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
+                      "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                      "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
+                      "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
+                    )}
+                  >
+                    <ReactMarkdown>
+                      {/* Use parsedFinalAiContent.content as it handles ---TEXT--- stripping if any */}
+                      {parsedFinalAiContent.content}
+                    </ReactMarkdown>
+                    {isLoading && styleRole === "assistant" && (
+                      <span className="ml-1 text-xs text-muted-foreground animate-pulse">
+                        (streaming...)
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Render SQL Editor if displaySqlQuery is available */}
+                {displaySqlQuery && datasetId ? (
+                  <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Suggested SQL Query:
+                    </p>
+                    <SqlEditor
+                      value={displaySqlQuery}
+                      onChange={() => {
+                        /* no-op for display only */
+                      }}
+                      datasetId={datasetId}
+                    />
+                    {!isLoading && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRunQuery(displaySqlQuery)}
+                          disabled={isExecuting}
+                          className="mt-2"
+                        >
+                          {isExecuting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Play className="mr-2 h-4 w-4" />
+                          )}
+                          Run Suggested Query
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : /* Fallback to SqlPreview if no displaySqlQuery but content is SQL type */
+                parsedFinalAiContent.type === "sql" &&
+                  finalAiContentString &&
+                  !displaySqlQuery ? (
                   <div className="min-w-[400px] w-full max-w-[800px] text-base">
                     <div className="relative">
                       <SqlPreview value={parsedFinalAiContent.content} />
@@ -485,31 +597,37 @@ export function ChatMessage({
                       )}
                     </div>
                   </div>
-                ) : finalAiContentString ? (
-                  <div
-                    className={cn(
-                      "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                      "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
-                      "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
-                      "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
-                    )}
-                  >
-                    <ReactMarkdown>
-                      {parsedFinalAiContent.content}
-                    </ReactMarkdown>
-                    {isLoading && styleRole === "assistant" && (
-                      <span className="ml-1 text-xs text-muted-foreground animate-pulse">
-                        (streaming...)
-                      </span>
-                    )}
-                  </div>
-                ) : isLoading && styleRole === "assistant" ? (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    AI response is generating...
-                  </div>
                 ) : null}
+
+                {/* Loading indicator when no text & no SQL yet, but still loading */}
+                {!finalAiContentString &&
+                  !displaySqlQuery &&
+                  isLoading &&
+                  styleRole === "assistant" && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      AI response is generating...
+                    </div>
+                  )}
               </div>
+              {displayDatasets.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground font-medium mb-1.5 flex items-center">
+                    <Database className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/80" />
+                    Agent utilized the following dataset(s):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {displayDatasets.map((datasetName) => (
+                      <span
+                        key={datasetName}
+                        className="text-xs bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground/80 px-2 py-0.5 rounded-md font-mono"
+                      >
+                        {datasetName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {!isLoading && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className={cn("text-[11px]", "text-muted-foreground")}>
