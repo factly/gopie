@@ -1,5 +1,4 @@
 import json
-import logging
 from enum import Enum
 
 from langchain_core.runnables.schema import StreamEvent
@@ -32,10 +31,6 @@ class EventStreamHandler:
 
         event_type = event["event"]
         graph_node = event.get("metadata", {}).get("langgraph_node", "unknown")
-
-        logging.info(
-            f"graph_node: {graph_node} stream_content: {self._stream_content}"
-        )
 
         role = None
         content = None

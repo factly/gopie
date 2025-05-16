@@ -11,7 +11,6 @@ class AgentNode(Enum):
     PLAN_QUERY = "plan_query"
     GENERATE_RESULT = "generate_result"
     STREAM_UPDATES = "stream_updates"
-    MAX_ITERATIONS_REACHED = "max_iterations_reached"
     TOOLS = "tools"
     UNKNOWN = "unknown"
 
