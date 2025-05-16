@@ -20,11 +20,6 @@ async def generate_subqueries(state: State, config: RunnableConfig):
     else:
         raise Exception("Last Message must be a user message")
 
-    llm_prompt = get_prompt("generate_subqueries", user_input=user_input)
-
-    llm = model_provider(config=config).get_llm()
-    response = await llm.ainvoke({"input": llm_prompt})
-
     query_result_object = QueryResult(
         original_user_query=user_input,
         timestamp=datetime.now(),
@@ -33,14 +28,60 @@ async def generate_subqueries(state: State, config: RunnableConfig):
     )
 
     try:
-        parser = JsonOutputParser()
-        parsed_content = parser.parse(str(response.content))
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "do not stream",
+            },
+        )
 
-        needs_breakdown = parsed_content.get("needs_breakdown", False)
-        explanation = parsed_content.get("explanation", "")
+        assessment_prompt = get_prompt(
+            "assess_query_complexity", user_input=user_input
+        )
+        llm = model_provider(config=config).get_llm()
+        assessment_response = await llm.ainvoke({"input": assessment_prompt})
+
+        await adispatch_custom_event(
+            "dataful-agent",
+            {
+                "content": "continue streaming",
+            },
+        )
+
+        parser = JsonOutputParser()
+        assessment_parsed = parser.parse(str(assessment_response.content))
+
+        needs_breakdown = assessment_parsed.get("needs_breakdown", False)
+        explanation = assessment_parsed.get("explanation", "")
+
+        subqueries = []
 
         if needs_breakdown:
-            subqueries = parsed_content.get("subqueries", [])
+            subqueries_prompt = get_prompt(
+                "generate_subqueries", user_input=user_input
+            )
+            subqueries_response = await llm.ainvoke(
+                {"input": subqueries_prompt}
+            )
+
+            subqueries_parsed = parser.parse(str(subqueries_response.content))
+            subqueries = subqueries_parsed.get("subqueries", [])
+
+            subqueries_message = (
+                "I'll break down your query into steps to give you "
+                "a more complete answer:"
+            )
+
+            for i, subquery in enumerate(subqueries, 1):
+                subqueries_message += f"\n\nStep {i}: {subquery}"
+
+            await adispatch_custom_event(
+                "dataful-agent",
+                {
+                    "content": subqueries_message,
+                },
+            )
+
             if len(subqueries) > 3:
                 subqueries = subqueries[:3]
 
@@ -48,13 +89,6 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 subqueries = [user_input]
         else:
             subqueries = [user_input]
-
-        await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": explanation,
-            },
-        )
 
         return {
             "user_query": user_input,
@@ -67,12 +101,13 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                         "needs_breakdown": needs_breakdown,
                         "subqueries": subqueries,
                         "original_query": user_input,
+                        "explanation": explanation,
                     },
                 )
             ],
         }
     except Exception as e:
-        error_msg = f"Error parsing subqueries: {e!s}"
+        error_msg = f"Error in subquery generation: {e!s}"
         default_subqueries = [user_input]
 
         return {

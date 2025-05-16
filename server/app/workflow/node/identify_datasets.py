@@ -100,11 +100,22 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "dataset_name_mapping": dataset_name_mapping,
         }
 
+        dataset_ids_mapping = {
+            schema.get("name"): schema.get("dataset_id")
+            for schema in filtered_dataset_schemas
+        }
+
+        selected_dataset_ids = [
+            dataset_ids_mapping.get(dataset_name)
+            for dataset_name in selected_datasets
+            if dataset_name in dataset_ids_mapping
+        ]
+
         await adispatch_custom_event(
             "dataful-agent",
             {
                 "content": "Datasets identified",
-                "datasets": selected_datasets,
+                "datasets": selected_dataset_ids,
             },
         )
 

@@ -193,7 +193,7 @@ async def _handle_data_query(
         clearly state what aspects you can answer and what remains unclear
     """
 
-    llm = model_provider.get_llm()
+    llm = model_provider(config=config).get_llm()
     response = await llm.ainvoke({"input": prompt})
 
     return {
