@@ -17,28 +17,40 @@ AVAILABLE_MODELS: dict[str, ModelInfo] = {
         "cost-effective",
         is_default=False,
     ),
-    "gemini-2.0-flash": ModelInfo(
-        id="gemini-2.0-flash",
-        name="Gemini 2.0 Flash",
+    "o4-mini": ModelInfo(
+        id="o4-mini",
+        name="o4-mini",
+        provider="OpenAI",
+        description="Faster, more affordable reasoning model",
+        is_default=False,
+    ),
+    "o3-mini": ModelInfo(
+        id="o3-mini",
+        name="o3-mini",
+        provider="OpenAI",
+        description="A small model alternative to o3",
+        is_default=False,
+    ),
+    "gemini-2.5-flash-preview-04-17": ModelInfo(
+        id="gemini-2.5-flash-preview-04-17",
+        name="Gemini 2.5 Flash Preview 04-17",
         provider="Google",
-        description="Google's Gemini 2.0 Flash model - fast, efficient "
-        "reasoning",
+        description="Adaptive thinking, cost efficiency",
         is_default=False,
     ),
     "gemini-2.5-pro-preview-05-06": ModelInfo(
         id="gemini-2.5-pro-preview-05-06",
         name="Gemini 2.5 Pro Preview 05-06",
         provider="Google",
-        description="Google's Gemini 2.5 Pro model - powerful reasoning "
-        "capabilities",
+        description="Enhanced thinking and reasoning, multimodal "
+        "understanding, advanced coding, and more",
         is_default=False,
     ),
-    "gemini-2.0-pro": ModelInfo(
-        id="gemini-2.0-pro",
-        name="Gemini 2.0 Pro",
+    "gemini-2.0-flash": ModelInfo(
+        id="gemini-2.0-flash",
+        name="Gemini 2.0 Flash",
         provider="Google",
-        description="Google's Gemini 2.0 Pro model - powerful reasoning "
-        "capabilities",
+        description="Next generation features, speed.",
         is_default=False,
     ),
 }

@@ -8,7 +8,9 @@ from langchain_core.documents import Document
 from app.models.data import DatasetDetails
 from app.services.gopie.dataset_info import format_schema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
-from app.utils.col_description_generator import generate_column_descriptions
+from app.utils.graph_utils.col_description_generator import (
+    generate_column_descriptions,
+)
 
 background_tasks = set()
 

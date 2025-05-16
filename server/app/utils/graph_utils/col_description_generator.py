@@ -27,31 +27,36 @@ async def generate_column_descriptions(
     """
 
     template = """
-    You are a data analyst assistant tasked with generating clear, concise
-    descriptions for columns in a dataset.
+        You are a data analyst assistant tasked with generating clear, concise
+        descriptions for columns in a dataset.
 
-    Below is the schema information for columns in this dataset. For each
-    column, generate a brief description that explains what the column
-    represents.
+        Below is the schema information for columns in this dataset. For each
+        column, generate a brief description that explains what the column
+        represents.
 
-    dataset_schema: {dataset_schema}
+        dataset_schema: {dataset_schema}
 
-    INSTRUCTIONS:
-    1. Generate a concise description for each column, strictly under 10 words
-    2. Focus only on what the column represents functionally
-    3. Do NOT include data types, statistics, or null information
+        INSTRUCTIONS:
+        1. Generate a concise description for each column, strictly under 10
+           words
+        2. Focus only on what the column represents functionally
+        3. Do NOT include data types, statistics, or null information
 
-    Return your response as a JSON object with column names as keys and
-    descriptions as values.
-    Example format:
-    {example_format}
+        Return your response as a JSON object with column names as keys and
+        descriptions as values.
+        Example format:
+        {example_format}
     """
 
     prompt = ChatPromptTemplate.from_template(template)
     model_provider = ModelProvider()
 
     try:
-        chain = prompt | model_provider.get_llm() | JsonOutputParser()
+        chain = (
+            prompt
+            | model_provider.get_custom_model("gpt-4o-mini")
+            | JsonOutputParser()
+        )
         response = await chain.ainvoke(
             {
                 "dataset_schema": schema,

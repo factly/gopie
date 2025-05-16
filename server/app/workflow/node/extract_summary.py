@@ -1,5 +1,5 @@
 from app.models.message import IntermediateStep
-from app.utils.summary_extraction import create_result_summary
+from app.utils.graph_utils.summary_extraction import create_result_summary
 from app.workflow.graph.types import State
 
 

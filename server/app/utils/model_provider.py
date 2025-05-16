@@ -24,6 +24,10 @@ class ModelProvider:
         )
         return LangchainConfig(model_config).embeddings_model
 
+    def get_custom_model(self, model_id: str):
+        model_config = ModelConfig(model_id=model_id, trace_id=self.trace_id)
+        return LangchainConfig(model_config).llm
+
 
 def model_provider(
     config: RunnableConfig,

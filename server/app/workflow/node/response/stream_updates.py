@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.model_provider import model_provider
+from app.utils.model_provider import ModelProvider, model_provider
 from app.workflow.graph.types import State
 
 
@@ -33,15 +33,26 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         SQL Query Used:
         {subquery_result.sql_query_used}
 
-        Instructions:
-        1. Explain in simple terms why the subquery failed
-        2. Suggest a potential fix or alternative approach the user could try
-        3. Mention whether we'll continue with other parts of the query or if
-           this failure is critical
-        4. Be professional but empathetic about the failure
-        5. Keep your response concise (2-3 sentences)
+        Remaining Subqueries:
+        {json.dumps([sq.query_text for sq in
+                    query_result.subqueries[query_index+1:]])}
 
-        Your response should be informative, actionable, and user-friendly.
+        First, analyze dependencies:
+        1. Is this failed subquery critical for the remaining subqueries?
+        2. Do the remaining subqueries depend on the results of this failed
+           subquery?
+        3. Would continuing with the remaining subqueries still provide value?
+
+        Then create a user-friendly update that:
+        1. Explains in simple terms why the subquery failed
+        2. Suggests a potential fix or alternative approach
+        3. Clearly states whether you'll continue with other parts of the query
+           or if this failure is critical and we need to stop
+        4. Is professional but empathetic about the failure
+        5. Keeps the response concise (2-3 sentences)
+
+        Your update should be informative, actionable, and user-friendly.
+        IMPORTANT: Be explicit about whether execution will continue or stop.
         """
     else:
         stream_update_prompt = f"""
@@ -75,9 +86,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     return {"messages": [AIMessage(content=response.content)]}
 
 
-async def check_further_execution_requirement(
-    state: State, config: RunnableConfig
-) -> str:
+async def check_further_execution_requirement(state: State) -> str:
     """
     Determines if further execution is required based on the current state.
     Returns a string indicating the next step: "next_sub_query" or
@@ -119,13 +128,20 @@ async def check_further_execution_requirement(
         {json.dumps([sq.query_text for sq in
                     query_result.subqueries[query_index+1:]])}
 
-        Please analyze and determine:
+        The last stream message likely contains a decision about whether
+        to continue execution. First, analyze this message to see if it
+        explicitly states a decision.
+
+        Then analyze these factors:
         1. Is the failed subquery critical for the remaining subqueries to be
         meaningful?
         2. Do the remaining subqueries depend on the results of this failed
         subquery?
         3. Would continuing with the remaining subqueries still provide partial
         value to the user?
+
+        If the last message clearly indicates a decision about continuing or
+        stopping, that should heavily influence your decision.
 
         Return only a single JSON object with this format:
         {{
@@ -137,7 +153,9 @@ async def check_further_execution_requirement(
         (true/false), not a string. Do not wrap it in quotes.
     """
 
-    llm = model_provider(config=config).get_llm()
+    model = ModelProvider()
+
+    llm = model.get_custom_model(model_id="gpt-4o-mini")
     response = await llm.ainvoke({"input": dependency_analysis_prompt})
 
     await adispatch_custom_event(

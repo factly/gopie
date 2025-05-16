@@ -14,7 +14,7 @@ from app.api.v1.routers.models import router as models_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from app.utils.generate_graph import visualize_graph
+from app.utils.graph_utils.generate_graph import visualize_graph
 
 
 @asynccontextmanager

@@ -1,10 +1,9 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
-from app.utils.model_provider import model_provider
+from app.utils.model_provider import ModelProvider
 from app.workflow.graph.types import State
 
 
@@ -80,7 +79,7 @@ async def execute_query(state: State) -> dict:
         }
 
 
-async def route_query_replan(state: State, config: RunnableConfig) -> str:
+async def route_query_replan(state: State) -> str:
     """
     Determine whether to replan the query or generate results based on
     execution status
@@ -110,7 +109,9 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
             },
         )
 
-        llm = model_provider(config=config).get_llm()
+        model = ModelProvider()
+
+        llm = model.get_custom_model(model_id="gemini-2.5-pro-preview-05-06")
 
         response = await llm.ainvoke(
             {
