@@ -3,6 +3,7 @@ import * as duckdb from "@duckdb/duckdb-wasm";
 export interface ValidationResult {
   isValid: boolean;
   columnNames?: string[];
+  columnTypes?: string[];
   columnCount?: number;
   previewRowCount?: number;
   previewData?: unknown[][];
@@ -62,6 +63,9 @@ export async function validateCsvWithDuckDb(
       const previewRowCount = validationResults.numRows;
       const dataPreview = validationResults.toArray() as unknown[][];
       const columnNames = validationResults.schema.fields.map((f) => f.name);
+      const columnTypes = validationResults.schema.fields.map((f) =>
+        f.type.toString()
+      );
 
       // Now try creating a table from the validated CSV to catch any deeper issues
       const tempTableName = `temp_validate_${Date.now()}`;
@@ -82,6 +86,7 @@ export async function validateCsvWithDuckDb(
       return {
         isValid: true,
         columnNames,
+        columnTypes,
         columnCount,
         previewRowCount,
         previewData: dataPreview,

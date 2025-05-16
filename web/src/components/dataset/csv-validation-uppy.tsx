@@ -213,7 +213,7 @@ export function CsvValidationUppy({
 
         // If validation successful and we have column names, update the column name store
         if (result.columnNames) {
-          setColumnMappings(result.columnNames);
+          setColumnMappings(result.columnNames, result.columnTypes);
         }
       }
     } catch (error) {

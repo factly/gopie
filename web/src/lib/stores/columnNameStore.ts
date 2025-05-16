@@ -4,13 +4,14 @@ export interface ColumnNameMapping {
   originalName: string;
   updatedName: string;
   isValid: boolean;
+  dataType?: string;
 }
 
 interface ColumnNameState {
   projectId: string | null;
   columnMappings: Map<string, ColumnNameMapping>;
   setProjectId: (projectId: string) => void;
-  setColumnMappings: (originalNames: string[]) => void;
+  setColumnMappings: (originalNames: string[], columnTypes?: string[]) => void;
   updateColumnName: (originalName: string, updatedName: string) => void;
   resetColumnMappings: () => void;
   getColumnMappings: () => Record<string, string>;
@@ -64,16 +65,20 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
   setProjectId: (projectId: string) => set({ projectId }),
 
-  setColumnMappings: (originalNames: string[]) => {
+  setColumnMappings: (originalNames: string[], columnTypes?: string[]) => {
     const mappings = new Map<string, ColumnNameMapping>();
 
-    originalNames.forEach((name) => {
+    originalNames.forEach((name, index) => {
       const isValid = validateColumnName(name);
-      mappings.set(name, {
+      const mapping: ColumnNameMapping = {
         originalName: name,
         updatedName: name,
         isValid,
-      });
+      };
+      if (columnTypes && columnTypes[index]) {
+        mapping.dataType = columnTypes[index];
+      }
+      mappings.set(name, mapping);
     });
 
     set({ columnMappings: mappings });

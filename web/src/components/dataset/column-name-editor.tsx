@@ -104,6 +104,7 @@ export function ColumnNameEditor() {
           <TableRow>
             <TableHead>Original Name</TableHead>
             <TableHead>Updated Name</TableHead>
+            <TableHead>Data Type</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Action</TableHead>
           </TableRow>
@@ -129,6 +130,7 @@ export function ColumnNameEditor() {
                   </span>
                 )}
               </TableCell>
+              <TableCell>{mapping.dataType || "N/A"}</TableCell>
               <TableCell>
                 {mapping.isValid ? (
                   <span className="flex items-center text-green-500">
