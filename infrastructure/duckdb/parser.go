@@ -7,18 +7,9 @@ import (
 	"vitess.io/vitess/go/vt/sqlparser"
 )
 
-// walkAndQualifyUnqualifiedTablesForPg recursively traverses relevant parts of a SELECT statement's AST
-// and sets the provided schemaName for any table reference (RangeVar) that is not already schema-qualified.
-//
-// Args:
-//
-//	node: The current AST node to process.
-//	schemaName: The schema name to apply to unqualified table references.
-//
-// WARN: This function, in its current simplified form, may not correctly distinguish
-// between base tables and references to Common Table Expressions (CTEs).
-// If a CTE reference appears as a RangeVar with an empty Schemaname,
-// this function might attempt to qualify it, which is generally not the desired behavior for CTEs.
+// walkAndQualifyUnqualifiedTablesForPg recursively traverses a SELECT statement's AST
+// and sets the provided schemaName for any table reference that is not already schema-qualified.
+// Note: May not correctly distinguish between base tables and CTE references.
 func walkAndQualifyUnqualifiedTablesForPg(node *pg_query.Node, schemaName string) {
 	if node == nil {
 		return
@@ -26,17 +17,13 @@ func walkAndQualifyUnqualifiedTablesForPg(node *pg_query.Node, schemaName string
 
 	// Case 1: Direct table reference (RangeVar)
 	if rv := node.GetRangeVar(); rv != nil {
-		// Only apply the schemaName if the table reference (RangeVar)
-		// does not already have an explicit schema.
-		// This prevents overwriting existing qualifications like "other_schema.my_table".
+
 		if rv.Schemaname == "" {
-			// Add a check here if you need to distinguish CTEs or other special RangeVar uses.
-			// For example, RangeVars for CTEs should not be schema-qualified.
-			// This basic version applies the schema if it's currently empty.
+
 			fmt.Printf("SELECT context: Qualifying unqualified table '%s' with schema '%s'\n", rv.Relname, schemaName)
 			rv.Schemaname = schemaName
 		}
-		// rv.Relname (the table's name within its schema) remains unchanged.
+
 		return // Processed this RangeVar node.
 	}
 
@@ -200,60 +187,73 @@ func walkAndQualifyUnqualifiedTablesForPg(node *pg_query.Node, schemaName string
 	}
 }
 
-// mysqlQualifierWalker holds the schema name to apply.
-// It's used as the context for the visitor function during AST traversal.
+// mysqlQualifierWalker holds the schema name and defined CTEs for the current walk.
 type mysqlQualifierWalker struct {
 	schemaName string
+	cteNames   map[string]bool
 }
 
-// newMySQLQualifierWalker creates a new walker with the given schema name.
-func newMySQLQualifierWalker(schemaName string) *mysqlQualifierWalker {
+// newMySQLQualifierWalker creates a new walker.
+
+func newMySQLQualifierWalker(schemaName string, currentCteNames map[string]bool) *mysqlQualifierWalker {
 	return &mysqlQualifierWalker{
 		schemaName: schemaName,
+		cteNames:   currentCteNames,
 	}
 }
 
-// qualifyUnqualifiedTableNode is the core visitor function called by sqlparser.Walk.
-// It inspects each node in the AST. If a node represents an unqualified table
-// in a FROM or JOIN clause, it applies the default schemaName.
-func (w *mysqlQualifierWalker) qualifyUnqualifiedTableNode(node sqlparser.SQLNode) (kontinue bool, err error) {
+func (w *mysqlQualifierWalker) visitorFunc(node sqlparser.SQLNode) (kontinue bool, err error) {
 	switch n := node.(type) {
 	case *sqlparser.AliasedTableExpr:
-		if tableName, ok := n.Expr.(*sqlparser.TableName); ok {
-			if tableName.Qualifier.IsEmpty() {
-				fmt.Printf("MySQL context: Qualifying unqualified table '%s' with schema '%s'\n",
-					tableName.Name.String(), w.schemaName)
-				tableName.Qualifier = sqlparser.NewIdentifierCS(w.schemaName)
+		if tnValue, ok := n.Expr.(sqlparser.TableName); ok {
+			if w.cteNames != nil {
+				if _, isCTE := w.cteNames[tnValue.Name.String()]; isCTE {
+					return true, nil
+				}
+			}
+
+			if tnValue.Qualifier.IsEmpty() {
+
+				tnValue.Qualifier = sqlparser.NewIdentifierCS(w.schemaName)
+
+				n.Expr = tnValue
 			}
 		}
 	}
-	return true, nil // Continue traversal to children
+	return true, nil
 }
 
-// WalkAndQualifyUnqualifiedTablesForMySQL recursively traverses relevant parts of a MySQL statement's AST
-// (parsed by github.com/vitessio/vitess/go/vt/sqlparser) and sets the provided schemaName
-// for any table reference (TableName within an AliasedTableExpr) that is not already schema-qualified.
-//
-// Args:
-//
-//	stmtNode: The root AST node of the parsed SQL statement (e.g., *sqlparser.Select, *sqlparser.Insert).
-//	schemaName: The schema name to apply to unqualified table references.
-//
-// Note: This function, similar to the provided PostgreSQL example, may not perfectly
-// distinguish between base tables and references to Common Table Expressions (CTEs)
-// without more sophisticated scope tracking. If a CTE reference appears as a TableName
-// with an empty Qualifier, this function might attempt to qualify it.
+// getWithClause is a helper to extract the *sqlparser.With clause from common statement types.
+func getWithClause(stmt sqlparser.SQLNode) *sqlparser.With {
+	switch s := stmt.(type) {
+	case *sqlparser.Select:
+		return s.With
+	}
+	return nil
+}
+
+// WalkAndQualifyUnqualifiedTablesForMySQL traverses a MySQL statement's AST
+// and applies the schemaName for unqualified table references, ignoring CTE references.
 func WalkAndQualifyUnqualifiedTablesForMySQL(stmtNode sqlparser.SQLNode, schemaName string) error {
 	if stmtNode == nil {
 		return nil
 	}
 
-	walker := newMySQLQualifierWalker(schemaName)
+	// Pre-collect CTE names from the top-level of the given stmtNode.
+	// This helps distinguish CTE references from base tables within the main query body.
+	// Tables *inside* CTE definitions will be qualified by the recursive walk if they are base tables.
+	currentCteNames := make(map[string]bool)
+	if wClause := getWithClause(stmtNode); wClause != nil {
+		for _, cte := range wClause.CTEs {
+			currentCteNames[cte.ID.String()] = true
+		}
+	}
 
-	// sqlparser.Walk traverses the AST. For each node, it calls the provided
-	// visitor function (walker.qualifyUnqualifiedTableNode).
-	// Modifications made by the visitor are applied to the AST in place.
-	err := sqlparser.Walk(walker.qualifyUnqualifiedTableNode, stmtNode)
+	walker := newMySQLQualifierWalker(schemaName, currentCteNames)
+
+	// sqlparser.Walk takes one visitor function and the node(s) to walk.
+	// Modifications to the AST are made in-place.
+	err := sqlparser.Walk(walker.visitorFunc, stmtNode)
 	if err != nil {
 		return fmt.Errorf("error walking MySQL AST for table qualification: %w", err)
 	}
