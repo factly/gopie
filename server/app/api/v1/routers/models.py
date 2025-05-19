@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.models.router import ModelInfo
-from app.utils.model_selector import AVAILABLE_MODELS
+from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 router = APIRouter()
 

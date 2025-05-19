@@ -14,8 +14,3 @@ class DatasetDetails(BaseModel):
     updated_at: str
     created_by: str
     updated_by: str
-
-
-class Provider:
-    OPENAI = "openai"
-    GOOGLE = "google"
