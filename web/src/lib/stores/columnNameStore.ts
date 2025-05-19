@@ -5,6 +5,7 @@ export interface ColumnNameMapping {
   updatedName: string;
   isValid: boolean;
   dataType?: string;
+  updatedDataType?: string;
 }
 
 interface ColumnNameState {
@@ -13,9 +14,12 @@ interface ColumnNameState {
   setProjectId: (projectId: string) => void;
   setColumnMappings: (originalNames: string[], columnTypes?: string[]) => void;
   updateColumnName: (originalName: string, updatedName: string) => void;
+  updateColumnDataType: (originalName: string, updatedDataType: string) => void;
   resetColumnMappings: () => void;
   getColumnMappings: () => Record<string, string>;
+  getColumnDataTypes: () => Record<string, string>;
   autoFixAllColumns: () => void;
+  hasDataTypeChanges: () => boolean;
 }
 
 export const validateColumnName = (name: string): boolean => {
@@ -59,6 +63,25 @@ export const toSnakeCase = (name: string): string => {
   return result;
 };
 
+// Valid DuckDB data types for columns
+export const VALID_DUCK_DB_TYPES = [
+  "INTEGER",
+  "BIGINT",
+  "DOUBLE",
+  "FLOAT",
+  "VARCHAR",
+  "TEXT",
+  "BOOLEAN",
+  "DATE",
+  "TIMESTAMP",
+  "DECIMAL",
+];
+
+// Validate datatype is a valid DuckDB type
+export const validateDataType = (type: string): boolean => {
+  return VALID_DUCK_DB_TYPES.includes(type.toUpperCase());
+};
+
 export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
   projectId: null,
   columnMappings: new Map<string, ColumnNameMapping>(),
@@ -70,14 +93,15 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
     originalNames.forEach((name, index) => {
       const isValid = validateColumnName(name);
+      const dataType =
+        columnTypes && columnTypes[index] ? columnTypes[index] : undefined;
       const mapping: ColumnNameMapping = {
         originalName: name,
         updatedName: name,
         isValid,
+        dataType,
+        updatedDataType: dataType,
       };
-      if (columnTypes && columnTypes[index]) {
-        mapping.dataType = columnTypes[index];
-      }
       mappings.set(name, mapping);
     });
 
@@ -102,6 +126,22 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
     });
   },
 
+  updateColumnDataType: (originalName: string, updatedDataType: string) => {
+    set((state) => {
+      const newMappings = new Map(state.columnMappings);
+      const currentMapping = newMappings.get(originalName);
+
+      if (currentMapping) {
+        newMappings.set(originalName, {
+          ...currentMapping,
+          updatedDataType,
+        });
+      }
+
+      return { columnMappings: newMappings };
+    });
+  },
+
   resetColumnMappings: () => set({ columnMappings: new Map() }),
 
   getColumnMappings: () => {
@@ -110,6 +150,23 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
       result[mapping.originalName] = mapping.updatedName;
     });
     return result;
+  },
+
+  getColumnDataTypes: () => {
+    const result: Record<string, string> = {};
+    get().columnMappings.forEach((mapping) => {
+      if (mapping.updatedDataType) {
+        result[mapping.updatedName] = mapping.updatedDataType;
+      }
+    });
+    return result;
+  },
+
+  hasDataTypeChanges: () => {
+    const mappings = get().columnMappings;
+    return Array.from(mappings.values()).some(
+      (mapping) => mapping.dataType !== mapping.updatedDataType
+    );
   },
 
   autoFixAllColumns: () => {

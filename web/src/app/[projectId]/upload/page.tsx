@@ -117,7 +117,8 @@ export default function UploadDatasetPage({
 
         <h1 className="text-2xl font-semibold">Upload Dataset</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload a CSV file to create a new dataset for your project
+          Upload a CSV file to create a new dataset for your project. You can
+          edit column names and datatypes before uploading.
         </p>
       </div>
 
