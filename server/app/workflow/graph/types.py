@@ -8,7 +8,7 @@ from app.models.query import QueryResult
 class State(TypedDict):
     dataset_ids: list[str] | None
     project_ids: list[str] | None
-    datasets: list[str]
+    identified_datasets: list[str]
     subqueries: list[str]
     subquery_index: int
     datasets_info: dict

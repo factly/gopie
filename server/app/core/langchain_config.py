@@ -6,13 +6,9 @@ from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
 from app.core.system_prompt import SYSTEM_PROMPT
+from app.models.data import Provider
 from app.tools import TOOLS
 from app.utils.model_selector import AVAILABLE_MODELS
-
-
-class Provider:
-    OPENAI = "openai"
-    GOOGLE = "google"
 
 
 class ModelConfig:
@@ -48,6 +44,10 @@ class ModelConfig:
             api_key=settings.PORTKEY_API_KEY,
             virtual_key=settings.OPENAI_VIRTUAL_KEY,
             trace_id=self.trace_id,
+            metadata={
+                "_user": "yuvrajsinh",
+                "project": "dataful-agent",
+            },
         )
 
     def _create_gemini_headers(self):
@@ -55,6 +55,10 @@ class ModelConfig:
             api_key=settings.PORTKEY_API_KEY,
             virtual_key=settings.GEMINI_VIRTUAL_KEY,
             trace_id=self.trace_id,
+            metadata={
+                "_user": "yuvrajsinh",
+                "project": "dataful-agent",
+            },
         )
 
 

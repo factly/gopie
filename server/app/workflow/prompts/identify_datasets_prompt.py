@@ -45,7 +45,7 @@ def create_identify_datasets_prompt(
         {{
             "selected_dataset": ["dataset_name1", "dataset_name2", ...],
             "reasoning": "Why these datasets were selected",
-            "column_predicted": [
+            "column_assumptions": [
                 {{
                     "dataset": "dataset_name1",
                     "columns": [

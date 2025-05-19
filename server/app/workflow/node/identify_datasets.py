@@ -50,16 +50,16 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
         if not semantic_searched_datasets:
             await adispatch_custom_event(
-                "datasets_identified",
+                "dataful-agent",
                 {
                     "content": "No relevant datasets found",
-                    "datasets": None,
+                    "identified_datasets": None,
                 },
             )
 
             return {
                 "query_result": query_result,
-                "datasets": None,
+                "identified_datasets": None,
                 "messages": [
                     ErrorMessage.from_json(
                         {"error": "No relevant datasets found"}
@@ -80,7 +80,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
         selected_datasets = parsed_content.get("selected_dataset", [])
         query_result.subqueries[query_index].tables_used = selected_datasets
-        column_assumptions = parsed_content.get("column_predicted", [])
+        column_assumptions = parsed_content.get("column_assumptions", [])
 
         filtered_dataset_schemas = [
             schema
@@ -88,41 +88,33 @@ async def identify_datasets(state: State, config: RunnableConfig):
             if schema.get("name") in selected_datasets
         ]
 
-        dataset_name_mapping = {}
-        for schema in filtered_dataset_schemas:
-            dataset_name_mapping[schema.get("name")] = schema.get(
-                "dataset_name", schema.get("name")
-            )
-
-        datasets_info = {
-            "column_assumptions": column_assumptions,
-            "schemas": filtered_dataset_schemas,
-            "dataset_name_mapping": dataset_name_mapping,
-        }
-
-        dataset_ids_mapping = {
-            schema.get("name"): schema.get("dataset_id")
+        dataset_name_mapping = {
+            schema.get("name"): schema.get("dataset_name", schema.get("name"))
             for schema in filtered_dataset_schemas
         }
 
         selected_dataset_ids = [
-            dataset_ids_mapping.get(dataset_name)
-            for dataset_name in selected_datasets
-            if dataset_name in dataset_ids_mapping
+            schema.get("dataset_id") for schema in filtered_dataset_schemas
         ]
+
+        datasets_info = {
+            "dataset_name_mapping": dataset_name_mapping,
+            "schemas": filtered_dataset_schemas,
+            "column_assumptions": column_assumptions,
+        }
 
         await adispatch_custom_event(
             "dataful-agent",
             {
                 "content": "Datasets identified",
-                "datasets": selected_dataset_ids,
+                "identified_datasets": selected_dataset_ids,
             },
         )
 
         return {
             "query_result": query_result,
             "datasets_info": datasets_info,
-            "datasets": selected_datasets,
+            "identified_datasets": selected_datasets,
             "messages": [IntermediateStep.from_json(parsed_content)],
         }
 
@@ -134,12 +126,12 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "dataful-agent",
             {
                 "content": "Error identifying datasets",
-                "datasets": None,
+                "identified_datasets": None,
             },
         )
 
         return {
             "query_result": query_result,
-            "datasets": None,
+            "identified_datasets": None,
             "messages": [ErrorMessage.from_json({"error": error_msg})],
         }

@@ -21,12 +21,11 @@ async def match_column_values(
             table names
 
     Returns:
-        Dictionary with matched columns, verified values, and suggestions
+        Dictionary with verified values, and similar values suggestions
     """
     result = {
         "value_matches": {},
         "value_suggestions": {},
-        "column_mappings": {},
     }
 
     if not column_assumptions or not dataset_name_mapping:
@@ -159,7 +158,10 @@ async def check_exact_match(
 async def find_similar_values(
     value: str, column_name: str, table_name: str
 ) -> list[str]:
-    """Find values in the column similar to the expected value."""
+    """
+    Find values in the column similar to the expected value.
+    """
+
     similar_values = []
 
     try:

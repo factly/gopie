@@ -22,7 +22,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         Updated state with the planned SQL query and related information
     """
     try:
-        selected_datasets = state.get("datasets", [])
+        identified_datasets = state.get("identified_datasets", [])
         query_index = state.get("subquery_index", 0)
         user_query = (
             state.get("subqueries")[query_index]
@@ -32,13 +32,13 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
 
-        if not selected_datasets:
+        if not identified_datasets:
             raise Exception("No dataset selected for query planning")
 
         retry_count = query_result.subqueries[query_index].retry_count
         error_messages = query_result.subqueries[query_index].error_message
 
-        if not selected_datasets:
+        if not identified_datasets:
             raise Exception("No dataset selected for query planning")
 
         if not datasets_info:

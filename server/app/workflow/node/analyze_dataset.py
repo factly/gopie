@@ -37,7 +37,7 @@ async def analyze_dataset(state: State) -> dict:
         datasets_info.pop("column_assumptions", None)
 
         return {
-            "dataset_info": datasets_info,
+            "datasets_info": datasets_info,
             "messages": [IntermediateStep.from_json(column_mappings)],
         }
     except Exception as e:

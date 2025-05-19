@@ -5,7 +5,7 @@ from qdrant_client.http.models import Distance, VectorParams
 
 from app.core.config import settings
 
-if settings.MODE == "development":
+if settings.MODE == "development" and False:
     client = QdrantClient(":memory:")
 else:
     client = QdrantClient(
