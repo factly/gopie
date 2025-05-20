@@ -25,6 +25,15 @@ type ChatMessage struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type DatabaseSource struct {
+	ID               pgtype.UUID
+	ConnectionString string
+	SqlQuery         string
+	Driver           string
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
 type Dataset struct {
 	ID          string
 	Name        string

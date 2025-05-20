@@ -50,7 +50,6 @@ func (d *OlapService) IngestFile(ctx context.Context, filepath string, name stri
 	// parse filepath to bucketname and path
 	// s3://bucketname/path/to/file
 	bucket, path, err := parseFilepath(filepath)
-
 	if err != nil {
 		return nil, err
 	}
@@ -337,4 +336,12 @@ func (d *OlapService) ExecuteQuery(query string) ([]map[string]any, error) {
 
 func (d *OlapService) DropTable(tableName string) error {
 	return d.olap.DropTable(tableName)
+}
+
+func (d *OlapService) CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error {
+	return d.olap.CreateTableFromPostgres(connectionString, sqlQuery, tableName)
+}
+
+func (d *OlapService) CreateTableFromMySql(connectionString, sqlQuery, tableName string) error {
+	return d.olap.CreateTableFromMySql(connectionString, sqlQuery, tableName)
 }

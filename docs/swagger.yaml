@@ -91,6 +91,51 @@ definitions:
     required:
     - prompt
     type: object
+  database.createRequestBody:
+    description: Request body for creating a database source dataset
+    properties:
+      alias:
+        description: Alias of the dataset
+        example: users_data
+        minLength: 3
+        type: string
+      connection_string:
+        description: Connection string for the Postgres database
+        example: postgres://username:password@localhost:5432/database
+        type: string
+      created_by:
+        description: User ID of the creator
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      description:
+        description: Description of the dataset
+        example: User data from our production database
+        maxLength: 500
+        minLength: 10
+        type: string
+      driver:
+        description: Driver of the database
+        enum:
+        - postgres
+        - mysql
+        example: postgres
+        type: string
+      project_id:
+        description: ID of the project to add the dataset to
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      sql_query:
+        description: SQL query to execute
+        example: SELECT * FROM users
+        type: string
+    required:
+    - alias
+    - connection_string
+    - created_by
+    - driver
+    - project_id
+    - sql_query
+    type: object
   datasets.updateDatasetParams:
     properties:
       alias:
@@ -375,6 +420,45 @@ info:
   title: GoPie API
   version: "1.0"
 paths:
+  /source/database/upload:
+    post:
+      consumes:
+      - application/json
+      description: Create a new dataset from a Postgres database query
+      parameters:
+      - description: Create request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/database.createRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Dataset'
+              type: object
+        "400":
+          description: Invalid request body or database connection error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Create dataset from Postgres
+      tags:
+      - database
   /source/s3/update:
     post:
       consumes:

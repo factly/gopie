@@ -14,6 +14,7 @@ import (
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
+	"github.com/factly/gopie/infrastructure/postgres/store/database_source"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
@@ -21,6 +22,7 @@ import (
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
+	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
@@ -71,6 +73,7 @@ func ServeHttp() error {
 	projectStore := projects.NewPostgresProjectStore(store.GetDB(), logger)
 	datasetStore := datasets.NewPostgresDatasetStore(store.GetDB(), logger)
 	chatStore := chats.NewChatStoreRepository(store.GetDB(), logger)
+	dbSourceStore := database_source.NewDatabaseSourceStore(store.GetDB(), logger, config)
 	aiAgentRepo := aiagent.NewAIAgent(config.AIAgent.Url, logger)
 
 	olapService := services.NewOlapService(olap, source, logger)
@@ -79,6 +82,7 @@ func ServeHttp() error {
 	datasetService := services.NewDatasetService(datasetStore)
 	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
 	aiAgentService := services.NewAIService(aiAgentRepo)
+	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, logger)
 
 	logger.Info("starting server", zap.String("host", config.Server.Host), zap.String("port", config.Server.Port))
 
@@ -123,6 +127,17 @@ func ServeHttp() error {
 	if config.OlapDB.AccessMode != "read_only" {
 		logger.Info("s3 upload routes enabled")
 		s3Routes.Routes(app.Group("/source/s3"), olapService, datasetService, projectService, aiAgentService, logger)
+
+		logger.Info("database source routes enabled")
+		databaseRoutes.Routes(
+			app.Group("/source/database"),
+			olapService,
+			datasetService,
+			projectService,
+			aiAgentService,
+			dbSourceService,
+			logger,
+		)
 	}
 
 	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)

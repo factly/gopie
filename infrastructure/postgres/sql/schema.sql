@@ -61,3 +61,12 @@ create table if not exists dataset_summary (
     dataset_name text not null references datasets(name) on delete cascade,
     summary jsonb not null
 );
+
+create table if not exists database_sources (
+    id uuid primary key default uuid_generate_v4(),
+    connection_string text not null,
+    sql_query text not null,
+    driver text not null,
+    created_at timestamp with time zone not null default now(),
+    updated_at timestamp with time zone not null default now()
+);
