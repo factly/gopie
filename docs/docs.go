@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/source/database/create": {
+        "/source/database/upload": {
             "post": {
                 "description": "Create a new dataset from a Postgres database query",
                 "consumes": [
@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/postgres.createRequestBody"
+                            "$ref": "#/definitions/database.createRequestBody"
                         }
                     }
                 ],
@@ -1405,6 +1405,62 @@ const docTemplate = `{
                 }
             }
         },
+        "database.createRequestBody": {
+            "description": "Request body for creating a database source dataset",
+            "type": "object",
+            "required": [
+                "alias",
+                "connection_string",
+                "created_by",
+                "driver",
+                "project_id",
+                "sql_query"
+            ],
+            "properties": {
+                "alias": {
+                    "description": "Alias of the dataset",
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "users_data"
+                },
+                "connection_string": {
+                    "description": "Connection string for the Postgres database",
+                    "type": "string",
+                    "example": "postgres://username:password@localhost:5432/database"
+                },
+                "created_by": {
+                    "description": "User ID of the creator",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "description": {
+                    "description": "Description of the dataset",
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 10,
+                    "example": "User data from our production database"
+                },
+                "driver": {
+                    "description": "Driver of the database",
+                    "type": "string",
+                    "enum": [
+                        "postgres",
+                        "mysql"
+                    ],
+                    "example": "postgres"
+                },
+                "project_id": {
+                    "description": "ID of the project to add the dataset to",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "sql_query": {
+                    "description": "SQL query to execute",
+                    "type": "string",
+                    "example": "SELECT * FROM users"
+                }
+            }
+        },
         "datasets.updateDatasetParams": {
             "type": "object",
             "required": [
@@ -1595,62 +1651,6 @@ const docTemplate = `{
                 "updated_by": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
-                }
-            }
-        },
-        "postgres.createRequestBody": {
-            "description": "Request body for creating a database source dataset",
-            "type": "object",
-            "required": [
-                "alias",
-                "connection_string",
-                "created_by",
-                "driver",
-                "project_id",
-                "sql_query"
-            ],
-            "properties": {
-                "alias": {
-                    "description": "Alias of the dataset",
-                    "type": "string",
-                    "minLength": 3,
-                    "example": "users_data"
-                },
-                "connection_string": {
-                    "description": "Connection string for the Postgres database",
-                    "type": "string",
-                    "example": "postgres://username:password@localhost:5432/database"
-                },
-                "created_by": {
-                    "description": "User ID of the creator",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "description": {
-                    "description": "Description of the dataset",
-                    "type": "string",
-                    "maxLength": 500,
-                    "minLength": 10,
-                    "example": "User data from our production database"
-                },
-                "driver": {
-                    "description": "Driver of the database",
-                    "type": "string",
-                    "enum": [
-                        "postgres",
-                        "mysql"
-                    ],
-                    "example": "postgres"
-                },
-                "project_id": {
-                    "description": "ID of the project to add the dataset to",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "sql_query": {
-                    "description": "SQL query to execute",
-                    "type": "string",
-                    "example": "SELECT * FROM users"
                 }
             }
         },

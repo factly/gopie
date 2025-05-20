@@ -87,6 +87,51 @@ definitions:
     required:
     - user_input
     type: object
+  database.createRequestBody:
+    description: Request body for creating a database source dataset
+    properties:
+      alias:
+        description: Alias of the dataset
+        example: users_data
+        minLength: 3
+        type: string
+      connection_string:
+        description: Connection string for the Postgres database
+        example: postgres://username:password@localhost:5432/database
+        type: string
+      created_by:
+        description: User ID of the creator
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      description:
+        description: Description of the dataset
+        example: User data from our production database
+        maxLength: 500
+        minLength: 10
+        type: string
+      driver:
+        description: Driver of the database
+        enum:
+        - postgres
+        - mysql
+        example: postgres
+        type: string
+      project_id:
+        description: ID of the project to add the dataset to
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      sql_query:
+        description: SQL query to execute
+        example: SELECT * FROM users
+        type: string
+    required:
+    - alias
+    - connection_string
+    - created_by
+    - driver
+    - project_id
+    - sql_query
+    type: object
   datasets.updateDatasetParams:
     properties:
       alias:
@@ -226,51 +271,6 @@ definitions:
         description: Last update timestamp
         example: "2024-02-05T12:00:00Z"
         type: string
-    type: object
-  postgres.createRequestBody:
-    description: Request body for creating a database source dataset
-    properties:
-      alias:
-        description: Alias of the dataset
-        example: users_data
-        minLength: 3
-        type: string
-      connection_string:
-        description: Connection string for the Postgres database
-        example: postgres://username:password@localhost:5432/database
-        type: string
-      created_by:
-        description: User ID of the creator
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      description:
-        description: Description of the dataset
-        example: User data from our production database
-        maxLength: 500
-        minLength: 10
-        type: string
-      driver:
-        description: Driver of the database
-        enum:
-        - postgres
-        - mysql
-        example: postgres
-        type: string
-      project_id:
-        description: ID of the project to add the dataset to
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      sql_query:
-        description: SQL query to execute
-        example: SELECT * FROM users
-        type: string
-    required:
-    - alias
-    - connection_string
-    - created_by
-    - driver
-    - project_id
-    - sql_query
     type: object
   projects.createRequestBody:
     description: Request body for creating a new project
@@ -416,7 +416,7 @@ info:
   title: GoPie API
   version: "1.0"
 paths:
-  /source/database/create:
+  /source/database/upload:
     post:
       consumes:
       - application/json
@@ -427,7 +427,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/postgres.createRequestBody'
+          $ref: '#/definitions/database.createRequestBody'
       produces:
       - application/json
       responses:

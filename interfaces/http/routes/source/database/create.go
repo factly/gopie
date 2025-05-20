@@ -42,7 +42,7 @@ type createRequestBody struct {
 // @Failure 400 {object} responses.ErrorResponse "Invalid request body or database connection error"
 // @Failure 404 {object} responses.ErrorResponse "Project not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /source/database/create [post]
+// @Router /source/database/upload [post]
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	// Get request body from context
 	var body createRequestBody
