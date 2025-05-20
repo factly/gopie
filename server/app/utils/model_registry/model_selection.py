@@ -5,14 +5,14 @@ from app.utils.model_registry.model_config import (
 )
 
 NODE_TO_MODEL = {
-    "analyze_query": "gpt-4o",
-    "plan_query": "gpt-4o",
-    "generate_subqueries": "gpt-4o",
-    "execute_query": "gpt-4o-mini",
-    "identify_datasets": "gpt-4o-mini",
-    "analyze_dataset": "gpt-4o-mini",
-    "extract_summary": "gpt-4o-mini",
-    "validate_query_result": "gpt-4o-mini",
+    "analyze_query": "gemini-2.5-flash-preview-04-17",
+    "plan_query": "gemini-2.5-flash-preview-04-17",
+    "generate_subqueries": "gemini-2.5-flash-preview-04-17",
+    "execute_query": "gemini-2.0-flash",
+    "identify_datasets": "gemini-2.5-flash-preview-04-17",
+    "generate_result": "gemini-2.5-flash-preview-04-17",
+    "stream_updates": "gemini-2.5-flash-preview-04-17",
+    "check_further_execution_requirement": "gemini-2.0-flash",
 }
 
 

@@ -16,49 +16,40 @@ def create_analyze_query_prompt(
         A formatted prompt string
     """
     return f"""
-        You are an AI assistant specialized in data analysis.
-        Your role is to help users analyze data by determining query types.
+        You are a data query classifier. Your only job is to categorize
+        the user query into ONE of three types.
 
-        USER QUERY:
-        "{user_query}"
+        USER QUERY: "{user_query}"
 
-        TOOL RESULTS from previous tool calls:
-        {json.dumps(tool_results)}
+        PREVIOUS TOOL RESULTS: {json.dumps(tool_results, indent=2)}
 
-        INSTRUCTIONS:
-        1. Classify this query into ONE of these types:
-            - "data_query": Requires SQL execution on datasets
-            (e.g., analysis, trends, statistics, filtered data)
-            - "conversational": General conversation not requiring
-                                data or tools
-            - "tool_only": Can be answered using available tools without SQL
+        QUERY TYPES - Select exactly ONE:
+        1. "data_query" - Requires SQL execution on datasets
+        * Needs database access to answer
+        * Examples: "Show sales trends", "Calculate average temps by region"
+        * Keywords: analyze, calculate, compare, find, show data, trends
 
-        2. For data queries:
-            - These require accessing and analyzing datasets with SQL
-            - Examples: "Show me sales trends",
-              "What's the average price?", "Compare metrics across regions"
+        2. "conversational" - General conversation not requiring data or tools
+        * Simple questions, greetings, or casual conversation
+        * Examples: "Hello", "How are you?", "What can you do?"
+        * No data analysis or specialized tools needed
 
-        3. For conversational queries:
-            - General questions, greetings, or casual conversation
-            - No dataset analysis or tools required
+        3. "tool_only" - Can be answered by directly calling tools
+        * Requires tools but NOT database queries
+        * Directly call a tool to gather the required data for user answer
+        * Examples: "What datasets do you have?", "Show schema for customers"
+        * Keywords: available data, metadata, schema, help with
 
-        4. For tool-only queries:
-            - If the query can be answered directly with
-              tool calls without dataset analysis, make those tool calls
-            - Try to call all necessary tools at once to answer the query
-            - Can be answered with tools but don't require SQL processing
-            - Examples: Questions about available datasets, \
-              schema information, metadata, tool-specific questions or can be
-              answered with the available tools
+        CRITICAL GUIDELINES:
+        - Choose EXACTLY ONE query type
+        - If ANY part requires data analysis, classify as "data_query"
+        - Be decisive - don't hedge or suggest multiple types
+        - If tools can directly answer without SQL, classify as "tool_only"
 
-        If there is a need of calling a tool to answer the query,
-        please call the tool(s) and dont return in the requested format
-        and directly make a tool call
-
-        Response format:
+        FORMAT YOUR RESPONSE AS JSON:
         {{
-            "query_type": "data_query|conversational|tool_only",
-            "reasoning": "Clear explanation of classification decision",
-            "data_query": true|false,
+            "query_type": "data_query" OR "conversational" OR "tool_only",
+            "reasoning": "1-2 sentences explaining your classification",
+            "data_query": true OR false
         }}
     """

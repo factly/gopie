@@ -89,11 +89,22 @@ async def _handle_conversational_query(
     }
 
     Instructions:
-    - Incorporate tool results naturally if relevant
-    - Preserve crucial information but present it clearly
-    - Respond professionally and warmly
-    - Keep response concise (3-5 sentences) unless detailed explanation needed
-    - Focus on direct, helpful answers
+    - Answer the query directly and confidently without mentioning your
+      information sources
+    - Seamlessly integrate relevant information from tool results
+      when applicable
+    - Respond in a friendly, professional, and conversational tone
+    - Be concise but thorough - prioritize accuracy over brevity
+    - Use simple language and avoid technical jargon unless appropriate
+    - Personalize your response based on the specific query context
+    - If uncertain about specific details, acknowledge limitations clearly
+    - Format information for maximum readability with lists or bullet points
+      when appropriate
+    - NEVER make up or fabricate data when you encounter errors or missing info
+    - When there are errors in data retrieval, clearly indicate that info
+      couldn't be retrieved without showing technical error details
+    - If data is unavailable, suggest alternative questions the user might ask
+    - Do not output technical details like SQL queries or error codes
     """
 
     llm = get_llm_for_node("generate_result", config)
@@ -175,22 +186,29 @@ async def _handle_data_query(
     }
 
     Instructions:
-        1. You are answering: "{user_query}"
-        2. Provide direct, concise answers based on the available data,
-           but don't mention that you got information from SQL query results.
-           You should directly answer the original user query.
-        3. Present key insights first
-        4. Format numbers properly (1,000,000, ₹, etc.)
-        5. Include trends and patterns for financial/statistical data
-        6. Use clear comparative language
-        7. Only use facts from query results
-        8. If there were errors in some parts of the query,
-           acknowledge them briefly but focus on the data that was
-         successfully retrieved
-        9. Be transparent about limitations caused by errors without
-        being negative
-        10. If the data seems insufficient to fully answer the query,
-        clearly state what aspects you can answer and what remains unclear
+    1. Answer the user's query directly and with confidence, avoiding phrases
+       like "based on the data" or "according to the results"
+    2. Start with the most important insights and key findings that directly
+       address "{user_query}"
+    3. Format numerical data properly with appropriate separators
+       (e.g., 1,000,000) and currency symbols when relevant
+    4. Highlight trends, patterns, and comparisons when present in the data
+    5. Use simple, clear language that a non-technical audience can understand
+    6. Organize information logically with natural transitions between
+       related points
+    7. For financial or statistical data, include brief interpretations
+       of what the numbers signify
+    8. Be precise and factual - only state what is explicitly supported
+       by the data
+    9. If some portions of the data were unavailable due to errors, focus on
+       delivering value from the available information
+    10. When appropriate, conclude with the most meaningful insight or takeaway
+    11. From the subqueries that outputted summaries, give a brief extract of
+        the most important insights
+    12. NEVER make up or fabricate data that isn't explicitly in the results
+    13. If there are errors or missing data, clearly acknowledge this without
+        showing technical error details
+    14. Do not output technical details like SQL queries or error codes
     """
 
     llm = get_llm_for_node("generate_result", config)
@@ -224,18 +242,23 @@ async def _handle_empty_results(
     prompt = f"""
     The user asked: "{user_query}"
 
-    I need to inform them that I couldn't find any matching data in a
-    helpful way.
-
-    Errors that occurred:
-    {errors}
+    Any errors that occurred while executing the query: {errors}
 
     Instructions:
-    1. Be empathetic but professional
-    2. Specifically mention their query topic
-    3. Suggest 2-3 possible alternative approaches or related questions they
-       might try
-    4. If there were errors, briefly acknowledge them without technical details
+    1. Acknowledge that no matching data was found for their specific query
+    2. Be empathetic but confident in your response, maintaining a helpful tone
+    3. Briefly mention the essence of their query to personalize the response
+    4. If errors occurred during processing, acknowledge them in general terms
+       without technical details
+    5. Suggest 2-3 specific alternative approaches or related questions they
+       might try instead
+    6. Phrase your suggestions as actionable recommendations
+    7. Avoid apologies - instead, focus on providing alternative paths forward
+    8. Keep your response concise and constructive
+    9. NEVER make up or fabricate data, especially when errors have occurred
+    10. Clearly inform the user that the requested information couldn't be
+        retrieved without exposing technical error details
+    11. Do not output technical details like SQL queries or error codes
     """
 
     llm = get_llm_for_node("generate_result", config)

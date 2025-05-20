@@ -15,7 +15,7 @@ MODELS = {
 }
 
 DEFAULT_MODEL = "gpt-4o"
-DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_EMBEDDING_MODEL = "text-embedding-3-large"
 
 
 AVAILABLE_MODELS: dict[str, ModelInfo] = {

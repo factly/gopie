@@ -21,6 +21,7 @@ def create_query_prompt(
     Returns:
         A formatted prompt string
     """
+
     error_context = ""
     if error_message and attempt > 1:
         error_context = f"""
@@ -30,15 +31,21 @@ def create_query_prompt(
         Please fix the issues in the query and try again. This is attempt
         {attempt} of 3.
         """
-    return f"""
+
+    formatted_datasets = json.dumps(datasets_info, indent=2)
+
+    prompt = f"""
+        # QUERY TASK
         Given the following natural language query and detailed information
         about multiple datasets, create an appropriate SQL query.
 
         User Query: "{user_query}"
 
+        # DATASETS INFORMATION
         Selected Datasets Information:
-        {json.dumps(datasets_info, indent=2)}
+        {formatted_datasets}
 
+        # DATASET NAMING GUIDELINES
         IMPORTANT - DATASET NAMING:
         - Each dataset has a 'name' (user-friendly name) and an 'dataset_name'
           (the real table name in the database)
@@ -48,15 +55,16 @@ def create_query_prompt(
           actual table name might be "ASD_ASDRDasdfaW"
         - Reference the provided `dataset_name_mapping` for the correct mapping
 
-        IMPORTANT - CASE SENSITIVITY:
+        # CASE SENSITIVITY GUIDELINES
         - When comparing column values (not column names), use LOWER() function
           for case-insensitive matching
         - Example: WHERE LOWER(column_name) = LOWER('value')
         - Do NOT use LOWER() for column names or table/dataset names
 
-        Error Context: {error_context}
+        # ERROR INFORMATION
+        {error_context}
 
-        IMPORTANT GUIDELINES:
+        # QUERY DEVELOPMENT GUIDELINES (IMPORTANT)
         1. Use the EXACT column names as shown in the dataset information
         2. Create a query that directly addresses the user's question
         3. If the user's query refers to a time period that doesn't match the
@@ -73,6 +81,7 @@ def create_query_prompt(
         7. For text comparisons, use LOWER() function on both sides to ensure
            case-insensitive matching
 
+        # SQL FORMATTING REQUIREMENTS
         SQL FORMATTING REQUIREMENTS:
         You must provide two versions of the SQL query:
         1. "sql_query": A simple version for execution
@@ -82,11 +91,12 @@ def create_query_prompt(
            - Proper indentation for readability
            - Consistent spacing around operators
 
+        # RESPONSE FORMAT
         Respond in this JSON format:
         {{
             "sql_query": "the SQL query to fetch the required data",
             "formatted_sql_query": "the well-formatted SQL query for UI
-                                    display",
+                                   display",
             "explanation": "brief explanation of what the query does",
             "tables_used": ["list of tables needed"],
             "joins_required": [
@@ -100,3 +110,5 @@ def create_query_prompt(
             "expected_result": "description of what the query will return"
         }}
     """
+
+    return prompt
