@@ -4,24 +4,25 @@ import * as React from "react";
 import { useState } from "react";
 import { UppyFile, Meta } from "@uppy/core";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import "@uppy/core/dist/style.css";
 import "@uppy/dashboard/dist/style.css";
 import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { CsvValidationUppy } from "@/components/dataset/csv-validation-uppy";
 import { useRouter } from "next/navigation";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
+
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
 
 export default function UploadDatasetPage({
   params,
 }: {
   params: Promise<{ projectId: string }>;
 }) {
-  // Unwrap params Promise with React.use()
   const { projectId } = React.use(params);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const sourceDataset = useSourceDataset();
@@ -30,6 +31,11 @@ export default function UploadDatasetPage({
   const getColumnMappings = useColumnNameStore(
     (state) => state.getColumnMappings
   );
+
+  const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState<
+    "postgres" | "mysql" | null
+  >(null);
 
   const handleUploadSuccess = async (
     file: UppyFile<Meta, Record<string, never>>,
@@ -43,23 +49,14 @@ export default function UploadDatasetPage({
 
     try {
       setUploadError(null);
-
-      // Extract s3Url from response
       const uploadURL = (response as { uploadURL?: string })?.uploadURL;
       const s3Url = uploadURL ? `s3:/${new URL(uploadURL).pathname}` : "";
-
-      // Get dataset name and description from file metadata if available
       const datasetName =
         file.meta.datasetName?.toString() ||
         file.meta.alias?.toString() ||
         (file.name || "dataset").replace(/\.csv$/, "");
       const datasetDescription =
-        file.meta.description?.toString() || "Uploaded from GoPie Web";
-
-      console.log("File metadata:", file.meta);
-      console.log("Dataset name being used:", datasetName);
-
-      // Get the column name mappings
+        file.meta.description?.toString() || "Uploaded from GoPie Web (CSV)";
       const alter_column_names = getColumnMappings();
 
       const res = await sourceDataset.mutateAsync({
@@ -71,35 +68,47 @@ export default function UploadDatasetPage({
         alter_column_names: alter_column_names,
       });
 
-      if (!res?.data.dataset.name) {
-        throw new Error("Invalid response from server");
+      if (!res?.data.dataset.id) {
+        throw new Error("Invalid response from server: Dataset ID not found.");
       }
 
-      toast.success(`Dataset ${datasetName} uploaded successfully`);
-      queryClient.invalidateQueries({
-        queryKey: ["project"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["datasets"],
-      });
-
-      // Navigate back to project page after successful upload
+      toast.success(
+        `Dataset ${res.data.dataset.alias} (CSV) uploaded successfully`
+      );
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
       router.push(`/${projectId}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-
       setUploadError(errorMessage);
-
-      if (
-        error instanceof Error &&
-        error.message.includes("add dataset to project")
-      ) {
-        toast.error(`Failed to add dataset to project: ${errorMessage}`);
-      } else {
-        toast.error(`Failed to source dataset: ${errorMessage}`);
-      }
+      toast.error(`Failed to source dataset (CSV): ${errorMessage}`);
     }
+  };
+
+  const handleDbSourceSuccess = (datasetAlias: string) => {
+    toast.success(
+      `Dataset ${datasetAlias} (from ${selectedDriver}) created successfully`
+    );
+    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
+    setIsDbDialogOpen(false);
+    setSelectedDriver(null);
+    router.push(`/${projectId}`);
+  };
+
+  const handleDbSourceError = (errorMessage: string) => {
+    toast.error(
+      `Failed to create dataset from ${
+        selectedDriver || "database"
+      }: ${errorMessage}`
+    );
+  };
+
+  const openDbDialog = (driver: "postgres" | "mysql") => {
+    setSelectedDriver(driver);
+    setUploadError(null);
+    setIsDbDialogOpen(true);
   };
 
   return (
@@ -114,29 +123,65 @@ export default function UploadDatasetPage({
           <ArrowLeft className="h-4 w-4" />
           Back to project
         </Button>
-
-        <h1 className="text-2xl font-semibold">Upload Dataset</h1>
+        <h1 className="text-2xl font-semibold">Add Dataset</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload a CSV file to create a new dataset for your project. You can
-          edit column names and datatypes before uploading.
+          Upload a CSV file or connect to a database to create a new dataset.
         </p>
       </div>
 
-      <div className="bg-card border rounded-lg p-6">
+      <div className="bg-card border rounded-lg p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-1">Upload CSV File</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Drag & drop a CSV file or click to browse.
+        </p>
         {uploadError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Upload Error</AlertTitle>
+            <AlertTitle>CSV Upload Error</AlertTitle>
             <AlertDescription>{uploadError}</AlertDescription>
           </Alert>
         )}
-
         <CsvValidationUppy
           projectId={projectId}
           onUploadSuccess={handleUploadSuccess}
           width="100%"
         />
       </div>
+
+      <div className="bg-card border rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-1 flex items-center">
+          <Database className="h-5 w-5 mr-2" /> Connect to Database
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Create a dataset by querying your existing PostgreSQL or MySQL
+          database.
+        </p>
+        <div className="flex gap-4">
+          <Button onClick={() => openDbDialog("postgres")} variant="outline">
+            Connect to PostgreSQL
+          </Button>
+          <Button onClick={() => openDbDialog("mysql")} variant="outline">
+            Connect to MySQL
+          </Button>
+        </div>
+      </div>
+
+      <Dialog open={isDbDialogOpen} onOpenChange={setIsDbDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          {selectedDriver && (
+            <DatabaseSourceForm
+              projectId={projectId}
+              driver={selectedDriver}
+              onCloseDialog={() => {
+                setIsDbDialogOpen(false);
+                setSelectedDriver(null);
+              }}
+              onSuccess={handleDbSourceSuccess}
+              onError={handleDbSourceError}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
