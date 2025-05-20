@@ -9,7 +9,7 @@ from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from app.utils.model_provider import ModelProvider
+from app.utils.model_registry.model_provider import ModelProvider
 
 
 async def add_documents_to_vector_store(documents, ids=None):

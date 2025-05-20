@@ -10,27 +10,32 @@ class ModelProvider:
         self,
         model_id: str | None = None,
         trace_id: str | None = None,
+        with_tools: bool = False,
     ):
         self.model_id = model_id
         self.trace_id = trace_id
+        self.with_tools = with_tools
 
     def get_llm(self):
         model_config = ModelConfig(
             model_id=self.model_id, trace_id=self.trace_id
         )
-        return LangchainConfig(model_config).llm
 
-    def get_llm_prompt_chain(self):
-        model_config = ModelConfig(
-            model_id=self.model_id, trace_id=self.trace_id
-        )
-        return LangchainConfig(model_config).llm_prompt_chain
+        lc_config = LangchainConfig(model_config)
+        return lc_config.llm
 
-    def get_llm_with_tools(self):
+    def get_node_llm(self):
         model_config = ModelConfig(
-            model_id=self.model_id, trace_id=self.trace_id
+            model_id=self.model_id,
+            trace_id=self.trace_id,
         )
-        return LangchainConfig(model_config).llm_with_tools
+
+        lc_config = LangchainConfig(model_config)
+
+        if self.with_tools:
+            return lc_config.prompt_chain | lc_config.llm_with_tools
+        else:
+            return lc_config.prompt_chain | lc_config.llm
 
     def get_embeddings_model(self):
         model_config = ModelConfig(
@@ -53,12 +58,9 @@ def get_llm_for_node(
     model_id = NODE_TO_MODEL.get(node_name, DEFAULT_MODEL)
     trace_id = config.get("configurable", {}).get("trace_id")
 
-    if with_tools:
-        return ModelProvider(
-            model_id=model_id, trace_id=trace_id
-        ).get_llm_with_tools()
-    else:
-        return ModelProvider(model_id=model_id, trace_id=trace_id).get_llm()
+    return ModelProvider(
+        model_id=model_id, trace_id=trace_id, with_tools=with_tools
+    ).get_node_llm()
 
 
 def get_custom_model(model_id: str):

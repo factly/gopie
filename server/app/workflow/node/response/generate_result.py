@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
-from app.utils.model_provider import model_provider
+from app.utils.model_registry.model_provider import get_llm_for_node
 from app.workflow.graph.types import State
 
 
@@ -96,7 +96,7 @@ async def _handle_conversational_query(
     - Focus on direct, helpful answers
     """
 
-    llm = model_provider(config=config).get_llm()
+    llm = get_llm_for_node("generate_result", config)
     response = await llm.ainvoke({"input": prompt})
 
     return {
@@ -193,7 +193,7 @@ async def _handle_data_query(
         clearly state what aspects you can answer and what remains unclear
     """
 
-    llm = model_provider(config=config).get_llm()
+    llm = get_llm_for_node("generate_result", config)
     response = await llm.ainvoke({"input": prompt})
 
     return {
@@ -238,7 +238,7 @@ async def _handle_empty_results(
     4. If there were errors, briefly acknowledge them without technical details
     """
 
-    llm = model_provider(config=config).get_llm()
+    llm = get_llm_for_node("generate_result", config)
     response = await llm.ainvoke({"input": prompt})
 
     return {

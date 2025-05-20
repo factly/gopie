@@ -5,16 +5,13 @@ from qdrant_client.http.models import Distance, VectorParams
 
 from app.core.config import settings
 
-if settings.MODE == "development" and False:
-    client = QdrantClient(":memory:")
-else:
+
+def initialize_qdrant_client():
     client = QdrantClient(
         url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
         check_compatibility=False,
     )
 
-
-def initialize_qdrant_client():
     if not collection_exists(client):
         client.create_collection(
             collection_name=settings.QDRANT_COLLECTION,

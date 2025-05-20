@@ -70,6 +70,7 @@ class LangchainConfig:
     def __init__(self, config: ModelConfig):
         self.config = config
         self.llm = self._create_llm()
+        self.prompt_chain = self._create_prompt_chain()
         self.llm_with_tools = self._create_llm_with_tools()
         self.llm_prompt_chain = self._create_llm_prompt_chain()
         self.embeddings_model = self._create_embeddings_model()
@@ -82,18 +83,19 @@ class LangchainConfig:
 
         return model
 
-    def _create_llm_with_tools(self):
-        return self.llm.bind_tools(list(TOOLS.values()))
-
-    def _create_llm_prompt_chain(self):
-        prompt = ChatPromptTemplate.from_messages(
+    def _create_prompt_chain(self):
+        return ChatPromptTemplate.from_messages(
             [
                 ("system", SYSTEM_PROMPT),
                 ("human", "{input}"),
             ]
         )
 
-        return prompt | self.llm
+    def _create_llm_with_tools(self):
+        return self.llm.bind_tools(list(TOOLS.values()))
+
+    def _create_llm_prompt_chain(self):
+        return self.prompt_chain | self.llm_with_tools
 
     def _create_openai_model(self):
         return ChatOpenAI(

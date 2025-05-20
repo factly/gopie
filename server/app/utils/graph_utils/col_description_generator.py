@@ -4,7 +4,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.models.schema import DatasetSchema
-from app.utils.model_provider import ModelProvider
+from app.utils.model_registry.model_provider import get_custom_model
 
 
 async def generate_column_descriptions(
@@ -49,14 +49,10 @@ async def generate_column_descriptions(
     """
 
     prompt = ChatPromptTemplate.from_template(template)
-    model_provider = ModelProvider()
+    llm = get_custom_model("gpt-4o-mini")
 
     try:
-        chain = (
-            prompt
-            | model_provider.get_custom_model("gpt-4o-mini")
-            | JsonOutputParser()
-        )
+        chain = prompt | llm | JsonOutputParser()
         response = await chain.ainvoke(
             {
                 "dataset_schema": schema,

@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.model_provider import ModelProvider, model_provider
+from app.utils.model_registry.model_provider import get_llm_for_node
 from app.workflow.graph.types import State
 
 
@@ -78,7 +78,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         Your response should be informative and forward-looking.
         """
 
-    llm = model_provider(config=config).get_llm()
+    llm = get_llm_for_node("stream_updates", config)
     response = await llm.ainvoke({"input": stream_update_prompt})
 
     logging.info(f"Stream updates response: {response.content}")
@@ -86,7 +86,9 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     return {"messages": [AIMessage(content=response.content)]}
 
 
-async def check_further_execution_requirement(state: State) -> str:
+async def check_further_execution_requirement(
+    state: State, config: RunnableConfig
+) -> str:
     """
     Determines if further execution is required based on the current state.
     Returns a string indicating the next step: "next_sub_query" or
@@ -153,9 +155,7 @@ async def check_further_execution_requirement(state: State) -> str:
         (true/false), not a string. Do not wrap it in quotes.
     """
 
-    model = ModelProvider()
-
-    llm = model.get_custom_model(model_id="gpt-4o-mini")
+    llm = get_llm_for_node("check_further_execution_requirement", config)
     response = await llm.ainvoke({"input": dependency_analysis_prompt})
 
     await adispatch_custom_event(

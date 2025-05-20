@@ -3,7 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.utils.model_provider import model_provider
+from app.utils.model_registry.model_provider import get_llm_for_node
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
@@ -55,7 +55,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             attempt=retry_count + 1,
         )
 
-        llm = model_provider(config=config).get_llm()
+        llm = get_llm_for_node("plan_query", config)
         response = await llm.ainvoke({"input": llm_prompt})
         response_content = str(response.content)
 

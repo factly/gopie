@@ -1,7 +1,8 @@
-from typing import Optional
-
 from app.models.router import ModelInfo
-from server.app.utils.model_registry.model_config import AVAILABLE_MODELS
+from app.utils.model_registry.model_config import (
+    AVAILABLE_MODELS,
+    DEFAULT_MODEL,
+)
 
 NODE_TO_MODEL = {
     "analyze_query": "gpt-4o",
@@ -15,6 +16,13 @@ NODE_TO_MODEL = {
 }
 
 
-def get_model_info(model_id: str) -> Optional[ModelInfo]:
-    """Get information about a specific model"""
-    return AVAILABLE_MODELS.get(model_id)
+def get_model_info(model_id: str) -> ModelInfo:
+    model_info = AVAILABLE_MODELS.get(model_id)
+
+    if model_info is None:
+        default_model_info = AVAILABLE_MODELS.get(DEFAULT_MODEL)
+        if default_model_info is None:
+            raise ValueError(f"Default model {DEFAULT_MODEL} not found")
+        return default_model_info
+
+    return model_info

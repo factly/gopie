@@ -7,7 +7,10 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
-from app.utils.model_provider import model_provider
+from app.utils.model_registry.model_provider import (
+    get_llm_for_node,
+    get_model_provider,
+)
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
@@ -29,8 +32,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
     project_ids = state.get("project_ids", [])
 
     try:
-        llm = model_provider(config=config).get_llm()
-        embeddings_model = model_provider(config=config).get_embeddings_model()
+        llm = get_llm_for_node("identify_datasets", config)
+        embeddings_model = get_model_provider(config).get_embeddings_model()
 
         semantic_searched_datasets = []
         try:
