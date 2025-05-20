@@ -1,9 +1,8 @@
 package models
 
 type UploadSchemaParams struct {
-	ProjectID string
-	DatasetID string
-	FilePath  string
+	ProjectID string `json:"project_id"`
+	DatasetID string `json:"dataset_id"`
 }
 
 type AIAgentChatParams struct {

@@ -180,7 +180,6 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: project.ID,
-		FilePath:  res.FilePath,
 	})
 	if err != nil {
 		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error

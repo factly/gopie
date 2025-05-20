@@ -17,7 +17,8 @@ func (a *aiAgent) UploadSchema(params *models.UploadSchemaParams) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", "/upload_schema", bytes.NewBuffer(bodyBuf))
+	url := a.buildUrl("/api/v1/upload_schema")
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBuf))
 	if err != nil {
 		a.logger.Error("Error in creating request to AI agent", zap.Error(err))
 		return err
@@ -52,6 +53,8 @@ func (a *aiAgent) UploadSchema(params *models.UploadSchemaParams) error {
 		a.logger.Error("Error in response from AI agent", zap.String("message", respBody.Message))
 		return fmt.Errorf("error in response from AI agent: %s", respBody.Message)
 	}
+
+	a.logger.Debug("Schema uploaded successfully", zap.String("message", respBody.Message))
 
 	return nil
 }
