@@ -48,7 +48,7 @@ export interface Dataset {
 export interface ChatMessage {
   id: string;
   content: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "intermediate" | "ai";
   created_at: string;
 }
 

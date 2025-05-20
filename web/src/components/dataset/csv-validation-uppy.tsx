@@ -7,6 +7,7 @@ import AwsS3 from "@uppy/aws-s3";
 import {
   validateCsvWithDuckDb,
   ValidationResult,
+  convertCsvWithTypes,
 } from "@/lib/validation/validate-csv";
 import { useDuckDb } from "@/hooks/useDuckDb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,6 +43,7 @@ export function CsvValidationUppy({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [modifiedFile, setModifiedFile] = useState<File | null>(null);
 
   // Validation state
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -61,15 +63,77 @@ export function CsvValidationUppy({
   const getColumnMappings = useColumnNameStore(
     (state) => state.getColumnMappings
   );
+  const getColumnDataTypes = useColumnNameStore(
+    (state) => state.getColumnDataTypes
+  );
+  const hasDataTypeChanges = useColumnNameStore(
+    (state) => state.hasDataTypeChanges
+  );
 
   // Calculate if all column names are valid
   const allColumnsValid = Array.from(columnMappings.values()).every(
     (mapping) => mapping.isValid
   );
   const canUpload =
-    selectedFile !== null &&
+    (selectedFile !== null || modifiedFile !== null) &&
     allColumnsValid &&
     validationResult?.isValid === true;
+
+  // Process datatype changes immediately when they happen
+  const handleDataTypeChange = async () => {
+    if (!db || !selectedFile || !isInitialized) {
+      toast.error("DuckDB is not initialized or no file selected");
+      return;
+    }
+
+    if (!hasDataTypeChanges()) {
+      // If no datatype changes, nothing to do
+      return;
+    }
+
+    try {
+      // Get column mappings and data types
+      const mappings = getColumnMappings();
+      const dataTypes = getColumnDataTypes();
+
+      // Read the original file as ArrayBuffer
+      const buffer = await selectedFile.arrayBuffer();
+
+      // Show processing toast
+      toast.loading("Processing datatypes with DuckDB...", {
+        id: "process-datatypes",
+      });
+
+      // Convert the CSV with updated datatypes
+      const convertedBuffer = await convertCsvWithTypes(
+        db,
+        buffer,
+        mappings,
+        dataTypes
+      );
+
+      // Create a new File from the converted buffer
+      const newFile = new File(
+        [convertedBuffer],
+        `converted_${selectedFile.name}`,
+        { type: "text/csv" }
+      );
+
+      // Update state with the new file
+      setModifiedFile(newFile);
+
+      toast.success("CSV processed with updated datatypes!", {
+        id: "process-datatypes",
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Error processing datatypes: ${errorMessage}`, {
+        id: "process-datatypes",
+      });
+      setUploadError(`Error processing datatypes: ${errorMessage}`);
+    }
+  };
 
   // Set project ID in store when component mounts or project ID changes
   useEffect(() => {
@@ -79,6 +143,7 @@ export function CsvValidationUppy({
     return () => {
       resetColumnMappings();
       setSelectedFile(null);
+      setModifiedFile(null);
       setValidationResult(null);
       setUploadError(null);
       if (uppy) {
@@ -140,6 +205,7 @@ export function CsvValidationUppy({
 
         // Reset states
         setSelectedFile(null);
+        setModifiedFile(null);
         setValidationResult(null);
         resetColumnMappings();
         setUploadProgress(0);
@@ -171,6 +237,7 @@ export function CsvValidationUppy({
   const handleFileSelected = async (file: File) => {
     // Reset states
     setSelectedFile(file);
+    setModifiedFile(null);
     setUploadError(null);
     setValidationResult(null);
     resetColumnMappings();
@@ -213,7 +280,7 @@ export function CsvValidationUppy({
 
         // If validation successful and we have column names, update the column name store
         if (result.columnNames) {
-          setColumnMappings(result.columnNames);
+          setColumnMappings(result.columnNames, result.columnTypes);
         }
       }
     } catch (error) {
@@ -227,6 +294,7 @@ export function CsvValidationUppy({
   // Clear selected file
   const handleClearFile = () => {
     setSelectedFile(null);
+    setModifiedFile(null);
     setValidationResult(null);
     resetColumnMappings();
     setUploadError(null);
@@ -237,7 +305,7 @@ export function CsvValidationUppy({
 
   // Handle file upload
   const handleUpload = async (datasetName?: string, description?: string) => {
-    if (!uppy || !selectedFile || !canUpload) {
+    if (!uppy || (!selectedFile && !modifiedFile) || !canUpload) {
       toast.error("Please fix all validation errors before uploading");
       return;
     }
@@ -246,14 +314,22 @@ export function CsvValidationUppy({
       // Clear any previous uploads
       uppy.cancelAll();
 
+      // Use the modified file if available, otherwise use the original file
+      const fileToUpload = modifiedFile || selectedFile;
+
+      if (!fileToUpload) {
+        toast.error("No file available for upload");
+        return;
+      }
+
       // Create timestamp for file name
       const timestamp = new Date().getTime();
-      const sanitizedName = sanitizeFileName(selectedFile.name);
+      const sanitizedName = sanitizeFileName(fileToUpload.name);
 
       // Format path according to [projectId]/dataset_[time]_filename.csv
       const path = `${projectId}/dataset_${timestamp}_${sanitizedName}`;
 
-      // Get column mappings from store
+      // Get column mappings from store - these will be used by the backend to rename columns
       const mappings = getColumnMappings();
 
       // Use provided dataset name or sanitized filename
@@ -262,8 +338,8 @@ export function CsvValidationUppy({
       // Add file to Uppy with the custom dataset name stored properly in metadata
       uppy.addFile({
         name: path, // This is the file path for storage
-        type: selectedFile.type,
-        data: selectedFile,
+        type: fileToUpload.type,
+        data: fileToUpload,
         meta: {
           alias: alias, // Store the dataset name as 'alias' to be more clear
           datasetName: alias, // Also store as datasetName for redundancy
@@ -271,6 +347,7 @@ export function CsvValidationUppy({
           type: "dataset",
           columnMappings: JSON.stringify(mappings),
           description: description || "Uploaded from GoPie Web",
+          processedWithDuckDB: modifiedFile !== null, // Flag to indicate if the file was processed with DuckDB
         },
       });
 
@@ -337,6 +414,17 @@ export function CsvValidationUppy({
                     <p className="text-xs mt-1 max-h-20 overflow-y-auto">
                       {validationResult.columnNames.join(", ")}
                     </p>
+                    {modifiedFile && (
+                      <p className="text-sm mt-2 text-blue-500 font-medium">
+                        File processed with custom datatypes. The column names
+                        will be updated during import.
+                      </p>
+                    )}
+                    {hasDataTypeChanges() && !modifiedFile && (
+                      <p className="text-sm mt-2 text-amber-500">
+                        Datatype changes will be applied on next edit
+                      </p>
+                    )}
                   </div>
                 )}
           </AlertDescription>
@@ -349,14 +437,16 @@ export function CsvValidationUppy({
         onUpload={handleUpload}
         isUploading={isUploading}
         progress={uploadProgress}
-        selectedFile={selectedFile}
+        selectedFile={modifiedFile || selectedFile}
         canUpload={canUpload}
         onClearFile={handleClearFile}
         className={typeof width === "number" ? `w-[${width}px]` : width}
       />
 
-      {/* Column name editor */}
-      {validationResult?.isValid && <ColumnNameEditor />}
+      {/* Column name editor with datatype processing callback */}
+      {validationResult?.isValid && (
+        <ColumnNameEditor onDataTypeChange={handleDataTypeChange} />
+      )}
     </div>
   );
 }

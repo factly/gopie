@@ -3,6 +3,7 @@ import * as duckdb from "@duckdb/duckdb-wasm";
 export interface ValidationResult {
   isValid: boolean;
   columnNames?: string[];
+  columnTypes?: string[];
   columnCount?: number;
   previewRowCount?: number;
   previewData?: unknown[][];
@@ -11,64 +12,74 @@ export interface ValidationResult {
 }
 
 /**
- * Validates a CSV file using DuckDB WebAssembly
- * @param db The DuckDB instance
- * @param fileArrayBuffer The file content as ArrayBuffer
- * @param fileSize The file size in bytes
- * @returns Validation result with error or success information
+ * Validates a CSV file using DuckDB WASM in the browser
  */
 export async function validateCsvWithDuckDb(
   db: duckdb.AsyncDuckDB,
   fileArrayBuffer: ArrayBuffer,
   fileSize: number
 ): Promise<ValidationResult> {
-  // Skip validation for files larger than 1GB
-  const ONE_GB = 1000 * 1000 * 1000;
-  if (fileSize > ONE_GB) {
-    return {
-      isValid: true,
-      error:
-        "File too large for browser validation, will be uploaded and validated on the server",
-    };
-  }
-
-  // Create a connection to DuckDB
+  // We'll create a virtual file name for the CSV
+  const virtualFileName = `temp_${Date.now()}.csv`;
   const conn = await db.connect();
 
   try {
-    // Create virtual filename for the CSV
-    const virtualFileName = `temp_file_${Date.now()}.csv`;
-
-    // Register the file buffer with DuckDB
-    await db.registerFileBuffer(
-      virtualFileName,
-      new Uint8Array(fileArrayBuffer)
-    );
-
     try {
-      // First try to read the CSV with auto-detection to check for parsing errors
-      const validationResults = await conn.query(`
-        SELECT * FROM read_csv_auto('${virtualFileName}', header=true, sample_size=1000)
-        LIMIT 5
-      `);
-
-      // Check if we got valid results
-      if (!validationResults) {
-        throw new Error("Failed to read CSV file");
+      // If file is too large (>1GB), we'll do basic validation only
+      if (fileSize > 1024 * 1024 * 1024) {
+        await conn.close();
+        return {
+          isValid: true,
+          error:
+            "File is larger than 1GB. Only basic validation performed, full validation will be done on the server.",
+        };
       }
 
-      // Get column info and row count for validation message
-      const columnCount = validationResults.schema.fields.length;
-      const previewRowCount = validationResults.numRows;
-      const dataPreview = validationResults.toArray() as unknown[][];
-      const columnNames = validationResults.schema.fields.map((f) => f.name);
+      // Register the file buffer with DuckDB
+      await db.registerFileBuffer(
+        virtualFileName,
+        new Uint8Array(fileArrayBuffer)
+      );
 
-      // Now try creating a table from the validated CSV to catch any deeper issues
+      // First create a temp table from the CSV
       const tempTableName = `temp_validate_${Date.now()}`;
       await conn.query(`
         CREATE TABLE ${tempTableName} AS 
         SELECT * FROM read_csv_auto('${virtualFileName}', header=true)
       `);
+
+      // Now get column info from the created table
+      const result = await conn.query(`
+        SELECT 
+          column_name, 
+          data_type as column_type
+        FROM 
+          information_schema.columns
+        WHERE 
+          table_name = '${tempTableName}'
+      `);
+
+      const columnNames: string[] = [];
+      const columnTypes: string[] = [];
+      const schema = result.toArray().map((row) => ({
+        name: row.column_name.toString(),
+        type: row.column_type.toString(),
+      }));
+
+      schema.forEach((col) => {
+        columnNames.push(col.name);
+        columnTypes.push(col.type);
+      });
+
+      // Get preview data (first 10 rows)
+      const previewRowCount = 10;
+      const previewQuery = await conn.query(`
+        SELECT * FROM ${tempTableName} 
+        LIMIT ${previewRowCount}
+      `);
+
+      const dataPreview = previewQuery.toArray();
+      const columnCount = columnNames.length;
 
       // Check table creation succeeded
       await conn.query(`SELECT * FROM ${tempTableName} LIMIT 1`);
@@ -82,6 +93,7 @@ export async function validateCsvWithDuckDb(
       return {
         isValid: true,
         columnNames,
+        columnTypes,
         columnCount,
         previewRowCount,
         previewData: dataPreview,
@@ -97,5 +109,90 @@ export async function validateCsvWithDuckDb(
       isValid: false,
       error: `CSV validation failed: ${(error as Error).message}`,
     };
+  }
+}
+
+/**
+ * Converts a CSV file with the specified column types using DuckDB
+ * @param db DuckDB instance
+ * @param fileArrayBuffer Original CSV file buffer
+ * @param columnMappings Column name mappings (original to updated)
+ * @param columnTypes Column type mappings (updated name to type)
+ * @returns ArrayBuffer of the converted CSV file
+ */
+export async function convertCsvWithTypes(
+  db: duckdb.AsyncDuckDB,
+  fileArrayBuffer: ArrayBuffer,
+  columnMappings: Record<string, string>,
+  columnTypes: Record<string, string>
+): Promise<ArrayBuffer> {
+  // Create virtual file names
+  const sourceFileName = `source_${Date.now()}.csv`;
+  const destFileName = `converted_${Date.now()}.csv`;
+  const conn = await db.connect();
+
+  try {
+    // Register the file buffer with DuckDB
+    await db.registerFileBuffer(
+      sourceFileName,
+      new Uint8Array(fileArrayBuffer)
+    );
+
+    // Create a temporary table from the CSV
+    const tempTableName = `temp_convert_${Date.now()}`;
+    await conn.query(`
+      CREATE TABLE ${tempTableName} AS 
+      SELECT * FROM read_csv_auto('${sourceFileName}', header=true)
+    `);
+
+    // Build a SQL statement to create a new table with the desired column types
+    let createCastTableSQL = `CREATE TABLE ${tempTableName}_cast AS SELECT `;
+    const castParts: string[] = [];
+
+    // For each column in our mapping, create a cast expression
+    for (const originalCol in columnMappings) {
+      const updatedCol = columnMappings[originalCol];
+      // Check if this column has a specific type defined
+      if (columnTypes[updatedCol]) {
+        // Cast the column to the desired type but preserve the original column name
+        castParts.push(
+          `CAST("${originalCol}" AS ${columnTypes[updatedCol]}) AS "${originalCol}"`
+        );
+      } else {
+        // Keep the original column type and name
+        castParts.push(`"${originalCol}" AS "${originalCol}"`);
+      }
+    }
+
+    // Complete the SQL statement
+    createCastTableSQL += castParts.join(", ");
+    createCastTableSQL += ` FROM ${tempTableName}`;
+
+    // Execute the SQL to create a new table with the casted columns
+    await conn.query(createCastTableSQL);
+
+    // Write the results to a temporary buffer
+    await conn.query(`
+      COPY (SELECT * FROM ${tempTableName}_cast) TO '${destFileName}' (FORMAT CSV, HEADER)
+    `);
+
+    // Get the converted CSV data
+    const convertedCsvBuffer = await db.copyFileToBuffer(destFileName);
+
+    // Clean up temporary tables
+    await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
+    await conn.query(`DROP TABLE IF EXISTS ${tempTableName}_cast`);
+
+    // Close the connection
+    await conn.close();
+
+    // Create a new ArrayBuffer from the buffer data
+    const buffer = convertedCsvBuffer.buffer;
+    const newBuffer = new Uint8Array(buffer).buffer as ArrayBuffer;
+    return newBuffer;
+  } catch (error) {
+    // Close the connection on error
+    await conn.close();
+    throw new Error(`CSV conversion failed: ${(error as Error).message}`);
   }
 }

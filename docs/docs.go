@@ -207,6 +207,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/summary/{tableName}": {
+            "get": {
+                "description": "Retrieves a summary of the specified dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dataset"
+                ],
+                "summary": "Get dataset summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the table to get summary for",
+                        "name": "tableName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset summary information",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid query or table not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/chats": {
             "get": {
                 "description": "Get all chats associated with a specific dataset with pagination",
@@ -362,7 +409,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/chats.chatWithAgentRequeryBody"
+                            "$ref": "#/definitions/chats.chatWithAgentRequestBody"
                         }
                     }
                 ],
@@ -1371,13 +1418,18 @@ const docTemplate = `{
                 }
             }
         },
-        "chats.chatWithAgentRequeryBody": {
+        "chats.chatWithAgentRequestBody": {
             "description": "Request body for creating a streaming chat conversation with an AI agent",
             "type": "object",
             "required": [
-                "user_input"
+                "prompt"
             ],
             "properties": {
+                "chat_id": {
+                    "description": "Chat ID for the conversation (optional)",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "dataset_ids": {
                     "description": "Array of dataset IDs to analyze",
                     "type": "array",
@@ -1398,7 +1450,7 @@ const docTemplate = `{
                         "['550e8400-e29b-41d4-a716-446655440000']"
                     ]
                 },
-                "user_input": {
+                "prompt": {
                     "description": "User input/question for the AI agent",
                     "type": "string",
                     "example": "What are the trends in this dataset?"
