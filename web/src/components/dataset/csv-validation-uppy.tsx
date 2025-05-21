@@ -329,9 +329,6 @@ export function CsvValidationUppy({
       // Format path according to [projectId]/dataset_[time]_filename.csv
       const path = `${projectId}/dataset_${timestamp}_${sanitizedName}`;
 
-      // Get column mappings from store - these will be used by the backend to rename columns
-      const mappings = getColumnMappings();
-
       // Use provided dataset name or sanitized filename
       const alias = datasetName || sanitizedName.replace(/\.csv$/, "");
 
@@ -345,7 +342,6 @@ export function CsvValidationUppy({
           datasetName: alias, // Also store as datasetName for redundancy
           projectId,
           type: "dataset",
-          columnMappings: JSON.stringify(mappings),
           description: description || "Uploaded from GoPie Web",
           processedWithDuckDB: modifiedFile !== null, // Flag to indicate if the file was processed with DuckDB
         },
