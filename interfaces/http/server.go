@@ -91,7 +91,15 @@ func ServeHttp() error {
 		AppName:       "gopie",
 	})
 
-	app.Use(cors.New())
+	app.Use(cors.New(
+		cors.Config{
+			AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
+			AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+			AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token",
+			AllowCredentials: true,
+			MaxAge:           86400,
+		},
+	))
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Sugar().Desugar(),
 	}))
