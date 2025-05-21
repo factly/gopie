@@ -24,8 +24,6 @@ RUN chmod 777 /usr/local/bin/goose
 RUN groupadd -g 1001 gopie \
   && useradd -m -u 1001 -s /bin/sh -g gopie gopie
 
-RUN mkdir -p $HOME_DIR/motherduck && touch $HOME_DIR/motherduck/gopie.db
-
 RUN mkdir -p $DATA_DIR
 RUN chown -R $USER:$USER $HOME_DIR
 
