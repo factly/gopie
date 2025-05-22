@@ -16,6 +16,9 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
     subquery_result = query_result.subqueries[query_index]
     reached_max_retries = subquery_result.retry_count >= 3
+    sql_queries = [
+        sql_info.sql_query for sql_info in subquery_result.sql_queries
+    ]
 
     if reached_max_retries:
         stream_update_prompt = f"""
@@ -30,8 +33,8 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         could not be completed due to errors:
         {json.dumps(subquery_result.error_message)}
 
-        SQL Query Used:
-        {subquery_result.sql_query_used}
+        SQL Queries Used:
+        {json.dumps(sql_queries, indent=2)}
 
         Remaining Subqueries:
         {json.dumps([sq.query_text for sq in
@@ -65,15 +68,20 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
         "{subquery_result.query_text}"
 
-        Subquery Result:
+        SQL Queries Information:
+        {json.dumps(sql_queries, indent=2)}
+
+        Subquery Result Information:
         {json.dumps(subquery_result.to_dict())}
 
         Instructions:
         1. Briefly summarize what information was retrieved from this subquery
         2. Explain how this information relates to the user's original question
-        3. Mention what the system will do next (if this is not the final
+        3. Mention which SQL queries were executed and if any had large results
+           that were summarized
+        4. Mention what the system will do next (if this is not the final
            subquery)
-        4. Keep your response concise (2-3 sentences)
+        5. Keep your response concise (2-3 sentences)
 
         Your response should be informative and forward-looking.
         """
@@ -112,6 +120,10 @@ async def check_further_execution_requirement(
 
     last_stream_message = state.get("messages", [])[-1]
 
+    sql_queries = [
+        sql_info.sql_query for sql_info in current_subquery.sql_queries
+    ]
+
     dependency_analysis_prompt = f"""
         I need to analyze whether further subqueries should be executed
         despite a failed subquery.
@@ -124,7 +136,7 @@ async def check_further_execution_requirement(
 
         Error Message: {json.dumps(current_subquery.error_message)}
 
-        SQL Query Used: {current_subquery.sql_query_used}
+        SQL Queries Used: {json.dumps(sql_queries)}
 
         Remaining Subqueries:
         {json.dumps([sq.query_text for sq in

@@ -12,10 +12,13 @@ def route_response_handler(state: State) -> str:
     query_result = state.get("query_result", None)
     current_subquery = query_result.subqueries[query_index]
 
-    if (
-        current_subquery.contains_large_results
-        and not current_subquery.summary
-    ):
+    has_large_results = False
+
+    for sql_query_info in current_subquery.sql_queries:
+        if sql_query_info.contains_large_results:
+            has_large_results = True
+
+    if has_large_results:
         return "large_sql_output"
 
     if len(subqueries) - 1 > query_index:

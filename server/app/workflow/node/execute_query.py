@@ -23,39 +23,30 @@ async def execute_query(state: State) -> dict:
     query_index = state.get("subquery_index", 0)
 
     try:
-        last_message = (
-            state.get("messages", [])[-1] if state.get("messages") else None
-        )
-        if not last_message or isinstance(last_message, ErrorMessage):
-            raise ValueError("No valid query plan found in messages")
+        sql_queries = query_result.subqueries[query_index].sql_queries
+        if not sql_queries:
+            raise ValueError("No SQL query/queries found in plan")
 
-        query_plan = last_message.content[0]
+        for index, query_info in enumerate(sql_queries):
+            result_records = await execute_sql(query_info.sql_query)
 
-        if not query_plan:
-            raise ValueError("Failed to parse query plan from message")
+            if not result_records:
+                raise ValueError("No results found for the query")
 
-        sql_query = query_plan.get("sql_query")
-        if not sql_query:
-            raise ValueError("No SQL query found in plan")
+            result_dict = {
+                "result": "Query executed successfully",
+                "query_executed": query_info.sql_query,
+                "data": result_records,
+            }
 
-        result_records = await execute_sql(sql_query)
-
-        if not result_records:
-            raise ValueError("No results found for the query")
-
-        result_dict = {
-            "result": "Query executed successfully",
-            "query_executed": sql_query,
-            "data": result_records,
-        }
-
-        query_result.subqueries[query_index].sql_query_used = sql_query
-        query_result.subqueries[query_index].query_result = result_records
+            query_result.subqueries[query_index].sql_queries[
+                index
+            ].sql_query_result = result_records
 
         await adispatch_custom_event(
             "dataful-agent",
             {
-                "content": "SQL Query executed successfully",
+                "content": "SQL Execution completed",
             },
         )
         return {
@@ -71,7 +62,7 @@ async def execute_query(state: State) -> dict:
         await adispatch_custom_event(
             "dataful-agent",
             {
-                "content": "Something went wrong while executing the query",
+                "content": "Error in SQL Execution",
             },
         )
         return {
@@ -92,6 +83,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         Routing decision: "replan", "reidentify_datasets", or
         "validate_query_result"
     """
+
     last_message = state["messages"][-1]
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)

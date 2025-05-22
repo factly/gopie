@@ -134,36 +134,29 @@ async def _handle_data_query(
 
     user_query = query_result.original_user_query
     results = []
-    summary = []
+    summaries = []
     tool_used_results = []
     sql_with_explanations = []
     errors = []
 
     if query_result.has_subqueries():
         for subquery in query_result.subqueries:
-            if subquery.query_result:
-                results.append(subquery.query_result)
+            for sql_query_info in subquery.sql_queries:
+                if sql_query_info.sql_query_result:
+                    results.append(sql_query_info.sql_query_result)
 
-            if subquery.summary:
-                summary.append(subquery.summary)
+                if sql_query_info.summary:
+                    summaries.append(sql_query_info.summary)
 
+                sql_with_explanations.append(
+                    f"SQL: {sql_query_info.sql_query}\n"
+                    f"Explanation: {sql_query_info.explanation}"
+                )
             if subquery.tool_used_result:
                 tool_used_results.append(subquery.tool_used_result)
 
             if subquery.error_message:
                 errors.extend(subquery.error_message)
-
-            if subquery.sql_query_used:
-                explanation = (
-                    subquery.sql_query_explanation
-                    if hasattr(subquery, "sql_query_explanation")
-                    and subquery.sql_query_explanation
-                    else "No explanation provided"
-                )
-                sql_with_explanations.append(
-                    f"SQL: {subquery.sql_query_used}\n"
-                    f"Explanation: {explanation}"
-                )
 
     if not results and not tool_used_results:
         return await _handle_empty_results(query_result, errors, config)
@@ -178,7 +171,7 @@ async def _handle_data_query(
           else "No SQL queries were executed."
       }
     - Results: {json.dumps(results, indent=2)}
-    - Summary: {json.dumps(summary, indent=2)}
+    - Summary: {json.dumps(summaries, indent=2)}
     - Tool Results: {
         json.dumps(tool_used_results, indent=2)
         if tool_used_results

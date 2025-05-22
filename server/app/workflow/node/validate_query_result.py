@@ -8,7 +8,7 @@ from app.workflow.graph.types import State
 async def validate_query_result(state: State) -> dict:
     """
     Validate if the current subquery result is small enough for LLM processing.
-    If too large, mark the subquery as containing large results.
+    If too large, mark the subquery's SQL queries as containing large results.
 
     Args:
         state: The current state object containing query results
@@ -32,25 +32,29 @@ async def validate_query_result(state: State) -> dict:
             if 0 <= subquery_index < len(query_result.subqueries):
                 subquery = query_result.subqueries[subquery_index]
 
-                if not subquery.query_result:
-                    pass
+                large_result_found = False
+                for i, sql_query_info in enumerate(subquery.sql_queries):
+                    if not sql_query_info.sql_query_result:
+                        continue
 
-                is_too_large, reason = is_result_too_large(
-                    subquery.query_result
-                )
-
-                if is_too_large:
-                    subquery.contains_large_results = True
-
-                    warning = (
-                        f"Subquery {subquery_index+1} result was too large: "
-                        f"{reason}. "
-                    )
-                    warning += "Flagged for summary extraction."
-                    query_result.add_error_message(
-                        warning, "Result Size Warning"
+                    is_too_large, reason = is_result_too_large(
+                        sql_query_info.sql_query_result
                     )
 
+                    if is_too_large:
+                        sql_query_info.contains_large_results = True
+                        large_result_found = True
+
+                        warning = (
+                            f"SQL query {i+1} in subquery {subquery_index+1} "
+                            f"result was too large: {reason}. "
+                        )
+                        warning += "Flagged for summary extraction."
+                        query_result.add_error_message(
+                            warning, "Result Size Warning"
+                        )
+
+                if large_result_found:
                     result_dict = {
                         "warning": "Query result was too large and has been "
                         "flagged for summary extraction",

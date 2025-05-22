@@ -5,16 +5,27 @@ from app.workflow.graph.types import State
 
 async def extract_summary(state: State) -> dict:
     """
-    Extract a summary for a specific subquery, especially for large results.
+    Extract summaries for SQL query results in a specific subquery,
+    especially for large results.
 
     Args:
         state: The current state object with query results and subquery_index
 
     Returns:
-        Updated state with the summary added to the identified subquery
+        Updated state with summaries added to the identified SQL queries
     """
     query_result = state.get("query_result", None)
     subquery_index = state.get("subquery_index", 0)
+
+    if not query_result or not hasattr(query_result, "subqueries"):
+        return {
+            "messages": [
+                IntermediateStep.from_json(
+                    {"message": "No query result available."}
+                )
+            ],
+            "query_result": query_result,
+        }
 
     if not (0 <= subquery_index < len(query_result.subqueries)):
         return {
@@ -28,26 +39,35 @@ async def extract_summary(state: State) -> dict:
 
     subquery = query_result.subqueries[subquery_index]
 
-    if not subquery.contains_large_results or subquery.summary:
-        return {
-            "query_result": query_result,
-            "messages": [
-                IntermediateStep.from_json(
-                    {
-                        "message": subquery.summary
-                        or "No summary needed for this result."
-                    }
-                )
-            ],
-        }
+    summaries_created = False
+    result_messages = []
 
-    result = subquery.query_result
-    summary = create_result_summary(result)
+    for i, sql_query_info in enumerate(subquery.sql_queries):
+        no_large_results = not sql_query_info.contains_large_results
+        has_summary = sql_query_info.summary
 
-    query_result.subqueries[subquery_index].summary = summary
-    query_result.subqueries[subquery_index].query_result = None
+        if no_large_results or has_summary:
+            continue
+
+        result = sql_query_info.sql_query_result
+        if result:
+            summary = create_result_summary(result)
+            sql_query_info.contains_large_results = False
+            sql_query_info.summary = summary
+            sql_query_info.sql_query_result = None
+            summaries_created = True
+
+            sq_idx = subquery_index + 1
+            result_messages.append(
+                f"Created summary for SQL query {i+1} in subquery {sq_idx}"
+            )
+
+    if not summaries_created:
+        message = "No summaries needed for this subquery."
+    else:
+        message = "; ".join(result_messages)
 
     return {
         "query_result": query_result,
-        "messages": [IntermediateStep.from_json(summary)],
+        "messages": [IntermediateStep.from_json({"message": message})],
     }
