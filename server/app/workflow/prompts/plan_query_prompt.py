@@ -37,7 +37,7 @@ def create_query_prompt(
     prompt = f"""
         # QUERY TASK
         Given the following natural language query and detailed information
-        about multiple datasets, create an appropriate SQL query.
+        about multiple datasets, create appropriate SQL query or queries.
 
         User Query: "{user_query}"
 
@@ -64,6 +64,23 @@ def create_query_prompt(
         # ERROR INFORMATION
         {error_context}
 
+        # DATASET RELATIONSHIP ASSESSMENT
+        1. ANALYZE whether the selected datasets can be related through common
+           fields
+           - Look for matching column names, primary/foreign keys, or semantic
+             relationships
+           - Determine if JOIN operations are possible between datasets
+
+        2. DECISION POINT:
+           a) If datasets ARE RELATED:
+              - Create a SINGLE SQL query using appropriate JOINs
+              - Use the most efficient join type (INNER, LEFT, etc.)
+
+           b) If datasets are NOT RELATED (no sensible join possible):
+              - Create MULTIPLE independent SQL queries (one per dataset)
+              - Each query should extract the relevant information from its
+                dataset
+
         # QUERY DEVELOPMENT GUIDELINES (IMPORTANT)
         1. Use the EXACT column names as shown in the dataset information
         2. Create a query that directly addresses the user's question
@@ -84,7 +101,7 @@ def create_query_prompt(
 
         # SQL FORMATTING REQUIREMENTS
         SQL FORMATTING REQUIREMENTS:
-        You must provide two versions of the SQL query:
+        You must provide two versions of the SQL query (or queries):
         1. "sql_query": A simple version for execution
         2. "formatted_sql_query": A well-formatted version for UI display with:
            - SQL keywords in UPPERCASE
@@ -95,21 +112,24 @@ def create_query_prompt(
         # RESPONSE FORMAT
         Respond in this JSON format:
         {{
-            "sql_query": "the SQL query to fetch the required data",
-            "formatted_sql_query": "the well-formatted SQL query for UI
-                                   display",
-            "explanation": "brief explanation of what the query does",
-            "tables_used": ["list of tables needed"],
-            "joins_required": [
+            "sql_queries": [
                 {{
-                    "left_table": "name of left table",
-                    "right_table": "name of right table",
-                    "join_type": "type of join (INNER, LEFT, etc.)",
-                    "join_conditions": ["list of join conditions"]
+                    "sql_query": "the SQL query to fetch the required data",
+                    "formatted_sql_query": "the well-formatted SQL query for
+                                           UI display",
+                    "explanation": "brief explanation of the overall query
+                                    strategy",
+                    "tables_used": ["list of tables needed"],
+                    "expected_result": "description of what the query will
+                                        return"
                 }}
             ],
-            "expected_result": "description of what the query will return"
         }}
+
+        Note: If datasets are related and you only need one query,
+        "sql_queries" should contain only one element. If datasets aren't
+        related, include multiple queries in the "sql_queries" array, one for
+        each dataset needed.
     """
 
     return prompt

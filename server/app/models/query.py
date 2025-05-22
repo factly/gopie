@@ -4,22 +4,27 @@ from typing import Any, TypedDict
 
 
 @dataclass
+class SqlQueryInfo:
+    sql_query: str
+    explanation: str
+    sql_query_result: Any = None
+    contains_large_results: bool = False
+    summary: dict | None = None
+
+
+@dataclass
 class SubQueryInfo:
     """
     A class to represent information about a subquery
     """
 
     query_text: str
-    sql_query_used: str
-    sql_query_explanation: str | None = None
+    sql_queries: list[SqlQueryInfo]
     tables_used: str | None = None
     query_type: str | None = None
     error_message: list[dict] | None = None
     retry_count: int = 0
-    query_result: Any = None
     tool_used_result: Any = None
-    contains_large_results: bool = False
-    summary: dict | None = None
 
     def add_error_message(self, error_message: str, error_origin_type: str):
         if self.error_message is None:
@@ -29,14 +34,10 @@ class SubQueryInfo:
     def to_dict(self) -> dict[str, Any]:
         return {
             "query_text": self.query_text,
-            "sql_query_used": self.sql_query_used,
-            "sql_query_explanation": self.sql_query_explanation,
+            "sql_queries": self.sql_queries,
             "tables_used": self.tables_used,
             "query_type": self.query_type,
-            "query_result": self.query_result,
             "tool_used_result": self.tool_used_result,
-            "contains_large_results": self.contains_large_results,
-            "summary": self.summary,
             "error_message": self.error_message,
             "retry_count": self.retry_count,
         }
@@ -68,7 +69,7 @@ class QueryResult:
     def add_subquery(
         self,
         query_text: str,
-        sql_query_used: str,
+        sql_queries: list[SqlQueryInfo],
         query_info: QueryInfo | None = None,
     ):
         """
@@ -76,12 +77,9 @@ class QueryResult:
         """
         subquery_info = SubQueryInfo(
             query_text=query_text,
-            sql_query_used=sql_query_used,
+            sql_queries=sql_queries,
             tables_used=query_info.get("tables_used") if query_info else None,
             query_type=query_info.get("query_type") if query_info else None,
-            query_result=(
-                query_info.get("query_result") if query_info else None
-            ),
             tool_used_result=(
                 query_info.get("tool_used_result") if query_info else None
             ),

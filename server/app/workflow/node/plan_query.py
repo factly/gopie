@@ -6,20 +6,25 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.model_registry.model_provider import get_llm_for_node
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
+from server.app.models.query import SqlQueryInfo
 
 
 async def plan_query(state: State, config: RunnableConfig) -> dict:
     """
     Plan the SQL query based on user input and dataset information.
-    This function generates a SQL query that addresses the user's question
-    using the available dataset information.
+    This function generates a SQL query or multiple queries that address
+    the user's question using the available dataset information.
+
+    It will generate:
+    - A single SQL query with JOINs if datasets are related
+    - Multiple SQL queries if datasets are not related
 
     Args:
         state: The current state containing datasets, user query, and other
         context
 
     Returns:
-        Updated state with the planned SQL query and related information
+        Updated state with the planned SQL query/queries
     """
     try:
         identified_datasets = state.get("identified_datasets", [])
@@ -63,49 +68,36 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         try:
             parsed_response = parser.parse(response_content)
 
-            required_fields = [
-                "sql_query",
-                "explanation",
-                "tables_used",
-                "expected_result",
-            ]
-            missing_fields = [
-                field
-                for field in required_fields
-                if field not in parsed_response
-            ]
+            sql_queries = parsed_response.get("sql_queries", None)
+            formatted_sql_queries = []
+            sql_queries_info = []
 
-            if missing_fields:
-                raise Exception(
-                    f"Missing required fields in LLM response: "
-                    f"{', '.join(missing_fields)}"
+            if not sql_queries:
+                raise Exception("Failed in parsing SQL query/queries")
+
+            for sql_query in sql_queries:
+                sql_query_explanation = sql_query.get("explanation", "")
+                sql_queries_info.append(
+                    SqlQueryInfo(
+                        sql_query=sql_query["sql_query"],
+                        explanation=sql_query_explanation,
+                    )
                 )
 
-            sql_query = parsed_response.get("sql_query", "")
-            sql_query_explanation = parsed_response.get("explanation", "")
-            formatted_sql_query = parsed_response.get(
-                "formatted_sql_query", sql_query
-            )
+                formatted_sql_queries.append(sql_query["formatted_sql_query"])
 
-            if not sql_query:
-                raise Exception("Failed in parsing SQL query")
-
-            query_result.subqueries[query_index].sql_query_used = sql_query
-            query_result.subqueries[
-                query_index
-            ].sql_query_explanation = sql_query_explanation
+            query_result.subqueries[query_index].sql_queries = sql_queries_info
 
             await adispatch_custom_event(
                 "dataful-agent",
                 {
                     "content": "Generated SQL query",
-                    "query": formatted_sql_query,
+                    "queries": formatted_sql_queries,
                 },
             )
 
             return {
                 "query_result": query_result,
-                "query": sql_query,
                 "messages": [IntermediateStep.from_json(parsed_response)],
             }
 
