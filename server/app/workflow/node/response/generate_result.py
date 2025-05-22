@@ -29,7 +29,7 @@ async def generate_result(
     any_data_query = False
     if isinstance(query_result, QueryResult) and query_result.has_subqueries():
         for subquery in query_result.subqueries:
-            if subquery.query_type == "data_query" and subquery.query_result:
+            if subquery.query_type == "data_query":
                 any_data_query = True
                 break
 
@@ -206,6 +206,7 @@ async def _handle_data_query(
     11. From the subqueries that outputted summaries, give a brief extract of
         the most important insights
     12. NEVER make up or fabricate data that isn't explicitly in the results
+        (provide the actual data in form of context)
     13. If there are errors or missing data, clearly acknowledge this without
         showing technical error details
     14. Do not output technical details like SQL queries or error codes

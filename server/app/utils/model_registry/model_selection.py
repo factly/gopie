@@ -5,11 +5,11 @@ from app.utils.model_registry.model_config import (
 )
 
 NODE_TO_MODEL = {
-    "analyze_query": "gemini-2.5-flash-preview-04-17",
-    "plan_query": "gemini-2.5-flash-preview-04-17",
+    "analyze_query": "gemini-2.0-flash",
+    "route_query_replan": "gemini-2.0-flash",
     "generate_subqueries": "gemini-2.5-flash-preview-04-17",
-    "execute_query": "gemini-2.0-flash",
     "identify_datasets": "gemini-2.5-flash-preview-04-17",
+    "plan_query": "gemini-2.5-flash-preview-04-17",
     "generate_result": "gemini-2.5-flash-preview-04-17",
     "stream_updates": "gemini-2.5-flash-preview-04-17",
     "check_further_execution_requirement": "gemini-2.0-flash",

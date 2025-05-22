@@ -80,6 +80,7 @@ def create_query_prompt(
            - Consider the relationship between datasets
         7. For text comparisons, use LOWER() function on both sides to ensure
            case-insensitive matching
+        8. Never use LIKE operator while generating SQL query
 
         # SQL FORMATTING REQUIREMENTS
         SQL FORMATTING REQUIREMENTS:

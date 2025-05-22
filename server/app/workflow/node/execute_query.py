@@ -110,7 +110,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
             },
         )
 
-        llm = get_llm_for_node("execute_query", config)
+        llm = get_llm_for_node("route_query_replan", config)
 
         response = await llm.ainvoke(
             {

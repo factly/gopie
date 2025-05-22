@@ -49,7 +49,7 @@ class ModelConfig:
             virtual_key=settings.OPENAI_VIRTUAL_KEY,
             trace_id=self.trace_id,
             metadata={
-                "_user": "yuvrajsinh",
+                "_user": "yuvrajsinh.gohil",
                 "project": "dataful-agent",
             },
         )
@@ -60,7 +60,7 @@ class ModelConfig:
             virtual_key=settings.GEMINI_VIRTUAL_KEY,
             trace_id=self.trace_id,
             metadata={
-                "_user": "yuvrajsinh",
+                "_user": "yuvrajsinh.gohil",
                 "project": "dataful-agent",
             },
         )
