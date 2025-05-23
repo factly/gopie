@@ -3,10 +3,10 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
+from app.models.query import SqlQueryInfo
 from app.utils.model_registry.model_provider import get_llm_for_node
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
-from server.app.models.query import SqlQueryInfo
 
 
 async def plan_query(state: State, config: RunnableConfig) -> dict:

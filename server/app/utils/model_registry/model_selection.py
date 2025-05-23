@@ -15,6 +15,17 @@ NODE_TO_MODEL = {
     "check_further_execution_requirement": "gemini-2.0-flash",
 }
 
+# NODE_TO_MODEL = {
+#     "analyze_query": "o3-mini",
+#     "route_query_replan": "o3-mini",
+#     "generate_subqueries": "o3-mini",
+#     "identify_datasets": "o3-mini",
+#     "plan_query": "o3-mini",
+#     "generate_result": "o3-mini",
+#     "stream_updates": "o3-mini",
+#     "check_further_execution_requirement": "o3-mini",
+# }
+
 
 def get_model_info(model_id: str) -> ModelInfo:
     model_info = AVAILABLE_MODELS.get(model_id)

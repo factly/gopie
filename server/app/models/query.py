@@ -11,6 +11,15 @@ class SqlQueryInfo:
     contains_large_results: bool = False
     summary: dict | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sql_query": self.sql_query,
+            "explanation": self.explanation,
+            "sql_query_result": self.sql_query_result,
+            "contains_large_results": self.contains_large_results,
+            "summary": self.summary,
+        }
+
 
 @dataclass
 class SubQueryInfo:
@@ -34,7 +43,7 @@ class SubQueryInfo:
     def to_dict(self) -> dict[str, Any]:
         return {
             "query_text": self.query_text,
-            "sql_queries": self.sql_queries,
+            "sql_queries": [query.to_dict() for query in self.sql_queries],
             "tables_used": self.tables_used,
             "query_type": self.query_type,
             "tool_used_result": self.tool_used_result,

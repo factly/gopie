@@ -62,7 +62,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         )
         query_result.add_subquery(
             query_text=user_input,
-            sql_query_used="",
+            sql_queries=[],
             query_info={
                 "query_type": "conversational",
                 "tables_used": None,
