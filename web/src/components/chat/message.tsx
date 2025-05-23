@@ -307,7 +307,7 @@ export function ChatMessage({
                   )}
 
                   {/* Render SQL Editor if displaySqlQuery is available */}
-                  {displaySqlQuery && datasetId ? (
+                  {displaySqlQuery ? (
                     <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-2">
                       <p className="text-xs text-muted-foreground font-medium">
                         Suggested SQL Query:
@@ -317,7 +317,7 @@ export function ChatMessage({
                         onChange={() => {
                           /* no-op for display only */
                         }}
-                        datasetId={datasetId}
+                        datasetId={""}
                       />
                       <div className="flex justify-end">
                         <Button
@@ -538,7 +538,7 @@ export function ChatMessage({
                 )}
 
                 {/* Render SQL Editor if displaySqlQuery is available */}
-                {displaySqlQuery && datasetId ? (
+                {displaySqlQuery ? (
                   <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-2">
                     <p className="text-xs text-muted-foreground font-medium">
                       Suggested SQL Query:
@@ -548,7 +548,7 @@ export function ChatMessage({
                       onChange={() => {
                         /* no-op for display only */
                       }}
-                      datasetId={datasetId}
+                      datasetId={""}
                     />
                     {!isLoading && (
                       <div className="flex justify-end">
