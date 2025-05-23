@@ -28,6 +28,7 @@ import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z
@@ -44,6 +45,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,16 +59,23 @@ export function CreateProjectDialog() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await createProject.mutateAsync({
+      const project = await createProject.mutateAsync({
         ...values,
         created_by: "gopie-web-ui",
       });
+
       queryClient.invalidateQueries({
         queryKey: ["projects"],
       });
+
       setOpen(false);
       form.reset();
       toast.success("Project created successfully");
+
+      // Redirect to the newly created project
+      if (project && project.data.id) {
+        router.push(`/${project.data.id}`);
+      }
     } catch (error) {
       const message =
         error instanceof Error
