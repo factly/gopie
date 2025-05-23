@@ -121,7 +121,7 @@ export default function ProjectPage({
           <Link href={`/${projectId}/upload`}>
             <Button size="sm" className="h-9">
               <UploadIcon className="mr-2 size-4" />
-              Upload Dataset
+              Create Dataset
             </Button>
           </Link>
         </div>
@@ -139,7 +139,7 @@ export default function ProjectPage({
             <Link href={`/${projectId}/upload`}>
               <Button size="sm" className="h-9">
                 <UploadIcon className="mr-2 size-4" />
-                Upload Dataset
+                Create Dataset
               </Button>
             </Link>
           </motion.div>

@@ -221,7 +221,7 @@ export function ChatMessage({
                 duration={1}
                 spread={1}
               >
-                AI is thinking...
+                Processing your request...
               </TextShimmerWave>
             </div>
           </div>

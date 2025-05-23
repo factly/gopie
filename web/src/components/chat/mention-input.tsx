@@ -7,7 +7,7 @@ import {
   KeyboardEvent,
 } from "react";
 import { X, Sparkles, Send, Square } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Command,
   CommandGroup,
@@ -19,6 +19,12 @@ import {
   PopoverContent,
   PopoverAnchor,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { ContextItem } from "./context-picker";
 import { useProjects } from "@/lib/queries/project/list-projects";
@@ -45,6 +51,7 @@ interface MentionInputProps {
   isStreaming?: boolean;
   stopMessageStream?: () => void;
   lockableContextIds?: string[]; // Array of context IDs that cannot be removed
+  hasContext?: boolean; // Whether any context is selected
 }
 
 export function MentionInput({
@@ -63,8 +70,9 @@ export function MentionInput({
   isStreaming = false,
   stopMessageStream = () => {},
   lockableContextIds,
+  hasContext,
 }: MentionInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const [showMentionPopover, setShowMentionPopover] = useState(false);
@@ -93,8 +101,30 @@ export function MentionInput({
     []
   );
 
+  // Auto-resize textarea
+  const autoResizeTextarea = useCallback(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = "auto";
+
+      const scrollHeight = textarea.scrollHeight;
+      const maxHeight = 120; // Max height in pixels (about 5 lines)
+
+      if (scrollHeight <= maxHeight) {
+        // If content fits within max height, set height to scrollHeight
+        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.overflowY = "hidden";
+      } else {
+        // If content exceeds max height, set to max height and enable scrolling
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = "auto";
+      }
+    }
+  }, []);
+
   // Handle input changes and detect @ mentions
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const currentPosition = e.target.selectionStart || 0;
 
@@ -120,42 +150,56 @@ export function MentionInput({
 
     // Set cursor position after React updates the DOM
     setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.setSelectionRange(
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(
           newCursorPosition,
           newCursorPosition
         );
+        // Auto-resize after cursor position is set
+        autoResizeTextarea();
       }
     }, 0);
   };
 
   // Handle @ key press to explicitly open the menu
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "@") {
       setShowMentionPopover(true);
       debouncedSearch("");
     } else if (e.key === "Escape") {
       setShowMentionPopover(false);
     } else if (e.key === "Enter" && !e.shiftKey) {
-      // Handle Enter key press to submit the form
+      // Handle Enter key press to submit the form (only if not holding Shift)
       e.preventDefault();
       if (value.trim() && !disabled) {
         onSubmit(e);
       }
     }
+    // Allow Shift+Enter for new lines (default textarea behavior)
   };
 
-  // Focus input on mount
+  // Focus input on mount and setup auto-resize
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      // Use setTimeout to ensure the textarea is properly rendered before auto-resizing
+      setTimeout(() => {
+        autoResizeTextarea();
+      }, 0);
     }
-  }, []);
+  }, [autoResizeTextarea]);
+
+  // Auto-resize when value changes
+  useEffect(() => {
+    setTimeout(() => {
+      autoResizeTextarea();
+    }, 0);
+  }, [value, autoResizeTextarea]);
 
   // Maintain cursor position when input value changes
   useEffect(() => {
-    if (inputRef.current && cursorPosition !== null) {
-      inputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+    if (textareaRef.current && cursorPosition !== null) {
+      textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
     }
   }, [value, cursorPosition]);
 
@@ -163,8 +207,8 @@ export function MentionInput({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node) &&
+        textareaRef.current &&
+        !textareaRef.current.contains(event.target as Node) &&
         popoverRef.current &&
         !popoverRef.current.contains(event.target as Node)
       ) {
@@ -291,8 +335,8 @@ export function MentionInput({
 
     // Focus the input and set cursor after the mention
     setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
 
         if (cursorPosition !== null) {
           // Set cursor position after the mention
@@ -300,7 +344,7 @@ export function MentionInput({
             .substring(0, cursorPosition)
             .replace(/@[^@\s]*$/, "");
           const newPosition = beforeMention.length + item.name.length + 2; // +2 for @ and space
-          inputRef.current.setSelectionRange(newPosition, newPosition);
+          textareaRef.current.setSelectionRange(newPosition, newPosition);
         }
       }
     }, 10); // Slightly longer timeout to ensure UI updates first
@@ -330,7 +374,7 @@ export function MentionInput({
             "hover:shadow-md focus-within:shadow-md",
             selectedContexts.length > 0
               ? "min-h-[4rem] py-2.5"
-              : "min-h-[3.25rem]",
+              : "min-h-[3.25rem] py-2.5",
             "w-full",
             className,
             disabled ? "opacity-50" : ""
@@ -376,42 +420,66 @@ export function MentionInput({
             </div>
           )}
 
-          <Input
-            ref={inputRef}
-            className={cn(
-              "flex-1 border-0 bg-transparent p-0 pr-[10.5rem]",
-              "shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm",
-              !selectedContexts.length ? "py-4" : "py-1.5"
-            )}
-            placeholder={placeholder}
-            value={value}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-          />
+          <div className="relative flex-1 flex items-center">
+            <Textarea
+              ref={textareaRef}
+              className={cn(
+                "w-full border-0 bg-transparent p-0 pr-12 resize-none",
+                "shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm",
+                "min-h-[1.5rem] max-h-[120px] leading-relaxed",
+                "placeholder:text-muted-foreground flex items-center"
+              )}
+              placeholder={placeholder}
+              value={value}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setTimeout(() => autoResizeTextarea(), 0)}
+              disabled={disabled}
+              rows={1}
+              style={{ paddingTop: "0.125rem", paddingBottom: "0.125rem" }}
+            />
+          </div>
 
-          {/* Action buttons container */}
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5">
+          {/* Action buttons container - positioned at the very right edge */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {actionButtons}
             {showSendButton && (
-              <Button
-                type={isStreaming ? "button" : "submit"}
-                size="icon"
-                variant={isStreaming ? "destructive" : "default"}
-                className="h-9 w-9 rounded-full shadow-sm ml-0.5"
-                disabled={
-                  isStreaming ? false : disabled || !value.trim() || isSending
-                }
-                onClick={isStreaming ? handleStopMessageStream : undefined}
-              >
-                {isSending && !isStreaming ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : isStreaming ? (
-                  <Square className="h-4 w-4" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type={isStreaming ? "button" : "submit"}
+                      size="icon"
+                      variant={isStreaming ? "destructive" : "default"}
+                      className="h-8 w-8 rounded-full shadow-sm"
+                      disabled={
+                        isStreaming
+                          ? false
+                          : disabled ||
+                            !value.trim() ||
+                            isSending ||
+                            !hasContext
+                      }
+                      onClick={
+                        isStreaming ? handleStopMessageStream : undefined
+                      }
+                    >
+                      {isSending && !isStreaming ? (
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : isStreaming ? (
+                        <Square className="h-3.5 w-3.5" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  {!hasContext && !isStreaming && (
+                    <TooltipContent>
+                      <p>Select some context before sending</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
@@ -421,9 +489,9 @@ export function MentionInput({
           onOpenChange={(open) => {
             setShowMentionPopover(open);
             // Re-focus the input when popover closes
-            if (!open && inputRef.current) {
+            if (!open && textareaRef.current) {
               setTimeout(() => {
-                inputRef.current?.focus();
+                textareaRef.current?.focus();
               }, 0);
             }
           }}

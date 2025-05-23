@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/navigation/sidebar";
 import { AuthProvider } from "@/components/auth/auth-provider";
 
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   description: "GoPie",
   icons: {
     icon: "/gopie.svg",
-    apple: "/gopie.svg"
-  }
+    apple: "/gopie.svg",
+  },
 };
 
 export default function RootLayout({
@@ -34,15 +34,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col font-sans`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full font-sans`}
       >
         <AuthProvider>
           <SidebarProvider>
             <Providers>
               <AppSidebar />
-              <div className="flex flex-col min-h-screen w-full bg-background">
-                {children}
-              </div>
+              <SidebarInset>{children}</SidebarInset>
               <Toaster />
             </Providers>
           </SidebarProvider>

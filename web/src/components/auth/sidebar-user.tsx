@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export function SidebarUser() {
   const { data: session, status } = useAuthSession();
@@ -41,7 +42,12 @@ export function SidebarUser() {
   // If auth is disabled, show a disabled auth indicator
   if (isAuthDisabled) {
     return (
-      <div className="flex items-center px-3 py-2">
+      <div
+        className={cn(
+          "flex items-center",
+          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
+        )}
+      >
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-amber-100 text-amber-800">
             AD
@@ -56,7 +62,12 @@ export function SidebarUser() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center px-3 py-2">
+      <div
+        className={cn(
+          "flex items-center",
+          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
+        )}
+      >
         <Avatar className="h-8 w-8">
           <AvatarFallback>...</AvatarFallback>
         </Avatar>
@@ -67,16 +78,36 @@ export function SidebarUser() {
 
   if (!user) {
     return (
-      <div className="flex items-center px-3 py-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/api/auth/signin">Sign In</Link>
-        </Button>
+      <div
+        className={cn(
+          "flex items-center",
+          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
+        )}
+      >
+        {isSidebarOpen ? (
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/api/auth/signin">Sign In</Link>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+            <Link href="/api/auth/signin">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>SI</AvatarFallback>
+              </Avatar>
+            </Link>
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="flex items-center px-3 py-2">
+    <div
+      className={cn(
+        "flex items-center",
+        isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
+      )}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
