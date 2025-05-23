@@ -16,6 +16,7 @@ MODELS = {
 
 DEFAULT_MODEL = "gpt-4o"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-large"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-preview-04-17"
 
 
 AVAILABLE_MODELS: dict[str, ModelInfo] = {

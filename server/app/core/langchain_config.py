@@ -1,6 +1,6 @@
 import uuid
 
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
@@ -11,6 +11,7 @@ from app.tools import TOOLS
 from app.utils.model_registry.model_config import (
     AVAILABLE_MODELS,
     DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_GEMINI_MODEL,
     DEFAULT_MODEL,
 )
 
@@ -24,7 +25,7 @@ class ModelConfig:
 
         self.openai_model = DEFAULT_MODEL
         self.openai_embeddings_model = DEFAULT_EMBEDDING_MODEL
-        self.gemini_model = settings.DEFAULT_GEMINI_MODEL
+        self.gemini_model = DEFAULT_GEMINI_MODEL
 
         if model_id and model_id in AVAILABLE_MODELS:
             self._set_model_from_id(model_id)
@@ -87,6 +88,7 @@ class LangchainConfig:
         return ChatPromptTemplate.from_messages(
             [
                 ("system", SYSTEM_PROMPT),
+                MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}"),
             ]
         )

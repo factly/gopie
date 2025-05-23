@@ -41,7 +41,7 @@ class AgentEventDispatcher(BaseCallbackHandler):
         trace_id: str | None = None,
         content: str | None = None,
         datasets_used: list[str] | None = None,
-        generated_sql_query: list[str] | None = None,
+        generated_sql_query: str | None = None,
         tool_category: str | None = None,
     ) -> StructuredChatStreamChunk:
         """
