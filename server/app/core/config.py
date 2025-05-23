@@ -14,12 +14,7 @@ class Settings(BaseSettings):
     CORS_HEADERS: list[str] = ["*"]
 
     PORTKEY_API_KEY: str = ""
-
-    DEFAULT_GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_VIRTUAL_KEY: str = ""
-
-    DEFAULT_OPENAI_MODEL: str = "gpt-4o"
-    OPENAI_EMBEDDINGS_MODEL: str = "text-embedding-3-large"
     OPENAI_VIRTUAL_KEY: str = ""
 
     QDRANT_HOST: str = "host.docker.internal"
