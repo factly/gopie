@@ -77,15 +77,12 @@ export default function HomePage() {
   const sendMessage = async (message: string) => {
     if (!message.trim() || isSending) return false;
 
-    // Check if there's at least one dataset in the context
-    const datasetContext = selectedContexts.find(
-      (ctx) => ctx.type === "dataset"
-    );
-    if (!datasetContext) {
+    // Check if there's at least one context item selected (any type)
+    if (selectedContexts.length === 0) {
       toast({
         title: "Context Required",
         description:
-          "Please select at least one dataset in context before sending a message",
+          "Please select at least one context item before sending a message",
         variant: "destructive",
       });
       return false;
@@ -295,6 +292,7 @@ export default function HomePage() {
                     className="flex-1"
                     showSendButton={true}
                     isSending={isSending}
+                    hasContext={selectedContexts.length > 0}
                   />
                 </div>
               </div>

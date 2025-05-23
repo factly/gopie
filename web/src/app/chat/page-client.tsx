@@ -16,7 +16,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
 import { ChatMessage } from "@/components/chat/message";
 import { SqlResults } from "@/components/chat/sql-results";
 import {
@@ -38,6 +37,7 @@ import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { fetchChats } from "@/lib/queries/chat/list-chats";
 import { useQueryClient } from "@tanstack/react-query";
 import { Chat, Project, Dataset } from "@/lib/api-client";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface StreamEvent {
   role: "intermediate" | "ai";
@@ -410,11 +410,14 @@ interface OptimisticMessage {
   role: "user" | "assistant" | "intermediate" | "ai";
   created_at: string;
   isLoading?: boolean;
+  streamAborted?: boolean;
 }
 
 interface ChatInputProps {
   sendMessage: (message: string) => Promise<void>;
   isSending: boolean;
+  isStreaming: boolean;
+  stopMessageStream: () => void;
   selectedContexts: ContextItem[];
   onSelectContext: (context: ContextItem) => void;
   onRemoveContext: (contextId: string) => void;
@@ -422,12 +425,15 @@ interface ChatInputProps {
   setIsVoiceModeActive: (active: boolean) => void;
   initialValue?: string;
   lockableContextIds?: string[];
+  hasContext: boolean;
 }
 
 const ChatInput = React.memo(
   ({
     sendMessage,
     isSending,
+    isStreaming,
+    stopMessageStream,
     selectedContexts,
     onSelectContext,
     onRemoveContext,
@@ -435,6 +441,7 @@ const ChatInput = React.memo(
     setIsVoiceModeActive,
     initialValue = "",
     lockableContextIds = [],
+    hasContext,
   }: ChatInputProps) => {
     const [inputValue, setInputValue] = useState(initialValue);
 
@@ -474,7 +481,10 @@ const ChatInput = React.memo(
             className="flex-1"
             showSendButton={true}
             isSending={isSending}
+            isStreaming={isStreaming}
+            stopMessageStream={stopMessageStream}
             lockableContextIds={lockableContextIds}
+            hasContext={hasContext}
             actionButtons={
               <VoiceModeToggle
                 isActive={isVoiceModeActive}
@@ -585,6 +595,7 @@ const ChatView = React.memo(
                   role={message.role}
                   createdAt={message.created_at}
                   isLoading={message.isLoading}
+                  streamAborted={message.streamAborted}
                   chatId={selectedChatId || undefined}
                   isLatest={
                     index === optimisticMessages.length - 1 &&
@@ -615,11 +626,13 @@ function ChatPageClient() {
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
-  const { setOpen } = useSidebar();
+  const { setOpen, open: isSidebarOpen, isMobile } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { selectedChatId, selectedChatTitle, selectChatForDataset } =
     useChatStore();
   const [isSending, setIsSending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
   >([]);
@@ -771,8 +784,13 @@ function ChatPageClient() {
     async (message: string) => {
       if (!message.trim()) return;
       setIsSending(true);
+      setIsStreaming(true);
       const optimisticId = Date.now().toString();
       const currentChatId = selectedChatId;
+
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
 
       setOptimisticMessages((prev) => [
         ...prev,
@@ -808,6 +826,7 @@ function ChatPageClient() {
           datasetIds,
           projectIds,
           prompt: message,
+          signal, // Pass the abort signal to the request
         });
 
         const reader = response.body?.getReader();
@@ -1014,13 +1033,17 @@ function ChatPageClient() {
 
         setActiveTab("chat");
       } catch (error) {
-        console.error("Error sending message:", error);
-        toast.error("Failed to send message");
-        setOptimisticMessages((prev) =>
-          prev.filter((msg) => !msg.id.endsWith(optimisticId))
-        );
+        if (!(error instanceof Error && error.name === "AbortError")) {
+          console.error("Error sending message:", error);
+          toast.error("Failed to send message");
+          setOptimisticMessages((prev) =>
+            prev.filter((msg) => !msg.id.endsWith(optimisticId))
+          );
+        }
       } finally {
         setIsSending(false);
+        setIsStreaming(false);
+        abortControllerRef.current = null;
       }
     },
     [
@@ -1033,19 +1056,39 @@ function ChatPageClient() {
     ]
   );
 
+  const stopMessageStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+
+      setOptimisticMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (
+            msg.isLoading &&
+            (msg.role === "assistant" || msg.role === "ai") &&
+            Array.isArray(msg.content)
+          ) {
+            return {
+              ...msg,
+              streamAborted: true,
+            };
+          }
+          return msg;
+        })
+      );
+      abortControllerRef.current = null;
+      setIsStreaming(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
-      const datasetContext = selectedContexts.find(
-        (context) => context.type === "dataset"
-      );
-      if (datasetContext) {
-        sendMessage(initialMessage);
-        setInitialMessageSent(true);
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("initialMessage");
-        params.delete("contextData");
-        router.replace(`/chat?${params.toString()}`);
-      }
+      // Send the message if any context is selected (not just datasets)
+      sendMessage(initialMessage);
+      setInitialMessageSent(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("initialMessage");
+      params.delete("contextData");
+      router.replace(`/chat?${params.toString()}`);
     }
   }, [
     initialMessage,
@@ -1363,27 +1406,36 @@ function ChatPageClient() {
         </ResizablePanelGroup>
       </div>
       {activeTab === "chat" && (
-        <div className="fixed bottom-0 left-0 right-0 z-10 w-full">
-          <div
-            style={{
-              width: isOpen ? `calc(100% - ${sqlPanelWidth}px)` : "100%",
-              transition: "width 0.2s ease-in-out",
-            }}
-          >
-            <ChatInput
-              sendMessage={sendMessage}
-              isSending={isSending}
-              selectedContexts={selectedContexts}
-              onSelectContext={handleSelectContext}
-              onRemoveContext={handleRemoveContext}
-              isVoiceModeActive={isVoiceModeActive}
-              setIsVoiceModeActive={setIsVoiceModeActive}
-              initialValue={initialMessage || ""}
-              lockableContextIds={
-                selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-              }
-            />
-          </div>
+        <div
+          className="fixed bottom-0 right-0 z-10"
+          style={{
+            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem",
+            width: isOpen
+              ? `calc(100% - ${
+                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
+                } - ${sqlPanelWidth}px)`
+              : `calc(100% - ${
+                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
+                })`,
+            transition: "left 0.2s ease-in-out, width 0.2s ease-in-out",
+          }}
+        >
+          <ChatInput
+            sendMessage={sendMessage}
+            isSending={isSending}
+            isStreaming={isStreaming}
+            stopMessageStream={stopMessageStream}
+            selectedContexts={selectedContexts}
+            onSelectContext={handleSelectContext}
+            onRemoveContext={handleRemoveContext}
+            isVoiceModeActive={isVoiceModeActive}
+            setIsVoiceModeActive={setIsVoiceModeActive}
+            initialValue={initialMessage || ""}
+            lockableContextIds={
+              selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+            }
+            hasContext={selectedContexts.length > 0}
+          />
         </div>
       )}
       {isVoiceModeActive && latestAssistantMessage && (

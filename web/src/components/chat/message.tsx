@@ -75,6 +75,7 @@ interface ChatMessageProps {
   role: "user" | "assistant" | "intermediate" | "ai";
   createdAt: string;
   isLoading?: boolean;
+  streamAborted?: boolean; // Added new prop
   onDelete?: (messageId: string) => void;
   chatId?: string;
   isLatest?: boolean;
@@ -89,6 +90,7 @@ export function ChatMessage({
   role,
   createdAt,
   isLoading,
+  streamAborted, // Added new prop
   onDelete,
   chatId,
   isLatest,
@@ -219,7 +221,7 @@ export function ChatMessage({
                 duration={1}
                 spread={1}
               >
-                AI is thinking...
+                Processing your request...
               </TextShimmerWave>
             </div>
           </div>
@@ -527,6 +529,11 @@ export function ChatMessage({
                         (streaming...)
                       </span>
                     )}
+                    {!isLoading && streamAborted && finalAiContentString && (
+                      <span className="ml-1 text-xs text-muted-foreground italic">
+                        (Stream stopped)
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -607,6 +614,15 @@ export function ChatMessage({
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       AI response is generating...
+                    </div>
+                  )}
+
+                {!isLoading &&
+                  streamAborted &&
+                  !finalAiContentString &&
+                  !displaySqlQuery && (
+                    <div className="text-sm text-muted-foreground italic">
+                      Stream stopped by user. No content was generated.
                     </div>
                   )}
               </div>

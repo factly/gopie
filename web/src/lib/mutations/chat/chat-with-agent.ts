@@ -7,6 +7,7 @@ interface ChatWithAgentParams {
   datasetIds?: string[];
   projectIds?: string[];
   prompt: string;
+  signal?: AbortSignal;
 }
 
 // The mutation function will return the raw KyResponse object
@@ -25,6 +26,7 @@ export const useChatWithAgent = createMutation<
         project_ids: params.projectIds,
         prompt: params.prompt,
       },
+      signal: params.signal,
       // Ky throws HTTPError for non-2xx responses by default.
       // The response object itself is returned to the caller for stream processing.
       // The apiClient is configured with timeout: false, which is suitable for long-lived streams.
