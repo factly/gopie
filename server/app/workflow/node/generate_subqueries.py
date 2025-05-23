@@ -7,7 +7,10 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult
-from app.utils.model_registry.model_provider import get_llm_for_node
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_llm_for_node,
+)
 from app.workflow.graph.types import State
 from app.workflow.prompts.prompt_selector import get_prompt
 
@@ -39,7 +42,12 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             "assess_query_complexity", user_input=user_input
         )
         llm = get_llm_for_node("generate_subqueries", config)
-        assessment_response = await llm.ainvoke({"input": assessment_prompt})
+        assessment_response = await llm.ainvoke(
+            {
+                "input": assessment_prompt,
+                "chat_history": get_chat_history(config),
+            }
+        )
 
         await adispatch_custom_event(
             "dataful-agent",
@@ -61,7 +69,10 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 "generate_subqueries", user_input=user_input
             )
             subqueries_response = await llm.ainvoke(
-                {"input": subqueries_prompt}
+                {
+                    "input": subqueries_prompt,
+                    "chat_history": get_chat_history(config),
+                }
             )
 
             subqueries_parsed = parser.parse(str(subqueries_response.content))

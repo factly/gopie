@@ -2,6 +2,7 @@ import json
 import logging
 import uuid
 
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.models.chat import Error, StructuredChatStreamChunk
@@ -36,6 +37,10 @@ async def stream_graph_updates(
     if not trace_id:
         trace_id = str(uuid.uuid4())
 
+    chat_history = [
+        convert_to_langchain_message(message) for message in messages[:-1]
+    ]
+
     input_state = {
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
@@ -48,6 +53,7 @@ async def stream_graph_updates(
         configurable={
             "model_id": model_id,
             "trace_id": trace_id,
+            "chat_history": chat_history,
         },
     )
 
@@ -95,3 +101,12 @@ async def stream_graph_updates(
         )
         yield "data: " + json.dumps(output.model_dump(mode="json")) + "\n \n"
         logging.exception(e)
+
+
+def convert_to_langchain_message(message: Message):
+    if message.role == "user":
+        return HumanMessage(content=message.content)
+    elif message.role == "assistant":
+        return AIMessage(content=message.content)
+    else:
+        raise ValueError(f"Unknown role: {message.role}")

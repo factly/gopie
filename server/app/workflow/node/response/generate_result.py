@@ -6,7 +6,10 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
-from app.utils.model_registry.model_provider import get_llm_for_node
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_llm_for_node,
+)
 from app.workflow.graph.types import State
 
 
@@ -108,7 +111,9 @@ async def _handle_conversational_query(
     """
 
     llm = get_llm_for_node("generate_result", config)
-    response = await llm.ainvoke({"input": prompt})
+    response = await llm.ainvoke(
+        {"input": prompt, "chat_history": get_chat_history(config)}
+    )
 
     return {
         "messages": [
@@ -206,7 +211,9 @@ async def _handle_data_query(
     """
 
     llm = get_llm_for_node("generate_result", config)
-    response = await llm.ainvoke({"input": prompt})
+    response = await llm.ainvoke(
+        {"input": prompt, "chat_history": get_chat_history(config)}
+    )
 
     return {
         "messages": [
@@ -256,7 +263,9 @@ async def _handle_empty_results(
     """
 
     llm = get_llm_for_node("generate_result", config)
-    response = await llm.ainvoke({"input": prompt})
+    response = await llm.ainvoke(
+        {"input": prompt, "chat_history": get_chat_history(config)}
+    )
 
     return {
         "messages": [

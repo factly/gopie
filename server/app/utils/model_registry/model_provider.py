@@ -65,3 +65,7 @@ def get_llm_for_node(
 
 def get_custom_model(model_id: str):
     return ModelProvider(model_id=model_id).get_llm()
+
+
+def get_chat_history(config: RunnableConfig):
+    return config.get("configurable", {}).get("chat_history", [])

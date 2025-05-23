@@ -8,6 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.model_registry.model_provider import (
+    get_chat_history,
     get_llm_for_node,
     get_model_provider,
 )
@@ -76,7 +77,9 @@ async def identify_datasets(state: State, config: RunnableConfig):
             available_datasets_schemas=semantic_searched_datasets,
         )
 
-        response: Any = await llm.ainvoke({"input": llm_prompt})
+        response: Any = await llm.ainvoke(
+            {"input": llm_prompt, "chat_history": get_chat_history(config)}
+        )
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

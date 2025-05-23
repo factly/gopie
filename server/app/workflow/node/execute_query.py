@@ -4,7 +4,10 @@ from langchain_core.runnables import RunnableConfig
 from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
-from app.utils.model_registry.model_provider import get_llm_for_node
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_llm_for_node,
+)
 from app.workflow.graph.types import State
 
 
@@ -106,6 +109,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
 
         response = await llm.ainvoke(
             {
+                "chat_history": get_chat_history(config),
                 "input": f"""
                     I got an error when executing the query:
                     {last_message.content}
@@ -128,7 +132,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
                     2. Determine if it's a schema/dataset issue
                     3. Check if it's a query syntax issue
                     4. Decide on the appropriate action
-                """
+                """,
             }
         )
 

@@ -1,5 +1,6 @@
 from typing import Annotated, TypedDict
 
+from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from app.models.query import QueryResult
@@ -21,3 +22,4 @@ class State(TypedDict):
 class ConfigSchema(TypedDict):
     model_id: str
     trace_id: str
+    chat_history: list[BaseMessage]

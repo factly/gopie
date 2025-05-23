@@ -6,7 +6,10 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.model_registry.model_provider import get_llm_for_node
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_llm_for_node,
+)
 from app.workflow.graph.types import State
 
 
@@ -87,7 +90,12 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         """
 
     llm = get_llm_for_node("stream_updates", config)
-    response = await llm.ainvoke({"input": stream_update_prompt})
+    response = await llm.ainvoke(
+        {
+            "input": stream_update_prompt,
+            "chat_history": get_chat_history(config),
+        }
+    )
 
     logging.info(f"Stream updates response: {response.content}")
 
@@ -168,7 +176,12 @@ async def check_further_execution_requirement(
     """
 
     llm = get_llm_for_node("check_further_execution_requirement", config)
-    response = await llm.ainvoke({"input": dependency_analysis_prompt})
+    response = await llm.ainvoke(
+        {
+            "input": dependency_analysis_prompt,
+            "chat_history": get_chat_history(config),
+        }
+    )
 
     await adispatch_custom_event(
         "dataful-agent",
