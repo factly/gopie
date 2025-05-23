@@ -410,11 +410,14 @@ interface OptimisticMessage {
   role: "user" | "assistant" | "intermediate" | "ai";
   created_at: string;
   isLoading?: boolean;
+  streamAborted?: boolean;
 }
 
 interface ChatInputProps {
   sendMessage: (message: string) => Promise<void>;
   isSending: boolean;
+  isStreaming: boolean;
+  stopMessageStream: () => void;
   selectedContexts: ContextItem[];
   onSelectContext: (context: ContextItem) => void;
   onRemoveContext: (contextId: string) => void;
@@ -428,6 +431,8 @@ const ChatInput = React.memo(
   ({
     sendMessage,
     isSending,
+    isStreaming,
+    stopMessageStream,
     selectedContexts,
     onSelectContext,
     onRemoveContext,
@@ -474,6 +479,8 @@ const ChatInput = React.memo(
             className="flex-1"
             showSendButton={true}
             isSending={isSending}
+            isStreaming={isStreaming}
+            stopMessageStream={stopMessageStream}
             lockableContextIds={lockableContextIds}
             actionButtons={
               <VoiceModeToggle
@@ -585,6 +592,7 @@ const ChatView = React.memo(
                   role={message.role}
                   createdAt={message.created_at}
                   isLoading={message.isLoading}
+                  streamAborted={message.streamAborted}
                   chatId={selectedChatId || undefined}
                   isLatest={
                     index === optimisticMessages.length - 1 &&
@@ -620,6 +628,8 @@ function ChatPageClient() {
   const { selectedChatId, selectedChatTitle, selectChatForDataset } =
     useChatStore();
   const [isSending, setIsSending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
   >([]);
@@ -771,8 +781,13 @@ function ChatPageClient() {
     async (message: string) => {
       if (!message.trim()) return;
       setIsSending(true);
+      setIsStreaming(true);
       const optimisticId = Date.now().toString();
       const currentChatId = selectedChatId;
+
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
 
       setOptimisticMessages((prev) => [
         ...prev,
@@ -808,6 +823,7 @@ function ChatPageClient() {
           datasetIds,
           projectIds,
           prompt: message,
+          signal, // Pass the abort signal to the request
         });
 
         const reader = response.body?.getReader();
@@ -1014,13 +1030,17 @@ function ChatPageClient() {
 
         setActiveTab("chat");
       } catch (error) {
-        console.error("Error sending message:", error);
-        toast.error("Failed to send message");
-        setOptimisticMessages((prev) =>
-          prev.filter((msg) => !msg.id.endsWith(optimisticId))
-        );
+        if (!(error instanceof Error && error.name === "AbortError")) {
+          console.error("Error sending message:", error);
+          toast.error("Failed to send message");
+          setOptimisticMessages((prev) =>
+            prev.filter((msg) => !msg.id.endsWith(optimisticId))
+          );
+        }
       } finally {
         setIsSending(false);
+        setIsStreaming(false);
+        abortControllerRef.current = null;
       }
     },
     [
@@ -1032,6 +1052,30 @@ function ChatPageClient() {
       setActiveTab,
     ]
   );
+
+  const stopMessageStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+
+      setOptimisticMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (
+            msg.isLoading &&
+            (msg.role === "assistant" || msg.role === "ai") &&
+            Array.isArray(msg.content)
+          ) {
+            return {
+              ...msg,
+              streamAborted: true,
+            };
+          }
+          return msg;
+        })
+      );
+      abortControllerRef.current = null;
+      setIsStreaming(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
@@ -1373,6 +1417,8 @@ function ChatPageClient() {
             <ChatInput
               sendMessage={sendMessage}
               isSending={isSending}
+              isStreaming={isStreaming}
+              stopMessageStream={stopMessageStream}
               selectedContexts={selectedContexts}
               onSelectContext={handleSelectContext}
               onRemoveContext={handleRemoveContext}

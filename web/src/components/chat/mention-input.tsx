@@ -6,7 +6,7 @@ import {
   ReactNode,
   KeyboardEvent,
 } from "react";
-import { X, Sparkles, Send } from "lucide-react";
+import { X, Sparkles, Send, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Command,
@@ -42,6 +42,8 @@ interface MentionInputProps {
   actionButtons?: ReactNode;
   showSendButton?: boolean;
   isSending?: boolean;
+  isStreaming?: boolean;
+  stopMessageStream?: () => void;
   lockableContextIds?: string[]; // Array of context IDs that cannot be removed
 }
 
@@ -58,6 +60,8 @@ export function MentionInput({
   actionButtons,
   showSendButton = false,
   isSending = false,
+  isStreaming = false,
+  stopMessageStream = () => {},
   lockableContextIds,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -302,6 +306,15 @@ export function MentionInput({
     }, 10); // Slightly longer timeout to ensure UI updates first
   };
 
+  const handleStopMessageStream = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      stopMessageStream();
+    },
+    [stopMessageStream]
+  );
+
   return (
     <form
       onSubmit={(e) => {
@@ -382,14 +395,19 @@ export function MentionInput({
             {actionButtons}
             {showSendButton && (
               <Button
-                type="submit"
+                type={isStreaming ? "button" : "submit"}
                 size="icon"
-                variant="default"
+                variant={isStreaming ? "destructive" : "default"}
                 className="h-9 w-9 rounded-full shadow-sm ml-0.5"
-                disabled={disabled || !value.trim() || isSending}
+                disabled={
+                  isStreaming ? false : disabled || !value.trim() || isSending
+                }
+                onClick={isStreaming ? handleStopMessageStream : undefined}
               >
-                {isSending ? (
+                {isSending && !isStreaming ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : isStreaming ? (
+                  <Square className="h-4 w-4" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
