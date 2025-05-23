@@ -2,7 +2,9 @@ import { createMutation } from "react-query-kit";
 import { Project, ProjectInput } from "@/lib/api-client";
 import { apiClient } from "@/lib/api-client";
 
-async function createProject(project: ProjectInput): Promise<Project> {
+async function createProject(
+  project: ProjectInput
+): Promise<{ data: Project }> {
   try {
     const response = await apiClient.post("v1/api/projects/", {
       json: project,

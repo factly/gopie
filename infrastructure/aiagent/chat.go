@@ -22,12 +22,7 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	reqBody := map[string]any{
 		"project_ids": params.ProjectIDs,
 		"dataset_ids": params.DatasetIDs,
-		"messages": []map[string]any{
-			{
-				"role":    "user",
-				"content": params.UserInput,
-			},
-		},
+		"messages":    params.Messages,
 	}
 
 	reqBodyBuf, _ := json.Marshal(reqBody)

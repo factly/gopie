@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import { UppyFile, Meta } from "@uppy/core";
 import { toast } from "sonner";
-import { ArrowLeft, AlertCircle, Database } from "lucide-react";
+import { ArrowLeft, AlertCircle, Database, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import "@uppy/core/dist/style.css";
 import "@uppy/dashboard/dist/style.css";
@@ -25,6 +25,7 @@ export default function UploadDatasetPage({
 }) {
   const { projectId } = React.use(params);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -49,6 +50,8 @@ export default function UploadDatasetPage({
 
     try {
       setUploadError(null);
+      setIsProcessing(true);
+
       const uploadURL = (response as { uploadURL?: string })?.uploadURL;
       const s3Url = uploadURL ? `s3:/${new URL(uploadURL).pathname}` : "";
       const datasetName =
@@ -77,16 +80,19 @@ export default function UploadDatasetPage({
       );
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
-      router.push(`/${projectId}`);
+
+      router.push(`/${projectId}/${res.data.dataset.id}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       setUploadError(errorMessage);
       toast.error(`Failed to source dataset (CSV): ${errorMessage}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleDbSourceSuccess = (datasetAlias: string) => {
+  const handleDbSourceSuccess = (datasetAlias: string, datasetId: string) => {
     toast.success(
       `Dataset ${datasetAlias} (from ${selectedDriver}) created successfully`
     );
@@ -94,7 +100,7 @@ export default function UploadDatasetPage({
     queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
     setIsDbDialogOpen(false);
     setSelectedDriver(null);
-    router.push(`/${projectId}`);
+    router.push(`/${projectId}/${datasetId}`);
   };
 
   const handleDbSourceError = (errorMessage: string) => {
@@ -139,6 +145,16 @@ export default function UploadDatasetPage({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>CSV Upload Error</AlertTitle>
             <AlertDescription>{uploadError}</AlertDescription>
+          </Alert>
+        )}
+        {isProcessing && (
+          <Alert className="mb-4 bg-primary/10 border-primary/20">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <AlertTitle>Processing Dataset</AlertTitle>
+            <AlertDescription>
+              Your file has been uploaded and is being processed by the server.
+              This may take a few moments...
+            </AlertDescription>
           </Alert>
         )}
         <CsvValidationUppy

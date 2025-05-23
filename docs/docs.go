@@ -1422,7 +1422,7 @@ const docTemplate = `{
             "description": "Request body for creating a streaming chat conversation with an AI agent",
             "type": "object",
             "required": [
-                "prompt"
+                "messages"
             ],
             "properties": {
                 "chat_id": {
@@ -1440,6 +1440,13 @@ const docTemplate = `{
                         "['550e8400-e29b-41d4-a716-446655440000']"
                     ]
                 },
+                "messages": {
+                    "description": "Array of chat messages",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AIChatMessage"
+                    }
+                },
                 "project_ids": {
                     "description": "Array of project IDs to analyze",
                     "type": "array",
@@ -1449,11 +1456,6 @@ const docTemplate = `{
                     "example": [
                         "['550e8400-e29b-41d4-a716-446655440000']"
                     ]
-                },
-                "prompt": {
-                    "description": "User input/question for the AI agent",
-                    "type": "string",
-                    "example": "What are the trends in this dataset?"
                 }
             }
         },
@@ -1526,6 +1528,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AIChatMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "role": {
                     "type": "string"
                 }
             }

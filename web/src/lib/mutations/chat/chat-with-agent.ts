@@ -2,11 +2,16 @@ import { createMutation } from "react-query-kit";
 import { apiClient } from "@/lib/api-client";
 import { type KyResponse } from "ky";
 
+interface AIChatMessage {
+  role: string;
+  content: string;
+}
+
 interface ChatWithAgentParams {
   chatId?: string;
   datasetIds?: string[];
   projectIds?: string[];
-  prompt: string;
+  messages: AIChatMessage[];
   signal?: AbortSignal;
 }
 
@@ -24,7 +29,7 @@ export const useChatWithAgent = createMutation<
         chat_id: params.chatId,
         dataset_ids: params.datasetIds,
         project_ids: params.projectIds,
-        prompt: params.prompt,
+        messages: params.messages,
       },
       signal: params.signal,
       // Ky throws HTTPError for non-2xx responses by default.
