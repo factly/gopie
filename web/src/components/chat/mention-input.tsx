@@ -109,11 +109,12 @@ export function MentionInput({
       textarea.style.height = "auto";
 
       const scrollHeight = textarea.scrollHeight;
-      const maxHeight = 120; // Max height in pixels (about 5 lines)
+      const maxHeight = 160; // Increased max height for better multi-line support (about 7 lines)
+      const minHeight = 24; // Minimum height for single line
 
       if (scrollHeight <= maxHeight) {
-        // If content fits within max height, set height to scrollHeight
-        textarea.style.height = `${scrollHeight}px`;
+        // If content fits within max height, set height to scrollHeight but not less than minHeight
+        textarea.style.height = `${Math.max(scrollHeight, minHeight)}px`;
         textarea.style.overflowY = "hidden";
       } else {
         // If content exceeds max height, set to max height and enable scrolling
@@ -168,14 +169,24 @@ export function MentionInput({
       debouncedSearch("");
     } else if (e.key === "Escape") {
       setShowMentionPopover(false);
-    } else if (e.key === "Enter" && !e.shiftKey) {
-      // Handle Enter key press to submit the form (only if not holding Shift)
-      e.preventDefault();
-      if (value.trim() && !disabled) {
-        onSubmit(e);
+    } else if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Allow Shift+Enter for new lines (default textarea behavior)
+        return;
+      } else if (e.ctrlKey || e.metaKey) {
+        // Allow Ctrl+Enter or Cmd+Enter to also submit
+        e.preventDefault();
+        if (value.trim() && !disabled) {
+          onSubmit(e);
+        }
+      } else {
+        // Regular Enter submits the form
+        e.preventDefault();
+        if (value.trim() && !disabled) {
+          onSubmit(e);
+        }
       }
     }
-    // Allow Shift+Enter for new lines (default textarea behavior)
   };
 
   // Focus input on mount and setup auto-resize
@@ -370,11 +381,11 @@ export function MentionInput({
       <div className="relative">
         <div
           className={cn(
-            "flex flex-col justify-center rounded-lg border bg-background px-4 pr-10 shadow-sm transition-all duration-200",
+            "flex flex-col justify-start rounded-lg border bg-background px-4 shadow-sm transition-all duration-200",
             "hover:shadow-md focus-within:shadow-md",
             selectedContexts.length > 0
-              ? "min-h-[4rem] py-2.5"
-              : "min-h-[3.25rem] py-2.5",
+              ? "min-h-[4rem] py-3"
+              : "min-h-[3.5rem] py-3",
             "w-full",
             className,
             disabled ? "opacity-50" : ""
@@ -420,14 +431,15 @@ export function MentionInput({
             </div>
           )}
 
-          <div className="relative flex-1 flex items-center">
+          <div className="relative flex-1 flex items-start">
             <Textarea
               ref={textareaRef}
               className={cn(
-                "w-full border-0 bg-transparent p-0 pr-12 resize-none",
+                "w-full border-0 bg-transparent p-0 pr-16 resize-none",
                 "shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm",
-                "min-h-[1.5rem] max-h-[120px] leading-relaxed",
-                "placeholder:text-muted-foreground flex items-center"
+                "min-h-[1.5rem] max-h-[160px] leading-6",
+                "placeholder:text-muted-foreground",
+                "transition-all duration-200"
               )}
               placeholder={placeholder}
               value={value}
@@ -436,12 +448,16 @@ export function MentionInput({
               onFocus={() => setTimeout(() => autoResizeTextarea(), 0)}
               disabled={disabled}
               rows={1}
-              style={{ paddingTop: "0.125rem", paddingBottom: "0.125rem" }}
+              style={{
+                paddingTop: "0.25rem",
+                paddingBottom: "0.25rem",
+                lineHeight: "1.5",
+              }}
             />
           </div>
 
-          {/* Action buttons container - positioned at the very right edge */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          {/* Action buttons container - vertically centered for better alignment */}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {actionButtons}
             {showSendButton && (
               <TooltipProvider>

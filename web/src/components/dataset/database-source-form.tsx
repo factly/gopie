@@ -21,7 +21,7 @@ interface DatabaseSourceFormProps {
   projectId: string;
   driver: "postgres" | "mysql";
   onCloseDialog: () => void;
-  onSuccess: (datasetAlias: string) => void;
+  onSuccess: (datasetAlias: string, datasetId: string) => void;
   onError: (errorMessage: string) => void;
 }
 
@@ -75,7 +75,7 @@ export function DatabaseSourceForm({
         onError(errMessage);
         return;
       }
-      onSuccess(result.dataset.alias);
+      onSuccess(result.dataset.alias, result.dataset.id);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
