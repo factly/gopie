@@ -48,7 +48,7 @@ interface StreamEvent {
 
 // Add interface for client-side chat messages
 interface ClientChatMessage {
-  role: "user" | "ai";
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -1051,14 +1051,14 @@ function ChatPageClient() {
             if (aiContent) {
               if (
                 clientMessages.length !== 0 &&
-                clientMessages.at(-1)?.role === "ai" &&
+                clientMessages.at(-1)?.role === "assistant" &&
                 clientMessages.at(-1)?.content === aiContent
               ) {
                 console.log("Skipping duplicate AI response");
               } else {
                 setClientMessages((prev) => [
                   ...prev,
-                  { role: "ai", content: aiContent },
+                  { role: "assistant", content: aiContent },
                 ]);
               }
             }
