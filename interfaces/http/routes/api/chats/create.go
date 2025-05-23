@@ -226,8 +226,8 @@ type chatWithAgentRequestBody struct {
 	DatasetIDs []string `json:"dataset_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
 	// Array of project IDs to analyze
 	ProjectIDs []string `json:"project_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
-	// User input/question for the AI agent
-	Prompt string `json:"prompt" validate:"required" example:"What are the trends in this dataset?"`
+	// Array of chat messages
+	Messages []models.AIChatMessage `json:"messages" validate:"required"`
 	// Chat ID for the conversation (optional)
 	ChatID string `json:"chat_id" validate:"omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
@@ -253,8 +253,8 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	if len(body.DatasetIDs) == 0 && len(body.ProjectIDs) == 0 {
 		return ctx.Status(fiber.StatusBadRequest).SendString("At least one dataset_id or project_id is required")
 	}
-	if body.Prompt == "" {
-		return ctx.Status(fiber.StatusBadRequest).SendString("user_input is required")
+	if len(body.Messages) == 0 {
+		return ctx.Status(fiber.StatusBadRequest).SendString("messages field is required")
 	}
 
 	// Set headers for SSE
@@ -271,7 +271,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	params := &models.AIAgentChatParams{
 		ProjectIDs: body.ProjectIDs,
 		DatasetIDs: body.DatasetIDs,
-		UserInput:  body.Prompt,
+		Messages:   body.Messages,
 		DataChan:   dataChan,
 		ErrChan:    errChan,
 	}

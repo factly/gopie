@@ -46,6 +46,12 @@ interface StreamEvent {
   generated_sql_query?: string;
 }
 
+// Add interface for client-side chat messages
+interface ClientChatMessage {
+  role: "user" | "ai";
+  content: string;
+}
+
 interface CachedDatasetsData {
   results: Dataset[];
   total_count?: number;
@@ -663,6 +669,8 @@ function ChatPageClient() {
     new Map()
   );
 
+  const [clientMessages, setClientMessages] = useState<ClientChatMessage[]>([]);
+
   const chatWithAgent = useChatWithAgent();
 
   useEffect(() => {
@@ -792,6 +800,13 @@ function ChatPageClient() {
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
 
+      // Add the new user message to clientMessages
+      const userMessage: ClientChatMessage = {
+        role: "user",
+        content: message,
+      };
+      setClientMessages((prev) => [...prev, userMessage]);
+
       setOptimisticMessages((prev) => [
         ...prev,
         {
@@ -821,11 +836,36 @@ function ChatPageClient() {
           .filter((ctx) => ctx.type === "project")
           .map((ctx) => ctx.id);
 
+        // Filter out potential duplicate messages before sending
+        const messagesWithoutDuplicates = [
+          ...clientMessages,
+          userMessage,
+        ].reduce(
+          (
+            unique: ClientChatMessage[],
+            message: ClientChatMessage,
+            index,
+            array
+          ) => {
+            // Check if this is a duplicate of the previous message
+            const prevMessage = array[index - 1];
+            if (
+              prevMessage &&
+              prevMessage.role === message.role &&
+              prevMessage.content === message.content
+            ) {
+              return unique; // Skip this message
+            }
+            return [...unique, message];
+          },
+          []
+        );
+
         const response = await chatWithAgent.mutateAsync({
           chatId: currentChatId || undefined,
           datasetIds,
           projectIds,
-          prompt: message,
+          messages: messagesWithoutDuplicates,
           signal, // Pass the abort signal to the request
         });
 
@@ -986,11 +1026,12 @@ function ChatPageClient() {
           }
         }
 
-        // Stream finished, capture derived datasets/SQL for the optimistic message
+        // After stream completed, collect AI response content to add to clientMessages
         setOptimisticMessages((prev) => {
           const currentOptMsg = prev.find(
             (msg) => msg.id === `assistant-${optimisticId}`
           );
+
           if (
             currentOptMsg &&
             Array.isArray(currentOptMsg.content) &&
@@ -999,9 +1040,32 @@ function ChatPageClient() {
             const { datasets, sql } = deriveEnhancementsFromStream(
               currentOptMsg.content as StreamEvent[]
             );
+
+            // Extract AI message content from stream events
+            const aiContent = (currentOptMsg.content as StreamEvent[])
+              .filter((event) => event.role === "ai")
+              .map((event) => event.content)
+              .join("");
+
+            // Add the AI response to clientMessages
+            if (aiContent) {
+              if (
+                clientMessages.length !== 0 &&
+                clientMessages.at(-1)?.role === "ai" &&
+                clientMessages.at(-1)?.content === aiContent
+              ) {
+                console.log("Skipping duplicate AI response");
+              } else {
+                setClientMessages((prev) => [
+                  ...prev,
+                  { role: "ai", content: aiContent },
+                ]);
+              }
+            }
+
             setLastCompletedStreamDetails({
               optimisticId: `assistant-${optimisticId}`,
-              chatId: currentChatId || newChatIdFromStream || "", // Ensure chatId is string
+              chatId: currentChatId || newChatIdFromStream || "",
               derivedDatasets: datasets,
               derivedSql: sql,
             });
@@ -1014,6 +1078,9 @@ function ChatPageClient() {
         });
 
         if (newChatIdFromStream && newChatNameFromStream) {
+          // Reset clientMessages when creating a new chat
+          setClientMessages([userMessage]);
+
           const datasetIdForNewChat =
             selectedContexts.find((ctx) => ctx.type === "dataset")?.id || null;
           selectChatForDataset(
@@ -1053,6 +1120,7 @@ function ChatPageClient() {
       queryClient,
       selectChatForDataset,
       setActiveTab,
+      clientMessages,
     ]
   );
 
@@ -1309,6 +1377,11 @@ function ChatPageClient() {
       window.removeEventListener("resize", updateWidth);
     };
   }, [isOpen, sqlPanelRef]);
+
+  // Reset clientMessages when chat changes
+  useEffect(() => {
+    setClientMessages([]);
+  }, [selectedChatId]);
 
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">

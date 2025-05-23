@@ -77,6 +77,11 @@ definitions:
         items:
           type: string
         type: array
+      messages:
+        description: Array of chat messages
+        items:
+          $ref: '#/definitions/models.AIChatMessage'
+        type: array
       project_ids:
         description: Array of project IDs to analyze
         example:
@@ -84,12 +89,8 @@ definitions:
         items:
           type: string
         type: array
-      prompt:
-        description: User input/question for the AI agent
-        example: What are the trends in this dataset?
-        type: string
     required:
-    - prompt
+    - messages
     type: object
   database.createRequestBody:
     description: Request body for creating a database source dataset
@@ -146,6 +147,13 @@ definitions:
         type: string
     required:
     - updated_by
+    type: object
+  models.AIChatMessage:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
     type: object
   models.Chat:
     properties:

@@ -5,10 +5,15 @@ type UploadSchemaParams struct {
 	DatasetID string `json:"dataset_id"`
 }
 
+type AIChatMessage struct {
+	Content string `json:"content"`
+	Role    string `json:"role"`
+}
+
 type AIAgentChatParams struct {
 	ProjectIDs []string
 	DatasetIDs []string
-	UserInput  string
+	Messages   []AIChatMessage
 	DataChan   chan []byte
 	ErrChan    chan error
 }
