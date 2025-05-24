@@ -33,5 +33,5 @@ jobs:
       with:
         push: true
         tags: asia-south1-docker.pkg.dev/factly-prod/mande/dataful-agent:${{ env.RELEASE_VERSION }}
-        context: server
-        file: server/Dockerfile
+        context: chat-server
+        file: chat-server/Dockerfile
