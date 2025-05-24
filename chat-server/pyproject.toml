@@ -1,0 +1,42 @@
+[project]
+name = "dataful-agent"
+version = "0.1.0"
+description = "A multidataset-SQL agent for Dataful"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+  "fastapi[standard]>=0.115.12",
+  "langchain>=0.3.21",
+  "langchain-community>=0.3.20",
+  "langchain-openai>=0.3.9",
+  "langchain-qdrant>=0.2.0",
+  "langgraph>=0.3.18",
+  "langsmith>=0.3.42",
+  "logging>=0.4.9.6",
+  "pandas>=2.2.3",
+  "portkey-ai>=1.11.1",
+  "pydantic>=2.10.6",
+  "qdrant-client>=1.13.3",
+]
+
+[tool.black]
+line-length = 79
+include = '\.pyi?$'
+exclude = '''
+/(
+   .eggs
+  | .git
+  | .venv
+  | .eggs
+  | .cache
+  | __pycache__
+  | _build
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 79

@@ -1,0 +1,79 @@
+import logging
+import sys
+import time
+
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.routers.dataset_upload import (
+    dataset_router as schema_upload_router,
+)
+from app.api.v1.routers.models import router as models_router
+from app.api.v1.routers.query import router as query_router
+from app.core.config import settings
+from app.core.session import SingletonAiohttp
+from app.utils.graph_utils.generate_graph import visualize_graph
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SingletonAiohttp.get_aiohttp_client()
+    try:
+        visualize_graph()
+    except Exception as e:
+        logging.error(f"Failed to generate graph visualization: {e}")
+    yield
+    await SingletonAiohttp.close_aiohttp_client()
+
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    docs_url="/api/docs",
+    openapi_url="/api",
+    lifespan=lifespan,
+)
+if settings.MODE == "development":
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=sys.stdout,
+    )
+else:
+    logging.basicConfig(level=logging.INFO)
+
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_methods=settings.CORS_METHODS,
+    allow_headers=settings.CORS_HEADERS,
+)
+
+app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
+app.include_router(
+    schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"]
+)
+app.include_router(
+    models_router, prefix=f"{settings.API_V1_STR}/models", tags=["models"]
+)
+
+
+def start():
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info",
+    )

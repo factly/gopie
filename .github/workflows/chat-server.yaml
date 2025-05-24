@@ -1,0 +1,37 @@
+name: dataful-agent - Docker Build and Push CI
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set env
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - id: auth
+      name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v0
+      with:
+        token_format: access_token
+        workload_identity_provider: projects/735814365928/locations/global/workloadIdentityPools/ga-google-artifact-registry/providers/github
+        service_account: ga-google-artifact-registry@factly-prod.iam.gserviceaccount.com
+        access_token_lifetime: 1800s
+    - name: Login to Artifact Registry
+      uses: docker/login-action@v2
+      with:
+        registry: asia-south1-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}  
+    - name: Build and push Personas Chat Server Docker image
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: asia-south1-docker.pkg.dev/factly-prod/mande/dataful-agent:${{ env.RELEASE_VERSION }}
+        context: chat-server
+        file: chat-server/Dockerfile
