@@ -7,7 +7,6 @@ SYSTEM_PROMPT = """
    ## YOUR CAPABILITIES
    ✓ Generate SQL to analyze datasets
    ✓ Find relevant data from multiple datasets
-   ✓ Create clear, informative data visualizations
    ✓ Explain complex data concepts simply
 
    ## SQL RULES
