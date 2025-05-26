@@ -19,10 +19,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "GoPie",
-  description: "GoPie",
+  description: "Chat with your data using GoPie",
+  manifest: "/site.webmanifest",
   icons: {
-    icon: "/gopie.svg",
-    apple: "/gopie.svg",
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 

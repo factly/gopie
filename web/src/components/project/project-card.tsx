@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, FolderIcon, Trash, PencilIcon } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash,
+  PencilIcon,
+  Calendar,
+  Layers,
+  ChevronRight,
+} from "lucide-react";
 import Link from "next/link";
 import { Project } from "@/lib/api-client";
 import {
@@ -33,12 +39,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface ProjectCardProps {
   project: Project;
   onUpdate?: (
     projectId: string,
-    data: { updated_by: string; name: string; description: string },
+    data: { updated_by: string; name: string; description: string }
   ) => Promise<void>;
   onDelete?: (projectId: string) => Promise<void>;
 }
@@ -50,9 +58,10 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedName, setEditedName] = useState(project.name);
   const [editedDescription, setEditedDescription] = useState(
-    project.description,
+    project.description
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -133,56 +142,128 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
     }
   };
 
+  // Function to create a simple initial avatar from project name
+  const getInitialAvatar = (name: string) => {
+    return name.charAt(0).toUpperCase();
+  };
+
   return (
     <>
-      <Card className="group hover:shadow-md transition-all">
-        <CardHeader className="space-y-1">
-          <div className="flex items-start justify-between">
-            <Link href={`/${project.id}`}>
-              <CardTitle className="text-xl font-semibold line-clamp-1">
-                {project.name}
-              </CardTitle>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="ml-2">
-                {project.datasetCount} Datasets
-              </Badge>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                    <PencilIcon className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-500"
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                  >
-                    <Trash className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          {project.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {project.description}
-            </p>
+      <Link href={`/${project.id}`} className="block">
+        <Card
+          className={cn(
+            "group transition-all duration-300 relative overflow-hidden border border-border/40 hover:border-border/80",
+            "backdrop-blur-sm bg-card/80 hover:bg-card/90",
+            "hover:shadow-lg hover:shadow-primary/5",
+            "cursor-pointer"
           )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <FolderIcon className="h-4 w-4" />
-            <span>Project</span>
-          </div>
-        </CardContent>
-      </Card>
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <div
+            className={cn(
+              "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-bl-3xl",
+              "transition-all duration-300 ease-in-out",
+              isHovered ? "opacity-100" : "opacity-50"
+            )}
+          />
+
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
+                  {getInitialAvatar(project.name)}
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+                    {project.name}
+                  </CardTitle>
+                  {project.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      {project.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="z-10">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-full"
+                      onClick={(e: React.MouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsEditing(true);
+                      }}
+                    >
+                      <PencilIcon className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="mt-2 pt-3 border-t border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Layers className="h-3.5 w-3.5" />
+                    <span className="font-medium">{project.datasetCount}</span>
+                    <span>
+                      {project.datasetCount === 1 ? "Dataset" : "Datasets"}
+                    </span>
+                  </div>
+
+                  {project.createdAt && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>
+                        {format(new Date(project.createdAt), "MMM d, yyyy")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className={cn(
+                    "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
+                    "transition-all duration-300 ease-in-out",
+                    isHovered ? "opacity-100 translate-x-0" : ""
+                  )}
+                >
+                  <span>View Project</span>
+                  <ChevronRight className="h-3 w-3" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
       <AlertDialog
         open={isDeleteDialogOpen}
@@ -201,7 +282,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>

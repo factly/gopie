@@ -1,6 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, TableIcon, Trash } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash,
+  Calendar,
+  Database,
+  ChevronRight,
+} from "lucide-react";
 import Link from "next/link";
 import { Dataset } from "@/lib/api-client";
 import {
@@ -19,9 +24,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface DatasetCardProps {
   dataset: Dataset;
@@ -35,81 +41,168 @@ export function DatasetCard({
   onDelete,
 }: DatasetCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const handleDelete = async () => {
+  const handleDelete = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!onDelete) return;
     setIsDeleting(true);
     try {
       await onDelete(dataset.id);
     } finally {
       setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
+
+  // Function to create a simple initial avatar from dataset name
+  const getInitialAvatar = (name: string) => {
+    return name.charAt(0).toUpperCase();
+  };
+
+  const preventLinkNavigation = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
-    <Card className="group hover:shadow-md transition-all">
-      <CardHeader className="space-y-1">
-        <div className="flex items-start justify-between">
-          <Link href={`/${projectId}/${dataset.id}`}>
-            <CardTitle className="text-xl font-semibold line-clamp-1">
-              {dataset.alias || dataset.name}
-            </CardTitle>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="ml-2">
-              CSV
-            </Badge>
-            {onDelete && (
-              <AlertDialog>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem className="text-red-500">
+    <Link href={`/${projectId}/${dataset.id}`} className="block">
+      <Card
+        className={cn(
+          "group transition-all duration-300 relative overflow-hidden border border-border/40 hover:border-border/80",
+          "backdrop-blur-sm bg-card/80 hover:bg-card/90",
+          "hover:shadow-lg hover:shadow-primary/5",
+          "cursor-pointer"
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div
+          className={cn(
+            "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-bl-3xl",
+            "transition-all duration-300 ease-in-out",
+            isHovered ? "opacity-100" : "opacity-50"
+          )}
+        />
+
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
+                {getInitialAvatar(dataset.alias || dataset.name)}
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+                  {dataset.alias || dataset.name}
+                </CardTitle>
+                {dataset.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                    {dataset.description}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="z-10 flex items-center gap-2">
+              {onDelete && (
+                <>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full"
+                        onClick={preventLinkNavigation}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      onClick={preventLinkNavigation}
+                    >
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          preventLinkNavigation(e);
+                          setShowDeleteDialog(true);
+                        }}
+                      >
                         <Trash className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete the dataset &quot;
-                      {dataset.id}&quot;. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="bg-red-500 hover:bg-red-600"
-                    >
-                      {isDeleting ? "Deleting..." : "Delete"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <AlertDialog
+                    open={showDeleteDialog}
+                    onOpenChange={setShowDeleteDialog}
+                  >
+                    <AlertDialogContent onClick={preventLinkNavigation}>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the dataset &quot;
+                          {dataset.alias || dataset.name}&quot;. This action
+                          cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={preventLinkNavigation}>
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) => handleDelete(e)}
+                          disabled={isDeleting}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        {dataset.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {dataset.description}
-          </p>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <TableIcon className="h-4 w-4" />
-          <span>Dataset</span>
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          <div className="mt-2 pt-3 border-t border-border/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Database className="h-3.5 w-3.5" />
+                  <span>{dataset.format} Dataset</span>
+                </div>
+
+                {dataset.created_at && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>
+                      {format(new Date(dataset.created_at), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
+                  "transition-all duration-300 ease-in-out",
+                  isHovered ? "opacity-100 translate-x-0" : ""
+                )}
+              >
+                <span>View Dataset</span>
+                <ChevronRight className="h-3 w-3" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

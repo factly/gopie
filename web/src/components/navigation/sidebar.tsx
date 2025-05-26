@@ -20,6 +20,7 @@ import {
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useTheme } from "next-themes";
 
 import {
   Sidebar,
@@ -57,6 +58,7 @@ export function AppSidebar() {
   const params = useParams();
   const pathname = usePathname();
   const { open: isSidebarOpen } = useSidebar();
+  const { theme } = useTheme();
   const projectId = params?.projectId as string;
   const datasetId = params?.datasetId as string;
 
@@ -143,13 +145,22 @@ export function AppSidebar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-20"
                   onClick={() => router.push("/")}
                   title="Back to Home"
                 >
-                  <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
+                  <Image
+                    src={
+                      theme === "dark"
+                        ? "/GoPie_Logo_Dark.svg"
+                        : "/GoPie_Logo.svg"
+                    }
+                    alt="GoPie"
+                    width={160}
+                    height={60}
+                    className="h-8"
+                  />
                 </Button>
-                <span className="font-semibold">GoPie</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
@@ -195,7 +206,7 @@ export function AppSidebar() {
               onClick={() => router.push("/")}
               title="Back to Home"
             >
-              <Image src="/gopie.svg" alt="GoPie" width={24} height={24} />
+              <Image src="/favicon.svg" alt="GoPie" width={32} height={32} />
             </Button>
             <Button
               variant="ghost"
