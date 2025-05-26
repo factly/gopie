@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ThemeToggle } from "@/components/theme/toggle";
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -227,7 +228,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Gradient background */}
-        <div className="absolute inset-x-0 top-0 h-[300px] bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 opacity-70 -z-10" />
+        <div className="absolute inset-x-0 top-0 h-[300px] bg-gradient-to-br from-primary/70 via-primary/60 to-secondary/70 opacity-70 -z-10" />
 
         {/* Navbar */}
         <div className="border-b bg-background/80 backdrop-blur-sm z-10">
@@ -235,16 +236,27 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2">
                 <Image
-                  src="/gopie.svg"
+                  src="/GoPie_Logo.svg"
                   alt="GoPie Logo"
-                  width={28}
-                  height={28}
-                  className="w-7 h-7"
+                  width={130}
+                  height={57}
+                  className="h-12 dark:hidden"
+                  priority
                 />
-                <span className="font-semibold text-lg">GoPie</span>
+                <Image
+                  src="/GoPie_Logo_Dark.svg"
+                  alt="GoPie Logo"
+                  width={130}
+                  height={57}
+                  className="h-12 hidden dark:block"
+                  priority
+                />
               </Link>
             </div>
-            <AuthStatus size="md" />
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <AuthStatus size="md" />
+            </div>
           </div>
         </div>
 
@@ -256,30 +268,59 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-2xl"
             >
-              <div className="flex flex-col items-center mb-8">
-                <div className="flex items-center mb-4">
-                  <Image
-                    src="/gopie.svg"
-                    alt="GoPie Logo"
-                    width={48}
-                    height={48}
-                    className="w-12 h-12 mr-3"
-                  />
-                  <h2 className="text-3xl font-semibold">GoPie Chat</h2>
+              <div className="mb-6">
+                <div className="flex justify-center mb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/30 backdrop-blur-sm max-w-md">
+                    <div className="bg-muted text-muted-foreground text-xs font-medium rounded-full px-1.5 py-0.5">
+                      NEW
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      GoPie is open source!
+                    </span>
+                    <a
+                      href="https://github.com/factly/gopie"
+                      className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                        <path d="M9 18c-4.51 2-5-2-7-2" />
+                      </svg>
+                      View on GitHub
+                    </a>
+                  </div>
                 </div>
-                <p className="text-muted-foreground text-center text-base max-w-md mt-2">
-                  Your AI-powered assistant for data insights and analysis
-                </p>
+                <h1 className="text-4xl md:text-5xl font-bold text-center text-foreground mt-3 mb-5">
+                  Chat with your data
+                </h1>
               </div>
 
-              <div className="rounded-2xl bg-black/10 dark:bg-white/5 p-3 backdrop-blur-sm border border-black/10 dark:border-white/10 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <ContextPicker
-                    selectedContexts={selectedContexts}
-                    onSelectContext={handleSelectContext}
-                    onRemoveContext={handleRemoveContext}
-                    triggerClassName="h-14 w-14 rounded-full bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                  />
+              <div
+                className="rounded-xl bg-card dark:bg-card/90 border border-border shadow-lg 
+                ring-[1.5px] ring-foreground/10 
+                hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
+                focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
+                transition-all duration-200"
+              >
+                <div className="flex items-center">
+                  <div className="flex items-center justify-center h-12 w-12 ml-2">
+                    <ContextPicker
+                      selectedContexts={selectedContexts}
+                      onSelectContext={handleSelectContext}
+                      onRemoveContext={handleRemoveContext}
+                      triggerClassName="flex items-center justify-center h-9 w-9 rounded-full bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    />
+                  </div>
                   <MentionInput
                     value={inputValue}
                     onChange={setInputValue}
@@ -289,7 +330,7 @@ export default function HomePage() {
                     selectedContexts={selectedContexts}
                     onSelectContext={handleSelectContext}
                     onRemoveContext={handleRemoveContext}
-                    className="flex-1"
+                    className="flex-1 dark-input"
                     showSendButton={true}
                     isSending={isSending}
                     hasContext={selectedContexts.length > 0}

@@ -388,7 +388,8 @@ export function MentionInput({
               : "min-h-[3.5rem] py-3",
             "w-full",
             className,
-            disabled ? "opacity-50" : ""
+            disabled ? "opacity-50" : "",
+            className.includes("dark-input") && "bg-transparent border-0 px-3"
           )}
         >
           {/* <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center h-5 w-5">
@@ -397,14 +398,21 @@ export function MentionInput({
 
           {/* Display selected contexts as badges above the input */}
           {selectedContexts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 items-center w-full mb-2.5 max-h-[80px] overflow-y-auto scrollbar-thin pr-1">
+            <div
+              className={cn(
+                "flex flex-wrap gap-1.5 items-center w-full mb-2.5 max-h-[80px] overflow-y-auto scrollbar-thin pr-1",
+                className.includes("dark-input") && "text-foreground"
+              )}
+            >
               {selectedContexts.map((context) => (
                 <Badge
                   key={`badge-${context.id}`}
                   variant={context.type === "project" ? "outline" : "secondary"}
                   className={cn(
                     "h-6 py-0.5 px-2 flex items-center gap-1.5 text-xs flex-shrink-0",
-                    "transition-all duration-200 hover:opacity-90"
+                    "transition-all duration-200 hover:opacity-90",
+                    className.includes("dark-input") &&
+                      "bg-muted/50 text-foreground border-border"
                   )}
                 >
                   {context.type === "project" ? (
@@ -415,7 +423,7 @@ export function MentionInput({
                   <span className="truncate max-w-32">{context.name}</span>
                   <X
                     className={cn(
-                      "h-3 w-3 cursor-pointer hover:text-red-500 transition-colors",
+                      "h-3 w-3 cursor-pointer hover:text-destructive transition-colors",
                       lockableContextIds?.includes(context.id) &&
                         "pointer-events-none opacity-40"
                     )}
@@ -436,10 +444,12 @@ export function MentionInput({
               ref={textareaRef}
               className={cn(
                 "w-full border-0 bg-transparent p-0 pr-16 resize-none",
-                "shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm",
+                "shadow-none ring-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm",
                 "min-h-[1.5rem] max-h-[160px] leading-6",
                 "placeholder:text-muted-foreground",
-                "transition-all duration-200"
+                "transition-all duration-200",
+                className.includes("dark-input") &&
+                  "text-foreground placeholder:text-muted-foreground"
               )}
               placeholder={placeholder}
               value={value}
@@ -467,7 +477,11 @@ export function MentionInput({
                       type={isStreaming ? "button" : "submit"}
                       size="icon"
                       variant={isStreaming ? "destructive" : "default"}
-                      className="h-8 w-8 rounded-full shadow-sm"
+                      className={cn(
+                        "h-8 w-8 rounded-full shadow-sm",
+                        className.includes("dark-input") &&
+                          "bg-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground border-0"
+                      )}
                       disabled={
                         isStreaming
                           ? false

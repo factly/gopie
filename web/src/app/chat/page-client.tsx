@@ -1490,7 +1490,6 @@ function ChatPageClient() {
               : `calc(100% - ${
                   isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
                 })`,
-            transition: "left 0.2s ease-in-out, width 0.2s ease-in-out",
           }}
         >
           <ChatInput
