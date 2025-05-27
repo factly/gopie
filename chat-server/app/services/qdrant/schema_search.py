@@ -83,7 +83,7 @@ async def search_schemas(
 
             schemas.append(formatted_schema)
 
-        logging.info(
+        logging.debug(
             f"Found {len(schemas)} schemas matching query: {user_query}"
         )
         return schemas

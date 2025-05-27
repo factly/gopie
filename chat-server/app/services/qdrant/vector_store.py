@@ -46,7 +46,7 @@ async def add_documents_to_vector_store(documents, ids=None):
         )
 
         if search_result[0]:
-            logging.info(
+            logging.debug(
                 f"Document with project_id={project_id}, "
                 f"dataset_id={dataset_id} already exists in vector store. "
                 "Skipping."

@@ -41,7 +41,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
         Remaining Subqueries:
         {json.dumps([sq.query_text for sq in
-                    query_result.subqueries[query_index+1:]])}
+                    query_result.subqueries[query_index + 1:]])}
 
         First, analyze dependencies:
         1. Is this failed subquery critical for the remaining subqueries?
@@ -97,7 +97,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         }
     )
 
-    logging.info(f"Stream updates response: {response.content}")
+    logging.debug(f"Stream updates response: {response.content}")
 
     return {"messages": [AIMessage(content=response.content)]}
 
@@ -148,7 +148,7 @@ async def check_further_execution_requirement(
 
         Remaining Subqueries:
         {json.dumps([sq.query_text for sq in
-                    query_result.subqueries[query_index+1:]])}
+                    query_result.subqueries[query_index + 1:]])}
 
         The last stream message likely contains a decision about whether
         to continue execution. First, analyze this message to see if it
@@ -193,7 +193,7 @@ async def check_further_execution_requirement(
     try:
         result = JsonOutputParser().parse(str(response.content))
 
-        logging.info(f"Result: {result}")
+        logging.debug(f"Result: {result}")
 
         continue_execution = result.get("continue_execution", False)
 
