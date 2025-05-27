@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=gopie
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -139,7 +139,7 @@ services:
       - gopie
     command: server -console-address :9002 /export
     healthcheck:
-      test: [ "CMD", "mc", "ready", "local" ]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -228,11 +228,13 @@ services:
     build:
       context: ./chat-server
       dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
     volumes:
       - ./chat-server/app:/code/app
     env_file:
       - ./chat-server/.env
-    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload"
     depends_on:
       - qdrant
     extra_hosts:

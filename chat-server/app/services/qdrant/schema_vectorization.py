@@ -58,7 +58,7 @@ async def store_schema_in_qdrant(
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
 
-        logging.info("Schema indexing task created successfully")
+        logging.debug("Schema indexing task created successfully")
         return True
 
     except Exception as e:

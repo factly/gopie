@@ -34,13 +34,18 @@ app = FastAPI(
     openapi_url="/api",
     lifespan=lifespan,
 )
+
 if settings.MODE == "development":
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         stream=sys.stdout,
+        format="[%(levelname)s] %(message)s",
     )
 else:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s] %(message)s",
+    )
 
 
 @app.middleware("http")
@@ -73,7 +78,7 @@ def start():
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
         log_level="info",
     )

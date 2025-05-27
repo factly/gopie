@@ -15,41 +15,53 @@ def create_analyze_query_prompt(
     Returns:
         A formatted prompt string
     """
+
     return f"""
-        You are a data query classifier. Your only job is to categorize
-        the user query into ONE of three types.
+        You are a data query classifier. Categorize the user query into ONE
+        of three types. Prevent hallucination - only answer based on available
+        context and data.
 
         USER QUERY: "{user_query}"
-
         PREVIOUS TOOL RESULTS: {json.dumps(tool_results, indent=2)}
 
         QUERY TYPES - Select exactly ONE:
-        1. "data_query" - Requires SQL execution on datasets
-        * Needs database access to answer
-        * Examples: "Show sales trends", "Calculate average temps by region"
-        * Keywords: analyze, calculate, compare, find, show data, trends
 
-        2. "conversational" - General conversation not requiring data or tools
-        * Simple questions, greetings, or casual conversation
-        * Examples: "Hello", "How are you?", "What can you do?"
-        * No data analysis or specialized tools needed
+        1. "data_query" - Requires database access or data analysis
+        * Examples: "Show sales trends", "Where were elections held last year"
+        * Use when asking for specific data that needs database retrieval
+        * Default choice when unsure between classifications
 
-        3. "tool_only" - Can be answered by directly calling tools
-        * Requires tools but NOT database queries
-        * Directly call a tool to gather the required data for user answer
-        * Examples: "What datasets do you have?", "Show schema for customers"
-        * Keywords: available data, metadata, schema, help with
+        2. "conversational" - Answerable with available context OR extremely
+           vague queries needing clarification
+        * Use ONLY for:
+          a) Greetings: "Hello", "What can you do?"
+          b) Questions answerable from provided context/previous conversation
+          c) Extremely vague queries where no reasonable assumptions possible
+        * NEVER use for specific facts/events without available context
+        * Avoid clarification unless query is extremely vague
 
-        CRITICAL GUIDELINES:
-        - Choose EXACTLY ONE query type
-        - If ANY part requires data analysis, classify as "data_query"
-        - Be decisive - don't hedge or suggest multiple types
-        - If tools can directly answer without SQL, classify as "tool_only"
+        3. "tool_only" - Definitively answerable by calling available tools
+        * Use when confident tools provide complete answer
+        * Tools must fully answer the user's question
+        * May be reclassified after getting tool results
+
+        CORE RULES:
+        - Unknown facts/events → "data_query" (never "conversational")
+        - When unsure → "data_query"
+        - Clarification only for extremely vague queries
+        - Let data retrieval handle specific filtering
+
+        DECISION PRIORITY:
+        1. Tools can answer completely → "tool_only"
+        2. Needs data/unsure → "data_query"
+        3. Available context → "conversational"
+        4. Extremely vague → "conversational" with clarification
 
         FORMAT YOUR RESPONSE AS JSON:
         {{
             "query_type": "data_query" OR "conversational" OR "tool_only",
-            "reasoning": "1-2 sentences explaining your classification",
-            "data_query": true OR false
+            "reasoning": "Brief explanation of classification decision",
+            "clarification_needed": "If conversational due to vagueness,
+                                    specify what you need"
         }}
     """
