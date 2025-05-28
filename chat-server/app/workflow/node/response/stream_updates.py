@@ -1,11 +1,11 @@
 import json
-import logging
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
@@ -97,7 +97,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         }
     )
 
-    logging.debug(f"Stream updates response: {response.content}")
+    logger.debug(f"Stream updates response: {response.content}")
 
     return {"messages": [AIMessage(content=response.content)]}
 
@@ -193,7 +193,7 @@ async def check_further_execution_requirement(
     try:
         result = JsonOutputParser().parse(str(response.content))
 
-        logging.debug(f"Result: {result}")
+        logger.debug(f"Result: {result}")
 
         continue_execution = result.get("continue_execution", False)
 
@@ -202,5 +202,5 @@ async def check_further_execution_requirement(
         else:
             return "end_execution"
     except Exception as e:
-        logging.error(f"Error parsing LLM response: {str(e)}")
+        logger.error(f"Error parsing LLM response: {str(e)}")
         return "end_execution"

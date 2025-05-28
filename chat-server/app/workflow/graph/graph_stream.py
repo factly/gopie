@@ -1,10 +1,10 @@
 import json
-import logging
 import uuid
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
@@ -84,7 +84,7 @@ async def stream_graph_updates(
                     tool_category=extracted_event_data.category,
                 )
 
-                logging.debug(json.dumps(chunk.model_dump(mode="json")))
+                logger.debug(json.dumps(chunk.model_dump(mode="json")))
 
                 yield "data: " + json.dumps(
                     chunk.model_dump(mode="json")
@@ -100,7 +100,7 @@ async def stream_graph_updates(
             error=error,
         )
         yield "data: " + json.dumps(output.model_dump(mode="json")) + "\n \n"
-        logging.exception(e)
+        logger.exception(e)
 
 
 def convert_to_langchain_message(message: Message):

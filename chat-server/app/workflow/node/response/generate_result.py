@@ -1,9 +1,9 @@
 import json
-import logging
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
 from app.utils.model_registry.model_provider import (
@@ -25,7 +25,7 @@ async def generate_result(
         if isinstance(query_result, QueryResult):
             query_result.calculate_execution_time()
 
-        logging.debug(
+        logger.debug(
             f"query_result: {json.dumps(query_result.to_dict(), indent=2)}"
         )
 

@@ -1,10 +1,10 @@
-import logging
 from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.model_registry.model_provider import (
@@ -56,7 +56,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             semantic_searched_datasets = dataset_schemas
 
         except Exception as e:
-            logging.warning(
+            logger.warning(
                 f"Vector search error: {e!s}. Unable to retrieve dataset "
                 "information."
             )

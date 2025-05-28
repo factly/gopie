@@ -1,6 +1,6 @@
-import logging
 from typing import Any
 
+from app.core.log import logger
 from app.services.gopie.sql_executor import execute_sql
 
 
@@ -29,7 +29,7 @@ async def match_column_values(
     }
 
     if not column_assumptions or not dataset_name_mapping:
-        logging.warning("Empty column assumptions or dataset mapping provided")
+        logger.warning("Empty column assumptions or dataset mapping provided")
         return result
 
     for dataset_assumption in column_assumptions:
@@ -37,7 +37,7 @@ async def match_column_values(
         columns = dataset_assumption.get("columns", [])
 
         if not dataset_name or dataset_name not in dataset_name_mapping:
-            logging.warning(
+            logger.warning(
                 f"Dataset '{dataset_name}' not found in mapping, skipping"
             )
             continue
@@ -50,8 +50,8 @@ async def match_column_values(
             fuzzy_values = column_obj.get("fuzzy_values", [])
 
             if not column_name:
-                logging.warning(
-                    f"Skipping column {col_idx+1}: No column name provided"
+                logger.warning(
+                    f"Skipping column {col_idx + 1}: No column name provided"
                 )
                 continue
 
@@ -71,7 +71,7 @@ async def match_column_values(
                     result,
                 )
 
-    logging.debug(
+    logger.debug(
         f"Column value matching completed with "
         f"{len(result['value_matches'])} value matches"
     )
@@ -143,10 +143,10 @@ async def check_exact_match(
             and result
             and result[0].get("count", 0) > 0
         ):
-            logging.info(f"Exact match found for '{value}' in '{column_name}'")
+            logger.info(f"Exact match found for '{value}' in '{column_name}'")
             return True
     except Exception as e:
-        logging.error(
+        logger.error(
             f"Error checking exact match for '{value}' in "
             f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
@@ -206,14 +206,14 @@ async def find_similar_values(
                             if column_name in row:
                                 similar_values.append(row[column_name])
     except Exception as e:
-        logging.error(
+        logger.error(
             f"Error finding similar values for '{value}' in "
             f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
         )
 
     if similar_values:
-        logging.info(
+        logger.info(
             f"Found {len(similar_values)} similar values for '{value}'"
         )
 
