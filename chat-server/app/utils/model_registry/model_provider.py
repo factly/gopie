@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 
+from app.core.config import settings
 from app.core.langchain_config import LangchainConfig, ModelConfig
-from app.utils.model_registry.model_config import DEFAULT_MODEL
 from app.utils.model_registry.model_selection import NODE_TO_MODEL
 
 
@@ -55,7 +55,7 @@ def get_model_provider(
 def get_llm_for_node(
     node_name: str, config: RunnableConfig, with_tools: bool = False
 ):
-    model_id = NODE_TO_MODEL.get(node_name, DEFAULT_MODEL)
+    model_id = NODE_TO_MODEL.get(node_name, settings.DEFAULT_OPENAI_MODEL)
     trace_id = config.get("configurable", {}).get("trace_id")
 
     return ModelProvider(

@@ -35,9 +35,12 @@ def create_identify_datasets_prompt(
         2. IDENTIFY REQUIRED COLUMNS
         * For each selected dataset, list ONLY the columns needed for the query
         * For string columns ONLY, provide two types of search values:
-            - "exact_values": Use when 100% confident value exists
+            - "exact_values": Use ONLY when the EXACT value appears in the
+              sample_data of the schema. If you cannot see the exact value
+              in the sample_data, DO NOT use exact_values.
             (Used in: WHERE LOWER(column) = LOWER('value'))
-            - "fuzzy_values": Use when less confident about exact match
+            - "fuzzy_values": Use when the exact value is NOT in sample_data
+              or when less confident about exact match
             (Used in: WHERE LOWER(column) LIKE LOWER('%value%'))
 
         3. VALUE GUIDELINES

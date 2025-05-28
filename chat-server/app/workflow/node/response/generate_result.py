@@ -25,7 +25,7 @@ async def generate_result(
         if isinstance(query_result, QueryResult):
             query_result.calculate_execution_time()
 
-        logging.info(
+        logging.debug(
             f"query_result: {json.dumps(query_result.to_dict(), indent=2)}"
         )
 

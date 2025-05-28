@@ -71,7 +71,7 @@ async def match_column_values(
                     result,
                 )
 
-    logging.info(
+    logging.debug(
         f"Column value matching completed with "
         f"{len(result['value_matches'])} value matches"
     )

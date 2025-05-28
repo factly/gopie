@@ -8,12 +8,7 @@ from app.core.config import settings
 from app.core.system_prompt import SYSTEM_PROMPT
 from app.models.provider import ModelVendor
 from app.tools import TOOLS
-from app.utils.model_registry.model_config import (
-    AVAILABLE_MODELS,
-    DEFAULT_EMBEDDING_MODEL,
-    DEFAULT_GEMINI_MODEL,
-    DEFAULT_MODEL,
-)
+from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 
 class ModelConfig:
@@ -23,9 +18,9 @@ class ModelConfig:
         self.trace_id = trace_id or str(uuid.uuid4())
         self.model_provider = ModelVendor.OPENAI
 
-        self.openai_model = DEFAULT_MODEL
-        self.openai_embeddings_model = DEFAULT_EMBEDDING_MODEL
-        self.gemini_model = DEFAULT_GEMINI_MODEL
+        self.openai_model = settings.DEFAULT_OPENAI_MODEL
+        self.openai_embeddings_model = settings.DEFAULT_EMBEDDING_MODEL
+        self.gemini_model = settings.DEFAULT_GEMINI_MODEL
 
         if model_id and model_id in AVAILABLE_MODELS:
             self._set_model_from_id(model_id)
