@@ -128,58 +128,28 @@ async def check_further_execution_requirement(
 
     last_stream_message = state.get("messages", [])[-1]
 
-    sql_queries = [
-        sql_info.sql_query for sql_info in current_subquery.sql_queries
-    ]
+    analysis_prompt = f"""
+        Analyze this message about a failed subquery and determine if execution
+        should continue.
 
-    dependency_analysis_prompt = f"""
-        I need to analyze whether further subqueries should be executed
-        despite a failed subquery.
+        Message: {last_stream_message.content}
 
-        Original User Query: "{query_result.original_user_query}"
-        Last Stream Message: "{last_stream_message.content}"
+        Make a decision based on:
+        1. If the message explicitly states to continue or stop
+        2. If the message implies a critical dependency issue
+        3. If the error seems recoverable
 
-        Failed Subquery ({query_index + 1}/{len(query_result.subqueries)}):
-        "{current_subquery.query_text}"
-
-        Error Message: {json.dumps(current_subquery.error_message)}
-
-        SQL Queries Used: {json.dumps(sql_queries)}
-
-        Remaining Subqueries:
-        {json.dumps([sq.query_text for sq in
-                    query_result.subqueries[query_index + 1:]])}
-
-        The last stream message likely contains a decision about whether
-        to continue execution. First, analyze this message to see if it
-        explicitly states a decision.
-
-        Then analyze these factors:
-        1. Is the failed subquery critical for the remaining subqueries to be
-        meaningful?
-        2. Do the remaining subqueries depend on the results of this failed
-        subquery?
-        3. Would continuing with the remaining subqueries still provide partial
-        value to the user?
-
-        If the last message clearly indicates a decision about continuing or
-        stopping, that should heavily influence your decision.
-
-        Return only a single JSON object with this format:
+        Return a JSON object with:
         {{
-            "continue_execution": boolean (true or false, not a string),
-            "reasoning": "Brief explanation of your decision"
+            "continue_execution": true/false,
+            "reasoning": "brief explanation"
         }}
-
-        IMPORTANT: The "continue_execution" value MUST be a boolean
-        (true/false), not a string. Do not wrap it in quotes.
     """
 
     llm = get_llm_for_node("check_further_execution_requirement", config)
     response = await llm.ainvoke(
         {
-            "input": dependency_analysis_prompt,
-            "chat_history": get_chat_history(config),
+            "input": analysis_prompt,
         }
     )
 
@@ -192,9 +162,7 @@ async def check_further_execution_requirement(
 
     try:
         result = JsonOutputParser().parse(str(response.content))
-
-        logger.debug(f"Result: {result}")
-
+        logger.debug(f"Execution decision: {result}")
         continue_execution = result.get("continue_execution", False)
 
         if continue_execution:
