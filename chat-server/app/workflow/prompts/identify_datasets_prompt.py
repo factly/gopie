@@ -5,7 +5,10 @@ from app.models.schema import DatasetSchema
 
 
 def create_identify_datasets_prompt(
-    user_query: str, available_datasets_schemas: List[DatasetSchema]
+    user_query: str,
+    available_datasets_schemas: List[DatasetSchema],
+    confidence_score: float | None = None,
+    query_type: str | None = None,
 ) -> str:
     """
     Create a prompt for identifying datasets based on user query.
@@ -13,14 +16,23 @@ def create_identify_datasets_prompt(
     Args:
         user_query: The natural language query from the user
         available_datasets_schemas: List of available dataset schemas
+        confidence_score: Confidence score for the query classification
+        query_type: Type of query determined by previous analysis
 
     Returns:
         A formatted prompt string
     """
+    query_info = ""
+    if query_type is not None:
+        query_info = f"\nQUERY TYPE: {query_type}"
+
+    if confidence_score is not None:
+        query_info += f"\nQUERY CONFIDENCE SCORE: {confidence_score}"
+
     return f"""
         TASK: Identify the most relevant dataset(s) for this user query.
 
-        USER QUERY: "{user_query}"
+        USER QUERY: "{user_query}"{query_info}
 
         AVAILABLE DATASETS (pre-filtered by relevance):
         {json.dumps(available_datasets_schemas, indent=2)}
@@ -28,9 +40,18 @@ def create_identify_datasets_prompt(
         INSTRUCTIONS:
 
         1. SELECT DATASETS
-        * Choose the dataset(s) that best match the user query
+        * Choose the dataset(s) that best match the user query based on
+          usefulness and relevance
         * You can select multiple datasets if needed
         * Always refer to datasets by their "name" field
+        * IMPORTANT: The query type and confidence score were determined
+          by a previous LLM step. Do NOT rely solely on the query type
+          or confidence score - use your own reasoning to determine if
+          datasets are useful
+        * If datasets are relevant and useful for answering the query,
+          select them REGARDLESS of query type or confidence score
+        * Your primary goal is to select datasets that help answer the
+          user's question effectively
 
         2. IDENTIFY REQUIRED COLUMNS
         * For each selected dataset, list ONLY the columns needed for the query
@@ -49,6 +70,13 @@ def create_identify_datasets_prompt(
         * Include ONLY string columns in the values list
         * DO NOT include numerical columns used for mathematical calculations
 
+        4. PROVIDE NODE MESSAGE
+        * Include a brief informative message to pass to subsequent nodes
+        * This message should describe what datasets were found and why
+        * If no datasets were found, explain why and what alternative approach
+          might work
+        * Be concise but informative - this will help guide later processing
+
         FORMAT YOUR RESPONSE AS JSON:
         {{
             "selected_dataset": ["dataset_name1", "dataset_name2", ...],
@@ -65,7 +93,9 @@ def create_identify_datasets_prompt(
                         }}
                     ]
                 }}
-            ]
+            ],
+            "node_message": "Brief message about datasets found/not found and
+                           why they're relevant to the query"
         }}
 
         IMPORTANT:
@@ -74,4 +104,5 @@ def create_identify_datasets_prompt(
         * Only include columns actually needed for the query
         * Always use the dataset "name" field (not ID)
         * Only use exact_values when completely confident the value exists
+        * Make your node_message informative for subsequent processing steps
     """

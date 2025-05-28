@@ -16,13 +16,16 @@ def create_analyze_query_prompt(
         A formatted prompt string
     """
 
+    tool_call_count = len(tool_results) if tool_results else 0
+
     return f"""
         You are a data query classifier. Categorize the user query into ONE
-        of three types. Prevent hallucination - only answer based on available
+        of two types. Prevent hallucination - only answer based on available
         context and data.
 
         USER QUERY: "{user_query}"
         PREVIOUS TOOL RESULTS: {json.dumps(tool_results, indent=2)}
+        NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}
 
         QUERY TYPES - Select exactly ONE:
 
@@ -30,36 +33,51 @@ def create_analyze_query_prompt(
         * Examples: "Show sales trends", "Where were elections held last year"
         * Use when asking for specific data that needs database retrieval
         * Default choice when unsure between classifications
+        * Use if previous tool calls failed to provide adequate answers
 
-        2. "conversational" - Answerable with available context OR extremely
-           vague queries needing clarification
-        * Use ONLY for:
-          a) Greetings: "Hello", "What can you do?"
+        2. "conversational" - Answerable with available context, tools, or
+           extremely vague queries needing clarification
+        * Use for:
+          a) Greetings, help requests: "Hello", "What can you do?"
           b) Questions answerable from provided context/previous conversation
           c) Extremely vague queries where no reasonable assumptions possible
-        * NEVER use for specific facts/events without available context
-        * Avoid clarification unless query is extremely vague
+          d) Queries that can be answered by calling available tools
+        * You can call tools directly from conversational mode if needed
+        * If tools provide incomplete answers, change to "data_query"
+        * NEVER use for specific facts/events without available context/tools
 
-        3. "tool_only" - Definitively answerable by calling available tools
-        * Use when confident tools provide complete answer
-        * Tools must fully answer the user's question
-        * May be reclassified after getting tool results
+        TOOL USAGE GUIDELINES:
+        * You can use tools within conversational queries
+        * Evaluate if previous tool calls successfully answered the query
+        * If a tool call failed or gave incomplete information:
+          - Consider classifying as "data_query" to use database search
+        * If previous tool calls successfully answered the query:
+          - Maintain conversational classification
+        * Current tool call count: {tool_call_count}/5 (max 5 allowed)
 
         CORE RULES:
-        - Unknown facts/events → "data_query" (never "conversational")
+        - Unknown facts/events without tools → "data_query"
         - When unsure → "data_query"
         - Clarification only for extremely vague queries
         - Let data retrieval handle specific filtering
+        - Failed tool calls → "data_query"
 
         DECISION PRIORITY:
-        1. Tools can answer completely → "tool_only"
+        1. Tools can completely answer → "conversational"
         2. Needs data/unsure → "data_query"
         3. Available context → "conversational"
         4. Extremely vague → "conversational" with clarification
 
+        CONFIDENCE SCORE:
+        - Provide a confidence score (1-10) for your classification
+        - 1-3: Low confidence, might need verification with dataset search
+        - 4-7: Medium confidence, could benefit from dataset verification
+        - 8-10: High confidence in classification decision
+
         FORMAT YOUR RESPONSE AS JSON:
         {{
-            "query_type": "data_query" OR "conversational" OR "tool_only",
+            "query_type": "data_query" OR "conversational",
+            "confidence_score": <integer from 1 to 10>,
             "reasoning": "Brief explanation of classification decision",
             "clarification_needed": "If conversational due to vagueness,
                                     specify what you need"

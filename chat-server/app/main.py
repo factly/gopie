@@ -1,5 +1,4 @@
 import logging
-import sys
 import time
 
 import uvicorn
@@ -34,18 +33,6 @@ app = FastAPI(
     openapi_url="/api",
     lifespan=lifespan,
 )
-
-if settings.MODE == "development":
-    logging.basicConfig(
-        level=logging.DEBUG,
-        stream=sys.stdout,
-        format="[%(levelname)s] %(message)s",
-    )
-else:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(levelname)s] %(message)s",
-    )
 
 
 @app.middleware("http")

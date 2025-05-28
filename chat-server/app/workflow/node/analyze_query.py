@@ -18,8 +18,8 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
     """
     Analyze the user query and the identified datasets to determine:
     1. If this is a data query requiring dataset processing
-    2. If this is a conversational query needing no datasets
-    3. If this is a tool-only query that can be handled without SQL execution
+    2. If this is a conversational query (may use tools but doesn't need
+       datasets)
 
     Args:
         state: The current state object containing messages and tool results
@@ -71,6 +71,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "tables_used": None,
                 "query_result": None,
                 "tool_used_result": None,
+                "confidence_score": 5,
             },
         )
 
@@ -107,8 +108,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         parser = JsonOutputParser()
 
         if has_tool_calls(response):
-            query_result.subqueries[query_index].query_type = "tool_only"
-
+            query_result.subqueries[query_index].query_type = "conversational"
             tool_call_count += 1
 
             return {
@@ -128,7 +128,12 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         parsed_content = parser.parse(response_content)
 
         query_type = parsed_content.get("query_type", "conversational")
+        confidence_score = parsed_content.get("confidence_score", 5)
+
         query_result.subqueries[query_index].query_type = query_type
+        query_result.subqueries[
+            query_index
+        ].confidence_score = confidence_score
 
         return {
             "query_result": query_result,
@@ -174,8 +179,12 @@ def route_from_analysis(state: State) -> str:
     query_index = state.get("subquery_index")
 
     query_type = query_result.subqueries[query_index].query_type
+    confidence_score = query_result.subqueries[query_index].confidence_score
 
-    if query_type in {"conversational", "tool_only"}:
-        return "basic_conversation"
+    if query_type == "conversational":
+        if confidence_score >= 8:
+            return "basic_conversation"
+        else:
+            return "identify_datasets"
     else:
         return "identify_datasets"

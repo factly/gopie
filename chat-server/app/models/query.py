@@ -34,6 +34,8 @@ class SubQueryInfo:
     error_message: list[dict] | None = None
     retry_count: int = 0
     tool_used_result: Any = None
+    confidence_score: int = 5
+    node_messages: dict | None = None
 
     def add_error_message(self, error_message: str, error_origin_type: str):
         if self.error_message is None:
@@ -49,6 +51,8 @@ class SubQueryInfo:
             "tool_used_result": self.tool_used_result,
             "error_message": self.error_message,
             "retry_count": self.retry_count,
+            "confidence_score": self.confidence_score,
+            "node_messages": self.node_messages,
         }
 
 
@@ -57,6 +61,8 @@ class QueryInfo(TypedDict, total=False):
     query_type: str | None
     query_result: Any
     tool_used_result: Any
+    confidence_score: int
+    node_message: str | None
 
 
 @dataclass
@@ -92,6 +98,12 @@ class QueryResult:
             tool_used_result=(
                 query_info.get("tool_used_result") if query_info else None
             ),
+            confidence_score=(
+                query_info.get("confidence_score", 5) if query_info else 5
+            ),
+            node_messages=(
+                query_info.get("node_messages", {}) if query_info else {}
+            ),
         )
         self.subqueries.append(subquery_info)
 
@@ -104,6 +116,16 @@ class QueryResult:
         Add an error message to the current subquery
         """
         self.subqueries[-1].add_error_message(error_message, error_origin_type)
+
+    def set_node_message(self, message: dict | None):
+        """
+        Set a message from the current node for subsequent nodes
+
+        Args:
+            message: The message content to be passed along
+        """
+        if self.has_subqueries():
+            self.subqueries[-1].node_messages = message
 
     def to_dict(self) -> dict[str, Any]:
         return {

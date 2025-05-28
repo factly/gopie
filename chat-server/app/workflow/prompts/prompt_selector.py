@@ -32,6 +32,8 @@ class PlanQueryParams(TypedDict):
 class IdentifyDatasetsParams(TypedDict):
     user_query: str
     available_datasets_schemas: list[DatasetSchema]
+    confidence_score: float | None
+    query_type: str | None
 
 
 class AnalyzeQueryParams(TypedDict):
@@ -96,7 +98,12 @@ def _validate_params(node_name: NodeName, params: dict[str, Any]) -> None:
     """
     required_params = {
         "plan_query": ["user_query", "datasets_info"],
-        "identify_datasets": ["user_query", "available_datasets_schemas"],
+        "identify_datasets": [
+            "user_query",
+            "available_datasets_schemas",
+            "confidence_score",
+            "query_type",
+        ],
         "analyze_query": ["user_query", "tool_results"],
         "generate_subqueries": ["user_input"],
         "assess_query_complexity": ["user_input"],
@@ -127,11 +134,16 @@ def _get_plan_query_prompt(
 
 
 def _get_identify_datasets_prompt(
-    user_query: str, available_datasets_schemas: list[DatasetSchema]
+    user_query: str,
+    available_datasets_schemas: list[DatasetSchema],
+    confidence_score: float | None = None,
+    query_type: str | None = None,
 ) -> str:
     return create_identify_datasets_prompt(
         user_query=user_query,
         available_datasets_schemas=available_datasets_schemas,
+        confidence_score=confidence_score,
+        query_type=query_type,
     )
 
 

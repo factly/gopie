@@ -139,7 +139,6 @@ async def _handle_data_query(
 
     user_query = query_result.original_user_query
     results = []
-    summaries = []
     tool_used_results = []
     sql_with_explanations = []
     errors = []
@@ -150,12 +149,11 @@ async def _handle_data_query(
                 if sql_query_info.sql_query_result:
                     results.append(sql_query_info.sql_query_result)
 
-                if sql_query_info.summary:
-                    summaries.append(sql_query_info.summary)
-
                 sql_with_explanations.append(
                     f"SQL: {sql_query_info.sql_query}\n"
-                    f"Explanation: {sql_query_info.explanation}"
+                    f"Explanation: {sql_query_info.explanation}\n"
+                    f"Result: {sql_query_info.sql_query_result}\n"
+                    f"Summary: {sql_query_info.summary}\n"
                 )
             if subquery.tool_used_result:
                 tool_used_results.append(subquery.tool_used_result)
@@ -170,13 +168,8 @@ async def _handle_data_query(
     Context:
     - Original User Query: "{user_query}"
     - SQL Queries with Explanations:
-      {
-          " ".join(sql_with_explanations)
-          if sql_with_explanations
-          else "No SQL queries were executed."
-      }
+      {sql_with_explanations}
     - Results: {json.dumps(results, indent=2)}
-    - Summary: {json.dumps(summaries, indent=2)}
     - Tool Results: {
         json.dumps(tool_used_results, indent=2)
         if tool_used_results
