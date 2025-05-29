@@ -72,6 +72,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "query_result": None,
                 "tool_used_result": None,
                 "confidence_score": 5,
+                "node_messages": {},
             },
         )
 
@@ -129,11 +130,21 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
 
         query_type = parsed_content.get("query_type", "conversational")
         confidence_score = parsed_content.get("confidence_score", 5)
+        reasoning = parsed_content.get("reasoning", "")
+        clarification_needed = parsed_content.get("clarification_needed", "")
 
         query_result.subqueries[query_index].query_type = query_type
         query_result.subqueries[
             query_index
         ].confidence_score = confidence_score
+
+        query_result.set_node_message(
+            "analyze_query",
+            {
+                "reasoning": reasoning,
+                "clarification_needed": clarification_needed,
+            },
+        )
 
         return {
             "query_result": query_result,
@@ -146,6 +157,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         error_msg = f"Error analyzing query: {e!s}"
         query_result.add_error_message(str(e), "Error analyzing query")
         query_result.subqueries[query_index].query_type = "conversational"
+        query_result.subqueries[query_index].confidence_score = 3
 
         return {
             "query_result": query_result,

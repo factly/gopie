@@ -92,6 +92,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
     query_index = state.get("subquery_index", 0)
 
     subquery_errors = query_result.subqueries[query_index].error_message
+    node_messages = query_result.subqueries[query_index].node_messages
 
     if (
         isinstance(last_message, ErrorMessage)
@@ -107,32 +108,50 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
 
         llm = get_llm_for_node("route_query_replan", config)
 
+        prompt = f"""
+            I encountered an error when executing the SQL query:
+            {last_message.content}
+
+            Previous error messages (including current attempt):
+            {subquery_errors}
+
+            Node execution messages and context:
+            {node_messages}
+
+            Analyze all available information carefully to determine the best
+            next action. Consider the nature of the error, the execution
+            context in node_messages, and what previous attempts have revealed.
+
+            You have three possible options:
+
+            1. "reidentify_datasets" - Choose this when the underlying dataset
+               structure doesn't match what was expected
+
+            2. "replan" - Choose this when the query itself needs reformulation
+               but the dataset understanding is correct
+
+            3. "validate_query_result" - Choose this when either:
+               - The current results are sufficient despite the error
+               - Further retries would be futile
+               - The error is expected and doesn't prevent moving forward
+               - Analyzing the data and found that the error is not fixable by
+                 retrying the query
+
+            Remember that "validate_query_result" doesn't mean success - it
+            means we proceed with what we have.
+
+            Avoid making simplistic decisions based solely on error keywords.
+            Instead, synthesize all available context to determine the most
+            appropriate action.
+
+            Return ONLY one of these exact strings: "reidentify_datasets",
+            "replan", or "validate_query_result"
+        """
+
         response = await llm.ainvoke(
             {
                 "chat_history": get_chat_history(config),
-                "input": f"""
-                    I got an error when executing the query:
-                    {last_message.content}
-
-                    This are error message either from previous retrys or the
-                    current try.
-                    {subquery_errors}
-
-                    Can you please tell whether this error can be solved by
-                    replanning the query? or it's need to reidentify the
-                    datasets?
-
-                    If it's need to reidentify the datasets, please return
-                    "reidentify_datasets"
-                    If it's need to replan the query, please return "replan"
-                    If it's no problem, please return "validate_query_result"
-
-                    Think through this step-by-step:
-                    1. Analyze the error message
-                    2. Determine if it's a schema/dataset issue
-                    3. Check if it's a query syntax issue
-                    4. Decide on the appropriate action
-                """,
+                "input": prompt,
             }
         )
 

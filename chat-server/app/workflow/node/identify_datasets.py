@@ -63,14 +63,12 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
         if not semantic_searched_datasets:
             query_result.set_node_message(
+                "identify_datasets",
                 {
-                    "node_name": "identify_datasets",
-                    "message": (
-                        "No relevant datasets found by doing semantic "
-                        "search. This query is not relavant to any "
-                        "datasets. Converting to conversational query."
-                    ),
-                }
+                    "No relevant datasets found by doing semantic "
+                    "search. This query is not relavant to any "
+                    "datasets. Converting to conversational query."
+                },
             )
 
             await adispatch_custom_event(
@@ -127,7 +125,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             query_result.subqueries[query_index].query_type = "data_query"
 
         if node_message:
-            query_result.set_node_message(node_message)
+            query_result.set_node_message("identify_datasets", node_message)
 
         filtered_dataset_schemas = [
             schema

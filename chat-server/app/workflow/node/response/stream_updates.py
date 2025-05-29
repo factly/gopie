@@ -18,76 +18,61 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_index = state.get("subquery_index", 0)
 
     subquery_result = query_result.subqueries[query_index]
-    reached_max_retries = subquery_result.retry_count >= 3
     sql_queries = [
         sql_info.sql_query for sql_info in subquery_result.sql_queries
     ]
+    node_messages = subquery_result.node_messages
 
-    if reached_max_retries:
-        stream_update_prompt = f"""
-        I need to create a brief update about a failed subquery for the user.
+    stream_update_prompt = f"""
+    I need to create a brief update about the execution of a subquery.
 
-        Original User Query: "{query_result.original_user_query}"
+    Original User Query: "{query_result.original_user_query}"
 
-        The system attempted to execute this subquery:
-        "{subquery_result.query_text}"
+    This is subquery {query_index + 1} / {len(query_result.subqueries)}:
+    "{subquery_result.query_text}"
 
-        After {subquery_result.retry_count} attempts, the subquery
-        could not be completed due to errors:
-        {json.dumps(subquery_result.error_message)}
+    SQL Queries Used:
+    {json.dumps(sql_queries, indent=2)}
 
-        SQL Queries Used:
-        {json.dumps(sql_queries, indent=2)}
+    Subquery Result Information:
+    {json.dumps(subquery_result.to_dict())}
 
-        Remaining Subqueries:
-        {json.dumps([sq.query_text for sq in
-                    query_result.subqueries[query_index + 1:]])}
+    Node Messages:
+    {json.dumps(node_messages, indent=2)}
 
-        First, analyze dependencies:
-        1. Is this failed subquery critical for the remaining subqueries?
-        2. Do the remaining subqueries depend on the results of this failed
-           subquery?
-        3. Would continuing with the remaining subqueries still provide value?
+    Error Information (if any):
+    {json.dumps(subquery_result.error_message)}
 
-        Then create a user-friendly update that:
-        1. Explains in simple terms why the subquery failed
-        2. Suggests a potential fix or alternative approach
-        3. Clearly states whether you'll continue with other parts of the query
-           or if this failure is critical and we need to stop
-        4. Is professional but empathetic about the failure
-        5. Keeps the response concise (2-3 sentences)
+    Remaining Subqueries:
+    {
+        json.dumps([
+            sq.query_text
+            for sq in query_result.subqueries[query_index + 1:]
+        ])
+    }
 
-        Your update should be informative, actionable, and user-friendly.
-        IMPORTANT: Be explicit about whether execution will continue or stop.
-        """
-    else:
-        stream_update_prompt = f"""
-        I need to create a brief update about a successfully executed subquery.
+    INSTRUCTIONS:
+    1. First, determine if this subquery was successful or failed by examining
+       the data.
+    2. If the subquery FAILED:
+       - Explain in simple terms why it failed
+       - Analyze if this failure is critical for the remaining subqueries
+       - Clearly state if execution should continue or stop
+       - Be professional but empathetic about the failure
 
-        Original User Query: "{query_result.original_user_query}"
+    3. If the subquery was SUCCESSFUL:
+       - Provide a clear and concise summary of the results
+       - Focus on the actual data retrieved and its relevance to the user's
+         question
+       - Highlight any interesting patterns or insights
+       - Don't describe the execution process, focus on what was found
 
-        The system successfully executed this subquery {query_index + 1} /
-        {len(query_result.subqueries)}:
+    4. Keep your response concise (2-3 sentences)
+    5. End by stating the next action (continue to next subquery, stopping
+       execution, etc.)
 
-        "{subquery_result.query_text}"
-
-        SQL Queries Information:
-        {json.dumps(sql_queries, indent=2)}
-
-        Subquery Result Information:
-        {json.dumps(subquery_result.to_dict())}
-
-        Instructions:
-        1. Briefly summarize what information was retrieved from this subquery
-        2. Explain how this information relates to the user's original question
-        3. Mention which SQL queries were executed and if any had large results
-           that were summarized
-        4. Mention what the system will do next (if this is not the final
-           subquery)
-        5. Keep your response concise (2-3 sentences)
-
-        Your response should be informative and forward-looking.
-        """
+    Your response should be informative, actionable, and user-friendly.
+    """
 
     llm = get_llm_for_node("stream_updates", config)
     response = await llm.ainvoke(
@@ -110,15 +95,6 @@ async def check_further_execution_requirement(
     Returns a string indicating the next step: "next_sub_query" or
     "end_execution".
     """
-    query_result = state.get("query_result", None)
-    query_index = state.get("subquery_index", 0)
-
-    current_subquery = query_result.subqueries[query_index]
-    reached_max_retries = current_subquery.retry_count >= 3
-
-    if not reached_max_retries:
-        return "next_sub_query"
-
     await adispatch_custom_event(
         "dataful-agent",
         {
@@ -129,15 +105,17 @@ async def check_further_execution_requirement(
     last_stream_message = state.get("messages", [])[-1]
 
     analysis_prompt = f"""
-        Analyze this message about a failed subquery and determine if execution
-        should continue.
+        Analyze this message about a subquery execution and determine if
+        further execution should continue.
+        execution should continue.
 
         Message: {last_stream_message.content}
 
         Make a decision based on:
         1. If the message explicitly states to continue or stop
-        2. If the message implies a critical dependency issue
-        3. If the error seems recoverable
+        2. If the message mentions or implies a critical failure
+        3. If the message indicates an error that prevents further processing
+        4. Whether the remaining subqueries can still provide value
 
         Return a JSON object with:
         {{
@@ -150,6 +128,7 @@ async def check_further_execution_requirement(
     response = await llm.ainvoke(
         {
             "input": analysis_prompt,
+            "chat_history": get_chat_history(config),
         }
     )
 

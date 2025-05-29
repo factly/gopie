@@ -35,7 +35,7 @@ class SubQueryInfo:
     retry_count: int = 0
     tool_used_result: Any = None
     confidence_score: int = 5
-    node_messages: dict | None = None
+    node_messages: dict = field(default_factory=dict)
 
     def add_error_message(self, error_message: str, error_origin_type: str):
         if self.error_message is None:
@@ -62,7 +62,7 @@ class QueryInfo(TypedDict, total=False):
     query_result: Any
     tool_used_result: Any
     confidence_score: int
-    node_message: str | None
+    node_messages: dict
 
 
 @dataclass
@@ -117,7 +117,7 @@ class QueryResult:
         """
         self.subqueries[-1].add_error_message(error_message, error_origin_type)
 
-    def set_node_message(self, message: dict | None):
+    def set_node_message(self, node_name: str, node_message: Any):
         """
         Set a message from the current node for subsequent nodes
 
@@ -125,7 +125,7 @@ class QueryResult:
             message: The message content to be passed along
         """
         if self.has_subqueries():
-            self.subqueries[-1].node_messages = message
+            self.subqueries[-1].node_messages[node_name] = node_message
 
     def to_dict(self) -> dict[str, Any]:
         return {
