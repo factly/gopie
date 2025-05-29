@@ -1,12 +1,12 @@
 import json
-from typing import Dict, List, Optional
 
 
 def create_query_prompt(
     user_query: str,
     datasets_info: dict,
-    error_message: Optional[List[Dict]] = None,
+    error_message: list[dict] | None = None,
     attempt: int = 1,
+    node_messages: list[dict] | None = None,
 ) -> str:
     """
     Create a prompt for planning a SQL query based on user input and dataset
@@ -17,6 +17,7 @@ def create_query_prompt(
         datasets_info: Information about the available datasets
         error_message: Any error messages from previous attempts
         attempt: The current attempt number
+        node_messages: Messages from previous nodes in the workflow
 
     Returns:
         A formatted prompt string
@@ -34,6 +35,33 @@ def create_query_prompt(
 
     formatted_datasets = json.dumps(datasets_info, indent=2)
 
+    dataset_analysis_context = ""
+    if datasets_info.get("correct_column_requirements"):
+        dataset_analysis_context = f"""
+        # DATASET ANALYSIS RESULTS
+        Analysis of column values from database:
+        {
+            json.dumps(
+                datasets_info.get("correct_column_requirements"), indent=2
+            )
+        }
+
+        IMPORTANT: Utilize these analyzed column values when constructing your
+        query, especially for matching conditions. This represents actual
+        values found or not found in the database.
+        """
+
+    node_messages_context = ""
+    if node_messages:
+        node_messages_context = f"""
+        # WORKFLOW CONTEXT
+        Previous workflow steps information:
+        {json.dumps(node_messages, indent=2)}
+
+        Use this information to better understand the context and reasoning
+        from previous steps.
+        """
+
     prompt = f"""
         # QUERY TASK
         Given the following natural language query and detailed information
@@ -44,6 +72,14 @@ def create_query_prompt(
         # DATASETS INFORMATION
         Selected Datasets Information:
         {formatted_datasets}
+        {dataset_analysis_context}
+        {node_messages_context}
+
+        # DATABASE COMPATIBILITY REQUIREMENTS
+        IMPORTANT:
+        - Generated SQL queries MUST be compatible with DuckDB SQL execution
+          engine.
+        - Avoid PostgreSQL-specific syntax and functions.
 
         # DATASET NAMING GUIDELINES
         IMPORTANT - DATASET NAMING:
@@ -112,6 +148,8 @@ def create_query_prompt(
         # RESPONSE FORMAT
         Respond in this JSON format:
         {{
+            "reasoning": "Explain your overall thought process for planning
+                          the query. Discuss whether datasets can be joined.",
             "sql_queries": [
                 {{
                     "sql_query": "the SQL query to fetch the required data",
@@ -124,6 +162,8 @@ def create_query_prompt(
                                         return"
                 }}
             ],
+            "limitations": "Any limitations or assumptions made when planning
+                            the query"
         }}
 
         Note: If datasets are related and you only need one query,

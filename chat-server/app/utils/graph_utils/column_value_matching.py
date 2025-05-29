@@ -1,13 +1,12 @@
-from typing import Any
-
 from app.core.log import logger
+from app.models.data import ColumnValueMatching
 from app.services.gopie.sql_executor import execute_sql
 
 
 async def match_column_values(
-    column_assumptions: list[dict[str, Any]],
-    dataset_name_mapping: dict[str, str],
-) -> dict:
+    column_assumptions: list[dict],
+    dataset_name_mapping: dict,
+) -> ColumnValueMatching:
     """
     Match column values against exact and fuzzy values and find similar values
     when exact matches aren't found.
@@ -21,12 +20,10 @@ async def match_column_values(
             table names
 
     Returns:
-        Dictionary with verified values, and similar values suggestions
+        ColumnValueMatching object with analyzed datasets, matched column
+        values, and value suggestions for each dataset
     """
-    result = {
-        "value_matches": {},
-        "value_suggestions": {},
-    }
+    result = ColumnValueMatching()
 
     if not column_assumptions or not dataset_name_mapping:
         logger.warning("Empty column assumptions or dataset mapping provided")
@@ -42,6 +39,11 @@ async def match_column_values(
             )
             continue
 
+        dataset_analysis = ColumnValueMatching.DatasetAnalysis(
+            dataset_name=dataset_name
+        )
+        result.datasets[dataset_name] = dataset_analysis
+
         actual_table = dataset_name_mapping[dataset_name]
 
         for col_idx, column_obj in enumerate(columns):
@@ -55,72 +57,87 @@ async def match_column_values(
                 )
                 continue
 
+            column_entry = ColumnValueMatching.ColumnAnalysis(
+                column_name=column_name
+            )
+
+            dataset_analysis.columns_analyzed.append(column_entry)
+
             if exact_values:
                 await verify_exact_values(
+                    column_entry,
                     column_name,
                     exact_values,
                     actual_table,
-                    result,
                 )
 
             if fuzzy_values:
                 await verify_fuzzy_values(
+                    column_entry,
                     column_name,
                     fuzzy_values,
                     actual_table,
-                    result,
                 )
 
-    logger.debug(
-        f"Column value matching completed with "
-        f"{len(result['value_matches'])} value matches"
-    )
+    result.datasets = {
+        k: v for k, v in result.datasets.items() if v.columns_analyzed
+    }
+
+    result.summary = f"Analyzed values for {len(result.datasets)} datasets"
     return result
 
 
 async def verify_exact_values(
+    column_entry: ColumnValueMatching.ColumnAnalysis,
     column_name: str,
-    exact_values: list[str],
+    exact_values: list,
     table_name: str,
-    result: dict[str, Any],
 ) -> None:
     """
     Verify exact values against the column and collect matches.
     """
-    matches = []
-
     for value in exact_values:
         exact_match = await check_exact_match(value, column_name, table_name)
         if exact_match:
-            matches.append(value)
-
-    if matches:
-        result["value_matches"][column_name] = matches
+            column_entry.verified_values.append(
+                ColumnValueMatching.VerifiedValue(
+                    value=value,
+                    match_type="exact",
+                    found_in_database=True,
+                )
+            )
+        else:
+            column_entry.verified_values.append(
+                ColumnValueMatching.VerifiedValue(
+                    value=value,
+                    match_type="exact",
+                    found_in_database=False,
+                )
+            )
 
 
 async def verify_fuzzy_values(
+    column_entry: ColumnValueMatching.ColumnAnalysis,
     column_name: str,
-    fuzzy_values: list[str],
+    fuzzy_values: list,
     table_name: str,
-    result: dict[str, Any],
 ) -> None:
     """
     Verify fuzzy values against the column and collect suggestions.
     """
-    suggestions = {}
-
     for value in fuzzy_values:
-        similar = await find_similar_values(value, column_name, table_name)
-        if similar:
-            suggestions[value] = similar
+        similar_values = await find_similar_values(
+            value, column_name, table_name
+        )
 
-    if suggestions:
-        if column_name not in result["value_suggestions"]:
-            result["value_suggestions"][column_name] = {}
+        suggestion = ColumnValueMatching.SuggestedAlternative(
+            requested_value=value,
+            match_type="fuzzy",
+            found_similar_values=bool(similar_values),
+            similar_values=similar_values,
+        )
 
-        result["value_suggestions"][column_name][
-            "similar_values"
-        ] = suggestions
+        column_entry.suggested_alternatives.append(suggestion)
 
 
 async def check_exact_match(
@@ -143,7 +160,7 @@ async def check_exact_match(
             and result
             and result[0].get("count", 0) > 0
         ):
-            logger.info(f"Exact match found for '{value}' in '{column_name}'")
+            logger.debug(f"Exact match found for '{value}' in '{column_name}'")
             return True
     except Exception as e:
         logger.error(
@@ -210,11 +227,6 @@ async def find_similar_values(
             f"Error finding similar values for '{value}' in "
             f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
-        )
-
-    if similar_values:
-        logger.info(
-            f"Found {len(similar_values)} similar values for '{value}'"
         )
 
     return list(set(similar_values))

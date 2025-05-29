@@ -84,7 +84,9 @@ async def stream_graph_updates(
                     tool_category=extracted_event_data.category,
                 )
 
-                logger.debug(json.dumps(chunk.model_dump(mode="json")))
+                logger.debug(
+                    json.dumps(chunk.model_dump(mode="json"), indent=2)
+                )
 
                 yield "data: " + json.dumps(
                     chunk.model_dump(mode="json")
