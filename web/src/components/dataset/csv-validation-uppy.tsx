@@ -13,6 +13,7 @@ import { useDuckDb } from "@/hooks/useDuckDb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
+import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
 import { CustomFileUploader } from "./custom-file-uploader";
 
@@ -23,7 +24,6 @@ export interface CsvValidationUppyProps {
     response: unknown,
     columnMappings?: Record<string, string>
   ) => Promise<void>;
-  width?: string | number;
 }
 
 function sanitizeFileName(name: string): string {
@@ -34,7 +34,6 @@ function sanitizeFileName(name: string): string {
 export function CsvValidationUppy({
   projectId,
   onUploadSuccess,
-  width = "100%",
 }: CsvValidationUppyProps) {
   // Uppy instance
   const [uppy, setUppy] = useState<Uppy | null>(null);
@@ -68,6 +67,11 @@ export function CsvValidationUppy({
   );
   const hasDataTypeChanges = useColumnNameStore(
     (state) => state.hasDataTypeChanges
+  );
+
+  // Access column description store hooks
+  const clearColumnDescriptions = useColumnDescriptionStore(
+    (state) => state.clearColumnDescriptions
   );
 
   // Calculate if all column names are valid
@@ -142,6 +146,7 @@ export function CsvValidationUppy({
     // Reset state when component unmounts
     return () => {
       resetColumnMappings();
+      clearColumnDescriptions();
       setSelectedFile(null);
       setModifiedFile(null);
       setValidationResult(null);
@@ -150,7 +155,13 @@ export function CsvValidationUppy({
         uppy.cancelAll();
       }
     };
-  }, [projectId, setProjectId, resetColumnMappings, uppy]);
+  }, [
+    projectId,
+    setProjectId,
+    resetColumnMappings,
+    clearColumnDescriptions,
+    uppy,
+  ]);
 
   // Initialize Uppy
   useEffect(() => {
@@ -208,6 +219,7 @@ export function CsvValidationUppy({
         setModifiedFile(null);
         setValidationResult(null);
         resetColumnMappings();
+        clearColumnDescriptions();
         setUploadProgress(0);
         setIsUploading(false);
       } catch (error) {
@@ -231,7 +243,13 @@ export function CsvValidationUppy({
     return () => {
       uppyInstance.cancelAll();
     };
-  }, [projectId, onUploadSuccess, getColumnMappings, resetColumnMappings]);
+  }, [
+    projectId,
+    onUploadSuccess,
+    getColumnMappings,
+    resetColumnMappings,
+    clearColumnDescriptions,
+  ]);
 
   // Handle file selection
   const handleFileSelected = async (file: File) => {
@@ -241,6 +259,7 @@ export function CsvValidationUppy({
     setUploadError(null);
     setValidationResult(null);
     resetColumnMappings();
+    clearColumnDescriptions();
 
     if (!isInitialized || !db) {
       toast.warning(
@@ -366,7 +385,7 @@ export function CsvValidationUppy({
   }
 
   return (
-    <div>
+    <div className="w-full">
       {uploadError && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -436,7 +455,7 @@ export function CsvValidationUppy({
         selectedFile={modifiedFile || selectedFile}
         canUpload={canUpload}
         onClearFile={handleClearFile}
-        className={typeof width === "number" ? `w-[${width}px]` : width}
+        className="w-full"
       />
 
       {/* Column name editor with datatype processing callback */}
