@@ -109,43 +109,47 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         llm = get_llm_for_node("route_query_replan", config)
 
         prompt = f"""
-            I encountered an error when executing the SQL query:
-            {last_message.content}
+I encountered an error when executing the SQL query:
+{last_message.content}
 
-            Previous error messages (including current attempt):
-            {subquery_errors}
+Previous error messages (including current attempt):
+{subquery_errors}
 
-            Node execution messages and context:
-            {node_messages}
+Node execution messages and context:
+{node_messages}
 
-            Analyze all available information carefully to determine the best
-            next action. Consider the nature of the error, the execution
-            context in node_messages, and what previous attempts have revealed.
+ANALYSIS INSTRUCTIONS:
+Analyze all available information carefully to determine the best next action.
+Consider the nature of the error, the execution context in node_messages,
+and what previous attempts have revealed.
 
-            You have three possible options:
+AVAILABLE OPTIONS:
 
-            1. "reidentify_datasets" - Choose this when the underlying dataset
-               structure doesn't match what was expected
+1. "reidentify_datasets"
+   Choose this when the underlying dataset structure doesn't match what was
+   expected
 
-            2. "replan" - Choose this when the query itself needs reformulation
-               but the dataset understanding is correct
+2. "replan"
+   Choose this when the query itself needs reformulation but the dataset
+   understanding is correct
 
-            3. "validate_query_result" - Choose this when either:
-               - The current results are sufficient despite the error
-               - Further retries would be futile
-               - The error is expected and doesn't prevent moving forward
-               - Analyzing the data and found that the error is not fixable by
-                 retrying the query
+3. "validate_query_result"
+   Choose this when either:
+   - The current results are sufficient despite the error
+   - Further retries would be futile
+   - The error is expected and doesn't prevent moving forward
+   - Analyzing the data and found that the error is not fixable by retrying
+     the query
 
-            Remember that "validate_query_result" doesn't mean success - it
-            means we proceed with what we have.
+IMPORTANT NOTES:
+- "validate_query_result" doesn't mean success - it means we proceed with
+  what we have
+- Avoid making simplistic decisions based solely on error keywords
+- Synthesize all available context to determine the most appropriate action
 
-            Avoid making simplistic decisions based solely on error keywords.
-            Instead, synthesize all available context to determine the most
-            appropriate action.
-
-            Return ONLY one of these exact strings: "reidentify_datasets",
-            "replan", or "validate_query_result"
+RESPONSE FORMAT:
+Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
+"validate_query_result"
         """
 
         response = await llm.ainvoke(
