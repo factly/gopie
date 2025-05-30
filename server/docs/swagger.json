@@ -585,6 +585,50 @@
                 }
             }
         },
+        "/v1/api/datasets/{datasetID}": {
+            "get": {
+                "description": "Get details of a specific dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Get dataset details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Dataset"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/nl2sql": {
             "post": {
                 "description": "Convert a natural language query to SQL for a specific dataset",
@@ -1846,6 +1890,7 @@
             "required": [
                 "alias",
                 "alter_column_names",
+                "column_descriptions",
                 "created_by",
                 "file_path",
                 "project_id"
@@ -1859,6 +1904,13 @@
                 },
                 "alter_column_names": {
                     "description": "Column names to be altered",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "column_descriptions": {
+                    "description": "Column descriptions",
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"

@@ -395,6 +395,11 @@ definitions:
           type: string
         description: Column names to be altered
         type: object
+      column_descriptions:
+        additionalProperties:
+          type: string
+        description: Column descriptions
+        type: object
       created_by:
         description: User ID of the creator
         example: 550e8400-e29b-41d4-a716-446655440000
@@ -417,6 +422,7 @@ definitions:
     required:
     - alias
     - alter_column_names
+    - column_descriptions
     - created_by
     - file_path
     - project_id
@@ -794,6 +800,35 @@ paths:
       summary: Chat with AI agent
       tags:
       - chats
+  /v1/api/datasets/{datasetID}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Dataset'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get dataset details
+      tags:
+      - datasets
   /v1/api/nl2sql:
     post:
       consumes:
