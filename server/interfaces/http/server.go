@@ -148,7 +148,7 @@ func ServeHttp() error {
 		)
 	}
 
-	api.Routes(app.Group("/v1/api"), olapService, aiService, logger)
+	api.Routes(app.Group("/v1/api"), olapService, aiService, datasetService, logger)
 	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
 		Logger:         logger,
 		ProjectService: projectService,
