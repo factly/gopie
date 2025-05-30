@@ -25,6 +25,8 @@ type uploadRequestBody struct {
 	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
 	// Column names to be altered
 	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
+	// Column descriptions
+	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
 }
 
 // @Summary Upload file from S3
@@ -165,6 +167,21 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			"message": "Error fetching dataset summary",
 			"code":    fiber.StatusInternalServerError,
 		})
+	}
+
+	if datasetSummary != nil {
+		summaryMap := make(map[string]int)
+		for i := range *datasetSummary {
+			summaryMap[(*datasetSummary)[i].ColumnName] = i
+		}
+
+		for colName, desc := range body.ColumnDescriptions {
+			if desc != "" {
+				if idx, exists := summaryMap[colName]; exists {
+					(*datasetSummary)[idx].Description = desc
+				}
+			}
+		}
 	}
 
 	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
