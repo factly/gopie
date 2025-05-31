@@ -87,10 +87,7 @@ async def stream_graph_updates(
                 logger.debug(
                     json.dumps(chunk.model_dump(mode="json"), indent=2)
                 )
-
-                yield "data: " + json.dumps(
-                    chunk.model_dump(mode="json")
-                ) + "\n \n"
+                yield chunk
 
     except Exception as e:
         error = Error(
@@ -98,10 +95,9 @@ async def stream_graph_updates(
             message="Sorry, something went wrong. Please try again later",
         )
         output = StructuredChatStreamChunk(
-            chat_id=chat_id,
-            error=error,
+            chat_id=chat_id, error=error, finish_reason="error"
         )
-        yield "data: " + json.dumps(output.model_dump(mode="json")) + "\n \n"
+        yield output
         logger.exception(e)
 
 
@@ -112,3 +108,10 @@ def convert_to_langchain_message(message: Message):
         return AIMessage(content=message.content)
     else:
         raise ValueError(f"Unknown role: {message.role}")
+
+
+async def stream_graph_updates_json(
+    **kwargs,
+):
+    async for chunk in stream_graph_updates(**kwargs):
+        yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"

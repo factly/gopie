@@ -60,5 +60,6 @@ class StructuredChatStreamChunk(BaseModel):
     datasets_used: list[str] | None = None
     generated_sql_query: str | None = None
     error: Error | None = None
+    finish_reason: str | None = None
 
     model_config = ConfigDict(coerce_numbers_to_str=True, extra="forbid")
