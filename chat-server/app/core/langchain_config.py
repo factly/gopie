@@ -46,7 +46,7 @@ class ModelConfig:
             trace_id=self.trace_id,
             metadata={
                 "_user": "yuvrajsinh.gohil",
-                "project": "dataful-agent",
+                "project": "gopie-chat-server",
             },
         )
 
@@ -57,7 +57,7 @@ class ModelConfig:
             trace_id=self.trace_id,
             metadata={
                 "_user": "yuvrajsinh.gohil",
-                "project": "dataful-agent",
+                "project": "gopie-chat-server",
             },
         )
 
