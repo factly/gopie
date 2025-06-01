@@ -45,6 +45,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
         retry_count = query_result.subqueries[query_index].retry_count
         error_messages = query_result.subqueries[query_index].error_message
+        node_messages = query_result.subqueries[query_index].node_messages
 
         if not identified_datasets:
             raise Exception("No dataset selected for query planning")
@@ -61,6 +62,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             datasets_info=datasets_info,
             error_message=error_messages,
             attempt=retry_count + 1,
+            node_messages=node_messages,
         )
 
         llm = get_llm_for_node("plan_query", config)
@@ -92,6 +94,30 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                 formatted_sql_queries.append(sql_query["formatted_sql_query"])
 
             query_result.subqueries[query_index].sql_queries = sql_queries_info
+
+            # Extract additional details for node_messages
+            reasoning = parsed_response.get("reasoning", "")
+            limitations = parsed_response.get("limitations", "")
+
+            tables_used = []
+            for query in sql_queries:
+                if "tables_used" in query:
+                    tables_used.extend(query["tables_used"])
+
+            query_result.set_node_message(
+                "plan_query",
+                {
+                    "query_strategy": (
+                        "single_query"
+                        if len(sql_queries) == 1
+                        else "multiple_queries"
+                    ),
+                    "tables_used": list(set(tables_used)),
+                    "query_count": len(sql_queries),
+                    "reasoning": reasoning,
+                    "limitations": limitations,
+                },
+            )
 
             await adispatch_custom_event(
                 "dataful-agent",

@@ -8,7 +8,10 @@ from app.workflow.node.analyze_query import analyze_query, route_from_analysis
 from app.workflow.node.execute_query import execute_query, route_query_replan
 from app.workflow.node.extract_summary import extract_summary
 from app.workflow.node.generate_subqueries import generate_subqueries
-from app.workflow.node.identify_datasets import identify_datasets
+from app.workflow.node.identify_datasets import (
+    identify_datasets,
+    route_from_datasets,
+)
 from app.workflow.node.plan_query import plan_query
 from app.workflow.node.response.generate_result import generate_result
 from app.workflow.node.response.response_handler import route_response_handler
@@ -46,6 +49,15 @@ graph_builder.add_conditional_edges(
 )
 
 graph_builder.add_conditional_edges(
+    "identify_datasets",
+    route_from_datasets,
+    {
+        "analyze_dataset": "analyze_dataset",
+        "no_datasets_found": "route_response",
+    },
+)
+
+graph_builder.add_conditional_edges(
     "execute_query",
     route_query_replan,
     {
@@ -78,7 +90,6 @@ graph_builder.add_edge(START, "generate_subqueries")
 graph_builder.add_edge("generate_subqueries", "analyze_query")
 graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("tools", "analyze_query")
-graph_builder.add_edge("identify_datasets", "analyze_dataset")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge("validate_query_result", "route_response")
 graph_builder.add_edge("extract_summary", "route_response")

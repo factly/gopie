@@ -1,9 +1,8 @@
-import logging
-
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
 
 from app.core.config import settings
+from app.core.log import logger
 from app.models.schema import DatasetSchema
 from app.services.gopie.dataset_info import format_schema
 from app.services.gopie.generate_schema import generate_schema
@@ -83,11 +82,11 @@ async def search_schemas(
 
             schemas.append(formatted_schema)
 
-        logging.debug(
+        logger.debug(
             f"Found {len(schemas)} schemas matching query: {user_query}"
         )
         return schemas
 
     except Exception as e:
-        logging.error(f"Error searching schemas: {e!s}")
+        logger.error(f"Error searching schemas: {e!s}")
         return []

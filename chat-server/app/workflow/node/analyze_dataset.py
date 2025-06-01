@@ -33,12 +33,16 @@ async def analyze_dataset(state: State) -> dict:
             column_assumptions, dataset_name_mapping
         )
 
-        datasets_info["correct_column_requirements"] = column_mappings
+        datasets_info[
+            "correct_column_requirements"
+        ] = column_mappings.model_dump()
         datasets_info.pop("column_assumptions", None)
 
         return {
             "datasets_info": datasets_info,
-            "messages": [IntermediateStep.from_json(column_mappings)],
+            "messages": [
+                IntermediateStep.from_json(column_mappings.model_dump())
+            ],
         }
     except Exception as e:
         error_msg = f"Dataset analysis failed: {str(e)}"

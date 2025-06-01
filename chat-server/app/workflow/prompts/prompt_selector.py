@@ -27,11 +27,14 @@ class PlanQueryParams(TypedDict):
     datasets_info: dict
     error_message: list[dict] | None
     attempt: int
+    node_messages: dict | None
 
 
 class IdentifyDatasetsParams(TypedDict):
     user_query: str
     available_datasets_schemas: list[DatasetSchema]
+    confidence_score: float | None
+    query_type: str | None
 
 
 class AnalyzeQueryParams(TypedDict):
@@ -78,38 +81,7 @@ def get_prompt(node_name: NodeName, **kwargs) -> str:
     if node_name not in prompt_map:
         raise ValueError(f"No prompt available for node: {node_name}")
 
-    _validate_params(node_name, kwargs)
-
     return prompt_map[node_name](**kwargs)
-
-
-def _validate_params(node_name: NodeName, params: dict[str, Any]) -> None:
-    """
-    Validate that all required parameters for a node are present.
-
-    Args:
-        node_name: The name of the node
-        params: The parameters passed to the prompt function
-
-    Raises:
-        ValueError: If required parameters are missing
-    """
-    required_params = {
-        "plan_query": ["user_query", "datasets_info"],
-        "identify_datasets": ["user_query", "available_datasets_schemas"],
-        "analyze_query": ["user_query", "tool_results"],
-        "generate_subqueries": ["user_input"],
-        "assess_query_complexity": ["user_input"],
-    }
-
-    missing_params = [
-        param for param in required_params[node_name] if param not in params
-    ]
-
-    if missing_params:
-        error_msg = f"Missing required parameters for {node_name}: "
-        error_msg += f"{', '.join(missing_params)}"
-        raise ValueError(error_msg)
 
 
 def _get_plan_query_prompt(
@@ -117,21 +89,28 @@ def _get_plan_query_prompt(
     datasets_info: dict,
     error_message: list[dict] | None = None,
     attempt: int = 1,
+    node_messages: list[dict] | None = None,
 ) -> str:
     return create_query_prompt(
         user_query=user_query,
         datasets_info=datasets_info,
         error_message=error_message,
         attempt=attempt,
+        node_messages=node_messages,
     )
 
 
 def _get_identify_datasets_prompt(
-    user_query: str, available_datasets_schemas: list[DatasetSchema]
+    user_query: str,
+    available_datasets_schemas: list[DatasetSchema],
+    confidence_score: float | None = None,
+    query_type: str | None = None,
 ) -> str:
     return create_identify_datasets_prompt(
         user_query=user_query,
         available_datasets_schemas=available_datasets_schemas,
+        confidence_score=confidence_score,
+        query_type=query_type,
     )
 
 

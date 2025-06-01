@@ -1,8 +1,7 @@
-import logging
-
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.core.log import logger
 from app.models.schema import DatasetSchema
 from app.utils.model_registry.model_provider import get_custom_model
 
@@ -62,5 +61,5 @@ async def generate_column_descriptions(
 
         return response
     except Exception as e:
-        logging.error(f"Error generating column descriptions: {e}")
+        logger.error(f"Error generating column descriptions: {e}")
         return {}

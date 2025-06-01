@@ -1,7 +1,7 @@
 [project]
-name = "dataful-agent"
+name = "gopie-chat-server"
 version = "0.1.0"
-description = "A multidataset-SQL agent for Dataful"
+description = "A multidataset-SQL agent for Gopie"
 readme = "README.md"
 requires-python = ">=3.11"
 

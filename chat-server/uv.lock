@@ -272,7 +272,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dataful-agent"
+name = "gopie-chat-server"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

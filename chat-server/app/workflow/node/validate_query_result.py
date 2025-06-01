@@ -46,7 +46,8 @@ async def validate_query_result(state: State) -> dict:
                         large_result_found = True
 
                         warning = (
-                            f"SQL query {i+1} in subquery {subquery_index+1} "
+                            f"SQL query {i + 1} in subquery "
+                            f"{subquery_index + 1} "
                             f"result was too large: {reason}. "
                         )
                         warning += "Flagged for summary extraction."
