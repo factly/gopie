@@ -60,7 +60,7 @@ async def create(
 ):
     request = from_openai_format(openai_format_request)
     trace_id = uuid.uuid4().hex
-    if openai_format_request.stream:
+    if openai_format_request.get("stream"):
         return StreamingResponse(
             to_openai_streaming_format(
                 stream_graph_updates(
@@ -76,7 +76,7 @@ async def create(
             ),
             media_type="text/event-stream",
         )
-    return to_openai_non_streaming_format(
+    return await to_openai_non_streaming_format(
         stream_graph_updates(
             request.messages,
             dataset_ids=request.dataset_ids,

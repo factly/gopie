@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from typing import Any, AsyncIterable, Dict, List, TypedDict, Union
 
@@ -13,8 +14,10 @@ from openai.types.chat.completion_create_params import (
     CompletionCreateParamsStreaming as RequestStreaming,
 )
 
-from app.models.chat import StructuredChatStreamChunk, ToolMessage
+from app.models.chat import Role, StructuredChatStreamChunk, ToolMessage
 from app.models.router import Message, QueryRequest
+
+logger = logging.getLogger(__name__)
 
 
 class StreamingState(TypedDict):
@@ -101,6 +104,13 @@ def _process_messages(
             }
             state["tool_messages"].append(tool_message)
             current_tool_messages.append(tool_message)
+        elif chunk.message.role == Role.INTERMEDIATE:
+            tool_message = {
+                "role": chunk.message.role,
+                "content": chunk.message.content,
+            }
+            state["tool_messages"].append(tool_message)
+            current_tool_messages.append(tool_message)
         else:
             # For regular text, prepare to stream it out
             delta_content = chunk.message.content
@@ -156,6 +166,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
+                "index": 0,
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
@@ -173,6 +184,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
+                "index": 0,
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
@@ -188,6 +200,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
+                "index": 0,
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
@@ -277,9 +290,9 @@ def from_openai_format(
         dataset_ids: List[str] = []
         for key, value in metadata.items():
             if key.startswith("project_id"):
-                project_ids.append(value.split(","))
+                project_ids.extend(value.split(","))
             elif key.startswith("dataset_id"):
-                dataset_ids.append(value.split(","))
+                dataset_ids.extend(value.split(","))
     query_params = {
         "messages": messages,
         "model_id": request.get(
@@ -332,6 +345,13 @@ async def to_openai_non_streaming_format(
                     "content": chunk.message.content,
                 }
                 state["tool_messages"].append(tool_message)
+            elif chunk.message.role == Role.INTERMEDIATE:
+                # Process tool message
+                tool_message = {
+                    "role": chunk.message.role,
+                    "content": chunk.message.content,
+                }
+                state["tool_messages"].append(tool_message)
             else:
                 # For regular text content
                 state["content_so_far"] += chunk.message.content
@@ -348,6 +368,7 @@ async def to_openai_non_streaming_format(
                 "id": f"call_{tool_call_id}",
                 "type": "function",
                 "function": {
+                    "index": 0,
                     "name": "tool_messages",
                     "arguments": json.dumps(
                         {"messages": state["tool_messages"]}
@@ -411,7 +432,7 @@ async def to_openai_non_streaming_format(
     )
 
 
-async def to_openai_streaming_format(
+async def _to_openai_streaming_format(
     response_chunks: AsyncIterable[StructuredChatStreamChunk],
     model: str,
     trace_id: str,
@@ -427,30 +448,54 @@ async def to_openai_streaming_format(
     """
     # Initialize state
     state = _initialize_streaming_state(model, trace_id)
+    try:
+        # Process chunks as they arrive
+        async for chunk in response_chunks:
+            # Process different parts of the chunk
+            current_datasets = _process_datasets(chunk, state)
+            current_sql_query = _process_sql_query(chunk, state)
+            current_tool_messages = _process_messages(chunk, state)
 
-    # Process chunks as they arrive
-    async for chunk in response_chunks:
-        # Process different parts of the chunk
-        current_datasets = _process_datasets(chunk, state)
-        current_sql_query = _process_sql_query(chunk, state)
-        current_tool_messages = _process_messages(chunk, state)
+            # Check for finish reason in the chunk
+            if hasattr(chunk, "finish_reason") and chunk.finish_reason:
+                state["finish_reason"] = chunk.finish_reason
 
-        # Check for finish reason in the chunk
-        if hasattr(chunk, "finish_reason") and chunk.finish_reason:
-            state["finish_reason"] = chunk.finish_reason
+            # Yield content chunk if there is regular text content
+            if state["yield_content"]:
+                yield _create_content_chunk(state)
+                state["yield_content"] = False
 
-        # Yield content chunk if there is regular text content
-        if state["yield_content"]:
-            yield _create_content_chunk(state)
-            state["yield_content"] = False
+            # Create and yield tool call chunks if needed
+            tool_calls = _create_tool_calls(
+                current_tool_messages,
+                current_datasets,
+                current_sql_query,
+                state,
+            )
+            if tool_calls:
+                yield _create_tool_call_chunk(tool_calls, state)
 
-        # Create and yield tool call chunks if needed
-        tool_calls = _create_tool_calls(
-            current_tool_messages, current_datasets, current_sql_query, state
-        )
-        if tool_calls:
-            yield _create_tool_call_chunk(tool_calls, state)
+        # Yield the final chunk with finish_reason
+        yield _create_final_chunk(state, state["finish_reason"])
+    except Exception as e:
+        yield _create_final_chunk(state, "error")
+        logger.exception(e, stack_info=True, stacklevel=3)
 
-    # Yield the final chunk with finish_reason
-    yield _create_final_chunk(state, state["finish_reason"])
-    yield "data: [DONE]\n \n"
+
+async def to_openai_streaming_format(
+    response_chunks: AsyncIterable[StructuredChatStreamChunk],
+    model: str,
+    trace_id: str,
+) -> AsyncIterable[str]:
+    """
+    Args:
+        response_chunks: AsyncIterable of internal response chunks
+        model: The model name to include in responses
+        finish_reason: The reason the completion finished (default: "stop")
+    """
+    openai_chunks = _to_openai_streaming_format(
+        response_chunks, model, trace_id
+    )
+    async for chunk in openai_chunks:
+        yield f"data: {chunk.model_dump(mode='json')}\n\n"
+    yield "data: [DONE]\n\n"

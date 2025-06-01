@@ -27,7 +27,7 @@ class Error(BaseModel):
     message: str
 
 
-class Role(Enum):
+class Role(str, Enum):
     AI = "ai"
     SYSTEM = "system"
     INTERMEDIATE = "intermediate"

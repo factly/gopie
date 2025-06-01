@@ -111,7 +111,8 @@ def convert_to_langchain_message(message: Message):
 
 
 async def stream_graph_updates_json(
+    *args,
     **kwargs,
 ):
-    async for chunk in stream_graph_updates(**kwargs):
+    async for chunk in stream_graph_updates(*args, **kwargs):
         yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"
