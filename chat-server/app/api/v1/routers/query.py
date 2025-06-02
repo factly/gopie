@@ -1,17 +1,16 @@
 import uuid
-from typing import Union
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.models.openai_compatibility import (
+from app.models.router import QueryRequest
+from app.utils.adapters.openai_adapter import (
     RequestNonStreaming,
     RequestStreaming,
     from_openai_format,
     to_openai_non_streaming_format,
     to_openai_streaming_format,
 )
-from app.models.router import QueryRequest
 from app.workflow.graph.graph_stream import (
     stream_graph_updates,
     stream_graph_updates_json,
@@ -22,7 +21,7 @@ router = APIRouter()
 
 @router.get("/")
 async def root():
-    return {"message": "Welcome to the Database Agent API"}
+    return {"message": "Welcome to the Gopie Chat Server API"}
 
 
 @router.post("/query")
@@ -43,7 +42,7 @@ async def query(request: QueryRequest):
     trace_id = uuid.uuid4().hex
     return StreamingResponse(
         stream_graph_updates_json(
-            request.messages,
+            messages=request.messages,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
             chat_id=request.chat_id,
@@ -56,7 +55,7 @@ async def query(request: QueryRequest):
 
 @router.post("/chat/completions")
 async def create(
-    openai_format_request: Union[RequestNonStreaming, RequestStreaming]
+    openai_format_request: RequestNonStreaming | RequestStreaming,
 ):
     request = from_openai_format(openai_format_request)
     trace_id = uuid.uuid4().hex
@@ -64,27 +63,27 @@ async def create(
         return StreamingResponse(
             to_openai_streaming_format(
                 stream_graph_updates(
-                    request.messages,
+                    messages=request.messages,
                     dataset_ids=request.dataset_ids,
                     project_ids=request.project_ids,
                     chat_id=request.chat_id,
                     trace_id=trace_id,
                     model_id=request.model_id,
                 ),
-                model=request.model_id,
                 trace_id=trace_id,
+                model=request.model_id,
             ),
             media_type="text/event-stream",
         )
     return await to_openai_non_streaming_format(
         stream_graph_updates(
-            request.messages,
+            messages=request.messages,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
             chat_id=request.chat_id,
             trace_id=trace_id,
             model_id=request.model_id,
         ),
-        model=request.model_id,
         trace_id=trace_id,
+        model=request.model_id,
     )
