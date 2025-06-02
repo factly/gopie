@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Dataful Agent"
+    PROJECT_NAME: str = "Gopie Chat Server"
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 

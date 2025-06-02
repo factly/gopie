@@ -1,10 +1,10 @@
-import logging
 from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.model_registry.model_provider import (
@@ -13,14 +13,22 @@ from app.utils.model_registry.model_provider import (
     get_model_provider,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.identify_datasets_prompt import (
+    create_identify_datasets_prompt,
+)
 
 
 async def identify_datasets(state: State, config: RunnableConfig):
     """
     Identify relevant dataset based on natural language query.
-    Uses Qdrant vector search to find the most relevant datasets first.
+
+    This function can also potentially reclassify a query based on vector
+    search results:
+    - If no datasets found for a data_query → convert to conversational
+    - If high relevance datasets found for low confidence query →
+        confirm as data_query
     """
+
     parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
     user_query = (
@@ -31,6 +39,9 @@ async def identify_datasets(state: State, config: RunnableConfig):
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
+
+    query_type = query_result.subqueries[query_index].query_type
+    confidence_score = query_result.subqueries[query_index].confidence_score
 
     try:
         llm = get_llm_for_node("identify_datasets", config)
@@ -47,12 +58,21 @@ async def identify_datasets(state: State, config: RunnableConfig):
             semantic_searched_datasets = dataset_schemas
 
         except Exception as e:
-            logging.warning(
+            logger.warning(
                 f"Vector search error: {e!s}. Unable to retrieve dataset "
                 "information."
             )
 
         if not semantic_searched_datasets:
+            query_result.set_node_message(
+                "identify_datasets",
+                {
+                    "No relevant datasets found by doing semantic "
+                    "search. This query is not relavant to any "
+                    "datasets. Converting to conversational query."
+                },
+            )
+
             await adispatch_custom_event(
                 "dataful-agent",
                 {
@@ -61,20 +81,32 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 },
             )
 
+            # convert data_query to conversational if no datasets found
+            if query_type == "data_query":
+                query_result.subqueries[
+                    query_index
+                ].query_type = "conversational"
+
             return {
                 "query_result": query_result,
                 "identified_datasets": None,
                 "messages": [
                     ErrorMessage.from_json(
-                        {"error": "No relevant datasets found"}
+                        {
+                            "error": (
+                                "No relevant datasets found. "
+                                "Treating as conversational query."
+                            )
+                        }
                     )
                 ],
             }
 
-        llm_prompt = get_prompt(
-            "identify_datasets",
+        llm_prompt = create_identify_datasets_prompt(
             user_query=user_query,
             available_datasets_schemas=semantic_searched_datasets,
+            confidence_score=confidence_score,
+            query_type=query_type,
         )
 
         response: Any = await llm.ainvoke(
@@ -87,6 +119,14 @@ async def identify_datasets(state: State, config: RunnableConfig):
         selected_datasets = parsed_content.get("selected_dataset", [])
         query_result.subqueries[query_index].tables_used = selected_datasets
         column_assumptions = parsed_content.get("column_assumptions", [])
+        node_message = parsed_content.get("node_message")
+
+        # Convert conversational query to data_query if relevant datasets found
+        if query_type == "conversational" and selected_datasets:
+            query_result.subqueries[query_index].query_type = "data_query"
+
+        if node_message:
+            query_result.set_node_message("identify_datasets", node_message)
 
         filtered_dataset_schemas = [
             schema
@@ -141,3 +181,29 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "identified_datasets": None,
             "messages": [ErrorMessage.from_json({"error": error_msg})],
         }
+
+
+def route_from_datasets(state: State) -> str:
+    """
+    Route to the appropriate next node based on dataset identification results.
+
+    This function determines whether to proceed with data analysis or
+    route directly to response generation for conversational queries.
+    """
+
+    query_result = state.get("query_result")
+    query_index = state.get("subquery_index", 0)
+    last_message = (
+        state.get("messages", [])[-1] if state.get("messages") else None
+    )
+
+    query_type = query_result.subqueries[query_index].query_type
+    identified_datasets = state.get("identified_datasets")
+
+    if isinstance(last_message, ErrorMessage):
+        return "analyze_dataset"
+
+    if query_type == "conversational" or not identified_datasets:
+        return "no_datasets_found"
+    else:
+        return "analyze_dataset"

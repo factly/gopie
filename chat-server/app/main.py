@@ -1,5 +1,3 @@
-import logging
-import sys
 import time
 
 import uvicorn
@@ -13,6 +11,7 @@ from app.api.v1.routers.dataset_upload import (
 from app.api.v1.routers.models import router as models_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
+from app.core.log import logger, setup_logger
 from app.core.session import SingletonAiohttp
 from app.utils.graph_utils.generate_graph import visualize_graph
 
@@ -21,9 +20,10 @@ from app.utils.graph_utils.generate_graph import visualize_graph
 async def lifespan(app: FastAPI):
     SingletonAiohttp.get_aiohttp_client()
     try:
+        setup_logger()
         visualize_graph()
     except Exception as e:
-        logging.error(f"Failed to generate graph visualization: {e}")
+        logger.error(f"Failed to generate graph visualization: {e}")
     yield
     await SingletonAiohttp.close_aiohttp_client()
 
@@ -34,18 +34,6 @@ app = FastAPI(
     openapi_url="/api",
     lifespan=lifespan,
 )
-
-if settings.MODE == "development":
-    logging.basicConfig(
-        level=logging.DEBUG,
-        stream=sys.stdout,
-        format="[%(levelname)s] %(message)s",
-    )
-else:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(levelname)s] %(message)s",
-    )
 
 
 @app.middleware("http")

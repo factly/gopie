@@ -1,10 +1,10 @@
 import asyncio
 import json
-import logging
 from typing import Any
 
 from langchain_core.documents import Document
 
+from app.core.log import logger
 from app.models.data import DatasetDetails
 from app.services.gopie.dataset_info import format_schema
 from app.services.qdrant.vector_store import add_documents_to_vector_store
@@ -58,9 +58,9 @@ async def store_schema_in_qdrant(
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
 
-        logging.debug("Schema indexing task created successfully")
+        logger.debug("Schema indexing task created successfully")
         return True
 
     except Exception as e:
-        logging.error(f"Error storing schema in Qdrant: {e!s}")
+        logger.error(f"Error storing schema in Qdrant: {e!s}")
         return False
