@@ -91,7 +91,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 "query_result": query_result,
                 "identified_datasets": None,
                 "messages": [
-                    ErrorMessage.from_json(
+                    IntermediateStep.from_json(
                         {
                             "error": (
                                 "No relevant datasets found. "

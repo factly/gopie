@@ -87,6 +87,7 @@ async def stream_graph_updates(
                 logger.debug(
                     json.dumps(chunk.model_dump(mode="json"), indent=2)
                 )
+
                 yield chunk
 
     except Exception as e:

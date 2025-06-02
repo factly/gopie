@@ -135,7 +135,7 @@ class EventStreamHandler:
             event_data = event.get("data", {})
             content = event_data.get("content", "")
             datasets_used = event_data.get("identified_datasets", [])
-            generated_sql_query = event_data.get("queries", [None])[0]
+            generated_sql_query = event_data.get("queries", [])
 
         return EventChunkData(
             role=role,
