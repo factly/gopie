@@ -2,227 +2,227 @@ services:
   #########################################################################
   #####                        DATABASE                                 #####
   #########################################################################
-  postgres:
-    image: postgres:17-alpine
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=gopie
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - gopie
-
-  ###########################################################################
-  #######             Zitadel                                         #######
-  ###########################################################################
-  # zitadel:
-  #   restart: "always"
-  #   image: "ghcr.io/zitadel/zitadel:v2.58.0"
-  #   command: "start-from-init --config /config.yaml --config /secrets.yaml --steps /init-steps.yaml --masterkey h9tyO3xu9Qr5ygDhkMgc44x0j3tWHjPL --tlsMode disabled"
+  # postgres:
+  #   image: postgres:17-alpine
   #   ports:
-  #     - "4455:4455"
+  #     - "5432:5432"
   #   volumes:
-  #     - "./zitadel/config.yaml:/config.yaml:ro"
-  #     - "./zitadel/secrets.yaml:/secrets.yaml:ro"
-  #     - "./zitadel/init-steps.yaml:/init-steps.yaml:ro"
-  #   depends_on:
-  #     - postgres
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
+  #     - ./volumes/postgres:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=gopie
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
   #   networks:
   #     - gopie
 
-  #########################################################################
-  #####                        GOPIE SERVICES                          #####
-  #########################################################################
-  gopie-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - GOPIE_SERVE_HOST=${GOPIE_SERVE_HOST}
-      - GOPIE_SERVE_PORT=${GOPIE_SERVE_PORT}
-      - GOPIE_S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - GOPIE_S3_SECRET_KEY=${MINIO_SECRET_KEY}
-      - GOPIE_S3_REGION=${MINIO_REGION}
-      - GOPIE_S3_ENDPOINT=${GOPIE_S3_ENDPOINT}
-      - GOPIE_LOGGER_LEVEL=${GOPIE_LOGGER_LEVEL}
-      - GOPIE_LOGGER_FILE=${GOPIE_LOGGER_FILE}
-      - GOPIE_LOGGER_MODE=${GOPIE_LOGGER_MODE}
-      - GOPIE_MOTHERDUCK_TOKEN=${GOPIE_MOTHERDUCK_TOKEN}
-      - GOPIE_MOTHERDUCK_DB_NAME=${GOPIE_MOTHERDUCK_DB_NAME}
-      - GOPIE_MOTHERDUCK_ACCESS_MODE=${GOPIE_MOTHERDUCK_ACCESS_MODE}
-      - GOPIE_PORTKEY_APIKEY=${GOPIE_PORTKEY_APIKEY}
-      - GOPIE_PORTKEY_BASEURL=${GOPIE_PORTKEY_BASEURL}
-      - GOPIE_PORTKEY_MODEL=${GOPIE_PORTKEY_MODEL}
-      - GOPIE_PORTKEY_VIRTUALKEY=${GOPIE_PORTKEY_VIRTUALKEY}
-      - GOPIE_POSTGRES_HOST=${POSTGRES_HOST}
-      - GOPIE_POSTGRES_PORT=${POSTGRES_PORT}
-      - GOPIE_POSTGRES_DB=${POSTGRES_DB}
-      - GOPIE_POSTGRES_USER=${POSTGRES_USER}
-      - GOPIE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - GOPIE_OLAPDB_DBTYPE=${GOPIE_OLAPDB_DBTYPE}
-      - GOPIE_OLAPDB_ACCESS_MODE=${GOPIE_OLAPDB_ACCESS_MODE}
-      - GOPIE_OLAPDB_PATH=${GOPIE_OLAPDB_PATH}
-      - GOPIE_OLAPDB_CPU=${GOPIE_OLAPDB_CPU}
-      - GOPIE_OLAPDB_MEMORY_LIMIT=${GOPIE_OLAPDB_MEMORY_LIMIT}
-      - GOPIE_OLAPDB_STORAGE_LIMIT=${GOPIE_OLAPDB_STORAGE_LIMIT}
-      - GOPIE_ZITADEL_DOMAIN=${ZITADEL_DOMAIN}
-      - GOPIE_ZITADEL_INSECURE_PORT=${ZITADEL_INSECURE_PORT}
-      - GOPIE_ZITADEL_PROTOCOL=${ZITADEL_PROTOCOL}
-      - GOPIE_ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
-      - GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN=${ZITADEL_PERSONAL_ACCESS_TOKEN}
-      - GOPIE_ZITADEL_SERVICE_USER_ID=${ZITADEL_SERVICE_USER_ID}
-      - GOPIE_ZITADEL_APP_LOGIN_URL=${ZITADEL_APP_LOGIN_URL}
-      - GOOSE_DBSTRING=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}
-      - GOOSE_DRIVER=${GOOSE_DRIVER}
-      - GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR}
-    volumes:
-      - ./zitadel/key.json:/home/gopie/zitadel_key.json:ro
-      - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
-    ports:
-      - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - gopie
-    command: >
-      sh -c "cd /home/gopie && goose up && gopie serve"
+  # ###########################################################################
+  # #######             Zitadel                                         #######
+  # ###########################################################################
+  # # zitadel:
+  # #   restart: "always"
+  # #   image: "ghcr.io/zitadel/zitadel:v2.58.0"
+  # #   command: "start-from-init --config /config.yaml --config /secrets.yaml --steps /init-steps.yaml --masterkey h9tyO3xu9Qr5ygDhkMgc44x0j3tWHjPL --tlsMode disabled"
+  # #   ports:
+  # #     - "4455:4455"
+  # #   volumes:
+  # #     - "./zitadel/config.yaml:/config.yaml:ro"
+  # #     - "./zitadel/secrets.yaml:/secrets.yaml:ro"
+  # #     - "./zitadel/init-steps.yaml:/init-steps.yaml:ro"
+  # #   depends_on:
+  # #     - postgres
+  # #   extra_hosts:
+  # #     - "host.docker.internal:host-gateway"
+  # #   networks:
+  # #     - gopie
 
-  gopie-web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile.prod
-    environment:
-      - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
-      - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
-      - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - AUTH_SECRET=${AUTH_SECRET}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID}
-      - ZITADEL_CLIENT_SECRET=${ZITADEL_CLIENT_SECRET}
-      - ZITADEL_ISSUER=${ZITADEL_ISSUER}
-      - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    networks:
-      - gopie
+  # #########################################################################
+  # #####                        GOPIE SERVICES                          #####
+  # #########################################################################
+  # gopie-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - GOPIE_SERVE_HOST=${GOPIE_SERVE_HOST}
+  #     - GOPIE_SERVE_PORT=${GOPIE_SERVE_PORT}
+  #     - GOPIE_S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
+  #     - GOPIE_S3_SECRET_KEY=${MINIO_SECRET_KEY}
+  #     - GOPIE_S3_REGION=${MINIO_REGION}
+  #     - GOPIE_S3_ENDPOINT=${GOPIE_S3_ENDPOINT}
+  #     - GOPIE_LOGGER_LEVEL=${GOPIE_LOGGER_LEVEL}
+  #     - GOPIE_LOGGER_FILE=${GOPIE_LOGGER_FILE}
+  #     - GOPIE_LOGGER_MODE=${GOPIE_LOGGER_MODE}
+  #     - GOPIE_MOTHERDUCK_TOKEN=${GOPIE_MOTHERDUCK_TOKEN}
+  #     - GOPIE_MOTHERDUCK_DB_NAME=${GOPIE_MOTHERDUCK_DB_NAME}
+  #     - GOPIE_MOTHERDUCK_ACCESS_MODE=${GOPIE_MOTHERDUCK_ACCESS_MODE}
+  #     - GOPIE_PORTKEY_APIKEY=${GOPIE_PORTKEY_APIKEY}
+  #     - GOPIE_PORTKEY_BASEURL=${GOPIE_PORTKEY_BASEURL}
+  #     - GOPIE_PORTKEY_MODEL=${GOPIE_PORTKEY_MODEL}
+  #     - GOPIE_PORTKEY_VIRTUALKEY=${GOPIE_PORTKEY_VIRTUALKEY}
+  #     - GOPIE_POSTGRES_HOST=${POSTGRES_HOST}
+  #     - GOPIE_POSTGRES_PORT=${POSTGRES_PORT}
+  #     - GOPIE_POSTGRES_DB=${POSTGRES_DB}
+  #     - GOPIE_POSTGRES_USER=${POSTGRES_USER}
+  #     - GOPIE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  #     - GOPIE_OLAPDB_DBTYPE=${GOPIE_OLAPDB_DBTYPE}
+  #     - GOPIE_OLAPDB_ACCESS_MODE=${GOPIE_OLAPDB_ACCESS_MODE}
+  #     - GOPIE_OLAPDB_PATH=${GOPIE_OLAPDB_PATH}
+  #     - GOPIE_OLAPDB_CPU=${GOPIE_OLAPDB_CPU}
+  #     - GOPIE_OLAPDB_MEMORY_LIMIT=${GOPIE_OLAPDB_MEMORY_LIMIT}
+  #     - GOPIE_OLAPDB_STORAGE_LIMIT=${GOPIE_OLAPDB_STORAGE_LIMIT}
+  #     - GOPIE_ZITADEL_DOMAIN=${ZITADEL_DOMAIN}
+  #     - GOPIE_ZITADEL_INSECURE_PORT=${ZITADEL_INSECURE_PORT}
+  #     - GOPIE_ZITADEL_PROTOCOL=${ZITADEL_PROTOCOL}
+  #     - GOPIE_ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
+  #     - GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN=${ZITADEL_PERSONAL_ACCESS_TOKEN}
+  #     - GOPIE_ZITADEL_SERVICE_USER_ID=${ZITADEL_SERVICE_USER_ID}
+  #     - GOPIE_ZITADEL_APP_LOGIN_URL=${ZITADEL_APP_LOGIN_URL}
+  #     - GOOSE_DBSTRING=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}
+  #     - GOOSE_DRIVER=${GOOSE_DRIVER}
+  #     - GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR}
+  #   volumes:
+  #     - ./zitadel/key.json:/home/gopie/zitadel_key.json:ro
+  #     - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - gopie
+  #   command: >
+  #     sh -c "cd /home/gopie && goose up && gopie serve"
 
-  #########################################################################
-  #####                        MINIO                                #######
-  #########################################################################
-  minio:
-    image: minio/minio
-    ports:
-      - "9000:9000"
-      - "9002:9002"
-    volumes:
-      - ./volumes/minio/data:/export
-      - ./volumes/minio/config:/root/.minio
-    environment:
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-    networks:
-      - gopie
-    command: server -console-address :9002 /export
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # gopie-web:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile.prod
+  #   environment:
+  #     - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
+  #     - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
+  #     - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+  #     - NEXTAUTH_URL=${NEXTAUTH_URL}
+  #     - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+  #     - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+  #     - AUTH_SECRET=${AUTH_SECRET}
+  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  #     - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID}
+  #     - ZITADEL_CLIENT_SECRET=${ZITADEL_CLIENT_SECRET}
+  #     - ZITADEL_ISSUER=${ZITADEL_ISSUER}
+  #     - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
+  #   networks:
+  #     - gopie
 
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      minio:
-        condition: service_healthy
-    networks:
-      - gopie
-    entrypoint: >
-      /bin/sh -c "
-        echo 'Minio is up. Creating the bucket!!' &&
-        /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
-        /usr/bin/mc mb -p myminio/${MINIO_BUCKET} &&
-        /usr/bin/mc anonymous set public myminio/${MINIO_BUCKET}
-      "
+  # #########################################################################
+  # #####                        MINIO                                #######
+  # #########################################################################
+  # minio:
+  #   image: minio/minio
+  #   ports:
+  #     - "9000:9000"
+  #     - "9002:9002"
+  #   volumes:
+  #     - ./volumes/minio/data:/export
+  #     - ./volumes/minio/config:/root/.minio
+  #   environment:
+  #     - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+  #     - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+  #   networks:
+  #     - gopie
+  #   command: server -console-address :9002 /export
+  #   healthcheck:
+  #     test: ["CMD", "mc", "ready", "local"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
-  #########################################################################
-  #####                          COMPANION                            #####
-  #########################################################################
-  companion:
-    image: transloadit/companion:sha-e80a7f7
-    ports:
-      - "3020:3020"
-    environment:
-      - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
-      - COMPANION_AWS_REGION=${MINIO_REGION}
-      - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
-      - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
-      - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
-      - COMPANION_DOMAIN=${COMPANION_DOMAIN}
-      - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
-      - COMPANION_DATADIR=${COMPANION_DATADIR}
-      - COMPANION_SELF_ENDPOINT=${COMPANION_SELF_ENDPOINT}
-      - NODE_ENV=${COMPANION_NODE_ENV}
-    networks:
-      - gopie
-    depends_on:
-      - minio
+  # createbuckets:
+  #   image: minio/mc
+  #   depends_on:
+  #     minio:
+  #       condition: service_healthy
+  #   networks:
+  #     - gopie
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #       echo 'Minio is up. Creating the bucket!!' &&
+  #       /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
+  #       /usr/bin/mc mb -p myminio/${MINIO_BUCKET} &&
+  #       /usr/bin/mc anonymous set public myminio/${MINIO_BUCKET}
+  #     "
 
-  #########################################################################
-  #####                        LIVEKIT SERVICES                        #####
-  #########################################################################
-  livekit-server:
-    image: livekit/livekit-server:latest
-    ports:
-      - "7880:7880" # WebRTC traffic
-      - "7881:7881" # RTMP traffic
-      - "7882:7882" # WHIP/WHEP
-    environment:
-      - "LIVEKIT_KEYS=devkey: secret"
-      - LIVEKIT_REDIS_HOST=livekit-redis
-      - LIVEKIT_TURN_HTTPS=false
-    networks:
-      - gopie
-    depends_on:
-      - livekit-redis
+  # #########################################################################
+  # #####                          COMPANION                            #####
+  # #########################################################################
+  # companion:
+  #   image: transloadit/companion:sha-e80a7f7
+  #   ports:
+  #     - "3020:3020"
+  #   environment:
+  #     - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
+  #     - COMPANION_AWS_REGION=${MINIO_REGION}
+  #     - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
+  #     - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
+  #     - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
+  #     - COMPANION_DOMAIN=${COMPANION_DOMAIN}
+  #     - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
+  #     - COMPANION_DATADIR=${COMPANION_DATADIR}
+  #     - COMPANION_SELF_ENDPOINT=${COMPANION_SELF_ENDPOINT}
+  #     - NODE_ENV=${COMPANION_NODE_ENV}
+  #   networks:
+  #     - gopie
+  #   depends_on:
+  #     - minio
 
-  livekit-redis:
-    image: redis:alpine
-    command: redis-server --save 60 1 --loglevel warning
-    volumes:
-      - ./volumes/livekit/redis:/data
-    networks:
-      - gopie
+  # #########################################################################
+  # #####                        LIVEKIT SERVICES                        #####
+  # #########################################################################
+  # livekit-server:
+  #   image: livekit/livekit-server:latest
+  #   ports:
+  #     - "7880:7880" # WebRTC traffic
+  #     - "7881:7881" # RTMP traffic
+  #     - "7882:7882" # WHIP/WHEP
+  #   environment:
+  #     - "LIVEKIT_KEYS=devkey: secret"
+  #     - LIVEKIT_REDIS_HOST=livekit-redis
+  #     - LIVEKIT_TURN_HTTPS=false
+  #   networks:
+  #     - gopie
+  #   depends_on:
+  #     - livekit-redis
 
-  livekit-py:
-    build:
-      context: ./livekit-py
-      dockerfile: Dockerfile
-    volumes:
-      - ./livekit-py:/app
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=secret
-      - LIVEKIT_URL=ws://livekit-server:7880
-    depends_on:
-      - livekit-server
-    networks:
-      - gopie
+  # livekit-redis:
+  #   image: redis:alpine
+  #   command: redis-server --save 60 1 --loglevel warning
+  #   volumes:
+  #     - ./volumes/livekit/redis:/data
+  #   networks:
+  #     - gopie
+
+  # livekit-py:
+  #   build:
+  #     context: ./livekit-py
+  #     dockerfile: Dockerfile
+  #   volumes:
+  #     - ./livekit-py:/app
+  #   environment:
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - LIVEKIT_API_KEY=devkey
+  #     - LIVEKIT_API_SECRET=secret
+  #     - LIVEKIT_URL=ws://livekit-server:7880
+  #   depends_on:
+  #     - livekit-server
+  #   networks:
+  #     - gopie
 
   chat-server:
     build:
