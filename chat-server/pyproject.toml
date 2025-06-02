@@ -34,6 +34,8 @@ exclude = '''
   | _build
   | build
   | dist
+  | app/core/system_prompt\.py
+  | app/workflow/prompts/
 )/
 '''
 
