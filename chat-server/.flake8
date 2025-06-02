@@ -1,5 +1,7 @@
 [flake8]
 ignore = E203,W503
+max-line-length = 79
+max-complexity = 18
 exclude =
     .eggs,
     *.egg-info,
@@ -13,8 +15,4 @@ exclude =
     .mypy_cache,
     .pytest_cache,
     app/core/system_prompt.py,
-    app/workflow/prompts/,
-    */app/core/system_prompt.py,
-    chat-server/app/core/system_prompt.py
-max-line-length = 79
-max-complexity = 18
+    app/workflow/prompts/
