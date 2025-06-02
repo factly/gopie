@@ -7,6 +7,7 @@ import (
 
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/go-playground/validator/v10"
+	"go.uber.org/zap"
 )
 
 func ParseLimitAndPage(limitStr, pageStr string) (int, int) {
@@ -45,7 +46,7 @@ func RandomString(length uint) string {
 // parseAndValidateRequest parses and validates the upload request
 func ValidateRequest(logger *logger.Logger, req any) error {
 	if err := validator.New().Struct(req); err != nil {
-		fmt.Println(err)
+		logger.Error("Invalid request body", zap.Error(err))
 		return fmt.Errorf("Invalid request body: %v", err)
 	}
 

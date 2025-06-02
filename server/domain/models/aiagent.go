@@ -11,8 +11,8 @@ type AIChatMessage struct {
 }
 
 type AIAgentChatParams struct {
-	ProjectIDs []string
-	DatasetIDs []string
+	ProjectIDs string
+	DatasetIDs string
 	Messages   []AIChatMessage
 	DataChan   chan []byte
 	ErrChan    chan error

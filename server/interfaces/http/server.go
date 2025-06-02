@@ -155,7 +155,7 @@ func ServeHttp() error {
 		DatasetService: datasetService,
 		OlapService:    olapService,
 	})
-	chatApi.Routes(app.Group("/v1/api/chats"), chatApi.RouterParams{
+	chatApi.Routes(app.Group("/v1/api/chat"), chatApi.RouterParams{
 		Logger:         logger,
 		ChatService:    chatService,
 		DatasetService: datasetService,
