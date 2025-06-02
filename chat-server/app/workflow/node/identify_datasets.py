@@ -13,7 +13,9 @@ from app.utils.model_registry.model_provider import (
     get_model_provider,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.identify_datasets_prompt import (
+    create_identify_datasets_prompt,
+)
 
 
 async def identify_datasets(state: State, config: RunnableConfig):
@@ -100,8 +102,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 ],
             }
 
-        llm_prompt = get_prompt(
-            "identify_datasets",
+        llm_prompt = create_identify_datasets_prompt(
             user_query=user_query,
             available_datasets_schemas=semantic_searched_datasets,
             confidence_score=confidence_score,

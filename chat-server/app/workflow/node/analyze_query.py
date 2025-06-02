@@ -11,7 +11,9 @@ from app.utils.model_registry.model_provider import (
     get_llm_for_node,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.analyze_query_prompt import (
+    create_analyze_query_prompt,
+)
 
 
 async def analyze_query(state: State, config: RunnableConfig) -> dict:
@@ -93,8 +95,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
-        prompt = get_prompt(
-            "analyze_query",
+        prompt = create_analyze_query_prompt(
             user_query=user_input,
             tool_results=tools_results,
         )

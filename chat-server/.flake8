@@ -1,5 +1,20 @@
 [flake8]
-ignore = E203 W503
-exclude = .eggs,*.egg-info,.git,.hg,.tox,__pycache__,.vscode,.venv,__init__.py,.mypy_cache,.pytest_cache,app/core/system_prompt.py,app/workflow/prompts/
+ignore = E203,W503
+exclude =
+    .eggs,
+    *.egg-info,
+    .git,
+    .hg,
+    .tox,
+    __pycache__,
+    .vscode,
+    .venv,
+    __init__.py,
+    .mypy_cache,
+    .pytest_cache,
+    app/core/system_prompt.py,
+    app/workflow/prompts/,
+    */app/core/system_prompt.py,
+    chat-server/app/core/system_prompt.py
 max-line-length = 79
 max-complexity = 18

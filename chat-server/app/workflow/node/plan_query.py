@@ -9,7 +9,7 @@ from app.utils.model_registry.model_provider import (
     get_llm_for_node,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.plan_query_prompt import create_query_prompt
 
 
 async def plan_query(state: State, config: RunnableConfig) -> dict:
@@ -56,8 +56,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                 "datasets"
             )
 
-        llm_prompt = get_prompt(
-            "plan_query",
+        llm_prompt = create_query_prompt(
             user_query=user_query,
             datasets_info=datasets_info,
             error_message=error_messages,

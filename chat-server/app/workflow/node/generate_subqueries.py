@@ -12,7 +12,10 @@ from app.utils.model_registry.model_provider import (
     get_llm_for_node,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.generate_subqueries_prompt import (
+    create_assess_query_complexity_prompt,
+    create_generate_subqueries_prompt,
+)
 
 
 async def generate_subqueries(state: State, config: RunnableConfig):
@@ -38,8 +41,8 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             },
         )
 
-        assessment_prompt = get_prompt(
-            "assess_query_complexity", user_input=user_input
+        assessment_prompt = create_assess_query_complexity_prompt(
+            user_input=user_input
         )
         llm = get_llm_for_node("generate_subqueries", config)
         assessment_response = await llm.ainvoke(
@@ -65,8 +68,8 @@ async def generate_subqueries(state: State, config: RunnableConfig):
         subqueries = []
 
         if needs_breakdown:
-            subqueries_prompt = get_prompt(
-                "generate_subqueries", user_input=user_input
+            subqueries_prompt = create_generate_subqueries_prompt(
+                user_input=user_input
             )
             subqueries_response = await llm.ainvoke(
                 {

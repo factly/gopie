@@ -6,7 +6,7 @@ def create_query_prompt(
     datasets_info: dict,
     error_message: list[dict] | None = None,
     attempt: int = 1,
-    node_messages: list[dict] | None = None,
+    node_messages: dict | None = None,
 ) -> str:
     """
     Create a prompt for planning a SQL query based on user input and dataset
