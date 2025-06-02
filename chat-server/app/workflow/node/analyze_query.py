@@ -11,15 +11,17 @@ from app.utils.model_registry.model_provider import (
     get_llm_for_node,
 )
 from app.workflow.graph.types import State
-from app.workflow.prompts.prompt_selector import get_prompt
+from app.workflow.prompts.analyze_query_prompt import (
+    create_analyze_query_prompt,
+)
 
 
 async def analyze_query(state: State, config: RunnableConfig) -> dict:
     """
     Analyze the user query and the identified datasets to determine:
     1. If this is a data query requiring dataset processing
-    2. If this is a conversational query needing no datasets
-    3. If this is a tool-only query that can be handled without SQL execution
+    2. If this is a conversational query (may use tools but doesn't need
+       datasets)
 
     Args:
         state: The current state object containing messages and tool results
@@ -71,6 +73,8 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "tables_used": None,
                 "query_result": None,
                 "tool_used_result": None,
+                "confidence_score": 5,
+                "node_messages": {},
             },
         )
 
@@ -91,8 +95,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
-        prompt = get_prompt(
-            "analyze_query",
+        prompt = create_analyze_query_prompt(
             user_query=user_input,
             tool_results=tools_results,
         )
@@ -107,8 +110,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         parser = JsonOutputParser()
 
         if has_tool_calls(response):
-            query_result.subqueries[query_index].query_type = "tool_only"
-
+            query_result.subqueries[query_index].query_type = "conversational"
             tool_call_count += 1
 
             return {
@@ -128,7 +130,22 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         parsed_content = parser.parse(response_content)
 
         query_type = parsed_content.get("query_type", "conversational")
+        confidence_score = parsed_content.get("confidence_score", 5)
+        reasoning = parsed_content.get("reasoning", "")
+        clarification_needed = parsed_content.get("clarification_needed", "")
+
         query_result.subqueries[query_index].query_type = query_type
+        query_result.subqueries[
+            query_index
+        ].confidence_score = confidence_score
+
+        query_result.set_node_message(
+            "analyze_query",
+            {
+                "reasoning": reasoning,
+                "clarification_needed": clarification_needed,
+            },
+        )
 
         return {
             "query_result": query_result,
@@ -141,6 +158,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         error_msg = f"Error analyzing query: {e!s}"
         query_result.add_error_message(str(e), "Error analyzing query")
         query_result.subqueries[query_index].query_type = "conversational"
+        query_result.subqueries[query_index].confidence_score = 3
 
         return {
             "query_result": query_result,
@@ -174,8 +192,12 @@ def route_from_analysis(state: State) -> str:
     query_index = state.get("subquery_index")
 
     query_type = query_result.subqueries[query_index].query_type
+    confidence_score = query_result.subqueries[query_index].confidence_score
 
-    if query_type in {"conversational", "tool_only"}:
-        return "basic_conversation"
+    if query_type == "conversational":
+        if confidence_score >= 8:
+            return "basic_conversation"
+        else:
+            return "identify_datasets"
     else:
         return "identify_datasets"

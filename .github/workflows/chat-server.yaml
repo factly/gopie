@@ -1,4 +1,4 @@
-name: dataful-agent - Docker Build and Push CI
+name: gopie-chat-server - Docker Build and Push CI
 on:
   push:
     tags:

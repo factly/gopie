@@ -1,10 +1,10 @@
 import json
-import logging
 import uuid
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
@@ -84,11 +84,10 @@ async def stream_graph_updates(
                     tool_category=extracted_event_data.category,
                 )
 
-                logging.debug(json.dumps(chunk.model_dump(mode="json")))
-
-                yield "data: " + json.dumps(
-                    chunk.model_dump(mode="json")
-                ) + "\n \n"
+                logger.debug(
+                    json.dumps(chunk.model_dump(mode="json"), indent=2)
+                )
+                yield chunk
 
     except Exception as e:
         error = Error(
@@ -96,11 +95,10 @@ async def stream_graph_updates(
             message="Sorry, something went wrong. Please try again later",
         )
         output = StructuredChatStreamChunk(
-            chat_id=chat_id,
-            error=error,
+            chat_id=chat_id, error=error, finish_reason="error"
         )
-        yield "data: " + json.dumps(output.model_dump(mode="json")) + "\n \n"
-        logging.exception(e)
+        yield output
+        logger.exception(e)
 
 
 def convert_to_langchain_message(message: Message):
@@ -110,3 +108,11 @@ def convert_to_langchain_message(message: Message):
         return AIMessage(content=message.content)
     else:
         raise ValueError(f"Unknown role: {message.role}")
+
+
+async def stream_graph_updates_json(
+    *args,
+    **kwargs,
+):
+    async for chunk in stream_graph_updates(*args, **kwargs):
+        yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"

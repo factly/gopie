@@ -1,10 +1,10 @@
 import asyncio
-import logging
 from uuid import uuid4
 
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
+from app.core.log import logger
 from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
@@ -46,7 +46,7 @@ async def add_documents_to_vector_store(documents, ids=None):
         )
 
         if search_result[0]:
-            logging.debug(
+            logger.debug(
                 f"Document with project_id={project_id}, "
                 f"dataset_id={dataset_id} already exists in vector store. "
                 "Skipping."
@@ -87,12 +87,12 @@ def perform_similarity_search(
             query, k=top_k, filter=query_filter
         )
     except Exception as e:
-        logging.error(
+        logger.error(
             f"Error performing similarity search: {e!s} | "
             f"Filter criteria: {query_filter}"
         )
         if query_filter:
-            logging.info("Attempting unfiltered search as fallback...")
+            logger.info("Attempting unfiltered search as fallback...")
             return vector_store.similarity_search(query, k=top_k)
         else:
             raise e

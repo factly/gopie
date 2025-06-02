@@ -1,8 +1,7 @@
-import logging
-
 from langchain_core.tools import tool
 
 from app.core.config import settings
+from app.core.log import logger
 from app.core.session import SingletonAiohttp
 
 BASE_URL = settings.GOPIE_API_ENDPOINT
@@ -38,7 +37,7 @@ async def list_datasets(
             response.raise_for_status()
             return json_response.get("results", [])
     except Exception as e:
-        logging.error(f"Error fetching datasets: {e}")
+        logger.error(f"Error fetching datasets: {e}")
         return []
 
 
@@ -66,7 +65,7 @@ async def list_projects(limit: int = 10, page: int = 1) -> list[dict]:
             response.raise_for_status()
             return (await response.json()).get("results", [])
     except Exception as e:
-        logging.error(f"Error fetching projects: {e}")
+        logger.error(f"Error fetching projects: {e}")
         return []
 
 

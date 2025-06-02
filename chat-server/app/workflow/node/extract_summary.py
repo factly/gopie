@@ -59,7 +59,7 @@ async def extract_summary(state: State) -> dict:
 
             sq_idx = subquery_index + 1
             result_messages.append(
-                f"Created summary for SQL query {i+1} in subquery {sq_idx}"
+                f"Created summary for SQL query {i + 1} in subquery {sq_idx}"
             )
 
     if not summaries_created:
