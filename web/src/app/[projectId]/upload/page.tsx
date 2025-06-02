@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CsvValidationUppy } from "@/components/dataset/csv-validation-uppy";
 import { useRouter } from "next/navigation";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
+import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
@@ -31,6 +32,9 @@ export default function UploadDatasetPage({
   const router = useRouter();
   const getColumnMappings = useColumnNameStore(
     (state) => state.getColumnMappings
+  );
+  const getColumnDescriptions = useColumnDescriptionStore(
+    (state) => state.getColumnDescriptions
   );
 
   const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
@@ -61,6 +65,7 @@ export default function UploadDatasetPage({
       const datasetDescription =
         file.meta.description?.toString() || "Uploaded from GoPie Web (CSV)";
       const alter_column_names = getColumnMappings();
+      const column_descriptions = getColumnDescriptions();
 
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
@@ -69,6 +74,7 @@ export default function UploadDatasetPage({
         createdBy: "system",
         description: datasetDescription,
         alter_column_names: alter_column_names,
+        column_descriptions: column_descriptions,
       });
 
       if (!res?.data.dataset.id) {
@@ -118,7 +124,7 @@ export default function UploadDatasetPage({
   };
 
   return (
-    <div className="container max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="container max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="mb-6">
         <Button
           variant="ghost"
@@ -160,7 +166,6 @@ export default function UploadDatasetPage({
         <CsvValidationUppy
           projectId={projectId}
           onUploadSuccess={handleUploadSuccess}
-          width="100%"
         />
       </div>
 

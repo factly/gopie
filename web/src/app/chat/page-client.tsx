@@ -451,6 +451,11 @@ const ChatInput = React.memo(
   }: ChatInputProps) => {
     const [inputValue, setInputValue] = useState(initialValue);
 
+    // Add effect to update input value when initialValue changes
+    useEffect(() => {
+      setInputValue(initialValue);
+    }, [initialValue]);
+
     const handleSendMessage = useCallback(
       (e: React.FormEvent) => {
         e.preventDefault();
@@ -631,6 +636,7 @@ function ChatPageClient() {
   const contextData = searchParams.get("contextData");
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
+  const [inputValue, setInputValue] = useState("");
 
   const { setOpen, open: isSidebarOpen, isMobile } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1099,6 +1105,9 @@ function ChatPageClient() {
         await queryClient.invalidateQueries({ queryKey: ["chats"] });
 
         setActiveTab("chat");
+
+        // Clear the input value after successfully sending the message
+        setInputValue("");
       } catch (error) {
         if (!(error instanceof Error && error.name === "AbortError")) {
           console.error("Error sending message:", error);
@@ -1121,6 +1130,7 @@ function ChatPageClient() {
       selectChatForDataset,
       setActiveTab,
       clientMessages,
+      setInputValue,
     ]
   );
 
@@ -1153,6 +1163,7 @@ function ChatPageClient() {
       // Send the message if any context is selected (not just datasets)
       sendMessage(initialMessage);
       setInitialMessageSent(true);
+      setInputValue("");
       const params = new URLSearchParams(searchParams.toString());
       params.delete("initialMessage");
       params.delete("contextData");
@@ -1502,7 +1513,7 @@ function ChatPageClient() {
             onRemoveContext={handleRemoveContext}
             isVoiceModeActive={isVoiceModeActive}
             setIsVoiceModeActive={setIsVoiceModeActive}
-            initialValue={initialMessage || ""}
+            initialValue={inputValue}
             lockableContextIds={
               selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
             }

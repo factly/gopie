@@ -54,9 +54,9 @@ import { SidebarUser } from "@/components/auth/sidebar-user";
 import { ProjectsSidebar } from "./project-sidebar";
 
 export function AppSidebar() {
-  const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const { open: isSidebarOpen } = useSidebar();
   const { theme } = useTheme();
   const projectId = params?.projectId as string;
@@ -142,41 +142,43 @@ export function AppSidebar() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-20"
-                  onClick={() => router.push("/")}
-                  title="Back to Home"
-                >
-                  <Image
-                    src={
-                      theme === "dark"
-                        ? "/GoPie_Logo_Dark.svg"
-                        : "/GoPie_Logo.svg"
-                    }
-                    alt="GoPie"
-                    width={160}
-                    height={60}
-                    className="h-8"
-                  />
-                </Button>
+                <Link href="/" className="h-8 w-20">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-20"
+                    title="Back to Home"
+                  >
+                    <Image
+                      src={
+                        theme === "dark"
+                          ? "/GoPie_Logo_Dark.svg"
+                          : "/GoPie_Logo.svg"
+                      }
+                      alt="GoPie"
+                      width={160}
+                      height={60}
+                      className="h-8"
+                    />
+                  </Button>
+                </Link>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Chat"
-                  onClick={() => router.push("/chat")}
-                >
-                  <MessageSquareIcon
-                    className={`h-4 w-4 ${
-                      pathname === "/chat" ? "text-primary" : ""
-                    }`}
-                  />
-                </Button>
+                <Link href="/chat">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Chat"
+                  >
+                    <MessageSquareIcon
+                      className={`h-4 w-4 ${
+                        pathname === "/chat" ? "text-primary" : ""
+                      }`}
+                    />
+                  </Button>
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -195,32 +197,37 @@ export function AppSidebar() {
                 </Button>
               </div>
             </div>
-            <CommandSearch projectId={projectId} onNavigate={router.push} />
+            <CommandSearch
+              projectId={projectId}
+              onNavigate={(href) => router.push(href)}
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => router.push("/")}
-              title="Back to Home"
-            >
-              <Image src="/favicon.svg" alt="GoPie" width={32} height={32} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              title="Chat"
-              onClick={() => router.push("/chat")}
-            >
-              <MessageSquareIcon
-                className={`h-4 w-4 ${
-                  pathname === "/chat" ? "text-primary" : ""
-                }`}
-              />
-            </Button>
+            <Link href="/">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Back to Home"
+              >
+                <Image src="/favicon.svg" alt="GoPie" width={32} height={32} />
+              </Button>
+            </Link>
+            <Link href="/chat">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Chat"
+              >
+                <MessageSquareIcon
+                  className={`h-4 w-4 ${
+                    pathname === "/chat" ? "text-primary" : ""
+                  }`}
+                />
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
@@ -237,7 +244,10 @@ export function AppSidebar() {
             >
               <PanelLeftIcon className="h-4 w-4" />
             </Button>
-            <CommandSearch projectId={projectId} onNavigate={router.push} />
+            <CommandSearch
+              projectId={projectId}
+              onNavigate={(href) => router.push(href)}
+            />
           </div>
         )}
         <SidebarTrigger className="hidden" />
@@ -270,17 +280,16 @@ export function AppSidebar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[200px]">
                     {projects?.results?.map((p) => (
-                      <DropdownMenuItem
-                        key={p.id}
-                        onSelect={() => router.push(`/${p.id}`)}
-                      >
-                        <span className="truncate">{p.name}</span>
-                        {p.id === project.id && (
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            Current
-                          </span>
-                        )}
-                      </DropdownMenuItem>
+                      <Link href={`/${p.id}`} key={p.id}>
+                        <DropdownMenuItem>
+                          <span className="truncate">{p.name}</span>
+                          {p.id === project.id && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              Current
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      </Link>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -341,21 +350,18 @@ export function AppSidebar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
                   {datasets.results.map((dataset) => (
-                    <DropdownMenuItem
-                      key={dataset.id}
-                      onSelect={() =>
-                        router.push(`/${projectId}/${dataset.id}`)
-                      }
-                    >
-                      <span className="truncate">
-                        {dataset.alias || dataset.name}
-                      </span>
-                      {dataset.id === datasetId && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          Current
+                    <Link href={`/${projectId}/${dataset.id}`} key={dataset.id}>
+                      <DropdownMenuItem>
+                        <span className="truncate">
+                          {dataset.alias || dataset.name}
                         </span>
-                      )}
-                    </DropdownMenuItem>
+                        {dataset.id === datasetId && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            Current
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    </Link>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
