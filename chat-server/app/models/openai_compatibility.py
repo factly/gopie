@@ -497,6 +497,6 @@ async def to_openai_streaming_format(
         response_chunks, model, trace_id
     )
     async for chunk in openai_chunks:
-        yield chunk.model_dump_json()
+        yield f"{chunk.model_dump_json()}\n\n"
     #     yield f"data: {chunk.model_dump(mode='json')}\n\n"
     # yield "data: [DONE]\n\n"
