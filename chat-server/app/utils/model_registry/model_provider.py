@@ -11,14 +11,16 @@ class ModelProvider:
         model_id: str | None = None,
         trace_id: str | None = None,
         with_tools: bool = False,
+        user: str | None = None,
     ):
         self.model_id = model_id
         self.trace_id = trace_id
         self.with_tools = with_tools
+        self.user = user
 
     def get_llm(self):
         model_config = ModelConfig(
-            model_id=self.model_id, trace_id=self.trace_id
+            model_id=self.model_id, trace_id=self.trace_id, user=self.user
         )
 
         lc_config = LangchainConfig(model_config)
@@ -28,6 +30,7 @@ class ModelProvider:
         model_config = ModelConfig(
             model_id=self.model_id,
             trace_id=self.trace_id,
+            user=self.user,
         )
 
         lc_config = LangchainConfig(model_config)
@@ -39,7 +42,7 @@ class ModelProvider:
 
     def get_embeddings_model(self):
         model_config = ModelConfig(
-            model_id=self.model_id, trace_id=self.trace_id
+            model_id=self.model_id, trace_id=self.trace_id, user=self.user
         )
         return LangchainConfig(model_config).embeddings_model
 
@@ -49,7 +52,8 @@ def get_model_provider(
 ):
     model_id = config.get("configurable", {}).get("model_id")
     trace_id = config.get("configurable", {}).get("trace_id")
-    return ModelProvider(model_id=model_id, trace_id=trace_id)
+    user = config.get("configurable", {}).get("user")
+    return ModelProvider(model_id=model_id, trace_id=trace_id, user=user)
 
 
 def get_llm_for_node(
@@ -57,9 +61,10 @@ def get_llm_for_node(
 ):
     model_id = NODE_TO_MODEL.get(node_name, settings.DEFAULT_OPENAI_MODEL)
     trace_id = config.get("configurable", {}).get("trace_id")
+    user = config.get("configurable", {}).get("user")
 
     return ModelProvider(
-        model_id=model_id, trace_id=trace_id, with_tools=with_tools
+        model_id=model_id, trace_id=trace_id, with_tools=with_tools, user=user
     ).get_node_llm()
 
 

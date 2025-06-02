@@ -276,25 +276,25 @@ def from_openai_format(
         for message in request.get("messages")
     ]
 
+    project_ids: list[str] = []
+    dataset_ids: list[str] = []
+
     metadata = request.get("metadata")
+
     if metadata:
-        project_ids: list[str] = []
-        dataset_ids: list[str] = []
         for key, value in metadata.items():
             if key.startswith("project_id"):
                 project_ids.extend(value.split(","))
             elif key.startswith("dataset_id"):
                 dataset_ids.extend(value.split(","))
-    query_params = {
-        "messages": messages,
-        "model_id": request.get(
-            "model"
-        ),  # Map OpenAI model to internal model_id
-        "dataset_ids": dataset_ids,
-        "project_ids": project_ids,
-    }
 
-    return QueryRequest(**query_params)
+    return QueryRequest(
+        messages=messages,
+        model_id=request.get("model"),
+        user=request.get("user"),
+        dataset_ids=dataset_ids,
+        project_ids=project_ids,
+    )
 
 
 async def to_openai_non_streaming_format(

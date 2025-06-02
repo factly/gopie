@@ -23,6 +23,7 @@ class QueryRequest(BaseModel):
     chat_id: str | None = None
     trace_id: str | None = None
     model_id: str | None = None
+    user: str | None = None
 
 
 class ModelInfo(BaseModel):

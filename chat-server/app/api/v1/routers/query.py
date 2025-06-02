@@ -35,6 +35,7 @@ async def query(request: QueryRequest):
                                 the projects.
     - `dataset_ids` (optional): List of individual dataset IDs to query
                                 directly.
+    - `user` (optional): User identifier for tracing the query execution
     - `chat_id` (optional): Unique identifier for the chat session.
     - `trace_id` (optional): Unique identifier for tracing the query execution
     - `model_id` (optional): ID of the model to use for reasoning
@@ -48,6 +49,7 @@ async def query(request: QueryRequest):
             chat_id=request.chat_id,
             trace_id=trace_id,
             model_id=request.model_id,
+            user=request.user,
         ),
         media_type="text/event-stream",
     )
@@ -69,6 +71,7 @@ async def create(
                     chat_id=request.chat_id,
                     trace_id=trace_id,
                     model_id=request.model_id,
+                    user=request.user,
                 ),
                 trace_id=trace_id,
                 model=request.model_id,
@@ -83,6 +86,7 @@ async def create(
             chat_id=request.chat_id,
             trace_id=trace_id,
             model_id=request.model_id,
+            user=request.user,
         ),
         trace_id=trace_id,
         model=request.model_id,

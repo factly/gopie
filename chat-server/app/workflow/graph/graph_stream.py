@@ -19,6 +19,7 @@ async def stream_graph_updates(
     chat_id: str | None = None,
     trace_id: str | None = None,
     model_id: str | None = None,
+    user: str | None = None,
 ):
     """
     Stream graph updates for user input with event tracking.
@@ -54,6 +55,7 @@ async def stream_graph_updates(
             "model_id": model_id,
             "trace_id": trace_id,
             "chat_history": chat_history,
+            "user": user,
         },
     )
 

@@ -13,8 +13,12 @@ from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 class ModelConfig:
     def __init__(
-        self, trace_id: str | None = None, model_id: str | None = None
+        self,
+        user: str | None = "gopie.chat.server",
+        trace_id: str | None = None,
+        model_id: str | None = None,
     ):
+        self.user = user
         self.trace_id = trace_id or str(uuid.uuid4())
         self.model_provider = ModelVendor.OPENAI
 
@@ -45,7 +49,7 @@ class ModelConfig:
             virtual_key=settings.OPENAI_VIRTUAL_KEY,
             trace_id=self.trace_id,
             metadata={
-                "_user": "yuvrajsinh.gohil",
+                "_user": self.user,
                 "project": "gopie-chat-server",
             },
         )
@@ -56,7 +60,7 @@ class ModelConfig:
             virtual_key=settings.GEMINI_VIRTUAL_KEY,
             trace_id=self.trace_id,
             metadata={
-                "_user": "yuvrajsinh.gohil",
+                "_user": self.user,
                 "project": "gopie-chat-server",
             },
         )

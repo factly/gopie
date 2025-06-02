@@ -23,3 +23,4 @@ class ConfigSchema(TypedDict):
     model_id: str
     trace_id: str
     chat_history: list[BaseMessage]
+    user: str
