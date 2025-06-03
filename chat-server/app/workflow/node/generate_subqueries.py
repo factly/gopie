@@ -68,6 +68,13 @@ async def generate_subqueries(state: State, config: RunnableConfig):
         subqueries = []
 
         if needs_breakdown:
+            await adispatch_custom_event(
+                "dataful-agent",
+                {
+                    "content": "Analyzing query...",
+                },
+            )
+
             subqueries_prompt = create_generate_subqueries_prompt(
                 user_input=user_input
             )
