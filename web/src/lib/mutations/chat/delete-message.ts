@@ -9,6 +9,6 @@ interface DeleteMessageParams {
 export const useDeleteMessage = createMutation({
   mutationKey: ["delete-message"],
   mutationFn: async ({ chatId, messageId }: DeleteMessageParams) => {
-    await apiClient.delete(`v1/api/chats/${chatId}/messages/${messageId}`);
+    await apiClient.delete(`v1/api/chat/${chatId}/messages/${messageId}`);
   },
 });

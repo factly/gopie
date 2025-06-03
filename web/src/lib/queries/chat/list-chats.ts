@@ -19,7 +19,7 @@ export async function fetchChats(
       page: context.pageParam.toString(),
     });
 
-    const response = await apiClient.get(`v1/api/chats?${searchParams}`);
+    const response = await apiClient.get(`v1/api/chat?${searchParams}`);
     return response.json();
   } catch (error) {
     throw new Error("Failed to fetch chats: " + error);
