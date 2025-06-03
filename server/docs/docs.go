@@ -380,7 +380,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/api/chat/agent": {
+        "/v1/api/chat/completions": {
             "post": {
                 "description": "Create a streaming chat conversation with an AI agent about datasets or projects",
                 "consumes": [

@@ -274,7 +274,7 @@ type chatWithAgentRequestBody struct {
 // @Success 200 {string} string "Server-sent events stream started"
 // @Failure 400 {string} string "Invalid request body"
 // @Failure 500 {string} string "Internal server error" // Should ideally be JSON for API consistency
-// @Router /v1/api/chat/agent [post]
+// @Router /v1/api/chat/completions [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {

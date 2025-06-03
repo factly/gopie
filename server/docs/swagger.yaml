@@ -764,7 +764,7 @@ paths:
       summary: Delete chat message
       tags:
       - chat
-  /v1/api/chat/agent:
+  /v1/api/chat/completions:
     post:
       consumes:
       - application/json
