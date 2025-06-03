@@ -9,7 +9,7 @@ import (
 
 // @Summary Get chat messages
 // @Description Get all messages from a specific chat with pagination
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param chatID path string true "Chat ID" example:"550e8400-e29b-41d4-a716-446655440000"
@@ -17,7 +17,7 @@ import (
 // @Param page query integer false "Page number" default(1)
 // @Success 200 {object} responses.SuccessResponse{data=[]models.ChatMessage} "Chat messages retrieved successfully"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/chats/{chatID}/messages [get]
+// @Router /v1/api/chat/{chatID}/messages [get]
 func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
 	limit := ctx.Query("limit")
@@ -50,7 +50,7 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 
 // @Summary List dataset chats
 // @Description Get all chats associated with a specific dataset with pagination
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param dataset_id query string true "Dataset ID" example:"550e8400-e29b-41d4-a716-446655440000"
@@ -59,7 +59,7 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 // @Success 200 {object} responses.SuccessResponse{data=[]models.Chat} "Dataset chats retrieved successfully"
 // @Failure 400 {object} responses.ErrorResponse "Dataset ID is required"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/chats [get]
+// @Router /v1/api/chat [get]
 func (h *httpHandler) listDatasetChats(ctx *fiber.Ctx) error {
 	datasetID := ctx.Query("dataset_id")
 	if datasetID == "" {

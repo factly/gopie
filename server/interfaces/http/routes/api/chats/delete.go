@@ -7,14 +7,14 @@ import (
 
 // @Summary Delete chat
 // @Description Delete an entire chat and all its messages
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param chatID path string true "Chat ID" example:"550e8400-e29b-41d4-a716-446655440000"
 // @Success 204 "Chat deleted successfully"
 // @Failure 404 {object} responses.ErrorResponse "Chat not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/chats/{chatID} [delete]
+// @Router /v1/api/chat/{chatID} [delete]
 func (h *httpHandler) deleteChat(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
 
@@ -39,7 +39,7 @@ func (h *httpHandler) deleteChat(ctx *fiber.Ctx) error {
 
 // @Summary Delete chat message
 // @Description Delete a specific message from a chat
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param chatID path string true "Chat ID" example:"550e8400-e29b-41d4-a716-446655440000"
@@ -47,7 +47,7 @@ func (h *httpHandler) deleteChat(ctx *fiber.Ctx) error {
 // @Success 204 "Message deleted successfully"
 // @Failure 404 {object} responses.ErrorResponse "Message not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/chats/{chatID}/messages/{messageID} [delete]
+// @Router /v1/api/chat/{chatID}/messages/{messageID} [delete]
 func (h *httpHandler) deleteMessage(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
 	messageID := ctx.Params("messageID")

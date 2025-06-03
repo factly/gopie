@@ -43,7 +43,7 @@ type chatRequestBody struct {
 
 // @Summary Create or continue chat
 // @Description Create a new chat or continue an existing chat conversation with AI about a dataset
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param body body chatRequestBody true "Chat request parameters"
@@ -51,7 +51,7 @@ type chatRequestBody struct {
 // @Failure 400 {object} map[string]interface{} "Invalid request body"
 // @Failure 404 {object} map[string]interface{} "Dataset not found"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
-// @Router /v1/api/chats [post]
+// @Router /v1/api/chat [post]
 func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	body := chatRequestBody{}
 	if err := ctx.BodyParser(&body); err != nil {
@@ -267,14 +267,14 @@ type chatWithAgentRequestBody struct {
 
 // @Summary Chat with AI agent
 // @Description Create a streaming chat conversation with an AI agent about datasets or projects
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce text/event-stream
 // @Param body body chatWithAgentRequestBody true "Chat request parameters"
 // @Success 200 {string} string "Server-sent events stream started"
 // @Failure 400 {string} string "Invalid request body"
 // @Failure 500 {string} string "Internal server error" // Should ideally be JSON for API consistency
-// @Router /v1/api/chats/agent [post]
+// @Router /v1/api/chat/agent [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
