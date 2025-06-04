@@ -11,29 +11,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countChatsByUser = `-- name: CountChatsByUser :one
+select count(*) from chats
+where created_by = $1
+`
+
+func (q *Queries) CountChatsByUser(ctx context.Context, createdBy pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, countChatsByUser, createdBy)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createChat = `-- name: CreateChat :one
 insert into chats (
-    name,
-    dataset_id,
-    created_by
-) values ($1, $2, $3)
-returning id, name, dataset_id, created_at, updated_at, created_by
+  title,
+  created_by
+) values (
+  $1, $2
+)
+returning id, title, created_at, updated_at, created_by
 `
 
 type CreateChatParams struct {
-	Name      string
-	DatasetID pgtype.UUID
+	Title     pgtype.Text
 	CreatedBy pgtype.Text
 }
 
-// Chat Operations
 func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, createChat, arg.Name, arg.DatasetID, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createChat, arg.Title, arg.CreatedBy)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.DatasetID,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
@@ -43,155 +53,66 @@ func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (Chat, e
 
 const createChatMessage = `-- name: CreateChatMessage :one
 insert into chat_messages (
-    chat_id,
-    content,
-    role,
-    created_at
-) values ($1, $2, $3, $4)
-returning id, chat_id, content, role, created_at
+  chat_id,
+  choices,
+  object,
+  model
+) values (
+  $1, $2, $3, $4
+)
+returning id, chat_id, choices, object, model, created_at
 `
 
 type CreateChatMessageParams struct {
-	ChatID    pgtype.UUID
-	Content   string
-	Role      string
-	CreatedAt pgtype.Timestamptz
+	ChatID  pgtype.UUID
+	Choices []byte
+	Object  string
+	Model   pgtype.Text
 }
 
-// Chat Messages Operations
 func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error) {
 	row := q.db.QueryRow(ctx, createChatMessage,
 		arg.ChatID,
-		arg.Content,
-		arg.Role,
-		arg.CreatedAt,
+		arg.Choices,
+		arg.Object,
+		arg.Model,
 	)
 	var i ChatMessage
 	err := row.Scan(
 		&i.ID,
 		&i.ChatID,
-		&i.Content,
-		&i.Role,
+		&i.Choices,
+		&i.Object,
+		&i.Model,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const deleteChat = `-- name: DeleteChat :exec
-delete from chats where id = $1
+delete from chats
+where id = $1
+and created_by = $2
 `
 
-func (q *Queries) DeleteChat(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteChat, id)
+type DeleteChatParams struct {
+	ID        pgtype.UUID
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) DeleteChat(ctx context.Context, arg DeleteChatParams) error {
+	_, err := q.db.Exec(ctx, deleteChat, arg.ID, arg.CreatedBy)
 	return err
 }
 
-const deleteChatMessage = `-- name: DeleteChatMessage :exec
-delete from chat_messages 
-where id = $1 and chat_id = $2
-`
-
-type DeleteChatMessageParams struct {
-	ID     pgtype.UUID
-	ChatID pgtype.UUID
-}
-
-func (q *Queries) DeleteChatMessage(ctx context.Context, arg DeleteChatMessageParams) error {
-	_, err := q.db.Exec(ctx, deleteChatMessage, arg.ID, arg.ChatID)
-	return err
-}
-
-const getChat = `-- name: GetChat :one
-select 
-    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
-    d.name as dataset_name,
-    (select count(*) from chat_messages where chat_id = c.id) as message_count
-from chats c
-join datasets d on c.dataset_id = d.id
-where c.id = $1
-`
-
-type GetChatRow struct {
-	ID           pgtype.UUID
-	Name         string
-	DatasetID    pgtype.UUID
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	CreatedBy    pgtype.Text
-	DatasetName  string
-	MessageCount int64
-}
-
-func (q *Queries) GetChat(ctx context.Context, id pgtype.UUID) (GetChatRow, error) {
-	row := q.db.QueryRow(ctx, getChat, id)
-	var i GetChatRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.DatasetID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.CreatedBy,
-		&i.DatasetName,
-		&i.MessageCount,
-	)
-	return i, err
-}
-
-const getChatMessagesCount = `-- name: GetChatMessagesCount :one
-select count(*) 
-from chat_messages
-where chat_id = $1
-`
-
-func (q *Queries) GetChatMessagesCount(ctx context.Context, chatID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getChatMessagesCount, chatID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const getDatasetChatsCount = `-- name: GetDatasetChatsCount :one
-select count(*) 
-from chats
-where dataset_id = $1
-`
-
-func (q *Queries) GetDatasetChatsCount(ctx context.Context, datasetID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getDatasetChatsCount, datasetID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const getUserChatsCount = `-- name: GetUserChatsCount :one
-select count(*) 
-from chats
-where created_by = $1
-`
-
-func (q *Queries) GetUserChatsCount(ctx context.Context, createdBy pgtype.Text) (int64, error) {
-	row := q.db.QueryRow(ctx, getUserChatsCount, createdBy)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const listChatMessages = `-- name: ListChatMessages :many
-select id, chat_id, content, role, created_at from chat_messages
+const getChatMessages = `-- name: GetChatMessages :many
+select id, chat_id, choices, object, model, created_at from chat_messages
 where chat_id = $1
 order by created_at asc
-limit $2 offset $3
 `
 
-type ListChatMessagesParams struct {
-	ChatID pgtype.UUID
-	Limit  int32
-	Offset int32
-}
-
-func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesParams) ([]ChatMessage, error) {
-	rows, err := q.db.Query(ctx, listChatMessages, arg.ChatID, arg.Limit, arg.Offset)
+func (q *Queries) GetChatMessages(ctx context.Context, chatID pgtype.UUID) ([]ChatMessage, error) {
+	rows, err := q.db.Query(ctx, getChatMessages, chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,8 +123,9 @@ func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChatID,
-			&i.Content,
-			&i.Role,
+			&i.Choices,
+			&i.Object,
+			&i.Model,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -216,49 +138,53 @@ func (q *Queries) ListChatMessages(ctx context.Context, arg ListChatMessagesPara
 	return items, nil
 }
 
-const listDatasetChats = `-- name: ListDatasetChats :many
+const getChatWithMessages = `-- name: GetChatWithMessages :many
 select 
-    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
-    (select count(*) from chat_messages where chat_id = c.id) as message_count
+  c.id, c.title, c.created_at, c.updated_at, c.created_by,
+  m.id as message_id,
+  m.choices,
+  m.object,
+  m.model,
+  m.created_at as message_created_at
 from chats c
-where c.dataset_id = $1
-order by c.updated_at desc
-limit $2 offset $3
+left join chat_messages m on c.id = m.chat_id
+where c.id = $1
+order by m.created_at asc
 `
 
-type ListDatasetChatsParams struct {
-	DatasetID pgtype.UUID
-	Limit     int32
-	Offset    int32
+type GetChatWithMessagesRow struct {
+	ID               pgtype.UUID
+	Title            pgtype.Text
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	CreatedBy        pgtype.Text
+	MessageID        pgtype.UUID
+	Choices          []byte
+	Object           pgtype.Text
+	Model            pgtype.Text
+	MessageCreatedAt pgtype.Timestamptz
 }
 
-type ListDatasetChatsRow struct {
-	ID           pgtype.UUID
-	Name         string
-	DatasetID    pgtype.UUID
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	CreatedBy    pgtype.Text
-	MessageCount int64
-}
-
-func (q *Queries) ListDatasetChats(ctx context.Context, arg ListDatasetChatsParams) ([]ListDatasetChatsRow, error) {
-	rows, err := q.db.Query(ctx, listDatasetChats, arg.DatasetID, arg.Limit, arg.Offset)
+func (q *Queries) GetChatWithMessages(ctx context.Context, id pgtype.UUID) ([]GetChatWithMessagesRow, error) {
+	rows, err := q.db.Query(ctx, getChatWithMessages, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDatasetChatsRow
+	var items []GetChatWithMessagesRow
 	for rows.Next() {
-		var i ListDatasetChatsRow
+		var i GetChatWithMessagesRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.DatasetID,
+			&i.Title,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
-			&i.MessageCount,
+			&i.MessageID,
+			&i.Choices,
+			&i.Object,
+			&i.Model,
+			&i.MessageCreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -270,53 +196,34 @@ func (q *Queries) ListDatasetChats(ctx context.Context, arg ListDatasetChatsPara
 	return items, nil
 }
 
-const listUserChats = `-- name: ListUserChats :many
-select 
-    c.id, c.name, c.dataset_id, c.created_at, c.updated_at, c.created_by,
-    d.name as dataset_name,
-    (select count(*) from chat_messages where chat_id = c.id) as message_count
-from chats c
-join datasets d on c.dataset_id = d.id
-where c.created_by = $1
-order by c.updated_at desc
+const listChatsByUser = `-- name: ListChatsByUser :many
+select id, title, created_at, updated_at, created_by from chats
+where created_by = $1
+order by updated_at desc
 limit $2 offset $3
 `
 
-type ListUserChatsParams struct {
+type ListChatsByUserParams struct {
 	CreatedBy pgtype.Text
 	Limit     int32
 	Offset    int32
 }
 
-type ListUserChatsRow struct {
-	ID           pgtype.UUID
-	Name         string
-	DatasetID    pgtype.UUID
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	CreatedBy    pgtype.Text
-	DatasetName  string
-	MessageCount int64
-}
-
-func (q *Queries) ListUserChats(ctx context.Context, arg ListUserChatsParams) ([]ListUserChatsRow, error) {
-	rows, err := q.db.Query(ctx, listUserChats, arg.CreatedBy, arg.Limit, arg.Offset)
+func (q *Queries) ListChatsByUser(ctx context.Context, arg ListChatsByUserParams) ([]Chat, error) {
+	rows, err := q.db.Query(ctx, listChatsByUser, arg.CreatedBy, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListUserChatsRow
+	var items []Chat
 	for rows.Next() {
-		var i ListUserChatsRow
+		var i Chat
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.DatasetID,
+			&i.Title,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
-			&i.DatasetName,
-			&i.MessageCount,
 		); err != nil {
 			return nil, err
 		}
@@ -328,26 +235,54 @@ func (q *Queries) ListUserChats(ctx context.Context, arg ListUserChatsParams) ([
 	return items, nil
 }
 
-const updateChat = `-- name: UpdateChat :one
-update chats
-set 
-    name = coalesce($1, name)
-where id = $2
-returning id, name, dataset_id, created_at, updated_at, created_by
+const updateChatMessage = `-- name: UpdateChatMessage :one
+update chat_messages
+set choices = $2
+where id = $1
+and chat_id = $3
+returning id, chat_id, choices, object, model, created_at
 `
 
-type UpdateChatParams struct {
-	Name string
-	ID   pgtype.UUID
+type UpdateChatMessageParams struct {
+	ID      pgtype.UUID
+	Choices []byte
+	ChatID  pgtype.UUID
 }
 
-func (q *Queries) UpdateChat(ctx context.Context, arg UpdateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, updateChat, arg.Name, arg.ID)
+func (q *Queries) UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error) {
+	row := q.db.QueryRow(ctx, updateChatMessage, arg.ID, arg.Choices, arg.ChatID)
+	var i ChatMessage
+	err := row.Scan(
+		&i.ID,
+		&i.ChatID,
+		&i.Choices,
+		&i.Object,
+		&i.Model,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateChatTitle = `-- name: UpdateChatTitle :one
+update chats
+set title = $2
+where id = $1
+and created_by = $3
+returning id, title, created_at, updated_at, created_by
+`
+
+type UpdateChatTitleParams struct {
+	ID        pgtype.UUID
+	Title     pgtype.Text
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams) (Chat, error) {
+	row := q.db.QueryRow(ctx, updateChatTitle, arg.ID, arg.Title, arg.CreatedBy)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.DatasetID,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
