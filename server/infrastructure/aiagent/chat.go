@@ -23,6 +23,13 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 		})
 	}
 
+	for _, msg := range params.PrevMessages {
+		messages = append(messages, openai.ChatCompletionMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
 	// Add metadata with project and dataset IDs if provided
 	metadata := make(map[string]string)
 	metadata["project_ids"] = params.ProjectIDs

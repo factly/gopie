@@ -50,3 +50,41 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 		"data": messages,
 	})
 }
+
+func (s *httpHandler) listUserChats(ctx *fiber.Ctx) error {
+	userID := ctx.Get("userID")
+	if userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":   "Unauthorized",
+			"message": "User ID is required",
+			"code":    fiber.StatusUnauthorized,
+		})
+	}
+	limit := ctx.Query("limit")
+	page := ctx.Query("page")
+	pagination := models.NewPagination()
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		l = 10
+	}
+	p, err := strconv.Atoi(page)
+	if err != nil {
+		p = 1
+	}
+
+	pagination.Limit = l
+	pagination.Offset = (p - 1) * l
+
+	chats, err := s.chatSvc.ListUserChats(userID, pagination)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching user chats",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	return ctx.JSON(map[string]interface{}{
+		"data": chats,
+	})
+}

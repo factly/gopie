@@ -261,7 +261,6 @@ type chatWithAgentRequestBody struct {
 	Temperature float64                `json:"temperature" validate:"omitempty"`
 	MaxTokens   int                    `json:"max_tokens" validate:"omitempty"`
 	ChatID      string                 `json:"chat_id" validate:"omitempty,uuid"`
-	CreatedBy   string                 `json:"created_by" validate:"required"`
 }
 
 // @Summary Chat with AI agent
@@ -275,6 +274,16 @@ type chatWithAgentRequestBody struct {
 // @Failure 500 {string} string "Internal server error" // Should ideally be JSON for API consistency
 // @Router /v1/api/chat/completions [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
+	userID := ctx.Get("userID")
+	if userID == "" {
+		h.logger.Error("Unauthorized request: Missing userID header")
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":   "Unauthorized",
+			"message": "User ID is required",
+			"code":    fiber.StatusUnauthorized,
+		})
+	}
+
 	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
 		h.logger.Error("Error parsing request body for agent chat", zap.Error(err))
@@ -322,15 +331,45 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	dataChan := make(chan []byte, 10) // Buffered channel
 	errChan := make(chan error, 1)    // Buffered channel for errors
 
-	params := &models.AIAgentChatParams{
-		ProjectIDs: projectIDs,
-		DatasetIDs: datasetIDs,
-		Messages:   body.Messages,
-		DataChan:   dataChan,
-		ErrChan:    errChan,
+	sessionID := body.ChatID
+
+	prevMessages := []*models.ChatMessage{}
+	var err error
+	if sessionID != "" {
+		// Fetch previous messages if chat ID is provided
+		prevMessages, err = h.chatSvc.GetChatMessages(sessionID)
+		if err != nil {
+			h.logger.Error("Error fetching previous chat messages", zap.Error(err), zap.String("session_id", sessionID))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Failed to fetch previous chat messages",
+				"message": err.Error(),
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+	} else {
+		sessionID = pkg.RandomString(16) // Generate a random session ID if not provided
 	}
 
-	sessionID := body.ChatID
+	aiPrevMessages := make([]models.AIChatMessage, 0, len(prevMessages))
+	for _, msg := range prevMessages {
+		if msg.Choices != nil && len(msg.Choices) > 0 {
+			if msg.Choices[0].Delta.Role != nil && msg.Choices[0].Delta.Content != nil {
+				aiPrevMessages = append(aiPrevMessages, models.AIChatMessage{
+					Role:    *msg.Choices[0].Delta.Role,
+					Content: *msg.Choices[0].Delta.Content,
+				})
+			}
+		}
+	}
+
+	params := &models.AIAgentChatParams{
+		ProjectIDs:   projectIDs,
+		DatasetIDs:   datasetIDs,
+		Messages:     body.Messages,
+		PrevMessages: aiPrevMessages,
+		DataChan:     dataChan,
+		ErrChan:      errChan,
+	}
 
 	ctx.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		defer func() {
@@ -468,7 +507,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					if body.ChatID == "" {
 						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
 							Messages:  messages,
-							CreatedBy: body.CreatedBy,
+							CreatedBy: userID,
 						})
 						if err != nil {
 							h.logger.Error("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
