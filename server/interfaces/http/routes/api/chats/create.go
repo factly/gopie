@@ -18,7 +18,6 @@ import (
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -166,15 +165,15 @@ RULES FOR SQL QUERIES:
 - Generate only read queries (SELECT)
         `, body.Messages[len(body.Messages)-1].Content, dataset.Name, schemaJson, rowsCsv)
 
-	messages := make([]models.ChatMessage, 0, len(body.Messages))
+	messages := make([]models.D_ChatMessage, 0, len(body.Messages))
 	for _, m := range body.Messages {
-		messages = append(messages, models.ChatMessage{
+		messages = append(messages, models.D_ChatMessage{
 			Content: m.Content,
 			Role:    m.Role,
 		})
 	}
 
-	chatWithMessages, err := h.chatSvc.ChatWithAi(&models.ChatWithAiParams{
+	chatWithMessages, err := h.chatSvc.D_ChatWithAi(&models.D_ChatWithAiParams{
 		ChatID:    body.ChatID,
 		DatasetID: body.DatasetID,
 		CreatedBy: body.CreatedBy,
@@ -262,6 +261,7 @@ type chatWithAgentRequestBody struct {
 	Temperature float64                `json:"temperature" validate:"omitempty"`
 	MaxTokens   int                    `json:"max_tokens" validate:"omitempty"`
 	ChatID      string                 `json:"chat_id" validate:"omitempty,uuid"`
+	CreatedBy   string                 `json:"created_by" validate:"required"`
 }
 
 // @Summary Chat with AI agent
@@ -331,9 +331,6 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	}
 
 	sessionID := body.ChatID
-	if sessionID == "" {
-		sessionID = uuid.NewString()
-	}
 	ctx.Set("X-Request-ID", sessionID)
 
 	ctx.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
@@ -367,6 +364,10 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 		// 	return
 		// }
 
+		assistantMessageBuilder := strings.Builder{}
+		assistantMessage := models.ChatMessage{}
+		messages := []models.ChatMessage{}
+
 		for {
 			select {
 			case dataChunk, ok := <-dataChan:
@@ -377,6 +378,33 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 				dataToSend := dataChunk
 
+				// accumulate assistant messages
+				var data models.ChatMessage
+				_ = json.Unmarshal(dataChunk, &data)
+
+				if data.Choices != nil && len(data.Choices) > 0 && data.Choices[0].Delta.Content != nil && *data.Choices[0].Delta.Role == "assistant" {
+					assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
+					s := assistantMessageBuilder.String()
+					assistantMessage = models.ChatMessage{
+						ID:        data.ID,
+						CreatedAt: data.CreatedAt,
+						Model:     data.Model,
+						Object:    data.Object,
+						Choices: []models.Choice{
+							{
+								Delta: models.Delta{
+									Role:         data.Choices[0].Delta.Role,
+									FunctionCall: data.Choices[0].Delta.FunctionCall,
+									Refusal:      data.Choices[0].Delta.Refusal,
+									ToolCalls:    data.Choices[0].Delta.ToolCalls,
+									Content:      &s,
+								},
+							},
+						},
+					}
+				} else {
+					messages = append(messages, data)
+				}
 				var jsonObj interface{}
 
 				trimmedChunk := bytes.TrimSpace(dataChunk)
@@ -411,6 +439,50 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				}
 
 				if errors.Is(serviceErr, io.EOF) {
+
+					// save the messages to database
+					messages = append(messages, assistantMessage)
+
+					var chatWithMessages *models.ChatWithMessages
+					var err error
+					if body.ChatID == "" {
+						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
+							Messages:  messages,
+							CreatedBy: body.CreatedBy,
+						})
+						if err != nil {
+							h.logger.Error("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
+							errorEvent := pkg.ChatMessageFromError(err)
+							errorEvent.ID = sessionID // Ensure session ID is set for error event
+							errorData, marshalErr := json.Marshal(errorEvent)
+							if marshalErr != nil {
+								h.logger.Error("SSE: Failed to marshal error event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+							}
+							if _, err := fmt.Fprintf(w, "data: %s\n\n", errorData); err != nil {
+								h.logger.Error("SSE: Error writing error event to stream", zap.Error(err), zap.String("session_id", sessionID))
+							}
+							return
+						}
+					} else {
+						_, err := h.chatSvc.AddNewMessage(context.Background(), body.ChatID, messages)
+						if err != nil {
+							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
+							errorEvent := pkg.ChatMessageFromError(err)
+							errorEvent.ID = sessionID // Ensure session ID is set for error event
+							errorData, marshalErr := json.Marshal(errorEvent)
+							if marshalErr != nil {
+								h.logger.Error("SSE: Failed to marshal error event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+							}
+							if _, err := fmt.Fprintf(w, "data: %s\n\n", errorData); err != nil {
+								h.logger.Error("SSE: Error writing error event to stream", zap.Error(err), zap.String("session_id", sessionID))
+							}
+							return
+						}
+					}
+					if sessionID == "" {
+						sessionID = chatWithMessages.ID
+					}
+
 					h.logger.Info("SSE: Stream finished successfully (EOF received).", zap.String("session_id", sessionID))
 					doneEvent := map[string]interface{}{
 						"id":      sessionID,
@@ -439,6 +511,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					if err := w.Flush(); err != nil {
 						h.logger.Error("SSE: Error flushing [DONE] marker", zap.Error(err), zap.String("session_id", sessionID))
 					}
+
 					return
 				}
 

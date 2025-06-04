@@ -39,24 +39,6 @@ create table if not exists failed_dataset_uploads(
     created_at timestamp with time zone not null default now()
 );
 
-
-create table if not exists chats(
-    id uuid primary key default uuid_generate_v4(),
-    name text not null,
-    dataset_id uuid not null references datasets(id) on delete cascade,
-    created_at timestamp with time zone not null default now(),
-    updated_at timestamp with time zone not null default now(),
-    created_by text default null
-);
-
-create table if not exists chat_messages(
-    id uuid primary key default uuid_generate_v4(),
-    chat_id uuid not null references chats(id) on delete cascade,
-    content text not null,
-    role text not null, -- 'user' or 'assistant'
-    created_at timestamp with time zone not null default now()
-);
-
 create table if not exists dataset_summary (
     dataset_name text not null references datasets(name) on delete cascade,
     summary jsonb not null
@@ -70,3 +52,23 @@ create table if not exists database_sources (
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now()
 );
+
+create table if not exists chats (
+    id uuid primary key default uuid_generate_v4(),
+    title TEXT,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now(),
+    created_by text default null
+);
+
+CREATE index idx_chats_user_id on chats(user_id);
+
+create table if not exists chat_messages (
+    id uuid primary key default uuid_generate_v4(),
+    chat_id uuid not null references chats(id) on delete cascade,
+    choices jsonb not null,
+    object text not null,
+    model text default null,
+    created_at timestamp with time zone default now()
+);
+

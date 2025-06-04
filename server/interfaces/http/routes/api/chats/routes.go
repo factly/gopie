@@ -31,6 +31,4 @@ func Routes(router fiber.Router, params RouterParams) {
 	router.Post("/completions", httpHandler.chatWithAgent)
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)
 	router.Delete("/:chatID", httpHandler.deleteChat)
-	router.Delete("/:chatID/messages/:messageID", httpHandler.deleteMessage)
-	router.Get("/", httpHandler.listDatasetChats)
 }

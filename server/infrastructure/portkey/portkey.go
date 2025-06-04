@@ -34,7 +34,6 @@ func (t *defaultHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 
 // Create new portkey client from config
 func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) *PortkeyClient {
-
 	// set portkey config in for request
 	header := http.Header{}
 	header.Set("x-portkey-virtual-key", cfg.VirtualKey)
@@ -84,7 +83,7 @@ func (c *PortkeyClient) GenerateResponse(content string) (string, error) {
 	return res.Choices[0].Message.Content, nil
 }
 
-func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.ChatMessage) (string, error) {
+func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.D_ChatMessage) (string, error) {
 	c.logger.Debug("generating sql from portkey")
 	msgs := make([]openai.ChatCompletionMessage, 0, len(prevMsgs)+1)
 	for _, msg := range prevMsgs {
@@ -120,18 +119,18 @@ func (c *PortkeyClient) GenerateSql(content string) (string, error) {
 	return c.GenerateResponse(content)
 }
 
-func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.ChatMessage) (*models.AiChatResponse, error) {
+func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.D_ChatMessage) (*models.D_AiChatResponse, error) {
 	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessages)
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.AiChatResponse{
+	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
 }
 
-func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*models.AiChatResponse, error) {
+func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*models.D_AiChatResponse, error) {
 	systemPrompt := `
 	!! IMPORTANT: In the response only provide the title of the content. Do not provide any other information. !!
 		Generate a title for the following content:
@@ -142,7 +141,7 @@ func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*mod
 		return nil, err
 	}
 
-	return &models.AiChatResponse{
+	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
 }

@@ -10,8 +10,7 @@ import (
 
 type Chat struct {
 	ID        pgtype.UUID
-	Name      string
-	DatasetID pgtype.UUID
+	Title     pgtype.Text
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	CreatedBy pgtype.Text
@@ -20,8 +19,9 @@ type Chat struct {
 type ChatMessage struct {
 	ID        pgtype.UUID
 	ChatID    pgtype.UUID
-	Content   string
-	Role      string
+	Choices   []byte
+	Object    string
+	Model     pgtype.Text
 	CreatedAt pgtype.Timestamptz
 }
 

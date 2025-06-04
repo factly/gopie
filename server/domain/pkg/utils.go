@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -51,4 +52,21 @@ func ValidateRequest(logger *logger.Logger, req any) error {
 	}
 
 	return nil
+}
+
+func ChatMessageFromError(err error) models.ChatMessage {
+	finishReason := "error"
+	return models.ChatMessage{
+		Choices: []models.Choice{
+			{
+				FinishReason: &finishReason,
+				Delta: models.Delta{
+					FunctionCall: &models.FunctionCall{
+						Arguments: fmt.Sprintf(`{"error": "Failed to create chat: %s"}`, err.Error()),
+						Name:      "error",
+					},
+				},
+			},
+		},
+	}
 }
