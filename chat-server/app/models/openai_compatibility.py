@@ -166,7 +166,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
-                "index": 0,
+                "index": state["tool_call_id"],
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
@@ -184,7 +184,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
-                "index": 0,
+                "index": state["tool_call_id"],
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
@@ -200,7 +200,7 @@ def _create_tool_calls(
         state["tool_call_id"] += 1
         tool_calls.append(
             {
-                "index": 0,
+                "index": state["tool_call_id"],
                 "id": f"call_{state['tool_call_id']}",
                 "type": "function",
                 "function": {
