@@ -94,17 +94,19 @@ func (service *ChatService) ChatWithAiAgent(ctx context.Context, params *models.
 }
 
 func (service *ChatService) CreateChat(ctx context.Context, params *models.CreateChatParams) (*models.ChatWithMessages, error) {
-	var userMessage models.ChatMessage
+	var userMessage *models.ChatMessage
+	var filteredMessages []models.ChatMessage
 
 	for _, msg := range params.Messages {
+		if msg.Object == "user.message" {
+			fmt.Printf("Skipping message with role: %s\n", *msg.Choices[0].Delta.Role)
+			userMessage = &msg
+		}
 		if msg.Choices != nil && len(msg.Choices) > 0 {
-			if msg.Choices[0].Delta.Role != nil && *msg.Choices[0].Delta.Role != "user" {
-				userMessage = msg
-				break
-			}
+			filteredMessages = append(filteredMessages, msg)
 		}
 	}
-	if userMessage.Choices == nil || len(userMessage.Choices) == 0 {
+	if userMessage == nil {
 		return nil, errors.New("no user message found in chat messages")
 	}
 
@@ -113,7 +115,9 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 		fmt.Printf("Error generating title from AI: %v\n", err)
 		return nil, fmt.Errorf("error generating title from AI: %w", err)
 	}
+
 	params.Title = title.Response
+	params.Messages = filteredMessages
 	chat, err := service.store.CreateChat(ctx, params)
 	return chat, err
 }

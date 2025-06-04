@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
-drop table if exists chats;
 drop table if exists chat_messages;
+drop table if exists chats;
 -- +goose StatementEnd
 
 -- +goose Down

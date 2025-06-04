@@ -70,16 +70,15 @@ func (c *PortkeyClient) GenerateResponse(content string) (string, error) {
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: []openai.ChatCompletionMessage{msgs},
-		// Temperature: 0.2,
 	})
 	if err != nil {
+		c.logger.Error("failed to generate sql from portkey", zap.Error(err))
 		return "", err
 	}
 
 	if len(res.Choices) == 0 {
 		return "", domain.ErrFailedToGenerateSql
 	}
-	c.logger.Debug("generated sql from portkey", zap.String("sql", res.Choices[0].Message.Content))
 	return res.Choices[0].Message.Content, nil
 }
 

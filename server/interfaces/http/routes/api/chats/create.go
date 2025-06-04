@@ -328,7 +328,6 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	}
 
 	sessionID := body.ChatID
-	ctx.Set("X-Request-ID", sessionID)
 
 	ctx.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		defer func() {
@@ -363,7 +362,25 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		assistantMessageBuilder := strings.Builder{}
 		assistantMessage := models.ChatMessage{}
-		messages := []models.ChatMessage{}
+		role := "user"
+		messages := []models.ChatMessage{
+			{
+				ID:        sessionID,
+				CreatedAt: time.Now(),
+				Model:     body.Model,
+				Object:    "user.message",
+				Choices: []models.Choice{
+					{
+						Delta: models.Delta{
+							Role:    &role,
+							Content: &body.Messages[len(body.Messages)-1].Content,
+						},
+					},
+				},
+			},
+		}
+
+		fmt.Println("Messages to send:", *messages[0].Choices[0].Delta.Role)
 
 		for {
 			select {
@@ -379,7 +396,10 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				var data models.ChatMessage
 				_ = json.Unmarshal(dataChunk, &data)
 
-				if data.Choices != nil && len(data.Choices) > 0 && data.Choices[0].Delta.Content != nil && *data.Choices[0].Delta.Role == "assistant" {
+				if data.Choices != nil && len(data.Choices) > 0 &&
+					data.Choices[0].Delta.Role != nil &&
+					*data.Choices[0].Delta.Role == "assistant" {
+					fmt.Println("Received assistant message chunk:", *data.Choices[0].Delta.Content)
 					assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
 					s := assistantMessageBuilder.String()
 					assistantMessage = models.ChatMessage{
