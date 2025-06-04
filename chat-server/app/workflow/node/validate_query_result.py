@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.workflow.graph.multidataset_agent.types import State
+from app.workflow.graph.multi_dataset_graph.types import State
 
 
 async def validate_query_result(state: State) -> dict:

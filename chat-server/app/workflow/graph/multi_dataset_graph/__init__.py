@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.tools import TOOL_METADATA, TOOLS
 from app.tools.tool_node import ToolNode
-from app.workflow.graph.multidataset_agent.types import ConfigSchema, State
+from app.workflow.graph.multi_dataset_graph.types import ConfigSchema, State
 from app.workflow.node.analyze_dataset import analyze_dataset
 from app.workflow.node.analyze_query import analyze_query, route_from_analysis
 from app.workflow.node.execute_query import execute_query, route_query_replan
@@ -95,4 +95,4 @@ graph_builder.add_edge("validate_query_result", "route_response")
 graph_builder.add_edge("extract_summary", "route_response")
 graph_builder.add_edge("generate_result", END)
 
-graph = graph_builder.compile()
+multi_dataset_graph = graph_builder.compile()

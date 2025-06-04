@@ -8,7 +8,7 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
-from app.workflow.graph.multidataset_agent.types import State
+from app.workflow.graph.multi_dataset_graph.types import State
 
 
 async def execute_query(state: State) -> dict:

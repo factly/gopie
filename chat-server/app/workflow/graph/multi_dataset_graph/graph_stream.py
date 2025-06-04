@@ -9,7 +9,8 @@ from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
 from app.workflow.events.handle_events_stream import EventStreamHandler
-from app.workflow.graph.multidataset_agent import graph
+from app.workflow.graph.multi_dataset_graph import multi_dataset_graph
+from app.workflow.graph.single_dataset_graph import simple_graph
 
 
 async def stream_graph_updates(
@@ -62,8 +63,15 @@ async def stream_graph_updates(
         },
     )
 
+    dataset_count = len(dataset_ids) if dataset_ids else 0
+    selected_graph = multi_dataset_graph if dataset_count > 1 else simple_graph
+
+    logger.info(
+        f"Selected graph: {selected_graph} with {dataset_count} " f"datasets"
+    )
+
     try:
-        async for event in graph.astream_events(
+        async for event in selected_graph.astream_events(
             input_state,
             version="v2",
             config=config,
