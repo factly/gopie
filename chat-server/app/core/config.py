@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     GEMINI_VIRTUAL_KEY: str = ""
     OPENAI_VIRTUAL_KEY: str = ""
 
+    LANGSMITH_PROMPT: bool = False
+
     QDRANT_HOST: str = "host.docker.internal"
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333

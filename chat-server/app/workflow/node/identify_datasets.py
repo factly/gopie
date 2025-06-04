@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
@@ -7,15 +8,13 @@ from langchain_core.runnables import RunnableConfig
 from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
     get_model_provider,
 )
-from app.workflow.graph.types import State
-from app.workflow.prompts.identify_datasets_prompt import (
-    create_identify_datasets_prompt,
-)
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def identify_datasets(state: State, config: RunnableConfig):
@@ -102,9 +101,12 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 ],
             }
 
-        llm_prompt = create_identify_datasets_prompt(
+        llm_prompt = get_prompt(
+            "identify_datasets",
             user_query=user_query,
-            available_datasets_schemas=semantic_searched_datasets,
+            available_datasets_schemas=json.dumps(
+                semantic_searched_datasets, indent=2
+            ),
             confidence_score=confidence_score,
             query_type=query_type,
         )

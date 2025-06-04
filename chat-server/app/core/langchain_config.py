@@ -5,9 +5,9 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
-from app.core.system_prompt import SYSTEM_PROMPT
 from app.models.provider import ModelVendor
 from app.tools import TOOLS
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 
@@ -84,9 +84,11 @@ class LangchainConfig:
         return model
 
     def _create_prompt_chain(self):
+        system_prompt = get_prompt("system_prompt")
+
         return ChatPromptTemplate.from_messages(
             [
-                ("system", SYSTEM_PROMPT),
+                ("system", system_prompt),
                 MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}"),
             ]

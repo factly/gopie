@@ -1,6 +1,6 @@
 from app.models.message import IntermediateStep
 from app.utils.graph_utils.summary_extraction import create_result_summary
-from app.workflow.graph.types import State
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def extract_summary(state: State) -> dict:

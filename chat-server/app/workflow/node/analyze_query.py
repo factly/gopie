@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -6,14 +7,12 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.tools.tool_node import has_tool_calls
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
-from app.workflow.graph.types import State
-from app.workflow.prompts.analyze_query_prompt import (
-    create_analyze_query_prompt,
-)
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def analyze_query(state: State, config: RunnableConfig) -> dict:
@@ -32,6 +31,8 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
     """
     last_message = state["messages"][-1]
     query_result = state.get("query_result")
+    subqueries = state.get("subqueries", [])
+    query_index = state.get("subquery_index", -1)
 
     tool_call_count = state.get("tool_call_count", 0)
 
@@ -51,14 +52,19 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         }
 
     if isinstance(last_message, ToolMessage):
-        query_index = state.get("subquery_index", -1)
         user_input = (
             state.get("subqueries", ["No input"])[query_index]
             if state.get("subqueries")
             else "No input"
         )
-    else:
-        query_index = state.get("subquery_index", -1) + 1
+
+    add_new_subquery = (
+        query_index == -1
+        or subqueries[query_index] != query_result.subqueries[-1].query_text
+    )
+
+    if add_new_subquery:
+        query_index += 1
         user_input = (
             state.get("subqueries", ["No input"])[query_index]
             if state.get("subqueries")
@@ -95,9 +101,10 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
-        prompt = create_analyze_query_prompt(
+        prompt = get_prompt(
+            "analyze_query",
             user_query=user_input,
-            tool_results=tools_results,
+            tool_results=json.dumps(tools_results, indent=2),
         )
         llm = get_llm_for_node("analyze_query", config, with_tools=True)
 

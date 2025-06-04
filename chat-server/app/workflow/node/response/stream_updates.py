@@ -1,27 +1,45 @@
+import json
+
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
-from app.workflow.graph.types import State
-from app.workflow.prompts.stream_updates_prompt import (
-    create_execution_analysis_prompt,
-    create_stream_update_prompt,
-)
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
 
-    stream_update_prompt = create_stream_update_prompt(
-        query_result=query_result,
-        query_index=query_index,
+    subquery_result = query_result.subqueries[query_index]
+    sql_queries = [
+        sql_info.sql_query for sql_info in subquery_result.sql_queries
+    ]
+    node_messages = subquery_result.node_messages
+
+    remaining_index = query_index + 1
+    remaining_subqueries = [
+        sq.query_text for sq in query_result.subqueries[remaining_index:]
+    ]
+
+    stream_update_prompt = get_prompt(
+        node_name="stream_updates",
+        query_text=subquery_result.query_text,
+        original_user_query=query_result.original_user_query,
+        subquery_count=len(query_result.subqueries),
+        query_index=query_index + 1,
+        subquery_result=json.dumps(subquery_result.to_dict()),
+        error_message=json.dumps(subquery_result.error_message),
+        sql_queries=json.dumps(sql_queries),
+        node_messages=json.dumps(node_messages),
+        remaining_subqueries=json.dumps(remaining_subqueries),
     )
 
     llm = get_llm_for_node("stream_updates", config)
@@ -54,8 +72,9 @@ async def check_further_execution_requirement(
 
     last_stream_message = state.get("messages", [])[-1]
 
-    analysis_prompt = create_execution_analysis_prompt(
-        last_stream_message_content=last_stream_message.content
+    analysis_prompt = get_prompt(
+        node_name="execution_analysis",
+        last_stream_message_content=last_stream_message.content,
     )
 
     llm = get_llm_for_node("check_further_execution_requirement", config)

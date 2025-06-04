@@ -1,6 +1,6 @@
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.graph_utils.column_value_matching import match_column_values
-from app.workflow.graph.types import State
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def analyze_dataset(state: State) -> dict:

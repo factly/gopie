@@ -6,16 +6,12 @@ from langchain_core.runnables import RunnableConfig
 from app.core.log import logger
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
-from app.workflow.graph.types import State
-from app.workflow.prompts.generate_result_prompt import (
-    create_conversational_query_prompt,
-    create_data_query_prompt,
-    create_empty_results_prompt,
-)
+from app.workflow.graph.multidataset_agent.types import State
 
 
 async def generate_result(
@@ -81,9 +77,12 @@ async def _handle_conversational_query(
     """
 
     user_query = query_result.original_user_query
+    result_context = json.dumps(query_result.to_dict(), indent=2)
 
-    prompt = create_conversational_query_prompt(
-        user_query=user_query, query_result=query_result
+    prompt = get_prompt(
+        node_name="conversational_query",
+        user_query=user_query,
+        query_result=result_context,
     )
 
     llm = get_llm_for_node("generate_result", config)
@@ -114,6 +113,7 @@ async def _handle_data_query(
     """
 
     user_query = query_result.original_user_query
+    result_context = json.dumps(query_result.to_dict(), indent=2)
 
     has_results = False
     if query_result.has_subqueries():
@@ -128,8 +128,10 @@ async def _handle_data_query(
     if not has_results:
         return await _handle_empty_results(query_result, config)
 
-    prompt = create_data_query_prompt(
-        user_query=user_query, query_result=query_result
+    prompt = get_prompt(
+        node_name="data_query",
+        user_query=user_query,
+        query_result=result_context,
     )
 
     llm = get_llm_for_node("generate_result", config)
@@ -160,9 +162,12 @@ async def _handle_empty_results(
     """
 
     user_query = query_result.original_user_query
+    result_context = json.dumps(query_result.to_dict(), indent=2)
 
-    prompt = create_empty_results_prompt(
-        user_query=user_query, query_result=query_result
+    prompt = get_prompt(
+        node_name="empty_results",
+        user_query=user_query,
+        query_result=result_context,
     )
 
     llm = get_llm_for_node("generate_result", config)
