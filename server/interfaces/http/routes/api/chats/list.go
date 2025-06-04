@@ -20,20 +20,7 @@ import (
 // @Router /v1/api/chat/{chatID}/messages [get]
 func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
-	limit := ctx.Query("limit")
-	page := ctx.Query("page")
-	pagination := models.NewPagination()
-	l, err := strconv.Atoi(limit)
-	if err != nil {
-		l = 10
-	}
-	p, err := strconv.Atoi(page)
-	if err != nil {
-		p = 1
-	}
 
-	pagination.Limit = l
-	pagination.Offset = (p - 1) * l
 	messages, err := s.chatSvc.GetChatMessages(chatID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
