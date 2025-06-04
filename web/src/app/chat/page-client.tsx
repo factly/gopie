@@ -9,8 +9,8 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { useChatMessages } from "@/lib/queries/chat";
-import { useDeleteChat, useChatWithAgent } from "@/lib/mutations/chat";
+import { useChat } from "@ai-sdk/react";
+import { useDeleteChat } from "@/lib/mutations/chat";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,19 +38,7 @@ import { fetchChats } from "@/lib/queries/chat/list-chats";
 import { useQueryClient } from "@tanstack/react-query";
 import { Chat, Project, Dataset } from "@/lib/api-client";
 import { useSidebar } from "@/components/ui/sidebar";
-
-interface StreamEvent {
-  role: "intermediate" | "ai";
-  content: string;
-  datasets_used?: string[];
-  generated_sql_query?: string;
-}
-
-// Add interface for client-side chat messages
-interface ClientChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+import { UIMessage } from "ai";
 
 interface CachedDatasetsData {
   results: Dataset[];
@@ -62,22 +50,12 @@ interface DatasetsFetcherResponse {
   total_count?: number;
 }
 
-// Helper function to derive datasets and SQL from stream events
-function deriveEnhancementsFromStream(streamEvents: StreamEvent[]): {
-  datasets: string[];
-  sql: string | null;
-} {
-  const allDatasets = new Set<string>();
-  let latestSql: string | null = null;
-  streamEvents.forEach((event) => {
-    if (event.datasets_used) {
-      event.datasets_used.forEach((dataset) => allDatasets.add(dataset));
-    }
-    if (event.generated_sql_query) {
-      latestSql = event.generated_sql_query;
-    }
-  });
-  return { datasets: Array.from(allDatasets), sql: latestSql };
+// Type for the messages from AI SDK
+interface ChatMessage {
+  id: string;
+  role: string;
+  content: string;
+  createdAt?: string | Date;
 }
 
 const ChatHistoryList = React.memo(function ChatHistoryList({
@@ -410,65 +388,45 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 });
 ChatHistoryList.displayName = "ChatHistoryList";
 
-interface OptimisticMessage {
-  id: string;
-  content: string | StreamEvent[];
-  role: "user" | "assistant" | "intermediate" | "ai";
-  created_at: string;
-  isLoading?: boolean;
-  streamAborted?: boolean;
-}
-
 interface ChatInputProps {
-  sendMessage: (message: string) => Promise<void>;
-  isSending: boolean;
+  onStop: () => void;
   isStreaming: boolean;
-  stopMessageStream: () => void;
   selectedContexts: ContextItem[];
   onSelectContext: (context: ContextItem) => void;
   onRemoveContext: (contextId: string) => void;
   isVoiceModeActive: boolean;
   setIsVoiceModeActive: (active: boolean) => void;
-  initialValue?: string;
   lockableContextIds?: string[];
   hasContext: boolean;
+  input: string;
+  handleInputChange: (value: string) => void;
+  handleSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
 }
 
 const ChatInput = React.memo(
   ({
-    sendMessage,
-    isSending,
+    onStop,
     isStreaming,
-    stopMessageStream,
     selectedContexts,
     onSelectContext,
     onRemoveContext,
     isVoiceModeActive,
     setIsVoiceModeActive,
-    initialValue = "",
     lockableContextIds = [],
     hasContext,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
   }: ChatInputProps) => {
-    const [inputValue, setInputValue] = useState(initialValue);
-
-    // Add effect to update input value when initialValue changes
-    useEffect(() => {
-      setInputValue(initialValue);
-    }, [initialValue]);
-
-    const handleSendMessage = useCallback(
-      (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!inputValue.trim() || isSending) return;
-        sendMessage(inputValue);
-        setInputValue("");
+    // Handle input change from MentionInput
+    const handleMentionInputChange = useCallback(
+      (value: string) => {
+        handleInputChange(value);
       },
-      [inputValue, isSending, sendMessage]
+      [handleInputChange]
     );
-
-    const handleInputChange = useCallback((value: string) => {
-      setInputValue(value);
-    }, []);
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
@@ -481,19 +439,19 @@ const ChatInput = React.memo(
             lockableContextIds={lockableContextIds}
           />
           <MentionInput
-            value={inputValue}
-            onChange={handleInputChange}
-            onSubmit={handleSendMessage}
-            disabled={isSending}
+            value={input}
+            onChange={handleMentionInputChange}
+            onSubmit={handleSubmit}
+            disabled={isLoading}
             placeholder="Ask a question..."
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
             className="flex-1"
             showSendButton={true}
-            isSending={isSending}
+            isSending={isLoading}
             isStreaming={isStreaming}
-            stopMessageStream={stopMessageStream}
+            stopMessageStream={onStop}
             lockableContextIds={lockableContextIds}
             hasContext={hasContext}
             actionButtons={
@@ -513,40 +471,25 @@ ChatInput.displayName = "ChatInput";
 interface ChatViewProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
-  isLoadingMessages: boolean;
-  optimisticMessages: OptimisticMessage[];
-  selectedChatId: string | null;
-  allMessages: Array<{
-    id: string;
-    content: string;
-    role: "user" | "assistant" | "intermediate" | "ai";
-    created_at: string;
-    chat_id?: string;
-  }>;
+  isLoading: boolean;
+  messages: UIMessage[];
   selectedContexts: ContextItem[];
-  enhancementsForFinalizedMessages: Map<
-    string,
-    { datasets: string[]; sql: string | null }
-  >;
+  selectedChatId: string | null;
 }
 
 const ChatView = React.memo(
   ({
     scrollRef,
     handleScroll,
-    isLoadingMessages,
-    optimisticMessages,
-    selectedChatId,
-    allMessages,
+    isLoading,
+    messages,
     selectedContexts,
-    enhancementsForFinalizedMessages,
+    selectedChatId,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative">
       <div
         className={`z-10 absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background via-background to-transparent pointer-events-none ${
-          allMessages.length > 0 || optimisticMessages.length > 0
-            ? "opacity-100"
-            : "opacity-0"
+          messages.length > 0 ? "opacity-100" : "opacity-0"
         } transition-opacity duration-300`}
       />
       <ScrollArea
@@ -555,17 +498,13 @@ const ChatView = React.memo(
         onScroll={handleScroll}
       >
         <div className="pb-32 pt-8">
-          {isLoadingMessages &&
-          !optimisticMessages.length &&
-          allMessages.length === 0 ? (
+          {isLoading && messages.length === 0 ? (
             <div className="space-y-4">
               <Skeleton className="h-16 w-3/4" />
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-16 w-2/3" />
             </div>
-          ) : !selectedChatId &&
-            !optimisticMessages.length &&
-            allMessages.length === 0 ? (
+          ) : !selectedChatId && messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-12 text-center max-w-lg mx-auto space-y-6">
               <div className="text-lg font-medium">
                 Start a new conversation
@@ -576,44 +515,38 @@ const ChatView = React.memo(
             </div>
           ) : (
             <div className="space-y-6">
-              {allMessages.map((message) => (
+              {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
                   id={message.id}
                   content={message.content}
+                  message={message}
                   role={
-                    message.role as "user" | "assistant" | "intermediate" | "ai"
+                    message.role === "system"
+                      ? "assistant"
+                      : (message.role as
+                          | "user"
+                          | "assistant"
+                          | "intermediate"
+                          | "ai")
                   }
-                  createdAt={message.created_at}
-                  chatId={selectedChatId || undefined}
-                  isLatest={false}
-                  datasetId={
-                    selectedContexts.find((ctx) => ctx.type === "dataset")?.id
+                  createdAt={
+                    typeof message.createdAt === "string"
+                      ? message.createdAt
+                      : message.createdAt instanceof Date
+                      ? message.createdAt.toISOString()
+                      : new Date().toISOString()
                   }
-                  finalizedDatasets={
-                    enhancementsForFinalizedMessages.get(message.id)?.datasets
-                  }
-                  finalizedSqlQuery={
-                    enhancementsForFinalizedMessages.get(message.id)?.sql
-                  }
-                />
-              ))}
-              {optimisticMessages.map((message, index) => (
-                <ChatMessage
-                  key={message.id}
-                  id={message.id}
-                  content={message.content}
-                  role={message.role}
-                  createdAt={message.created_at}
-                  isLoading={message.isLoading}
-                  streamAborted={message.streamAborted}
                   chatId={selectedChatId || undefined}
                   isLatest={
-                    index === optimisticMessages.length - 1 &&
+                    message === messages[messages.length - 1] &&
                     message.role !== "user"
                   }
                   datasetId={
                     selectedContexts.find((ctx) => ctx.type === "dataset")?.id
+                  }
+                  isLoading={
+                    message.role === "assistant" && message.content === ""
                   }
                 />
               ))}
@@ -636,18 +569,12 @@ function ChatPageClient() {
   const contextData = searchParams.get("contextData");
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
-  const [inputValue, setInputValue] = useState("");
 
-  const { setOpen, open: isSidebarOpen, isMobile } = useSidebar();
+  const { open: isSidebarOpen, isMobile } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { selectedChatId, selectedChatTitle, selectChatForDataset } =
     useChatStore();
-  const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const [optimisticMessages, setOptimisticMessages] = useState<
-    OptimisticMessage[]
-  >([]);
   const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
@@ -658,26 +585,92 @@ function ChatPageClient() {
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
 
-  // State to hold details from the most recently completed AI stream
-  const [lastCompletedStreamDetails, setLastCompletedStreamDetails] = useState<{
-    optimisticId: string;
-    chatId: string;
-    derivedDatasets: string[];
-    derivedSql: string | null;
-    // traceId?: string | null; // Future: if trace_id can be used for matching
-  } | null>(null);
+  const sqlPanelRef = useRef<HTMLDivElement>(null);
+  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
-  // State to store enhancements for finalized messages, keyed by backend message ID
-  const [
-    enhancementsForFinalizedMessages,
-    setEnhancementsForFinalizedMessages,
-  ] = useState<Map<string, { datasets: string[]; sql: string | null }>>(
-    new Map()
+  // AI SDK Chat Implementation
+  const {
+    messages,
+    input,
+    handleInputChange: sdkHandleInputChange,
+    handleSubmit: sdkHandleSubmit,
+    isLoading,
+    stop,
+    error,
+  } = useChat({
+    api: "/api/chat",
+    id: selectedChatId || undefined,
+    body: {
+      // Pass project_ids and dataset_ids from the selected contexts
+      project_ids: selectedContexts
+        .filter((ctx) => ctx.type === "project")
+        .map((ctx) => ctx.id),
+      dataset_ids: selectedContexts
+        .filter((ctx) => ctx.type === "dataset")
+        .map((ctx) => ctx.id),
+    },
+    onResponse: async (response) => {
+      console.log(
+        "Chat response received:",
+        response.status,
+        response.statusText
+      );
+    },
+    onFinish: (message) => {
+      console.log("Chat message finished:", message);
+      // Update latest assistant message for voice mode
+      if (message.role === "assistant") {
+        setLatestAssistantMessage(message.content);
+        setIsStreaming(false);
+      }
+    },
+    onError: (err) => {
+      console.error("Chat error:", err);
+      toast.error("Error processing chat: " + (err.message || "Unknown error"));
+    },
+  });
+
+  // Log messages for debugging
+  useEffect(() => {
+    console.log("Messages updated:", messages);
+  }, [messages]);
+
+  // Display any errors in the UI
+  useEffect(() => {
+    if (error) {
+      console.error("Chat error state:", error);
+      toast.error(`Error: ${error.message || "Unknown error"}`);
+    }
+  }, [error]);
+
+  // Custom input handler that works with our MentionInput component
+  const handleInputChange = useCallback(
+    (value: string) => {
+      // Create a synthetic change event
+      const syntheticEvent = {
+        target: { value },
+        currentTarget: { value },
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as React.ChangeEvent<HTMLInputElement>;
+
+      sdkHandleInputChange(syntheticEvent);
+    },
+    [sdkHandleInputChange]
   );
 
-  const [clientMessages, setClientMessages] = useState<ClientChatMessage[]>([]);
+  // Custom submit handler that works with our MentionInput component
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      sdkHandleSubmit(e as unknown as React.FormEvent);
+    },
+    [sdkHandleSubmit]
+  );
 
-  const chatWithAgent = useChatWithAgent();
+  // Fetch projects for context selection
+  const { data: projectsData } = useProjects({
+    variables: { limit: 100 },
+  });
 
   useEffect(() => {
     if (contextData) {
@@ -693,10 +686,6 @@ function ChatPageClient() {
       }
     }
   }, [contextData]);
-
-  const { data: projectsData } = useProjects({
-    variables: { limit: 100 },
-  });
 
   useEffect(() => {
     if (selectedChatId && projectsData?.results?.length) {
@@ -790,380 +779,17 @@ function ChatPageClient() {
     resetExecutedQueries();
   }, [selectedChatId, resetExecutedQueries]);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  const sendMessage = useCallback(
-    async (message: string) => {
-      if (!message.trim()) return;
-      setIsSending(true);
-      setIsStreaming(true);
-      const optimisticId = Date.now().toString();
-      const currentChatId = selectedChatId;
-
-      // Create a new AbortController for this request
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
-
-      // Add the new user message to clientMessages
-      const userMessage: ClientChatMessage = {
-        role: "user",
-        content: message,
-      };
-      setClientMessages((prev) => [...prev, userMessage]);
-
-      setOptimisticMessages((prev) => [
-        ...prev,
-        {
-          id: `user-${optimisticId}`,
-          content: message,
-          role: "user",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-
-      setOptimisticMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${optimisticId}`,
-          content: [],
-          role: "assistant",
-          created_at: new Date().toISOString(),
-          isLoading: true,
-        },
-      ]);
-
-      try {
-        const datasetIds = selectedContexts
-          .filter((ctx) => ctx.type === "dataset")
-          .map((ctx) => ctx.id);
-        const projectIds = selectedContexts
-          .filter((ctx) => ctx.type === "project")
-          .map((ctx) => ctx.id);
-
-        // Filter out potential duplicate messages before sending
-        const messagesWithoutDuplicates = [
-          ...clientMessages,
-          userMessage,
-        ].reduce(
-          (
-            unique: ClientChatMessage[],
-            message: ClientChatMessage,
-            index,
-            array
-          ) => {
-            // Check if this is a duplicate of the previous message
-            const prevMessage = array[index - 1];
-            if (
-              prevMessage &&
-              prevMessage.role === message.role &&
-              prevMessage.content === message.content
-            ) {
-              return unique; // Skip this message
-            }
-            return [...unique, message];
-          },
-          []
-        );
-
-        const response = await chatWithAgent.mutateAsync({
-          chatId: currentChatId || undefined,
-          datasetIds,
-          projectIds,
-          messages: messagesWithoutDuplicates,
-          signal, // Pass the abort signal to the request
-        });
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let newChatIdFromStream: string | null = null;
-        let newChatNameFromStream: string | null = null;
-
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const jsonStr = line.substring(5).trim();
-                if (jsonStr === "[DONE]") continue;
-                if (!jsonStr) continue;
-
-                try {
-                  const data = JSON.parse(jsonStr);
-                  let newContent = "";
-                  let responseRole = data.role || "assistant";
-
-                  if (
-                    responseRole === "intermediate" ||
-                    responseRole === "ai"
-                  ) {
-                    // Keep role
-                  } else if (responseRole !== "user") {
-                    responseRole = "assistant";
-                  }
-
-                  if (data.choices && data.choices[0]?.delta?.content) {
-                    newContent = data.choices[0].delta.content;
-                    if (data.choices[0].delta.role) {
-                      responseRole = data.choices[0].delta.role;
-                    }
-                  } else if (data.content) {
-                    newContent = data.content;
-                  } else if (data.message?.content) {
-                    newContent = data.message.content;
-                    if (data.message.role) responseRole = data.message.role;
-                  } else if (data.text) {
-                    newContent = data.text;
-                  } else if (typeof data === "string") {
-                    newContent = data;
-                  }
-
-                  let eventRoleForStream: "intermediate" | "ai" | null = null;
-                  if (responseRole === "intermediate") {
-                    eventRoleForStream = "intermediate";
-                  } else if (
-                    responseRole === "ai" ||
-                    responseRole === "assistant"
-                  ) {
-                    eventRoleForStream = "ai";
-                  }
-
-                  if (eventRoleForStream && newContent) {
-                    const currentEvent: StreamEvent = {
-                      role: eventRoleForStream,
-                      content: newContent,
-                      datasets_used: data.datasets_used,
-                      generated_sql_query: data.generated_sql_query,
-                    };
-                    setOptimisticMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === `assistant-${optimisticId}`
-                          ? {
-                              ...msg,
-                              content: Array.isArray(msg.content)
-                                ? [...msg.content, currentEvent]
-                                : [currentEvent],
-                            }
-                          : msg
-                      )
-                    );
-                  }
-
-                  if (!currentChatId && data.chat_id && !newChatIdFromStream) {
-                    newChatIdFromStream = data.chat_id;
-                    newChatNameFromStream =
-                      data.name || message.substring(0, 30) + "...";
-                  }
-                } catch (e) {
-                  console.error(
-                    "Error parsing SSE JSON:",
-                    e,
-                    "Raw line:",
-                    jsonStr
-                  );
-                }
-              } else if (line.trim()) {
-                console.log("Received non-SSE line:", line);
-              }
-            }
-          }
-        }
-
-        if (buffer.startsWith("data: ")) {
-          const jsonStr = buffer.substring(5).trim();
-          if (jsonStr && jsonStr !== "[DONE]") {
-            try {
-              const data = JSON.parse(jsonStr);
-              let newContent = "";
-              let responseRole = data.role || "assistant";
-              if (data.choices && data.choices[0]?.delta?.content) {
-                newContent = data.choices[0].delta.content;
-                if (data.choices[0].delta.role)
-                  responseRole = data.choices[0].delta.role;
-              } else if (data.content) newContent = data.content;
-              else if (data.message?.content) {
-                newContent = data.message.content;
-                if (data.message.role) responseRole = data.message.role;
-              } else if (data.text) newContent = data.text;
-              else if (typeof data === "string") newContent = data;
-
-              let eventRoleForStream: "intermediate" | "ai" | null = null;
-              if (responseRole === "intermediate")
-                eventRoleForStream = "intermediate";
-              else if (responseRole === "ai" || responseRole === "assistant")
-                eventRoleForStream = "ai";
-
-              if (eventRoleForStream && newContent) {
-                const currentEvent: StreamEvent = {
-                  role: eventRoleForStream,
-                  content: newContent,
-                  datasets_used: data.datasets_used,
-                  generated_sql_query: data.generated_sql_query,
-                };
-                setOptimisticMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === `assistant-${optimisticId}`
-                      ? {
-                          ...msg,
-                          content: Array.isArray(msg.content)
-                            ? [...msg.content, currentEvent]
-                            : [currentEvent],
-                        }
-                      : msg
-                  )
-                );
-              }
-            } catch (e) {
-              console.error(
-                "Error parsing remaining SSE JSON:",
-                e,
-                "Raw buffer:",
-                jsonStr
-              );
-            }
-          }
-        }
-
-        // After stream completed, collect AI response content to add to clientMessages
-        setOptimisticMessages((prev) => {
-          const currentOptMsg = prev.find(
-            (msg) => msg.id === `assistant-${optimisticId}`
-          );
-
-          if (
-            currentOptMsg &&
-            Array.isArray(currentOptMsg.content) &&
-            currentOptMsg.content.length > 0
-          ) {
-            const { datasets, sql } = deriveEnhancementsFromStream(
-              currentOptMsg.content as StreamEvent[]
-            );
-
-            // Extract AI message content from stream events
-            const aiContent = (currentOptMsg.content as StreamEvent[])
-              .filter((event) => event.role === "ai")
-              .map((event) => event.content)
-              .join("");
-
-            // Add the AI response to clientMessages
-            if (aiContent) {
-              if (
-                clientMessages.length !== 0 &&
-                clientMessages.at(-1)?.role === "assistant" &&
-                clientMessages.at(-1)?.content === aiContent
-              ) {
-                console.log("Skipping duplicate AI response");
-              } else {
-                setClientMessages((prev) => [
-                  ...prev,
-                  { role: "assistant", content: aiContent },
-                ]);
-              }
-            }
-
-            setLastCompletedStreamDetails({
-              optimisticId: `assistant-${optimisticId}`,
-              chatId: currentChatId || newChatIdFromStream || "",
-              derivedDatasets: datasets,
-              derivedSql: sql,
-            });
-          }
-          return prev.map((msg) =>
-            msg.id === `assistant-${optimisticId}`
-              ? { ...msg, isLoading: false }
-              : msg
-          );
-        });
-
-        if (newChatIdFromStream && newChatNameFromStream) {
-          // Reset clientMessages when creating a new chat
-          setClientMessages([userMessage]);
-
-          const datasetIdForNewChat =
-            selectedContexts.find((ctx) => ctx.type === "dataset")?.id || null;
-          selectChatForDataset(
-            datasetIdForNewChat,
-            newChatIdFromStream,
-            newChatNameFromStream
-          );
-        }
-
-        await queryClient.invalidateQueries({
-          queryKey: [
-            "chat-messages",
-            { chatId: currentChatId || newChatIdFromStream },
-          ],
-        });
-        await queryClient.invalidateQueries({ queryKey: ["chats"] });
-
-        setActiveTab("chat");
-
-        // Clear the input value after successfully sending the message
-        setInputValue("");
-      } catch (error) {
-        if (!(error instanceof Error && error.name === "AbortError")) {
-          console.error("Error sending message:", error);
-          toast.error("Failed to send message");
-          setOptimisticMessages((prev) =>
-            prev.filter((msg) => !msg.id.endsWith(optimisticId))
-          );
-        }
-      } finally {
-        setIsSending(false);
-        setIsStreaming(false);
-        abortControllerRef.current = null;
-      }
-    },
-    [
-      selectedChatId,
-      selectedContexts,
-      chatWithAgent,
-      queryClient,
-      selectChatForDataset,
-      setActiveTab,
-      clientMessages,
-      setInputValue,
-    ]
-  );
-
-  const stopMessageStream = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-
-      setOptimisticMessages((prevMessages) =>
-        prevMessages.map((msg) => {
-          if (
-            msg.isLoading &&
-            (msg.role === "assistant" || msg.role === "ai") &&
-            Array.isArray(msg.content)
-          ) {
-            return {
-              ...msg,
-              streamAborted: true,
-            };
-          }
-          return msg;
-        })
-      );
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
-  }, []);
-
+  // Handle initial message from URL params
   useEffect(() => {
     if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
-      // Send the message if any context is selected (not just datasets)
-      sendMessage(initialMessage);
+      handleInputChange(initialMessage);
+
+      // Create a submit event for the form
+      const submitEvent = new Event("submit", { bubbles: true });
+      handleSubmit(submitEvent as unknown as React.FormEvent);
+
       setInitialMessageSent(true);
-      setInputValue("");
+
       const params = new URLSearchParams(searchParams.toString());
       params.delete("initialMessage");
       params.delete("contextData");
@@ -1173,163 +799,16 @@ function ChatPageClient() {
     initialMessage,
     initialMessageSent,
     selectedContexts,
-    sendMessage,
+    handleInputChange,
+    handleSubmit,
     router,
     searchParams,
   ]);
 
-  const {
-    data: messagesData,
-    isLoading: isLoadingMessages,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useChatMessages({
-    variables: {
-      chatId: selectedChatId || "",
-      limit: 20,
-    },
-    enabled: !!selectedChatId,
-  });
-
-  const allMessages = useMemo(() => {
-    const messages =
-      messagesData?.pages.flatMap((page) => page.data.results) ?? [];
-    const processedMessages = messages.map((message) => ({
-      ...message,
-      role: ["user", "assistant", "intermediate", "ai"].includes(message.role)
-        ? (message.role as "user" | "assistant" | "intermediate" | "ai")
-        : "assistant",
-    }));
-    return processedMessages.sort((a, b) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
-      if (timeA === timeB) return a.role === "user" ? -1 : 1;
-      return timeA - timeB;
-    });
-  }, [messagesData?.pages]);
-
-  // Effect to associate completed stream data with a finalized message
-  useEffect(() => {
-    if (lastCompletedStreamDetails && allMessages.length > 0) {
-      const { chatId, derivedDatasets, derivedSql } =
-        lastCompletedStreamDetails;
-
-      // Attempt to find the corresponding message in allMessages
-      // Match if the stream's chatID is the currently selectedChatId
-      if (selectedChatId === chatId) {
-        const potentialMatches = allMessages.filter(
-          (msg) =>
-            (msg.role === "assistant" || msg.role === "ai") &&
-            // msg.chat_id === chatId && // No longer needed, selectedChatId is the context
-            !enhancementsForFinalizedMessages.has(msg.id)
-        );
-
-        if (potentialMatches.length > 0) {
-          const matchedMessage = potentialMatches[potentialMatches.length - 1]; // Take the most recent
-          setEnhancementsForFinalizedMessages((prev) =>
-            new Map(prev).set(matchedMessage.id, {
-              datasets: derivedDatasets,
-              sql: derivedSql,
-            })
-          );
-          setLastCompletedStreamDetails(null); // Consume the details
-        }
-      }
-    }
-  }, [
-    allMessages,
-    lastCompletedStreamDetails,
-    enhancementsForFinalizedMessages,
-    selectedChatId, // Added selectedChatId dependency
-  ]);
-
-  const showSqlButton = useMemo(() => {
-    const checkContentForSql = (content: string | StreamEvent[]): boolean => {
-      if (typeof content === "string") {
-        return content.toLowerCase().includes("sql");
-      } else if (Array.isArray(content)) {
-        return content.some(
-          (event) =>
-            event.role === "ai" && event.content.toLowerCase().includes("sql")
-        );
-      }
-      return false;
-    };
-    return (
-      selectedChatId &&
-      (allMessages.some((msg) => checkContentForSql(msg.content)) ||
-        optimisticMessages.some(
-          (msg) => msg.role !== "user" && checkContentForSql(msg.content)
-        ))
-    );
-  }, [selectedChatId, allMessages, optimisticMessages]);
-
-  useEffect(() => {
-    let lastAssistantText: string | null = null;
-    const assistantMessagesFromApi = allMessages.filter(
-      (msg) => msg.role === "assistant" || msg.role === "ai"
-    );
-    if (assistantMessagesFromApi.length > 0) {
-      const lastApiMsgContent =
-        assistantMessagesFromApi[assistantMessagesFromApi.length - 1].content;
-      if (typeof lastApiMsgContent === "string") {
-        lastAssistantText = lastApiMsgContent;
-      }
-    }
-
-    const optimisticAssistantMsg = optimisticMessages.find(
-      (msg) => (msg.role === "assistant" || msg.role === "ai") && !msg.isLoading
-    );
-    if (
-      optimisticAssistantMsg &&
-      Array.isArray(optimisticAssistantMsg.content)
-    ) {
-      lastAssistantText = optimisticAssistantMsg.content
-        .filter((e) => e.role === "ai")
-        .map((e) => e.content)
-        .join("");
-    } else if (
-      optimisticAssistantMsg &&
-      typeof optimisticAssistantMsg.content === "string"
-    ) {
-      lastAssistantText = optimisticAssistantMsg.content;
-    }
-
-    setLatestAssistantMessage(lastAssistantText);
-  }, [allMessages, optimisticMessages]);
-
-  useEffect(() => {
-    if (isSending) {
-      setLatestAssistantMessage(null);
-    }
-  }, [isSending]);
-
-  useEffect(() => {
-    setOptimisticMessages([]);
-  }, [selectedChatId]);
-
-  useEffect(() => {
-    if (!isSending && messagesData && optimisticMessages.length > 0) {
-      setOptimisticMessages([]);
-    }
-  }, [messagesData, isSending, optimisticMessages.length]);
-
-  useEffect(() => {
-    if (selectedChatId) {
-      setActiveTab("chat");
-    }
-  }, [selectedChatId, setActiveTab]);
-
-  const handleScroll = useCallback(
-    (event: React.UIEvent<HTMLDivElement>) => {
-      const viewport = event.currentTarget;
-      if (viewport.scrollTop < 100 && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    // Handle scroll - can be used for loading more messages if needed
+  }, []);
 
   useLayoutEffect(() => {
     if (scrollRef.current) {
@@ -1340,14 +819,14 @@ function ChatPageClient() {
         const isNearBottom =
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
           100;
-        if (isNearBottom || !isFetchingNextPage) {
+        if (isNearBottom) {
           requestAnimationFrame(() => {
             viewport.scrollTop = viewport.scrollHeight;
           });
         }
       }
     }
-  }, [allMessages, optimisticMessages, isFetchingNextPage]);
+  }, [messages]);
 
   const handleSelectContext = useCallback((context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
@@ -1359,13 +838,14 @@ function ChatPageClient() {
 
   const handleSendVoiceMessage = useCallback(
     async (message: string) => {
-      await sendMessage(message);
-    },
-    [sendMessage]
-  );
+      handleInputChange(message);
 
-  const sqlPanelRef = useRef<HTMLDivElement>(null);
-  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
+      // Create a submit event for the form
+      const submitEvent = new Event("submit", { bubbles: true });
+      handleSubmit(submitEvent as unknown as React.FormEvent);
+    },
+    [handleInputChange, handleSubmit]
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -1389,10 +869,29 @@ function ChatPageClient() {
     };
   }, [isOpen, sqlPanelRef]);
 
-  // Reset clientMessages when chat changes
+  // Update streaming state based on isLoading
   useEffect(() => {
-    setClientMessages([]);
-  }, [selectedChatId]);
+    setIsStreaming(isLoading);
+  }, [isLoading]);
+
+  // Handle stopping the stream
+  const handleStop = useCallback(() => {
+    stop();
+    setIsStreaming(false);
+  }, [stop]);
+
+  // Compute whether to show SQL button
+  const showSqlButton = useMemo(() => {
+    return (
+      selectedChatId &&
+      messages.some(
+        (msg) =>
+          msg.role === "assistant" &&
+          typeof msg.content === "string" &&
+          msg.content.toLowerCase().includes("sql")
+      )
+    );
+  }, [selectedChatId, messages]);
 
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
@@ -1453,14 +952,10 @@ function ChatPageClient() {
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
-                    isLoadingMessages={isLoadingMessages}
-                    optimisticMessages={optimisticMessages}
-                    selectedChatId={selectedChatId}
-                    allMessages={allMessages}
+                    isLoading={isLoading}
+                    messages={messages}
                     selectedContexts={selectedContexts}
-                    enhancementsForFinalizedMessages={
-                      enhancementsForFinalizedMessages
-                    }
+                    selectedChatId={selectedChatId}
                   />
                 </div>
               </TabsContent>
@@ -1504,20 +999,21 @@ function ChatPageClient() {
           }}
         >
           <ChatInput
-            sendMessage={sendMessage}
-            isSending={isSending}
+            onStop={handleStop}
             isStreaming={isStreaming}
-            stopMessageStream={stopMessageStream}
             selectedContexts={selectedContexts}
             onSelectContext={handleSelectContext}
             onRemoveContext={handleRemoveContext}
             isVoiceModeActive={isVoiceModeActive}
             setIsVoiceModeActive={setIsVoiceModeActive}
-            initialValue={inputValue}
             lockableContextIds={
               selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
             }
             hasContext={selectedContexts.length > 0}
+            input={input}
+            handleInputChange={handleInputChange}
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
           />
         </div>
       )}
@@ -1530,7 +1026,7 @@ function ChatPageClient() {
           datasetId={
             selectedContexts.find((ctx) => ctx.type === "dataset")?.id || ""
           }
-          isWaitingForResponse={isSending}
+          isWaitingForResponse={isLoading}
         />
       )}
     </main>
