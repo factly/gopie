@@ -18,6 +18,11 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 		s.logger.Error("Error starting transaction", zap.Error(err))
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+	}()
 
 	qtx := s.q.WithTx(tx)
 
@@ -27,61 +32,48 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 	})
 	if err != nil {
 		s.logger.Error("Error creating chat", zap.Error(err))
-		tx.Rollback(ctx)
 		return nil, err
 	}
 
-	errChan := make(chan error)
-	chatsChan := make(chan models.ChatMessage, len(params.Messages))
+	messages := make([]models.ChatMessage, 0, len(params.Messages))
 
+	// Process messages sequentially within the transaction
 	for _, message := range params.Messages {
-		go func(msg models.ChatMessage) {
-			choiceBytes, _ := json.Marshal(msg.Choices)
-			// Create chat message in DB
-			chat, err := s.q.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-				ChatID:  c.ID,
-				Choices: choiceBytes,
-				Object:  msg.Object,
-				Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
-			})
-			if err != nil {
-				errChan <- err
-				tx.Rollback(ctx)
-				return
-			}
+		choiceBytes, _ := json.Marshal(message.Choices)
+		// Create chat message in DB
+		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
+			ChatID:  c.ID,
+			Choices: choiceBytes,
+			Object:  message.Object,
+			Model:   pgtype.Text{String: message.Model, Valid: message.Model != ""},
+		})
+		if err != nil {
+			s.logger.Error("Error creating chat message", zap.Error(err))
+			return nil, err
+		}
 
-			choiceList := make([]models.Choice, 0)
-			if len(msg.Choices) > 0 {
-				_ = json.Unmarshal(choiceBytes, &choiceList)
-			}
+		choiceList := make([]models.Choice, 0)
+		if len(message.Choices) > 0 {
+			_ = json.Unmarshal(choiceBytes, &choiceList)
+		}
 
-			// Map DB result to domain model
-			chatMessage := models.ChatMessage{
-				ID:        chat.ID.String(),
-				CreatedAt: chat.CreatedAt.Time,
-				Model:     chat.Model.String,
-				Object:    chat.Object,
-				Choices:   choiceList,
-			}
+		// Map DB result to domain model
+		chatMessage := models.ChatMessage{
+			ID:        chat.ID.String(),
+			CreatedAt: chat.CreatedAt.Time,
+			Model:     chat.Model.String,
+			Object:    chat.Object,
+			Choices:   choiceList,
+		}
 
-			chatsChan <- chatMessage
-			errChan <- nil
-		}(message)
+		messages = append(messages, chatMessage)
 	}
 
+	// Commit transaction after all messages have been added
 	err = tx.Commit(ctx)
 	if err != nil {
 		s.logger.Error("Error committing transaction", zap.Error(err))
 		return nil, err
-	}
-	// Wait for all goroutines to complete
-	var messages []models.ChatMessage
-	for range params.Messages {
-		err := <-errChan
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, <-chatsChan)
 	}
 
 	return &models.ChatWithMessages{

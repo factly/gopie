@@ -42,6 +42,9 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
+	for _, msg := range messages {
+		msg.ChatID = chatID
+	}
 
 	return ctx.JSON(map[string]interface{}{
 		"data": messages,
