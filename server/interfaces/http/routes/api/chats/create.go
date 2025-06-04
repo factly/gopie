@@ -261,7 +261,6 @@ type chatWithAgentRequestBody struct {
 	Stream      bool                   `json:"stream" validate:"omitempty" default:"true"`
 	Temperature float64                `json:"temperature" validate:"omitempty"`
 	MaxTokens   int                    `json:"max_tokens" validate:"omitempty"`
-	Metadata    map[string]string      `json:"metadata" validate:"omitempty"`
 	ChatID      string                 `json:"chat_id" validate:"omitempty,uuid"`
 }
 
@@ -295,10 +294,14 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if body.Metadata["dataset_ids"] == "" && body.Metadata["project_ids"] == "" {
+	// Retrieve identifiers from headers
+	projectIDs := ctx.Get("x-project-ids")
+	datasetIDs := ctx.Get("x-dataset-ids")
+
+	if projectIDs == "" && datasetIDs == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Missing identifiers",
-			"message": "At least one dataset_id or project_id is required",
+			"message": "At least one x-project-ids or x-dataset-ids header is required",
 			"code":    fiber.StatusBadRequest,
 		})
 	}
@@ -320,8 +323,8 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	errChan := make(chan error, 1)    // Buffered channel for errors
 
 	params := &models.AIAgentChatParams{
-		ProjectIDs: body.Metadata["project_ids"],
-		DatasetIDs: body.Metadata["dataset_ids"],
+		ProjectIDs: projectIDs,
+		DatasetIDs: datasetIDs,
 		Messages:   body.Messages,
 		DataChan:   dataChan,
 		ErrChan:    errChan,
@@ -342,27 +345,27 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		h.logger.Debug("SSE: Connection established, starting stream.", zap.String("session_id", sessionID))
 
-		initEvent := map[string]interface{}{
-			"id":      sessionID,
-			"object":  "chat.completion.chunk",
-			"created": time.Now().Unix(),
-			"model":   body.Model,
-		}
-		initData, marshalErr := json.Marshal(initEvent)
-		if marshalErr != nil {
-			h.logger.Error("SSE: Failed to marshal init event", zap.Error(marshalErr), zap.String("session_id", sessionID))
-			fmt.Fprintf(w, "event: error\ndata: {\"error\":\"internal server error preparing stream\"}\n\n")
-			w.Flush()
-			return
-		}
-		if _, err := fmt.Fprintf(w, "data: %s\n\n", initData); err != nil {
-			h.logger.Error("SSE: Error writing init event to stream", zap.Error(err), zap.String("session_id", sessionID))
-			return
-		}
-		if err := w.Flush(); err != nil {
-			h.logger.Error("SSE: Error flushing init event", zap.Error(err), zap.String("session_id", sessionID))
-			return
-		}
+		// initEvent := map[string]interface{}{
+		// 	"id":      sessionID,
+		// 	"object":  "chat.completion.chunk",
+		// 	"created": time.Now().Unix(),
+		// 	"model":   body.Model,
+		// }
+		// initData, marshalErr := json.Marshal(initEvent)
+		// if marshalErr != nil {
+		// 	h.logger.Error("SSE: Failed to marshal init event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+		// 	fmt.Fprintf(w, "event: error\ndata: {\"error\":\"internal server error preparing stream\"}\n\n")
+		// 	w.Flush()
+		// 	return
+		// }
+		// if _, err := fmt.Fprintf(w, "data: %s\n\n", initData); err != nil {
+		// 	h.logger.Error("SSE: Error writing init event to stream", zap.Error(err), zap.String("session_id", sessionID))
+		// 	return
+		// }
+		// if err := w.Flush(); err != nil {
+		// 	h.logger.Error("SSE: Error flushing init event", zap.Error(err), zap.String("session_id", sessionID))
+		// 	return
+		// }
 
 		for {
 			select {
