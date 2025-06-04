@@ -9,7 +9,7 @@ from app.models.chat import Error, StructuredChatStreamChunk
 from app.models.router import Message
 from app.workflow.events.dispatcher import AgentEventDispatcher
 from app.workflow.events.handle_events_stream import EventStreamHandler
-from app.workflow.graph import graph
+from app.workflow.graph.multidataset_agent import graph
 
 
 async def stream_graph_updates(
@@ -31,6 +31,9 @@ async def stream_graph_updates(
         chat_id: Unique identifier for the chat session
         trace_id: Optional trace ID for tracking
         model_id: Optional model ID for selecting the reasoning model
+        user: User identifier
+        use_multi_agent: Whether to use multi-agent architecture (None = auto)
+        query_complexity: Estimated query complexity for routing decisions
 
     Yields:
         str: JSON-formatted event data for streaming in SSE format

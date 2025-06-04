@@ -2,7 +2,7 @@ import os
 
 from langchain_core.runnables.graph import CurveStyle
 
-from app.workflow.graph import graph
+from app.workflow.graph.multidataset_agent import graph
 
 
 def visualize_graph():

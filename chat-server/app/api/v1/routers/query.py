@@ -11,7 +11,7 @@ from app.utils.adapters.openai_adapter import (
     to_openai_non_streaming_format,
     to_openai_streaming_format,
 )
-from app.workflow.graph.graph_stream import (
+from app.workflow.graph.multidataset_agent.graph_stream import (
     stream_graph_updates,
     stream_graph_updates_json,
 )
