@@ -1,12 +1,9 @@
-import json
-
-
-def create_query_prompt(
+def create_plan_query_prompt(
     user_query: str,
-    datasets_info: dict,
-    error_message: list[dict] | None = None,
-    attempt: int = 1,
-    node_messages: dict | None = None,
+    formatted_datasets: str,
+    error_context: str | None = None,
+    dataset_analysis_context: str | None = None,
+    node_messages_context: str | None = None,
 ) -> str:
     """
     Create a prompt for planning a SQL query based on user input and dataset
@@ -14,49 +11,14 @@ def create_query_prompt(
 
     Args:
         user_query: The natural language query from the user
-        datasets_info: Information about the available datasets
-        error_message: Any error messages from previous attempts
-        attempt: The current attempt number
-        node_messages: Messages from previous nodes in the workflow
+        formatted_datasets: Information about the available datasets
+        error_context: Any error messages from previous attempts
+        dataset_analysis_context: Analysis of column values from database
+        node_messages_context: Messages from previous nodes in the workflow
 
     Returns:
         A formatted prompt string
     """
-
-    error_context = ""
-    if error_message and attempt > 1:
-        error_context = f"""
-Previous attempt failed with this error:
-{error_message}
-
-Please fix the issues in the query and try again. This is attempt
-{attempt} of 3.
-"""
-
-    formatted_datasets = json.dumps(datasets_info, indent=2)
-
-    dataset_analysis_context = ""
-    if datasets_info.get("correct_column_requirements"):
-        dataset_analysis_context = f"""
-# DATASET ANALYSIS RESULTS
-Analysis of column values from database:
-{json.dumps(datasets_info.get("correct_column_requirements"), indent=2)}
-
-IMPORTANT: Utilize these analyzed column values when constructing your
-query, especially for matching conditions. This represents actual
-values found or not found in the database.
-"""
-
-    node_messages_context = ""
-    if node_messages:
-        node_messages_context = f"""
-# WORKFLOW CONTEXT
-Previous workflow steps information:
-{json.dumps(node_messages, indent=2)}
-
-Use this information to better understand the context and reasoning
-from previous steps.
-"""
 
     prompt = f"""
 # QUERY TASK
@@ -68,8 +30,15 @@ User Query: "{user_query}"
 # DATASETS INFORMATION
 Selected Datasets Information:
 {formatted_datasets}
+
+# DATASET ANALYSIS RESULTS
 {dataset_analysis_context}
+
+# WORKFLOW CONTEXT
 {node_messages_context}
+
+# ERROR INFORMATION
+{error_context}
 
 # DATABASE COMPATIBILITY REQUIREMENTS
 IMPORTANT:
@@ -92,9 +61,6 @@ IMPORTANT - DATASET NAMING:
   for case-insensitive matching
 - Example: WHERE LOWER(column_name) = LOWER('value')
 - Do NOT use LOWER() for column names or table/dataset names
-
-# ERROR INFORMATION
-{error_context}
 
 # DATASET RELATIONSHIP ASSESSMENT
 1. ANALYZE whether the selected datasets can be related through common
@@ -132,7 +98,6 @@ IMPORTANT - DATASET NAMING:
 8. Never use LIKE operator while generating SQL query
 
 # SQL FORMATTING REQUIREMENTS
-SQL FORMATTING REQUIREMENTS:
 You must provide two versions of the SQL query (or queries):
 1. "sql_query": A simple version for execution
 2. "formatted_sql_query": A well-formatted version for UI display with:

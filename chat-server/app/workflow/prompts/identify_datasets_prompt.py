@@ -1,12 +1,6 @@
-import json
-from typing import List
-
-from app.models.schema import DatasetSchema
-
-
 def create_identify_datasets_prompt(
     user_query: str,
-    available_datasets_schemas: List[DatasetSchema],
+    available_datasets_schemas: str,
     confidence_score: float | None = None,
     query_type: str | None = None,
 ) -> str:
@@ -35,7 +29,7 @@ TASK: Identify the most relevant dataset(s) for this user query.
 USER QUERY: "{user_query}"{query_info}
 
 AVAILABLE DATASETS (pre-filtered by relevance):
-{json.dumps(available_datasets_schemas, indent=2)}
+{available_datasets_schemas}
 
 INSTRUCTIONS:
 

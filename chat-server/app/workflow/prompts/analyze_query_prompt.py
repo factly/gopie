@@ -1,10 +1,4 @@
-import json
-from typing import Any, List
-
-
-def create_analyze_query_prompt(
-    user_query: str, tool_results: List[Any]
-) -> str:
+def create_analyze_query_prompt(user_query: str, tool_results: str) -> str:
     """
     Create a prompt for analyzing a user query to determine its type.
 
@@ -23,7 +17,7 @@ You are a data query classifier. Categorize the user query into ONE of
 two types. Prevent hallucination - only answer based on available context.
 
 USER QUERY: "{user_query}"
-PREVIOUS TOOL RESULTS: {json.dumps(tool_results, indent=2)}
+PREVIOUS TOOL RESULTS: {tool_results}
 NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}
 
 QUERY TYPES - Select exactly ONE:

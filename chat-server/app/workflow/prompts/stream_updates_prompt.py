@@ -1,11 +1,13 @@
-import json
-
-from app.models.query import QueryResult
-
-
 def create_stream_update_prompt(
-    query_result: QueryResult,
+    query_text: str,
+    subquery_count: int,
+    original_user_query: str,
     query_index: int,
+    subquery_result: str,
+    error_message: str,
+    sql_queries: str,
+    node_messages: str,
+    remaining_subqueries: str,
 ) -> str:
     """
     Create a prompt for generating stream updates about subquery execution.
@@ -22,39 +24,28 @@ def create_stream_update_prompt(
         A formatted prompt string for stream updates
     """
 
-    subquery_result = query_result.subqueries[query_index]
-    sql_queries = [
-        sql_info.sql_query for sql_info in subquery_result.sql_queries
-    ]
-    node_messages = subquery_result.node_messages
-
-    remaining_index = query_index + 1
-    remaining_subqueries = [
-        sq.query_text for sq in query_result.subqueries[remaining_index:]
-    ]
-
     prompt = f"""
 I need to create a brief update about the execution of a subquery.
 
-Original User Query: "{query_result.original_user_query}"
+Original User Query: "{original_user_query}"
 
-This is subquery {query_index + 1} / {len(query_result.subqueries)}:
-"{subquery_result.query_text}"
+This is subquery {query_index} / {subquery_count}:
+"{query_text}"
 
 SQL Queries Used:
-{json.dumps(sql_queries, indent=2)}
+{sql_queries}
 
 Subquery Result Information:
-{json.dumps(subquery_result.to_dict())}
+{subquery_result}
 
 Node Messages:
-{json.dumps(node_messages, indent=2)}
+{node_messages}
 
 Error Information (if any):
-{json.dumps(subquery_result.error_message)}
+{error_message}
 
 Remaining Subqueries:
-{json.dumps(remaining_subqueries)}
+{remaining_subqueries}
 
 INSTRUCTIONS:
 1. First, determine if this subquery was successful or failed by examining

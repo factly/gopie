@@ -1,7 +1,6 @@
-import json
-
-
-def create_conversational_query_prompt(user_query: str, query_result) -> str:
+def create_conversational_query_prompt(
+    user_query: str, query_result: str
+) -> str:
     """
     Create a prompt for handling conversational or tool-only queries.
 
@@ -20,7 +19,7 @@ This is the LAST step in the workflow.
 USER QUERY: "{user_query}"
 
 QUERY RESULT:
-{json.dumps(query_result.to_dict(), indent=2)}
+{query_result}
 
 RESPONSE INSTRUCTIONS:
 1. Answer the query directly and confidently based on all available
@@ -45,7 +44,7 @@ RESPONSE INSTRUCTIONS:
     return prompt
 
 
-def create_data_query_prompt(user_query: str, query_result) -> str:
+def create_data_query_prompt(user_query: str, query_result: str) -> str:
     """
     Create a prompt for handling data analysis queries.
 
@@ -64,7 +63,7 @@ This is the LAST step in the workflow.
 USER QUERY: "{user_query}"
 
 QUERY RESULT:
-{json.dumps(query_result.to_dict(), indent=2)}
+{query_result}
 
 RESPONSE INSTRUCTIONS:
 1. Begin with a direct, confident answer to the user's query
@@ -115,7 +114,7 @@ RESPONSE INSTRUCTIONS:
     return prompt
 
 
-def create_empty_results_prompt(user_query: str, query_result) -> str:
+def create_empty_results_prompt(user_query: str, query_result: str) -> str:
     """
     Create a prompt for handling empty query results.
 
@@ -134,7 +133,7 @@ This is the LAST step in the workflow.
 USER QUERY: "{user_query}"
 
 QUERY RESULT:
-{json.dumps(query_result.to_dict(), indent=2)}
+{query_result}
 
 RESPONSE INSTRUCTIONS:
 1. Acknowledge that no matching data was found for their specific query
