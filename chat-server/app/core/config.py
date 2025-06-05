@@ -13,9 +13,22 @@ class Settings(BaseSettings):
     CORS_METHODS: list[str] = ["*"]
     CORS_HEADERS: list[str] = ["*"]
 
+    GATEWAY_PROVIDER: str = ""
+
     PORTKEY_API_KEY: str = ""
     GEMINI_VIRTUAL_KEY: str = ""
     OPENAI_VIRTUAL_KEY: str = ""
+    PORTKEY_SELF_HOSTED_URL: str = ""
+
+    LITELLM_BASE_URL: str = ""
+    LITELLM_API_KEY: str = ""
+
+    CLOUDFLARE_GATEWAY_URL: str = ""
+    CLOUDFLARE_API_TOKEN: str = ""
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+
+    OPENAI_API_KEY: str = ""
+    GOOGLE_API_KEY: str = ""
 
     LANGSMITH_PROMPT: bool = False
 

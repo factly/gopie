@@ -224,6 +224,9 @@ services:
     networks:
       - gopie
 
+  #########################################################################
+  #####                        CHAT SERVER                            #####
+  #########################################################################
   chat-server:
     build:
       context: ./chat-server
@@ -241,6 +244,22 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - gopie
+
+  portkey-gateway:
+    image: portkeyai/gateway:latest
+    ports:
+      - "8787:8787"
+    restart: always
+    networks:
+      - gopie
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8787/", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - portkey-self-hosted
+      - all-gateways
 
   qdrant:
     image: qdrant/qdrant
