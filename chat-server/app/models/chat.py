@@ -15,6 +15,9 @@ class AgentNode(Enum):
     TOOLS = "tools"
     UNKNOWN = "unknown"
 
+    PROCESS_QUERY = "process_query"
+    RESPONSE = "response"
+
 
 class ChunkType(Enum):
     START = "start"

@@ -2,7 +2,7 @@ from app.core.config import settings
 from app.core.log import logger
 from app.utils.langsmith.client import (
     extract_content_from_prompt_template,
-    pull_prompt_from_hub,
+    pull_prompt,
 )
 from app.workflow.prompts.prompt_selector import NodeName, PromptSelector
 
@@ -29,7 +29,7 @@ class PromptManager:
 
         if self.is_langsmith_enabled():
             try:
-                langsmith_prompt = pull_prompt_from_hub(langsmith_prompt_name)
+                langsmith_prompt = pull_prompt(langsmith_prompt_name)
                 formatted_prompt = langsmith_prompt.format(*args, **kwargs)
 
                 prompt_content = extract_content_from_prompt_template(

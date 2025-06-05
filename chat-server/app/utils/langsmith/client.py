@@ -1,4 +1,3 @@
-from langchain import hub
 from langsmith import Client
 
 
@@ -6,8 +5,9 @@ def get_langsmith_client():
     return Client()
 
 
-def pull_prompt_from_hub(prompt_name: str):
-    return hub.pull(prompt_name)
+def pull_prompt(prompt_name: str):
+    client = get_langsmith_client()
+    return client.pull_prompt(prompt_name)
 
 
 def extract_content_from_prompt_template(formatted_prompt) -> str:

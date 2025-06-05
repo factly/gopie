@@ -18,6 +18,13 @@ class CustomJSONEncoder(json.JSONEncoder):
             return str(obj)
 
 
+AI_STREAMING_NODES = [
+    AgentNode.RESPONSE,
+    AgentNode.STREAM_UPDATES,
+    AgentNode.GENERATE_RESULT,
+]
+
+
 class EventStreamHandler:
     def __init__(self):
         self._tool_start = False
@@ -114,10 +121,7 @@ class EventStreamHandler:
             if (
                 chunk
                 and chunk.content
-                and (
-                    graph_node == AgentNode.STREAM_UPDATES.value
-                    or graph_node == AgentNode.GENERATE_RESULT.value
-                )
+                and graph_node in [node.value for node in AI_STREAMING_NODES]
             ):
                 content = chunk.content
 
@@ -148,9 +152,6 @@ class EventStreamHandler:
         )
 
     def get_chat_role(self, node: str) -> Role:
-        if node in [
-            AgentNode.GENERATE_RESULT.value,
-            AgentNode.STREAM_UPDATES.value,
-        ]:
+        if node in [node.value for node in AI_STREAMING_NODES]:
             return Role.AI
         return Role.INTERMEDIATE

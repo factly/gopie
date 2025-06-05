@@ -11,7 +11,7 @@ from app.utils.adapters.openai_adapter import (
     to_openai_non_streaming_format,
     to_openai_streaming_format,
 )
-from app.workflow.graph.multi_dataset_graph.graph_stream import (
+from app.workflow.graph.graph_stream import (
     stream_graph_updates,
     stream_graph_updates_json,
 )
@@ -40,16 +40,19 @@ async def query(request: QueryRequest):
     - `trace_id` (optional): Unique identifier for tracing the query execution
     - `model_id` (optional): ID of the model to use for reasoning
     """
-    trace_id = uuid.uuid4().hex
+    trace_id = request.trace_id or uuid.uuid4().hex
+    chat_id = request.chat_id or uuid.uuid4().hex
+    user = request.user or "gopie.chat.server"
+
     return StreamingResponse(
         stream_graph_updates_json(
             messages=request.messages,
+            user=user,
+            trace_id=trace_id,
+            chat_id=chat_id,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
-            chat_id=request.chat_id,
-            trace_id=trace_id,
             model_id=request.model_id,
-            user=request.user,
         ),
         media_type="text/event-stream",
     )
@@ -60,18 +63,21 @@ async def create(
     openai_format_request: RequestNonStreaming | RequestStreaming,
 ):
     request = from_openai_format(openai_format_request)
-    trace_id = uuid.uuid4().hex
+    trace_id = request.trace_id or uuid.uuid4().hex
+    chat_id = request.chat_id or uuid.uuid4().hex
+    user = request.user or "gopie.chat.server"
+
     if openai_format_request.get("stream"):
         return StreamingResponse(
             to_openai_streaming_format(
                 stream_graph_updates(
                     messages=request.messages,
+                    user=user,
+                    trace_id=trace_id,
+                    chat_id=chat_id,
                     dataset_ids=request.dataset_ids,
                     project_ids=request.project_ids,
-                    chat_id=request.chat_id,
-                    trace_id=trace_id,
                     model_id=request.model_id,
-                    user=request.user,
                 ),
                 trace_id=trace_id,
                 model=request.model_id,
@@ -81,12 +87,12 @@ async def create(
     return await to_openai_non_streaming_format(
         stream_graph_updates(
             messages=request.messages,
+            user=user,
+            trace_id=trace_id,
+            chat_id=chat_id,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
-            chat_id=request.chat_id,
-            trace_id=trace_id,
             model_id=request.model_id,
-            user=request.user,
         ),
         trace_id=trace_id,
         model=request.model_id,

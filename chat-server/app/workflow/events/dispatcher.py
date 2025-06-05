@@ -21,6 +21,8 @@ def create_progress_message(agent_node: AgentNode) -> str:
         AgentNode.GENERATE_RESULT: "",
         AgentNode.TOOLS: "Executing tool...",
         AgentNode.UNKNOWN: "Processing...",
+        AgentNode.PROCESS_QUERY: "Processing your query...",
+        AgentNode.RESPONSE: ".",
     }
 
     return event_messages.get(agent_node, "Processing...")
