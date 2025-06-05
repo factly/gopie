@@ -1,12 +1,14 @@
-import uuid
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
-from app.models.provider import ModelVendor
+from app.models.provider import GatewayProvider, ModelVendor
 from app.tools import TOOLS
+from app.utils.gateway_providers.cloudflare import CloudflareGatewayProvider
+from app.utils.gateway_providers.litellm import LiteLLMGatewayProvider
+from app.utils.gateway_providers.portkey import PortkeyGatewayProvider
+from app.utils.gateway_providers.portkey_self_hosted import (
+    PortkeySelfHostedGatewayProvider,
+)
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
@@ -14,12 +16,12 @@ from app.utils.model_registry.model_config import AVAILABLE_MODELS
 class ModelConfig:
     def __init__(
         self,
-        user: str | None = "gopie.chat.server",
-        trace_id: str | None = None,
+        trace_id: str,
+        user: str,
         model_id: str | None = None,
     ):
         self.user = user
-        self.trace_id = trace_id or str(uuid.uuid4())
+        self.trace_id = trace_id
         self.model_provider = ModelVendor.OPENAI
 
         self.openai_model = settings.DEFAULT_OPENAI_MODEL
@@ -29,8 +31,7 @@ class ModelConfig:
         if model_id and model_id in AVAILABLE_MODELS:
             self._set_model_from_id(model_id)
 
-        self.openai_headers = self._create_openai_headers()
-        self.gemini_headers = self._create_gemini_headers()
+        self.gateway_provider = self._create_gateway_provider()
 
     def _set_model_from_id(self, model_id: str) -> None:
         model_info = AVAILABLE_MODELS[model_id]
@@ -43,27 +44,27 @@ class ModelConfig:
             self.gemini_model = model_id
             self.model_provider = ModelVendor.GOOGLE
 
-    def _create_openai_headers(self):
-        return createHeaders(
-            api_key=settings.PORTKEY_API_KEY,
-            virtual_key=settings.OPENAI_VIRTUAL_KEY,
-            trace_id=self.trace_id,
-            metadata={
-                "_user": self.user,
-                "project": "gopie-chat-server",
-            },
-        )
+    def _create_gateway_provider(self):
+        gateway_type = GatewayProvider(settings.GATEWAY_PROVIDER)
 
-    def _create_gemini_headers(self):
-        return createHeaders(
-            api_key=settings.PORTKEY_API_KEY,
-            virtual_key=settings.GEMINI_VIRTUAL_KEY,
-            trace_id=self.trace_id,
-            metadata={
-                "_user": self.user,
-                "project": "gopie-chat-server",
-            },
-        )
+        if gateway_type == GatewayProvider.PORTKEY_HOSTED:
+            return PortkeyGatewayProvider(
+                user=self.user, trace_id=self.trace_id
+            )
+        elif gateway_type == GatewayProvider.PORTKEY_SELF_HOSTED:
+            return PortkeySelfHostedGatewayProvider(
+                user=self.user, trace_id=self.trace_id
+            )
+        elif gateway_type == GatewayProvider.LITELLM:
+            return LiteLLMGatewayProvider(
+                user=self.user, trace_id=self.trace_id
+            )
+        elif gateway_type == GatewayProvider.CLOUDFLARE:
+            return CloudflareGatewayProvider(
+                user=self.user, trace_id=self.trace_id
+            )
+        else:
+            raise ValueError(f"Unsupported gateway provider: {gateway_type}")
 
 
 class LangchainConfig:
@@ -77,9 +78,13 @@ class LangchainConfig:
 
     def _create_llm(self):
         if self.config.model_provider == ModelVendor.GOOGLE:
-            model = self._create_gemini_model()
+            model = self.config.gateway_provider.get_gemini_model(
+                self.config.gemini_model
+            )
         else:
-            model = self._create_openai_model()
+            model = self.config.gateway_provider.get_openai_model(
+                self.config.openai_model
+            )
 
         return model
 
@@ -100,28 +105,18 @@ class LangchainConfig:
     def _create_llm_prompt_chain(self):
         return self.prompt_chain | self.llm_with_tools
 
-    def _create_openai_model(self):
-        return ChatOpenAI(
-            api_key="X",  # type: ignore
-            base_url=PORTKEY_GATEWAY_URL,
-            default_headers=self.config.openai_headers,
-            model=self.config.openai_model,
-            streaming=True,
-        )
-
-    def _create_gemini_model(self):
-        return ChatOpenAI(
-            api_key="X",  # type: ignore
-            base_url=PORTKEY_GATEWAY_URL,
-            default_headers=self.config.gemini_headers,
-            model=self.config.gemini_model,
-            streaming=True,
-        )
-
     def _create_embeddings_model(self):
-        return OpenAIEmbeddings(
-            api_key="X",  # type: ignore
-            base_url=PORTKEY_GATEWAY_URL,
-            default_headers=self.config.openai_headers,
-            model=self.config.openai_embeddings_model,
+        return self.config.gateway_provider.get_embeddings_model(
+            self.config.openai_embeddings_model
         )
+
+    def get_gateway_info(self) -> dict:
+        return {
+            "gateway_provider": settings.GATEWAY_PROVIDER,
+            "model_provider": self.config.model_provider.value,
+            "openai_model": self.config.openai_model,
+            "gemini_model": self.config.gemini_model,
+            "embeddings_model": self.config.openai_embeddings_model,
+            "trace_id": self.config.trace_id,
+            "user": self.config.user,
+        }
