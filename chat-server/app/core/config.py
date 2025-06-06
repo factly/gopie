@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     PORTKEY_SELF_HOSTED_URL: str = ""
 
     LITELLM_BASE_URL: str = ""
-    LITELLM_API_KEY: str = ""
+    LITELLM_MASTER_KEY: str = ""
 
     CLOUDFLARE_GATEWAY_URL: str = ""
     CLOUDFLARE_API_TOKEN: str = ""
