@@ -261,6 +261,27 @@ services:
       - portkey-self-hosted
       - all-gateways
 
+  litellm:
+    build:
+      context: .
+      args:
+        target: runtime
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - GOOGLE_LOCATION=${GOOGLE_LOCATION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+    volumes:
+      - ./chat-server/litellm_config.yaml:/app/config.yaml
+      - ${GOOGLE_SERVICE_ACCOUNT_JSON:-./chat-server/google/service-account.json}:/app/service-account.json:ro
+    command: [ "--config", "/app/config.yaml", "--port", "4000", "--num_workers", "8" ]
+    networks:
+      - gopie
+
   qdrant:
     image: qdrant/qdrant
     ports:

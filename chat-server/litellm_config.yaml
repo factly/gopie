@@ -1,0 +1,15 @@
+model_list:
+  - model_name: "*"
+    litellm_params:
+      model: openai/*
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: "gemini*"
+    litellm_params:
+      model: vertex_ai/gemini*
+      vertex_project: os.environ/GOOGLE_PROJECT_ID
+      vertex_location: os.environ/GOOGLE_LOCATION
+      service_account_json: os.environ/GOOGLE_APPLICATION_CREDENTIALS
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
