@@ -3,6 +3,7 @@ import json
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
+from app.services.google.google_access_token import get_google_access_token
 
 
 class PortkeySelfHostedGatewayProvider:
@@ -42,7 +43,13 @@ class PortkeySelfHostedGatewayProvider:
     ) -> ChatOpenAI:
         gemini_headers = self.headers.copy()
         gemini_headers["x-portkey-provider"] = "google"
-        gemini_headers["Authorization"] = f"Bearer {settings.GOOGLE_API_KEY}"
+        if settings.GOOGLE_APPLICATION_CREDENTIALS:
+            access_token = get_google_access_token()
+            gemini_headers["Authorization"] = f"Bearer {access_token}"
+        else:
+            gemini_headers[
+                "Authorization"
+            ] = f"Bearer {settings.GOOGLE_API_KEY}"
 
         return ChatOpenAI(
             api_key="X",  # type: ignore
