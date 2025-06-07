@@ -26,9 +26,15 @@ class Settings(BaseSettings):
     CLOUDFLARE_GATEWAY_URL: str = ""
     CLOUDFLARE_API_TOKEN: str = ""
     CLOUDFLARE_ACCOUNT_ID: str = ""
+    CLOUDFLARE_GATEWAY_ID: str = ""
 
     OPENAI_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
+
+    GOOGLE_PROJECT_ID: str = ""
+    GOOGLE_LOCATION: str = ""
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
     LANGSMITH_PROMPT: bool = False
 

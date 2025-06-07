@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 
 dependencies = [
   "fastapi[standard]>=0.115.12",
+  "google-auth>=2.40.3",
   "langchain>=0.3.21",
   "langchain-community>=0.3.20",
   "langchain-openai>=0.3.9",
@@ -16,6 +17,7 @@ dependencies = [
   "logging>=0.4.9.6",
   "pandas>=2.2.3",
   "portkey-ai>=1.11.1",
+  "pre-commit>=4.2.0",
   "pydantic>=2.10.6",
   "qdrant-client>=1.13.3",
 ]
