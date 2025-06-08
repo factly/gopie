@@ -13,3 +13,6 @@ model_list:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: null
+  store_model_in_db: false
+  use_azure_key_vault: false

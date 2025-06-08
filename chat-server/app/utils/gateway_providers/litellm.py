@@ -11,11 +11,9 @@ class LiteLLMGatewayProvider:
     ):
         self.user = user
         self.trace_id = trace_id
-        self.headers = {}
-        if settings.LITELLM_MASTER_KEY:
-            self.headers[
-                "Authorization"
-            ] = f"Bearer {settings.LITELLM_MASTER_KEY}"
+        self.headers = {
+            "Authorization": f"Bearer {settings.LITELLM_MASTER_KEY}",
+        }
 
     def get_openai_model(
         self, model_name: str, streaming: bool = True
