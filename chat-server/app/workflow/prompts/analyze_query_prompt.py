@@ -1,4 +1,6 @@
-def create_analyze_query_prompt(user_query: str, tool_results: str) -> str:
+def create_analyze_query_prompt(
+    user_query: str, tool_results: str, tool_call_count: int
+) -> str:
     """
     Create a prompt for analyzing a user query to determine its type.
 
@@ -9,8 +11,6 @@ def create_analyze_query_prompt(user_query: str, tool_results: str) -> str:
     Returns:
         A formatted prompt string
     """
-
-    tool_call_count = len(tool_results) if tool_results else 0
 
     return f"""
 You are a data query classifier. Categorize the user query into ONE of

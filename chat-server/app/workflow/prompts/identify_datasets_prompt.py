@@ -16,17 +16,13 @@ def create_identify_datasets_prompt(
     Returns:
         A formatted prompt string
     """
-    query_info = ""
-    if query_type is not None:
-        query_info = f"\nQUERY TYPE: {query_type}"
-
-    if confidence_score is not None:
-        query_info += f"\nQUERY CONFIDENCE SCORE: {confidence_score}"
-
     return f"""
 TASK: Identify the most relevant dataset(s) for this user query.
 
-USER QUERY: "{user_query}"{query_info}
+USER QUERY: "{user_query}"
+
+QUERY TYPE: {query_type}
+QUERY CONFIDENCE SCORE: {confidence_score}
 
 AVAILABLE DATASETS (pre-filtered by relevance):
 {available_datasets_schemas}
