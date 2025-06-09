@@ -3,6 +3,7 @@ import json
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
+from app.core.log import logger
 from app.services.google.google_access_token import get_google_access_token
 
 
@@ -42,14 +43,17 @@ class PortkeySelfHostedGatewayProvider:
         self, model_name: str, streaming: bool = True
     ) -> ChatOpenAI:
         gemini_headers = self.headers.copy()
-        gemini_headers["x-portkey-provider"] = "google"
+        gemini_headers["x-portkey-provider"] = "vertex_ai"
+
+        gemini_headers[
+            "x-portkey-vertex-project-id"
+        ] = settings.GOOGLE_PROJECT_ID
+        gemini_headers["x-portkey-vertex-region"] = settings.GOOGLE_LOCATION
+
         if settings.GOOGLE_APPLICATION_CREDENTIALS:
             access_token = get_google_access_token()
+            logger.info(f"Access token: {access_token}")
             gemini_headers["Authorization"] = f"Bearer {access_token}"
-        else:
-            gemini_headers[
-                "Authorization"
-            ] = f"Bearer {settings.GOOGLE_API_KEY}"
 
         return ChatOpenAI(
             api_key="X",  # type: ignore

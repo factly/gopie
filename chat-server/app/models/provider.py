@@ -17,6 +17,7 @@ class GatewayProvider(str, Enum):
     PORTKEY_SELF_HOSTED = "portkey_self_hosted"
     LITELLM = "litellm"
     CLOUDFLARE = "cloudflare"
+    OPENROUTER = "openrouter"
 
 
 DEFAULT_VENDOR = ModelVendor.OPENAI

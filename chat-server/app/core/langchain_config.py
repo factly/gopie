@@ -5,6 +5,7 @@ from app.models.provider import GatewayProvider, ModelVendor
 from app.tools import TOOLS
 from app.utils.gateway_providers.cloudflare import CloudflareGatewayProvider
 from app.utils.gateway_providers.litellm import LiteLLMGatewayProvider
+from app.utils.gateway_providers.openrouter import OpenrouterGatewayProvider
 from app.utils.gateway_providers.portkey import PortkeyGatewayProvider
 from app.utils.gateway_providers.portkey_self_hosted import (
     PortkeySelfHostedGatewayProvider,
@@ -61,6 +62,10 @@ class ModelConfig:
             )
         elif gateway_type == GatewayProvider.CLOUDFLARE:
             return CloudflareGatewayProvider(
+                user=self.user, trace_id=self.trace_id
+            )
+        elif gateway_type == GatewayProvider.OPENROUTER:
+            return OpenrouterGatewayProvider(
                 user=self.user, trace_id=self.trace_id
             )
         else:

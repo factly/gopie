@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
     GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_BASE_URL: str = ""
+
     LANGSMITH_PROMPT: bool = False
 
     QDRANT_HOST: str = "host.docker.internal"
