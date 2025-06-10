@@ -20,6 +20,7 @@ import (
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
+	"github.com/factly/gopie/interfaces/http/routes/api/ai"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
@@ -148,6 +149,7 @@ func ServeHttp() error {
 		)
 	}
 
+	ai.Routes(app.Group("/v1/api/ai"), aiService, logger)
 	api.Routes(app.Group("/v1/api"), olapService, aiService, datasetService, logger)
 	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
 		Logger:         logger,

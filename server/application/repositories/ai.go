@@ -8,6 +8,7 @@ import (
 
 type AiRepository interface {
 	GenerateSql(nl string) (string, error)
+	GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error)
 }
 
 type AiChatRepository interface {

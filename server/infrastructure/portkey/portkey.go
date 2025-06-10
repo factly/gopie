@@ -2,6 +2,7 @@ package portkey
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/factly/gopie/domain"
@@ -143,4 +144,50 @@ func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*mod
 	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
+}
+
+func (c *PortkeyClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error) {
+	systemPrompt := `
+	!! IMPORTANT: In the response only provide the column descriptions in JSON format. Do not provide any other information. !!
+	Valid format is:
+	{
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	Invalid format is:
+	response: {
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	or
+	result: {
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	and so on.
+
+	Generate column descriptions for the following rows and summary:
+	Rows: ` + rows + `
+	Summary: ` + summary
+
+	resp, err := c.GenerateResponse(systemPrompt)
+	if err != nil {
+		return nil, err
+	}
+	// Parse the response into a map
+	descriptions := make(map[string]string)
+	// conver string to map
+	err = json.Unmarshal([]byte(resp), &descriptions)
+	if err != nil {
+		c.logger.Error("failed to parse column descriptions", zap.Error(err))
+		return nil, err
+	}
+
+	return descriptions, nil
 }
