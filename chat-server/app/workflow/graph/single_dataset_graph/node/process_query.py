@@ -8,10 +8,11 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
-from app.services.gopie.dataset_info import get_dataset_info
-from app.services.gopie.generate_schema import generate_schema
+from app.core.config import settings
 from app.services.gopie.sql_executor import execute_sql
+from app.services.qdrant.qdrant_setup import initialize_qdrant_client
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
@@ -39,6 +40,45 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
     return output.getvalue()
 
 
+async def get_schema_from_qdrant(dataset_id: str) -> dict[str, Any]:
+    """
+    Get the schema of a specific table from Qdrant database.
+    Based on the get_table_schema tool logic.
+    """
+    try:
+        client = initialize_qdrant_client()
+
+        search_result = client.scroll(
+            collection_name=settings.QDRANT_COLLECTION,
+            scroll_filter=Filter(
+                should=[
+                    FieldCondition(
+                        key="metadata.dataset_id",
+                        match=MatchValue(value=dataset_id),
+                    ),
+                ]
+            ),
+            limit=1,
+        )
+
+        if not search_result[0]:
+            return {
+                "error": f"Dataset '{dataset_id}' not found in the database."
+            }
+
+        payload = search_result[0][0].payload
+        if not payload:
+            return {
+                "error": "Schema information not available for this dataset."
+            }
+
+        schema = json.loads(payload.get("page_content", "{}"))
+        return schema
+
+    except Exception as e:
+        return {"error": f"Error retrieving schema from Qdrant: {e!s}"}
+
+
 async def process_query(state: Any, config: RunnableConfig) -> dict:
     """
     Process the user query for single dataset workflow:
@@ -51,11 +91,7 @@ async def process_query(state: Any, config: RunnableConfig) -> dict:
     try:
         messages = state.get("messages", [])
         dataset_ids = state.get("dataset_ids", [])
-        project_ids = state.get("project_ids", [])
         user_query = state.get("query", "")
-
-        if not dataset_ids or not project_ids:
-            raise Exception("No dataset or project ID provided")
 
         if not user_query and messages:
             last_message = messages[-1]
@@ -65,14 +101,18 @@ async def process_query(state: Any, config: RunnableConfig) -> dict:
                 user_query = last_message.get("content", "")
 
         dataset_id = dataset_ids[0]
-        project_id = project_ids[0]
 
-        dataset_details = await get_dataset_info(dataset_id, project_id)
-        dataset_schema, sample_data = await generate_schema(
-            dataset_details.name, limit=50
-        )
+        schema_info = await get_schema_from_qdrant(dataset_id)
+        if "error" in schema_info:
+            raise Exception(f"Schema fetch error: {schema_info['error']}")
 
-        schema_json = json.dumps(dataset_schema, indent=2)
+        dataset_name = schema_info.get("dataset_name", "")
+        user_provided_dataset_name = schema_info.get("name", "")
+
+        sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
+        sample_data = await execute_sql(sample_data_query)
+
+        schema_json = json.dumps(schema_info, indent=2)
         rows_csv = convert_rows_to_csv(sample_data)
 
         prompt = f"""
@@ -81,7 +121,9 @@ appropriately with a JSON response.
 
 USER QUESTION: {user_query}
 
-TABLE NAME: {dataset_details.name}
+TABLE NAME: {dataset_name} (This is the name of the table in the database
+                            so use this in forming SQL queries)
+USER PROVIDED TABLE NAME: {user_provided_dataset_name}
 
 TABLE SCHEMA IN JSON:
 ---------------------
@@ -105,16 +147,16 @@ RULES FOR SQL QUERIES:
 - Generate only read queries (SELECT)
 
 RESPONSE FORMAT:
-Return a JSON object with one of these formats:
+Return a JSON object in one of these formats:
 
-For SQL queries:
+For SQL queries (single or multiple):
 {{
     "response_type": "sql",
-    "sql_query": "<SQL query here without semicolon>",
-    "explanation": "<Brief explanation of what the query does>"
+    "sql_queries": ["<SQL query here without semicolon>", ...],
+    "explanations": ["<Brief explanation for each query>", ...]
 }}
 
-For non-SQL responses (like general questions):
+For non-SQL responses:
 {{
     "response_type": "text",
     "response": "<Your response here>",
@@ -124,7 +166,7 @@ For non-SQL responses (like general questions):
 Always respond with valid JSON only.
         """
 
-        llm = get_llm_for_node("plan_query", config)
+        llm = get_llm_for_node("process_query", config)
         parser = JsonOutputParser()
 
         llm_response = await llm.ainvoke(
@@ -135,45 +177,48 @@ Always respond with valid JSON only.
         parsed_response = parser.parse(response_content)
 
         if parsed_response.get("response_type") == "sql":
-            sql_query = parsed_response.get("sql_query", "")
-            explanation = parsed_response.get(
-                "explanation", "SQL query generated from user request"
-            )
+            sql_queries = parsed_response.get("sql_queries", [])
+            explanations = parsed_response.get("explanations", [])
 
             await adispatch_custom_event(
                 "dataful-agent",
                 {
-                    "content": "SQL query generated",
-                    "queries": [sql_query],
+                    "content": "SQL queries generated",
+                    "queries": sql_queries,
                 },
             )
 
-            try:
-                query_result_data = await execute_sql(sql_query)
-
-                sql_result = {
-                    "sql_query": sql_query,
-                    "explanation": explanation,
-                    "result": query_result_data,
-                    "success": True,
-                    "error": None,
-                }
-            except Exception as sql_error:
-                sql_result = {
-                    "sql_query": sql_query,
-                    "explanation": explanation,
-                    "result": None,
-                    "success": False,
-                    "error": str(sql_error),
-                }
+            sql_results = []
+            for q, exp in zip(sql_queries, explanations):
+                try:
+                    result_data = await execute_sql(q)
+                    sql_results.append(
+                        {
+                            "sql_query": q,
+                            "explanation": exp,
+                            "result": result_data,
+                            "success": True,
+                            "error": None,
+                        }
+                    )
+                except Exception as err:
+                    sql_results.append(
+                        {
+                            "sql_query": q,
+                            "explanation": exp,
+                            "result": None,
+                            "success": False,
+                            "error": str(err),
+                        }
+                    )
 
             query_result = {
                 "user_query": user_query,
-                "dataset_name": dataset_details.name,
+                "user_friendly_dataset_name": user_provided_dataset_name,
+                "dataset_name": dataset_name,
                 "response_type": "sql",
-                "sql_queries": [sql_result],
+                "sql_queries": sql_results,
                 "timestamp": datetime.now().isoformat(),
-                "success": sql_result["success"],
             }
 
             return {
@@ -189,12 +234,12 @@ Always respond with valid JSON only.
 
             query_result = {
                 "user_query": user_query,
-                "dataset_name": dataset_details.name,
+                "user_friendly_dataset_name": user_provided_dataset_name,
+                "dataset_name": dataset_name,
                 "response_type": "text",
                 "response": text_response,
                 "explanation": explanation,
                 "timestamp": datetime.now().isoformat(),
-                "success": True,
             }
 
             return {
@@ -207,7 +252,6 @@ Always respond with valid JSON only.
         error_result = {
             "user_query": user_query if "user_query" in locals() else "",
             "error": error_message,
-            "success": False,
             "timestamp": datetime.now().isoformat(),
         }
 

@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_model_provider,
+    get_llm_for_node,
 )
 
 
@@ -23,10 +23,13 @@ async def response(state: Any, config: RunnableConfig) -> dict:
 
     user_query = query_result.get("user_query", "")
     dataset_name = query_result.get("dataset_name", "Unknown dataset")
+    user_friendly_dataset_name = query_result.get(
+        "user_friendly_dataset_name", dataset_name
+    )
     sql_queries = query_result.get("sql_queries", [])
 
-    successful_results = [r for r in sql_queries if r.get("success", False)]
-    failed_results = [r for r in sql_queries if not r.get("success", False)]
+    successful_results = [r for r in sql_queries if r.get("success", True)]
+    failed_results = [r for r in sql_queries if not r.get("success", True)]
 
     results_context = ""
     if successful_results:
@@ -62,6 +65,7 @@ informative, and focus on what CAN be determined from the available data.
 USER'S QUESTION: "{user_query}"
 
 DATASET USED: {dataset_name}
+USER FRIENDLY DATASET NAME: {user_friendly_dataset_name}
 
 {results_context}
 
@@ -86,7 +90,7 @@ IMPORTANT: Base your response ONLY on the data provided above. Do not add
 information that isn't present in the results.
 """
 
-    llm = get_model_provider(config).get_node_llm()
+    llm = get_llm_for_node("response", config)
 
     final_response = await llm.ainvoke(
         {"input": custom_prompt, "chat_history": get_chat_history(config)}
