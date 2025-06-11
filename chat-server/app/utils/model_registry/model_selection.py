@@ -13,6 +13,9 @@ NODE_TO_MODEL = {
     "check_further_execution_requirement": (
         settings.MODEL_CHECK_FURTHER_EXECUTION_REQUIREMENT
     ),
+    # Single dataset graph nodes
+    "process_query": settings.MODEL_PROCESS_QUERY,
+    "response": settings.MODEL_RESPONSE,
 }
 
 

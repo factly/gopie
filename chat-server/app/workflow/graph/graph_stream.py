@@ -64,7 +64,9 @@ async def stream_graph_updates(
     )
 
     dataset_count = len(dataset_ids) if dataset_ids else 0
-    selected_graph = multi_dataset_graph if dataset_count > 1 else simple_graph
+    selected_graph = (
+        simple_graph if dataset_count == 1 else multi_dataset_graph
+    )
 
     try:
         async for event in selected_graph.astream_events(

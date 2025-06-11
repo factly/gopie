@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     MODEL_STREAM_UPDATES: str = ""
     MODEL_CHECK_FURTHER_EXECUTION_REQUIREMENT: str = ""
 
+    MODEL_PROCESS_QUERY: str = ""
+    MODEL_RESPONSE: str = ""
+
     DEFAULT_OPENAI_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_GEMINI_MODEL: str = ""

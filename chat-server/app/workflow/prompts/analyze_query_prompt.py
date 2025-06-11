@@ -13,8 +13,8 @@ def create_analyze_query_prompt(
     """
 
     return f"""
-You are a data query classifier. Categorize the user query into ONE of
-two types. Prevent hallucination - only answer based on available context.
+You are a data query classifier. Analyze the user query and take appropriate action.
+Prevent hallucination - only answer based on available context.
 
 USER QUERY: "{user_query}"
 PREVIOUS TOOL RESULTS: {tool_results}
@@ -67,12 +67,15 @@ CONFIDENCE SCORE:
 - 4-7: Medium confidence, could benefit from dataset verification
 - 8-10: High confidence in classification decision
 
-FORMAT YOUR RESPONSE AS JSON:
-{{
-    "query_type": "data_query" OR "conversational",
-    "confidence_score": <integer from 1 to 10>,
-    "reasoning": "Brief explanation of classification decision",
-    "clarification_needed": "If conversational due to vagueness,
-                             specify what you need"
-}}
+IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
+    Call the appropriate tool directly in your response and do not output any JSON.
+
+IF NO TOOL CALL IS REQUIRED:
+    FORMAT YOUR RESPONSE AS JSON:
+    {{
+        "query_type": "data_query" OR "conversational",
+        "confidence_score": <integer from 1 to 10>,
+        "reasoning": "Brief explanation of classification decision",
+        "clarification_needed": "If conversational due to vagueness, specify what you need"
+    }}
 """
