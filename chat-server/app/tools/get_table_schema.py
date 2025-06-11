@@ -1,66 +1,78 @@
-from typing import Any
+import json
 
 from langchain_core.tools import tool
-from qdrant_client.http.models import FieldCondition, Filter, MatchValue
+from qdrant_client.http.models import FieldCondition, Filter, MatchAny
 
 from app.core.config import settings
 from app.services.qdrant.qdrant_setup import initialize_qdrant_client
 
 
 @tool
-async def get_table_schema(dataset_name: str) -> dict[str, Any]:
+async def get_datasets_schemas(
+    dataset_ids: list[str] | None = None, project_ids: list[str] | None = None
+) -> list[dict] | dict:
     """
-    Get the schema of a specific table from Qdrant database.
+    Get the schema of a specific tables from Qdrant database.
+
+    Situation where it can be used:
+        - User wants to know the schema of a specific dataset.
+        - Want information related to datasets or get summary of datasets.
 
     Args:
-        dataset_name: The name of the dataset to retrieve schema for.
+        dataset_ids: The ids of the datasets to retrieve schema for.
+        project_ids: The ids of the projects to retrieve schema for.
+
+        Caution:
+            Requires atleast one of the dataset_ids or project_ids.
 
     Returns:
-        A dictionary with column details and schema information.
+        A dictionary with schema information for the provided dataset ids.
     """
     try:
         client = initialize_qdrant_client()
 
-        search_result = client.scroll(
-            collection_name=settings.QDRANT_COLLECTION,
-            scroll_filter=Filter(
-                should=[
-                    FieldCondition(
-                        key="metadata.name",
-                        match=MatchValue(value=dataset_name),
-                    ),
-                    FieldCondition(
-                        key="metadata.dataset_name",
-                        match=MatchValue(value=dataset_name),
-                    ),
-                ]
-            ),
-            limit=1,
-        )
+        filter_conditions = []
 
-        if not search_result[0]:
-            return {
-                "error": f"Dataset '{dataset_name}' not found in the database."
-            }
+        if dataset_ids:
+            filter_conditions.append(
+                FieldCondition(
+                    key="metadata.dataset_id",
+                    match=MatchAny(any=dataset_ids),
+                )
+            )
 
-        point = search_result[0][0]
+        if project_ids:
+            filter_conditions.append(
+                FieldCondition(
+                    key="metadata.project_id",
+                    match=MatchAny(any=project_ids),
+                )
+            )
 
-        payload = point.payload or {}
-        schema = payload.get("metadata", {}).get("schema", None)
+        if filter_conditions:
+            search_result = client.scroll(
+                collection_name=settings.QDRANT_COLLECTION,
+                scroll_filter=Filter(should=filter_conditions),
+            )
 
-        if not schema:
-            return {
-                "error": "Schema information not available for this dataset."
-            }
+        schemas = []
+        for result in search_result:
+            if result:
+                payload = result[0].payload  # type: ignore
+                if payload:
+                    schema = json.loads(payload.get("page_content", "{}"))
+                    schemas.append(schema)
 
-        for column in schema.get("columns_details", []):
-            if "stats" in column:
-                del column["stats"]
-
-        return schema
+        return schemas
 
     except Exception as e:
-        return {"error": f"Error retrieving schema from Qdrant: {e!s}"}
+        return [
+            {
+                "error": f"Error retrieving schema from Qdrant: {e!s}",
+                "dataset_ids": dataset_ids,
+                "project_ids": project_ids,
+            }
+        ]
 
 
 def get_dynamic_tool_text(args: dict) -> str:
@@ -71,6 +83,6 @@ def get_dynamic_tool_text(args: dict) -> str:
     return base_text
 
 
-__tool__ = get_table_schema
+__tool__ = get_datasets_schemas
 __tool_category__ = "Data Exploration"
 __get_dynamic_tool_text__ = get_dynamic_tool_text

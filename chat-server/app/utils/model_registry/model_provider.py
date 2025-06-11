@@ -7,8 +7,8 @@ from app.utils.model_registry.model_selection import NODE_TO_MODEL
 class ModelProvider:
     def __init__(
         self,
-        trace_id: str,
-        user: str,
+        trace_id: str = "",
+        user: str = "",
         model_id: str | None = None,
         with_tools: bool = False,
     ):
@@ -68,7 +68,7 @@ def get_llm_for_node(
 
 
 def get_custom_model(model_id: str):
-    return ModelProvider(model_id=model_id, trace_id="", user="").get_llm()
+    return ModelProvider(model_id=model_id).get_llm()
 
 
 def get_chat_history(config: RunnableConfig):

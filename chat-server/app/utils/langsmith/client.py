@@ -10,17 +10,5 @@ def pull_prompt(prompt_name: str):
     return client.pull_prompt(prompt_name)
 
 
-def extract_content_from_prompt_template(formatted_prompt) -> str:
-    """
-    Extract content from a chat prompt template.
-
-    If multiple messages: return as-is
-    If single message: return just the content
-
-    Args:
-        formatted_prompt: The formatted prompt from LangSmith
-
-    Returns:
-        The prompt content (string if single message, original if multiple)
-    """
-    return str(formatted_prompt)
+def extract_content_from_prompt_template(prompt_template: str) -> str:
+    return str(prompt_template)
