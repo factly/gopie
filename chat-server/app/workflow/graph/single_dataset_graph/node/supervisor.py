@@ -1,9 +1,7 @@
 from typing import Any
 from venv import logger
 
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
 from app.utils.model_registry.model_provider import (
@@ -29,40 +27,27 @@ async def supervisor(state: Any, config: RunnableConfig) -> dict:
     if not has_data:
         return {"next_action": "response"}
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(
-                content="""
-                You are a routing supervisor for a data analysis system.
-                Analyze the user's question to determine if they want data
-                visualization (charts, graphs, plots) or just a text
-                response.
-                Consider visualization keywords like: plot, chart, graph,
-                visualize, show, display, trend, comparison, distribution,
-                etc.
-                """
-            ),
-            HumanMessage(
-                content="""
-                User question: {question}
-                Available data: {data_summary}
-                Respond with JSON:
-                {{
-                    "wants_visualization": true/false,
-                    "reasoning": "explanation of the decision"
-                }}
-                """
-            ),
-        ]
-    )
+    prompt = f"""
+You are a routing supervisor for a data analysis system.
+Analyze the user's question to determine if they want data
+visualization (charts, graphs, plots) or just a text
+response.
+Consider visualization keywords like: plot, chart, graph,
+visualize, show, display, trend, comparison, distribution,
+etc.
+
+User question: {user_query}
+Respond with JSON:
+{{
+    "wants_visualization": true/false,
+    "reasoning": "explanation of the decision"
+}}
+    """
 
     llm = get_llm_for_node("supervisor", config)
     response = await llm.ainvoke(
         {
-            "input": prompt.format(
-                question=user_query,
-                data_summary=successful_results,
-            ),
+            "input": prompt,
             "chat_history": get_chat_history(config),
         }
     )

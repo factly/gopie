@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from langchain_core.messages import AIMessage
@@ -72,7 +71,6 @@ The user asked: "{user_query}"
 I've created a {viz_type} chart from {dataset_name}.
 
 Visualization result: {viz_result}
-
 SQL queries results: {query_result}
 
 Describe what the visualization shows in a helpful, conversational way.
@@ -93,4 +91,4 @@ information that isn't present in the results.
         "visualization_result": viz_result,
     }
 
-    return {"messages": [AIMessage(content=json.dumps(response))]}
+    return {"messages": [AIMessage(content=str(response))]}

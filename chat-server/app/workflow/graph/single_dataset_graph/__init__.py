@@ -34,6 +34,6 @@ graph_builder.add_conditional_edges(
 )
 
 graph_builder.add_edge("response", END)
-graph_builder.add_edge("visualizer_agent", END)
+graph_builder.add_edge("visualizer_agent", "response")
 
 simple_graph = graph_builder.compile()

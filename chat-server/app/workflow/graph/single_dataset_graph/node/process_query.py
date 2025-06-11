@@ -82,7 +82,6 @@ USER QUESTION: {user_query}
 
 TABLE NAME: {dataset_name} (This is the name of the table in the database
                             so use this in forming SQL queries)
-USER PROVIDED TABLE NAME: {user_provided_dataset_name}
 
 TABLE SCHEMA IN JSON:
 ---------------------
