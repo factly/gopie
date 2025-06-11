@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
@@ -32,7 +33,7 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 	}, nil
 }
 
-func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, message []models.ChatMessage) ([]models.ChatMessage, error) {
+func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		s.logger.Error("Error starting transaction", zap.Error(err))
@@ -42,38 +43,38 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 	qtx := s.q.WithTx(tx)
 	var chatMessages []models.ChatMessage
 
-	for _, msg := range message {
-		go func(msg models.ChatMessage) {
-			choiceBytes, _ := json.Marshal(msg.Choices)
-			chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-				ChatID:  pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
-				Choices: choiceBytes,
-				Object:  msg.Object,
-				Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
-			})
-			if err != nil {
-				s.logger.Error("Error creating chat message", zap.Error(err))
-				tx.Rollback(ctx)
-				return
-			}
-			choiceList := make([]models.Choice, 0)
-			if len(msg.Choices) > 0 {
-				_ = json.Unmarshal(choiceBytes, &choiceList)
-			}
+	for _, msg := range messages {
+		choiceBytes, _ := json.Marshal(msg.Choices)
+		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
+			ChatID:  pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
+			Choices: choiceBytes,
+			Object:  msg.Object,
+			Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
+		})
+		if err != nil {
+			s.logger.Error("Error creating chat message", zap.Error(err))
+			return nil, err
+		}
 
-			chatMessage := models.ChatMessage{
-				ID:        chat.ID.String(),
-				CreatedAt: chat.CreatedAt.Time,
-				Model:     chat.Model.String,
-				Object:    chat.Object,
-				Choices:   choiceList,
-			}
-			chatMessages = append(chatMessages, chatMessage)
-		}(msg)
+		choiceList := make([]models.Choice, 0)
+		if len(msg.Choices) > 0 {
+			_ = json.Unmarshal(choiceBytes, &choiceList)
+		}
+
+		chatMessage := models.ChatMessage{
+			ID:        chat.ID.String(),
+			CreatedAt: chat.CreatedAt.Time,
+			Model:     chat.Model.String,
+			Object:    chat.Object,
+			Choices:   choiceList,
+		}
+		chatMessages = append(chatMessages, chatMessage)
 	}
+
 	if err := tx.Commit(ctx); err != nil {
 		s.logger.Error("Error committing transaction", zap.Error(err))
 		return nil, err
 	}
+
 	return chatMessages, nil
 }

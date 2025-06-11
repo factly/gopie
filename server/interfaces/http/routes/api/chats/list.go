@@ -1,9 +1,8 @@
 package chats
 
 import (
-	"strconv"
-
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -59,20 +58,11 @@ func (s *httpHandler) listUserChats(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusUnauthorized,
 		})
 	}
-	limit := ctx.Query("limit")
-	page := ctx.Query("page")
 	pagination := models.NewPagination()
-	l, err := strconv.Atoi(limit)
-	if err != nil {
-		l = 10
-	}
-	p, err := strconv.Atoi(page)
-	if err != nil {
-		p = 1
-	}
+	limit, page := pkg.ParseLimitAndPage(ctx.Query("limit"), ctx.Query("page"))
 
-	pagination.Limit = l
-	pagination.Offset = (p - 1) * l
+	pagination.Limit = limit
+	pagination.Offset = page
 
 	chats, err := s.chatSvc.ListUserChats(userID, pagination)
 	if err != nil {
