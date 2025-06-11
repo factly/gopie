@@ -1,5 +1,9 @@
 def create_analyze_query_prompt(
-    user_query: str, tool_results: str, tool_call_count: int
+    user_query: str,
+    tool_results: str,
+    tool_call_count: int,
+    dataset_ids: list[str] | None = None,
+    project_ids: list[str] | None = None,
 ) -> str:
     """
     Create a prompt for analyzing a user query to determine its type.
@@ -7,7 +11,9 @@ def create_analyze_query_prompt(
     Args:
         user_query: The natural language query from the user
         tool_results: Results from any tools that were previously called
-
+        tool_call_count: Number of tool calls made so far
+        dataset_ids: List of dataset ids
+        project_ids: List of project ids
     Returns:
         A formatted prompt string
     """
@@ -19,6 +25,8 @@ Prevent hallucination - only answer based on available context.
 USER QUERY: "{user_query}"
 PREVIOUS TOOL RESULTS: {tool_results}
 NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}
+DATASET IDS: {dataset_ids}
+PROJECT IDS: {project_ids}
 
 QUERY TYPES - Select exactly ONE:
 
@@ -75,6 +83,8 @@ IF NO TOOL CALL IS REQUIRED:
     {{
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
+        "visualization_required": true OR false,
+        "visualization_already_created": true OR false,
         "reasoning": "Brief explanation of classification decision",
         "clarification_needed": "If conversational due to vagueness, specify what you need"
     }}

@@ -1,6 +1,9 @@
+from typing import Any
+
+
 def create_plan_query_prompt(
     user_query: str,
-    formatted_datasets: str,
+    formatted_datasets: Any,
     error_context: str | None = None,
     dataset_analysis_context: str | None = None,
     node_messages_context: str | None = None,
@@ -95,7 +98,7 @@ IMPORTANT - DATASET NAMING:
    - Consider the relationship between datasets
 7. For text comparisons, use LOWER() function on both sides to ensure
    case-insensitive matching
-8. Never use LIKE operator while generating SQL query
+8. Never use ILIKE, LIKE operator while generating SQL query
 
 # SQL FORMATTING REQUIREMENTS
 You must provide two versions of the SQL query (or queries):

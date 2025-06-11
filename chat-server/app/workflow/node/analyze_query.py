@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -104,8 +103,10 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         prompt = get_prompt(
             "analyze_query",
             user_query=user_input,
-            tool_results=json.dumps(tools_results, indent=2),
+            tool_results=tools_results,
             tool_call_count=tool_call_count,
+            dataset_ids=state.get("dataset_ids", []),
+            project_ids=state.get("project_ids", []),
         )
         llm = get_llm_for_node("analyze_query", config, with_tools=True)
 

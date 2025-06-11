@@ -93,5 +93,5 @@ IMPORTANT:
 * Only include columns actually needed for the query
 * Always use the dataset "name" field (not ID)
 * Only use exact_values when completely confident the value exists
-* Make your node_message informative for subsequent processing steps
+* Make your node_message informative providing context on the datasets you selected
 """

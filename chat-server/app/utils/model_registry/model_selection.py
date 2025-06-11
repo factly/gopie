@@ -18,7 +18,6 @@ NODE_TO_MODEL = {
     "response": settings.MODEL_RESPONSE,
     "supervisor": settings.DEFAULT_OPENAI_MODEL,
     # Visualization graph nodes
-    "format_results": settings.DEFAULT_OPENAI_MODEL,
     "choose_visualization": settings.DEFAULT_OPENAI_MODEL,
     "format_data_for_visualization": settings.DEFAULT_OPENAI_MODEL,
 }

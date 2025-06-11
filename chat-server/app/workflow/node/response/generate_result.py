@@ -27,7 +27,8 @@ async def generate_result(
             query_result.calculate_execution_time()
 
         logger.debug(
-            f"query_result: {json.dumps(query_result.to_dict(), indent=2)}"
+            "query_result: %s",
+            json.dumps(query_result.to_dict(), indent=2, default=str),
         )
 
     any_data_query = False
@@ -77,7 +78,7 @@ async def _handle_conversational_query(
     """
 
     user_query = query_result.original_user_query
-    result_context = json.dumps(query_result.to_dict(), indent=2)
+    result_context = json.dumps(query_result.to_dict(), indent=2, default=str)
 
     prompt = get_prompt(
         node_name="conversational_query",
@@ -113,7 +114,7 @@ async def _handle_data_query(
     """
 
     user_query = query_result.original_user_query
-    result_context = json.dumps(query_result.to_dict(), indent=2)
+    result_context = json.dumps(query_result.to_dict(), indent=2, default=str)
 
     has_results = False
     if query_result.has_subqueries():
@@ -162,7 +163,7 @@ async def _handle_empty_results(
     """
 
     user_query = query_result.original_user_query
-    result_context = json.dumps(query_result.to_dict(), indent=2)
+    result_context = json.dumps(query_result.to_dict(), indent=2, default=str)
 
     prompt = get_prompt(
         node_name="empty_results",
