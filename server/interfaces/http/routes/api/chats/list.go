@@ -38,8 +38,20 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 	})
 }
 
+// @Summary List user chats
+// @Description Get all chats for a specific user with pagination
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param x-user-id header string true "User ID" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param limit query integer false "Number of chats per page" default(10)
+// @Param page query integer false "Page number" default(1)
+// @Success 200 {object} map[string]interface{} "User chats retrieved successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized - User ID is required"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /v1/api/chat [get]
 func (s *httpHandler) listUserChats(ctx *fiber.Ctx) error {
-	userID := ctx.Get("userID")
+	userID := ctx.Get("x-user-id")
 	if userID == "" {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error":   "Unauthorized",

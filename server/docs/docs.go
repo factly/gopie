@@ -256,7 +256,7 @@ const docTemplate = `{
         },
         "/v1/api/chat": {
             "get": {
-                "description": "Get all chats associated with a specific dataset with pagination",
+                "description": "Get all chats for a specific user with pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -266,13 +266,13 @@ const docTemplate = `{
                 "tags": [
                     "chat"
                 ],
-                "summary": "List dataset chats",
+                "summary": "List user chats",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Dataset ID",
-                        "name": "dataset_id",
-                        "in": "query",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "header",
                         "required": true
                     },
                     {
@@ -292,36 +292,24 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Dataset chats retrieved successfully",
+                        "description": "User chats retrieved successfully",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/responses.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.Chat"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Dataset ID is required",
+                    "401": {
+                        "description": "Unauthorized - User ID is required",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -402,6 +390,31 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/chats.chatWithAgentRequestBody"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "x-user-id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated project IDs",
+                        "name": "x-project-ids",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated dataset IDs",
+                        "name": "x-dataset-ids",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat ID for continuing existing conversation",
+                        "name": "x-chat-id",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -417,8 +430,14 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized - User ID is required",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "500": {
-                        "description": "Internal server error\" // Should ideally be JSON for API consistency",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -445,6 +464,13 @@ const docTemplate = `{
                         "description": "Chat ID",
                         "name": "chatID",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user-id",
+                        "in": "header",
                         "required": true
                     }
                 ],
@@ -523,54 +549,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/api/chat/{chatID}/messages/{messageID}": {
-            "delete": {
-                "description": "Delete a specific message from a chat",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chat"
-                ],
-                "summary": "Delete chat message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Chat ID",
-                        "name": "chatID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Message ID",
-                        "name": "messageID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Message deleted successfully"
-                    },
-                    "404": {
-                        "description": "Message not found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
                         }
                     },
                     "500": {
@@ -1460,9 +1438,6 @@ const docTemplate = `{
                 "messages"
             ],
             "properties": {
-                "chat_id": {
-                    "type": "string"
-                },
                 "max_tokens": {
                     "type": "integer"
                 },
@@ -1470,12 +1445,6 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.AIChatMessage"
-                    }
-                },
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
                     }
                 },
                 "model": {
@@ -1574,31 +1543,17 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Chat": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "models.ChatMessage": {
             "type": "object",
             "properties": {
-                "content": {
+                "chat_id": {
                     "type": "string"
+                },
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Choice"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -1606,7 +1561,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "role": {
+                "model": {
+                    "type": "string"
+                },
+                "object": {
                     "type": "string"
                 }
             }
@@ -1629,12 +1587,27 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.ChatMessage"
                     }
                 },
-                "name": {
+                "title": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
                 }
+            }
+        },
+        "models.Choice": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "$ref": "#/definitions/models.Delta"
+                },
+                "finish_reason": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "logprobs": {}
             }
         },
         "models.Dataset": {
@@ -1711,6 +1684,38 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Delta": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "function_call": {
+                    "$ref": "#/definitions/models.FunctionCall"
+                },
+                "refusal": {},
+                "role": {
+                    "type": "string"
+                },
+                "tool_calls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ToolCall"
+                    }
+                }
+            }
+        },
+        "models.FunctionCall": {
+            "type": "object",
+            "properties": {
+                "arguments": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Project": {
             "description": "Project model",
             "type": "object",
@@ -1747,6 +1752,34 @@ const docTemplate = `{
                 "updated_by": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "models.ToolCall": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/models.ToolFunction"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ToolFunction": {
+            "type": "object",
+            "properties": {
+                "arguments": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

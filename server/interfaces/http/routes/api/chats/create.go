@@ -260,7 +260,6 @@ type chatWithAgentRequestBody struct {
 	Stream      bool                   `json:"stream" validate:"omitempty" default:"true"`
 	Temperature float64                `json:"temperature" validate:"omitempty"`
 	MaxTokens   int                    `json:"max_tokens" validate:"omitempty"`
-	ChatID      string                 `json:"chat_id" validate:"omitempty,uuid"`
 }
 
 // @Summary Chat with AI agent
@@ -269,12 +268,17 @@ type chatWithAgentRequestBody struct {
 // @Accept json
 // @Produce text/event-stream
 // @Param body body chatWithAgentRequestBody true "Chat request parameters"
+// @Param x-user-id header string true "User ID" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param x-project-ids header string false "Comma-separated project IDs" example:"550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+// @Param x-dataset-ids header string false "Comma-separated dataset IDs" example:"550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+// @Param x-chat-id header string false "Chat ID for continuing existing conversation" example:"550e8400-e29b-41d4-a716-446655440000"
 // @Success 200 {string} string "Server-sent events stream started"
 // @Failure 400 {string} string "Invalid request body"
-// @Failure 500 {string} string "Internal server error" // Should ideally be JSON for API consistency
+// @Failure 401 {string} string "Unauthorized - User ID is required"
+// @Failure 500 {string} string "Internal server error"
 // @Router /v1/api/chat/completions [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
-	userID := ctx.Get("userID")
+	userID := ctx.Get("x-user-id")
 	if userID == "" {
 		h.logger.Error("Unauthorized request: Missing userID header")
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -331,7 +335,8 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	dataChan := make(chan []byte, 10) // Buffered channel
 	errChan := make(chan error, 1)    // Buffered channel for errors
 
-	sessionID := body.ChatID
+	chatIdHeader := ctx.Get("x-chat-id")
+	sessionID := chatIdHeader
 
 	prevMessages := []*models.ChatMessage{}
 	var err error
@@ -380,16 +385,26 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		h.logger.Debug("SSE: Connection established, starting stream.", zap.String("session_id", sessionID))
 
+		// Send initial OpenAI-compatible chunk with session ID
 		// initEvent := map[string]interface{}{
 		// 	"id":      sessionID,
 		// 	"object":  "chat.completion.chunk",
 		// 	"created": time.Now().Unix(),
 		// 	"model":   body.Model,
+		// 	"choices": []map[string]interface{}{
+		// 		{
+		// 			"index": 0,
+		// 			"delta": map[string]interface{}{
+		// 				"role": "assistant",
+		// 			},
+		// 			"finish_reason": nil,
+		// 		},
+		// 	},
 		// }
 		// initData, marshalErr := json.Marshal(initEvent)
 		// if marshalErr != nil {
 		// 	h.logger.Error("SSE: Failed to marshal init event", zap.Error(marshalErr), zap.String("session_id", sessionID))
-		// 	fmt.Fprintf(w, "event: error\ndata: {\"error\":\"internal server error preparing stream\"}\n\n")
+		// 	fmt.Fprintf(w, "data: {\"error\":\"internal server error preparing stream\"}\n\n")
 		// 	w.Flush()
 		// 	return
 		// }
@@ -504,7 +519,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 					var chatWithMessages *models.ChatWithMessages
 					var err error
-					if body.ChatID == "" {
+					if chatIdHeader == "" {
 						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
 							Messages:  messages,
 							CreatedBy: userID,
@@ -523,7 +538,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 							return
 						}
 					} else {
-						_, err := h.chatSvc.AddNewMessage(context.Background(), body.ChatID, messages)
+						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages)
 						if err != nil {
 							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)
