@@ -8,11 +8,9 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
-from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
-from app.core.config import settings
 from app.services.gopie.sql_executor import execute_sql
-from app.services.qdrant.qdrant_setup import initialize_qdrant_client
+from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
@@ -38,45 +36,6 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
             writer.writerow(record)
 
     return output.getvalue()
-
-
-async def get_schema_from_qdrant(dataset_id: str) -> dict[str, Any]:
-    """
-    Get the schema of a specific table from Qdrant database.
-    Based on the get_table_schema tool logic.
-    """
-    try:
-        client = initialize_qdrant_client()
-
-        search_result = client.scroll(
-            collection_name=settings.QDRANT_COLLECTION,
-            scroll_filter=Filter(
-                should=[
-                    FieldCondition(
-                        key="metadata.dataset_id",
-                        match=MatchValue(value=dataset_id),
-                    ),
-                ]
-            ),
-            limit=1,
-        )
-
-        if not search_result[0]:
-            return {
-                "error": f"Dataset '{dataset_id}' not found in the database."
-            }
-
-        payload = search_result[0][0].payload
-        if not payload:
-            return {
-                "error": "Schema information not available for this dataset."
-            }
-
-        schema = json.loads(payload.get("page_content", "{}"))
-        return schema
-
-    except Exception as e:
-        return {"error": f"Error retrieving schema from Qdrant: {e!s}"}
 
 
 async def process_query(state: Any, config: RunnableConfig) -> dict:

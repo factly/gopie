@@ -9,3 +9,8 @@ class State(TypedDict):
     project_ids: list[str] | None
     query: str | None
     query_result: dict | None
+
+    next_action: str | None  # Agent routing
+    visualization_data: list[dict] | None
+
+    visualization_result: dict | None
