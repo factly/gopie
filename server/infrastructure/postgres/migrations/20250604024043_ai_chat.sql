@@ -17,7 +17,7 @@ create table if not exists chat_messages (
     choices jsonb not null,
     object text not null,
     model text default null,
-    created_at timestamp with time zone default now()
+    created_at timestamp with time zone default now(),
     unique (chat_id, key)
 );
 
