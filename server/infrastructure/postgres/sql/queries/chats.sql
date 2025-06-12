@@ -39,9 +39,10 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model
+  model,
+  key
 ) values (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 returning *;
 
@@ -65,5 +66,8 @@ left join chat_messages m on c.id = m.chat_id
 where c.id = $1
 order by m.created_at asc;
 
-
+-- name: GetChatById :one
+select * from chats
+where id = $1
+and created_by = $2;
 

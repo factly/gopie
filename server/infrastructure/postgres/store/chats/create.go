@@ -46,6 +46,7 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 			Choices: choiceBytes,
 			Object:  message.Object,
 			Model:   pgtype.Text{String: message.Model, Valid: message.Model != ""},
+			Key:     int32(message.Key),
 		})
 		if err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))
@@ -64,6 +65,7 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 			Model:     chat.Model.String,
 			Object:    chat.Object,
 			Choices:   choiceList,
+			Key:       int(message.Key),
 		}
 
 		messages = append(messages, chatMessage)

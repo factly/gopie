@@ -37,13 +37,13 @@ func (service *ChatService) GetChatMessages(chatID string) ([]*models.ChatMessag
 	return service.store.GetChatMessages(context.Background(), chatID)
 }
 
-func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
+func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage, keyStart int) ([]models.ChatMessage, error) {
 	for i, msg := range messages {
 		if msg.CreatedAt.IsZero() {
 			messages[i].CreatedAt = time.Now()
 		}
 	}
-	return service.store.AddNewMessage(ctx, chatID, messages)
+	return service.store.AddNewMessage(ctx, chatID, messages, keyStart)
 }
 
 func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams) (*models.D_ChatWithMessages, error) {
@@ -97,9 +97,9 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	var userMessage *models.ChatMessage
 	var filteredMessages []models.ChatMessage
 
-	for _, msg := range params.Messages {
+	for i, msg := range params.Messages {
+		msg.Key = i
 		if msg.Object == "user.message" {
-			fmt.Printf("Skipping message with role: %s\n", *msg.Choices[0].Delta.Role)
 			userMessage = &msg
 		}
 		if msg.Choices != nil && len(msg.Choices) > 0 {
@@ -120,4 +120,12 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	params.Messages = filteredMessages
 	chat, err := service.store.CreateChat(ctx, params)
 	return chat, err
+}
+
+func (service *ChatService) GetChatByID(chatID, userID string) (*models.Chat, error) {
+	chat, err := service.store.GetChatByID(context.Background(), chatID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting chat by ID: %w", err)
+	}
+	return chat, nil
 }

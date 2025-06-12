@@ -68,6 +68,7 @@ type ChatMessage struct {
 	CreatedAt time.Time `json:"created_at"`
 	Model     string    `json:"model"`
 	Object    string    `json:"object"`
+	Key       int       `json:"key"`
 }
 
 type ChatWithMessages struct {

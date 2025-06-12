@@ -354,6 +354,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	} else {
 		sessionID = pkg.RandomString(16) // Generate a random session ID if not provided
 	}
+	keyStart := len(prevMessages)
 
 	aiPrevMessages := make([]models.AIChatMessage, 0, len(prevMessages))
 	for _, msg := range prevMessages {
@@ -436,8 +437,6 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				},
 			},
 		}
-
-		fmt.Println("Messages to send:", *messages[0].Choices[0].Delta.Role)
 
 		for {
 			select {
@@ -538,7 +537,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 							return
 						}
 					} else {
-						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages)
+						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages, keyStart)
 						if err != nil {
 							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)
