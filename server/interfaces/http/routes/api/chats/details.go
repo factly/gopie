@@ -5,7 +5,7 @@ import "github.com/gofiber/fiber/v2"
 // GetChatDetails godoc
 // @Summary Get chat details
 // @Description Retrieve detailed information about a specific chat by its ID
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param chatID path string true "Chat ID"

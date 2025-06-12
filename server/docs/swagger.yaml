@@ -509,7 +509,7 @@ paths:
             type: object
       summary: Get chat details
       tags:
-      - chats
+      - chat
   /source/database/upload:
     post:
       consumes:

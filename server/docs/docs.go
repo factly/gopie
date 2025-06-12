@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
                 "summary": "Get chat details",
                 "parameters": [
