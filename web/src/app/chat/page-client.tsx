@@ -11,6 +11,9 @@ import {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { useDeleteChat } from "@/lib/mutations/chat";
+import { useChats } from "@/lib/queries/chat/list-chats";
+import { useChatMessages } from "@/lib/queries/chat/get-messages";
+import { useChatDetails } from "@/lib/queries/chat/get-chat";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,23 +35,9 @@ import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useProjects } from "@/lib/queries/project/list-projects";
-import { useDatasets } from "@/lib/queries/dataset/list-datasets";
-import { fetchChats } from "@/lib/queries/chat/list-chats";
 import { useQueryClient } from "@tanstack/react-query";
-import { Chat, Project, Dataset } from "@/lib/api-client";
 import { useSidebar } from "@/components/ui/sidebar";
 import { UIMessage } from "ai";
-
-interface CachedDatasetsData {
-  results: Dataset[];
-  total_count?: number;
-}
-
-interface DatasetsFetcherResponse {
-  results: Dataset[];
-  total_count?: number;
-}
 
 // Type for the messages from AI SDK
 interface ChatMessage {
@@ -69,149 +58,49 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(true);
-  const [allChats, setAllChats] = useState<
-    (Chat & {
-      datasetId: string;
-      datasetName: string;
-      projectId: string;
-      projectName: string;
-    })[]
-  >([]);
-
-  const { data: projectsData } = useProjects({
-    variables: { limit: 100 },
-  });
 
   const deleteChat = useDeleteChat();
 
+  // Use the infinite query hook
+  const {
+    data: chatsData,
+    isLoading,
+    error,
+  } = useChats({
+    variables: { userID: "1", limit: 100 }, // Using hardcoded user ID "1" as in the API route
+  });
+
+  // Flatten all pages, filter out null values, and sort chats by updated_at descending
+  const allChats = useMemo(() => {
+    if (!chatsData?.pages) return [];
+
+    const allResults = chatsData.pages.flatMap(
+      (page) => page.data.results || []
+    );
+
+    // Filter out null values and ensure we have valid chat objects
+    const validChats = allResults.filter(
+      (chat) =>
+        chat !== null &&
+        chat !== undefined &&
+        typeof chat === "object" &&
+        "updated_at" in chat
+    );
+
+    return validChats.sort((a, b) => {
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    });
+  }, [chatsData]);
+
+  // Show error toast if there's an error
   useEffect(() => {
-    async function fetchAllChats() {
-      if (!projectsData?.results?.length) return;
-
-      setIsLoading(true);
-      const projects = projectsData.results;
-      const allChatsArray: (Chat & {
-        datasetId: string;
-        datasetName: string;
-        projectId: string;
-        projectName: string;
-      })[] = [];
-
-      try {
-        const datasetPromises = projects.map(async (project) => {
-          try {
-            const queryKey = [
-              "datasets",
-              { projectId: project.id, limit: 100 },
-            ];
-            const cachedData =
-              queryClient.getQueryData<CachedDatasetsData>(queryKey);
-
-            if (cachedData && cachedData.results) {
-              return { projectId: project.id, data: cachedData };
-            }
-
-            const data = await queryClient.fetchQuery<DatasetsFetcherResponse>({
-              queryKey,
-              queryFn: async () => {
-                const result = await useDatasets.fetcher({
-                  projectId: project.id,
-                  limit: 100,
-                });
-                return result;
-              },
-            });
-
-            return { projectId: project.id, data };
-          } catch (error) {
-            console.error(
-              `Failed to fetch datasets for project ${project.id}:`,
-              error
-            );
-            return { projectId: project.id, data: { results: [] } };
-          }
-        });
-
-        const datasetResults = await Promise.all(datasetPromises);
-
-        for (const result of datasetResults) {
-          const projectId = result.projectId;
-          const data = result.data;
-          const project = projects.find((p) => p.id === projectId);
-
-          if (!project || !data || !Array.isArray(data.results)) {
-            continue;
-          }
-
-          for (const dataset of data.results) {
-            try {
-              const chatsResponse = await fetchChats(
-                { datasetId: dataset.id, limit: 50 },
-                { pageParam: 1 }
-              );
-
-              if (chatsResponse.data.results) {
-                const chatsWithContext = chatsResponse.data.results.map(
-                  (chat: Chat) => ({
-                    ...chat,
-                    datasetId: dataset.id,
-                    datasetName: dataset.alias,
-                    projectId: project.id,
-                    projectName: project.name,
-                  })
-                );
-                allChatsArray.push(...chatsWithContext);
-              }
-            } catch (error) {
-              console.error(
-                `Failed to fetch chats for dataset ${dataset.id}:`,
-                error
-              );
-            }
-          }
-        }
-
-        allChatsArray.sort((a, b) => {
-          return (
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-          );
-        });
-
-        setAllChats(allChatsArray);
-
-        if (selectedChatId) {
-          const selectedChat = allChatsArray.find(
-            (chat) => chat.id === selectedChatId
-          );
-          if (selectedChat) {
-            setSelectedContexts([
-              {
-                id: selectedChat.datasetId,
-                type: "dataset",
-                name: selectedChat.datasetName,
-                projectId: selectedChat.projectId,
-              },
-            ]);
-            setLinkedDatasetId(selectedChat.datasetId);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching all chats:", error);
-        toast.error("Failed to load chat history");
-      } finally {
-        setIsLoading(false);
-      }
+    if (error) {
+      console.error("Error fetching user chats:", error);
+      toast.error("Failed to load chat history");
     }
-
-    fetchAllChats();
-  }, [
-    projectsData?.results,
-    selectedChatId,
-    setSelectedContexts,
-    setLinkedDatasetId,
-    queryClient,
-  ]);
+  }, [error]);
 
   const handleStartNewChat = () => {
     selectChatForDataset(null, null, null);
@@ -222,15 +111,20 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
   const handleDeleteChat = async (chatId: string) => {
     try {
-      await deleteChat.mutateAsync(chatId);
-      setAllChats((prev) => {
-        const chatToDelete = prev.find((chat) => chat.id === chatId);
-        if (chatToDelete && chatToDelete.datasetId === selectedChatId) {
-          selectChatForDataset(null, null, null);
-        }
-        return prev.filter((chat) => chat.id !== chatId);
+      await deleteChat.mutateAsync({
+        chatId,
+        userId: "1", // Using hardcoded user ID "1" as in the API route
       });
+
+      // Invalidate the chats query to refetch data
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
+
+      // If the deleted chat was selected, clear the selection
+      const chatToDelete = allChats.find((chat) => chat.id === chatId);
+      if (chatToDelete && chatToDelete.id === selectedChatId) {
+        selectChatForDataset(null, null, null);
+      }
+
       if (selectedChatId === chatId) {
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
@@ -239,6 +133,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
           queryKey: ["chat-messages", { chatId }],
         });
       }
+
       toast.success("Chat deleted successfully");
     } catch {
       toast.error("Failed to delete chat");
@@ -342,16 +237,15 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                   onClick={() =>
                     handleSelectChat(
                       chat.id,
-                      chat.name || "New Chat",
-                      chat.datasetId,
-                      chat.datasetName,
-                      chat.projectId
+                      chat.title || "New Chat"
+                      // Note: Dataset and project info might need to be retrieved
+                      // from the chat messages or stored in the chat object
                     )
                   }
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="font-medium text-foreground/90 text-sm truncate max-w-[calc(100%-60px)]">
-                      {chat.name || "New Chat"}
+                      {chat.title || "New Chat"}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
@@ -370,8 +264,10 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       </Button>
                     </div>
                   </div>
+                  {/* Note: Since the API doesn't return dataset/project info with chats,
+                      we might need to fetch this information separately or store it differently */}
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    {chat.projectName} / {chat.datasetName}
+                    Chat History
                   </div>
                 </div>
               );
@@ -475,6 +371,10 @@ interface ChatViewProps {
   messages: UIMessage[];
   selectedContexts: ContextItem[];
   selectedChatId: string | null;
+  isLoadingChatMessages?: boolean;
+  hasNextPage?: boolean;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 const ChatView = React.memo(
@@ -485,6 +385,10 @@ const ChatView = React.memo(
     messages,
     selectedContexts,
     selectedChatId,
+    isLoadingChatMessages = false,
+    hasNextPage = false,
+    fetchNextPage,
+    isFetchingNextPage = false,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative">
       <div
@@ -498,7 +402,28 @@ const ChatView = React.memo(
         onScroll={handleScroll}
       >
         <div className="pb-32 pt-8">
-          {isLoading && messages.length === 0 ? (
+          {/* Load more button for pagination */}
+          {hasNextPage && selectedChatId && (
+            <div className="flex justify-center mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchNextPage}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load more messages"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {(isLoading || isLoadingChatMessages) && messages.length === 0 ? (
             <div className="space-y-4">
               <Skeleton className="h-16 w-3/4" />
               <Skeleton className="h-20 w-full" />
@@ -567,13 +492,18 @@ function ChatPageClient() {
   const router = useRouter();
   const initialMessage = searchParams.get("initialMessage");
   const contextData = searchParams.get("contextData");
+  const chatIdFromUrl = searchParams.get("chatId");
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
   const { open: isSidebarOpen, isMobile } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, selectedChatTitle, selectChatForDataset } =
-    useChatStore();
+  const {
+    selectedChatId,
+    selectedChatTitle,
+    selectChatForDataset,
+    setSelectedChatTitle,
+  } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
   const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
@@ -584,19 +514,73 @@ function ChatPageClient() {
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
   const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
+  // Helper function to update URL with chat state
+  const updateUrlWithChatId = useCallback(
+    (chatId: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (chatId) {
+        params.set("chatId", chatId);
+      } else {
+        params.delete("chatId");
+      }
+      router.replace(`/chat?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
+
+  // Fetch all chat messages when a chat is selected
+  const {
+    data: chatMessagesData,
+    isLoading: isLoadingChatMessages,
+    error: chatMessagesError,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useChatMessages({
+    variables: {
+      chatId: selectedChatId || "",
+      limit: 50,
+    },
+    enabled: !!selectedChatId,
+  });
+
+  const allChatMessages = useMemo(() => {
+    return chatMessagesData?.pages.flatMap((page) => page.data) || [];
+  }, [chatMessagesData]);
+
+  // Fetch chat details when a chat is selected
+  const {
+    data: chatDetailsData,
+    isLoading: isLoadingChatDetails,
+    error: chatDetailsError,
+  } = useChatDetails({
+    variables: {
+      chatId: selectedChatId || "",
+      userId: "1", // Using hardcoded user ID "1" as in other queries
+    },
+    enabled: !!selectedChatId,
+  });
+
+  const chatDetails = chatDetailsData?.data;
+
+  // State to control whether to use query messages or streaming messages
+  const [useStreamingMessages, setUseStreamingMessages] = useState(false);
+
   // AI SDK Chat Implementation
   const {
-    messages,
+    messages: streamingMessages,
     input,
     handleInputChange: sdkHandleInputChange,
     handleSubmit: sdkHandleSubmit,
     isLoading,
     stop,
     error,
+    data,
   } = useChat({
     api: "/api/chat",
     id: selectedChatId || undefined,
@@ -608,6 +592,8 @@ function ChatPageClient() {
       dataset_ids: selectedContexts
         .filter((ctx) => ctx.type === "dataset")
         .map((ctx) => ctx.id),
+      // Pass the current chat ID if available
+      chat_id: selectedChatId || undefined,
     },
     onResponse: async (response) => {
       console.log(
@@ -615,25 +601,124 @@ function ChatPageClient() {
         response.status,
         response.statusText
       );
+      // Switch to streaming messages when we start receiving a response
+      setUseStreamingMessages(true);
     },
-    onFinish: (message) => {
+    onFinish: (message, { usage, finishReason }) => {
       console.log("Chat message finished:", message);
+      console.log("Usage:", usage);
+      console.log("Finish reason:", finishReason);
+
       // Update latest assistant message for voice mode
       if (message.role === "assistant") {
         setLatestAssistantMessage(message.content);
         setIsStreaming(false);
       }
+
+      // If this was a new chat (no selectedChatId), invalidate chats list
+      if (!selectedChatId) {
+        console.log("New chat completed, invalidating chats list");
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+      }
+
+      // Switch back to query messages and invalidate to get the complete conversation
+      setUseStreamingMessages(false);
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", { chatId: selectedChatId }],
+      });
     },
     onError: (err) => {
       console.error("Chat error:", err);
       toast.error("Error processing chat: " + (err.message || "Unknown error"));
+      // Switch back to query messages on error
+      setUseStreamingMessages(false);
     },
+    initialMessages: [], // Don't use initial messages from query
   });
+
+  // Determine which messages to display
+  const displayMessages = useMemo(() => {
+    if (useStreamingMessages && streamingMessages.length > 0) {
+      // When streaming, combine query messages with streaming messages
+      return [...allChatMessages, ...streamingMessages];
+    }
+    // Otherwise, use query messages
+    return allChatMessages;
+  }, [useStreamingMessages, streamingMessages, allChatMessages]);
 
   // Log messages for debugging
   useEffect(() => {
-    console.log("Messages updated:", messages);
-  }, [messages]);
+    console.log("Messages updated:", displayMessages);
+  }, [displayMessages]);
+
+  // Log chat title state for debugging
+  useEffect(() => {
+    console.log("Chat title state:", {
+      selectedChatTitle,
+      selectedChatId,
+      isLoadingChatDetails,
+      chatDetails: chatDetails?.title,
+    });
+    if (chatDetails && chatDetails.title) {
+      selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
+      setSelectedChatTitle(chatDetails.title);
+    }
+  }, [
+    selectedChatTitle,
+    selectedChatId,
+    isLoadingChatDetails,
+    chatDetails,
+    selectChatForDataset,
+    linkedDatasetId,
+    setSelectedChatTitle,
+  ]);
+
+  // Handle data stream for chat creation
+  useEffect(() => {
+    if (data && data.length > 0) {
+      console.log("Data stream received:", data);
+
+      // Check for chat creation message
+      const chatCreatedData = data.find((item: unknown) => {
+        return (
+          typeof item === "object" &&
+          item !== null &&
+          "type" in item &&
+          (item as { type: string }).type === "chat-created"
+        );
+      }) as { type: string; chatId: string } | undefined;
+
+      if (chatCreatedData && !selectedChatId) {
+        console.log(
+          "New chat ID created via data stream:",
+          chatCreatedData.chatId
+        );
+        // Update the chat store with the new chat ID and a default title
+        const datasetContext = selectedContexts.find(
+          (ctx) => ctx.type === "dataset"
+        );
+        const chatTitle = `Chat ${new Date().toLocaleTimeString()}`;
+
+        selectChatForDataset(
+          datasetContext?.id || null,
+          chatCreatedData.chatId,
+          chatTitle
+        );
+
+        // Invalidate both chat list and messages queries to refresh
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+        queryClient.invalidateQueries({
+          queryKey: ["chat-messages", { chatId: chatCreatedData.chatId }],
+        });
+      }
+    }
+  }, [
+    data,
+    selectedChatId,
+    selectedContexts,
+    selectChatForDataset,
+    queryClient,
+  ]);
 
   // Display any errors in the UI
   useEffect(() => {
@@ -667,10 +752,69 @@ function ChatPageClient() {
     [sdkHandleSubmit]
   );
 
-  // Fetch projects for context selection
-  const { data: projectsData } = useProjects({
-    variables: { limit: 100 },
-  });
+  // Note: Projects are now fetched when needed for context selection
+
+  // Initialize chat from URL on first load
+  useEffect(() => {
+    if (!isInitialized && chatIdFromUrl && chatIdFromUrl !== selectedChatId) {
+      // Load the chat from URL if it's different from current selection
+      selectChatForDataset(null, chatIdFromUrl, "Loading...");
+      setIsInitialized(true);
+    } else if (!isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [chatIdFromUrl, selectedChatId, selectChatForDataset, isInitialized]);
+
+  // Update chat title when chat details are loaded
+  useEffect(() => {
+    console.log("Chat details effect:", {
+      chatDetails,
+      selectedChatId,
+      linkedDatasetId,
+      chatDetailsId: chatDetails?.id,
+      chatDetailsTitle: chatDetails?.title,
+    });
+
+    if (
+      chatDetails &&
+      selectedChatId &&
+      chatDetails.id === selectedChatId &&
+      chatDetails.title
+    ) {
+      console.log("Updating chat title to:", chatDetails.title);
+      selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
+    }
+  }, [chatDetails, selectedChatId, linkedDatasetId]);
+
+  // Handle chat details loading error
+  useEffect(() => {
+    if (chatDetailsError) {
+      console.error("Error fetching chat details:", chatDetailsError);
+      toast.error("Failed to load chat details");
+    }
+  }, [chatDetailsError]);
+
+  // Reset streaming state when switching chats
+  useEffect(() => {
+    setUseStreamingMessages(false);
+  }, [selectedChatId]);
+
+  // This logic is now handled by the useChatDetails hook above
+
+  // Handle chat messages loading error
+  useEffect(() => {
+    if (chatMessagesError) {
+      console.error("Error fetching chat messages:", chatMessagesError);
+      toast.error("Failed to load chat messages");
+    }
+  }, [chatMessagesError]);
+
+  // Update URL when selectedChatId changes
+  useEffect(() => {
+    if (isInitialized && selectedChatId !== chatIdFromUrl) {
+      updateUrlWithChatId(selectedChatId);
+    }
+  }, [selectedChatId, chatIdFromUrl, updateUrlWithChatId, isInitialized]);
 
   useEffect(() => {
     if (contextData) {
@@ -688,100 +832,17 @@ function ChatPageClient() {
   }, [contextData]);
 
   useEffect(() => {
-    if (selectedChatId && projectsData?.results?.length) {
-      const findChatDataset = async () => {
-        try {
-          const datasetPromises = projectsData.results.map(
-            async (project: Project) => {
-              try {
-                const queryKey = [
-                  "datasets",
-                  { projectId: project.id, limit: 100 },
-                ];
-                const cachedData =
-                  queryClient.getQueryData<CachedDatasetsData>(queryKey);
-                if (cachedData && cachedData.results) {
-                  return { project, data: cachedData };
-                }
-                const data =
-                  await queryClient.fetchQuery<DatasetsFetcherResponse>({
-                    queryKey,
-                    queryFn: async () => {
-                      const result = await useDatasets.fetcher({
-                        projectId: project.id,
-                        limit: 100,
-                      });
-                      return result;
-                    },
-                  });
-                return { project, data };
-              } catch (error) {
-                console.error(
-                  `Failed to fetch datasets for project ${project.id}:`,
-                  error
-                );
-                return { project, data: { results: [] } };
-              }
-            }
-          );
-
-          const datasetResults = await Promise.all(datasetPromises);
-
-          for (const result of datasetResults) {
-            const project = result.project;
-            const data = result.data;
-
-            if (!data || !Array.isArray(data.results)) {
-              continue;
-            }
-
-            for (const dataset of data.results) {
-              try {
-                const chatsResponse = await fetchChats(
-                  { datasetId: dataset.id, limit: 50 },
-                  { pageParam: 1 }
-                );
-
-                if (!chatsResponse?.data?.results?.length) continue;
-
-                const chatFound = chatsResponse.data.results.find(
-                  (chat: Chat) => chat.id === selectedChatId
-                );
-
-                if (chatFound) {
-                  const datasetContext: ContextItem = {
-                    id: dataset.id,
-                    type: "dataset",
-                    name: dataset.alias,
-                    projectId: project.id,
-                  };
-                  setSelectedContexts([datasetContext]);
-                  setLinkedDatasetId(dataset.id);
-                  return;
-                }
-              } catch (error) {
-                console.error(
-                  `Failed to fetch chats for dataset ${dataset.id}:`,
-                  error
-                );
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error finding dataset for chat:", error);
-        }
-      };
-      findChatDataset();
-    }
-  }, [selectedChatId, projectsData, queryClient]);
-
-  useEffect(() => {
     resetExecutedQueries();
   }, [selectedChatId, resetExecutedQueries]);
 
   // Handle initial message from URL params
   useEffect(() => {
-    if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
+    if (
+      initialMessage &&
+      !initialMessageSent &&
+      selectedContexts.length > 0 &&
+      isInitialized
+    ) {
       handleInputChange(initialMessage);
 
       // Create a submit event for the form
@@ -790,6 +851,7 @@ function ChatPageClient() {
 
       setInitialMessageSent(true);
 
+      // Only remove initialMessage and contextData, preserve chatId
       const params = new URLSearchParams(searchParams.toString());
       params.delete("initialMessage");
       params.delete("contextData");
@@ -803,6 +865,7 @@ function ChatPageClient() {
     handleSubmit,
     router,
     searchParams,
+    isInitialized,
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -826,7 +889,7 @@ function ChatPageClient() {
         }
       }
     }
-  }, [messages]);
+  }, [displayMessages]);
 
   const handleSelectContext = useCallback((context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
@@ -884,14 +947,14 @@ function ChatPageClient() {
   const showSqlButton = useMemo(() => {
     return (
       selectedChatId &&
-      messages.some(
-        (msg) =>
+      displayMessages.some(
+        (msg: UIMessage) =>
           msg.role === "assistant" &&
           typeof msg.content === "string" &&
           msg.content.toLowerCase().includes("sql")
       )
     );
-  }, [selectedChatId, messages]);
+  }, [selectedChatId, displayMessages]);
 
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
@@ -909,7 +972,11 @@ function ChatPageClient() {
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
                   >
-                    {selectedChatTitle ? selectedChatTitle : "Chat"}
+                    {isLoadingChatDetails && selectedChatId
+                      ? "Loading..."
+                      : selectedChatTitle
+                      ? selectedChatTitle
+                      : "Chat"}
                   </TabsTrigger>
                   <TabsTrigger
                     value="history"
@@ -953,9 +1020,13 @@ function ChatPageClient() {
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
                     isLoading={isLoading}
-                    messages={messages}
+                    messages={displayMessages}
                     selectedContexts={selectedContexts}
                     selectedChatId={selectedChatId}
+                    isLoadingChatMessages={isLoadingChatMessages}
+                    hasNextPage={hasNextPage}
+                    fetchNextPage={fetchNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
                   />
                 </div>
               </TabsContent>
