@@ -46,5 +46,5 @@ type ChatStoreRepository interface {
 	GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error)
 
 	GetChatMessages(ctx context.Context, chatID string) ([]*models.ChatMessage, error)
-	AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage, keyStart int) ([]models.ChatMessage, error)
+	AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error)
 }

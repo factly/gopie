@@ -10,10 +10,11 @@ where created_by = $1;
 
 -- name: CreateChat :one
 insert into chats (
+  id, 
   title,
   created_by
 ) values (
-  $1, $2
+  $1, $2, $3
 )
 returning *;
 
@@ -39,10 +40,9 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model,
-  key
+  model
 ) values (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4
 )
 returning *;
 

@@ -25,21 +25,23 @@ func (q *Queries) CountChatsByUser(ctx context.Context, createdBy pgtype.Text) (
 
 const createChat = `-- name: CreateChat :one
 insert into chats (
+  id, 
   title,
   created_by
 ) values (
-  $1, $2
+  $1, $2, $3
 )
 returning id, title, created_at, updated_at, created_by
 `
 
 type CreateChatParams struct {
+	ID        string
 	Title     pgtype.Text
 	CreatedBy pgtype.Text
 }
 
 func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, createChat, arg.Title, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createChat, arg.ID, arg.Title, arg.CreatedBy)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
@@ -56,20 +58,18 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model,
-  key
+  model
 ) values (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4
 )
-returning id, key, chat_id, choices, object, model, created_at
+returning id, chat_id, choices, object, model, created_at
 `
 
 type CreateChatMessageParams struct {
-	ChatID  pgtype.UUID
+	ChatID  string
 	Choices []byte
 	Object  string
 	Model   pgtype.Text
-	Key     int32
 }
 
 func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error) {
@@ -78,12 +78,10 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 		arg.Choices,
 		arg.Object,
 		arg.Model,
-		arg.Key,
 	)
 	var i ChatMessage
 	err := row.Scan(
 		&i.ID,
-		&i.Key,
 		&i.ChatID,
 		&i.Choices,
 		&i.Object,
@@ -100,7 +98,7 @@ and created_by = $2
 `
 
 type DeleteChatParams struct {
-	ID        pgtype.UUID
+	ID        string
 	CreatedBy pgtype.Text
 }
 
@@ -116,7 +114,7 @@ and created_by = $2
 `
 
 type GetChatByIdParams struct {
-	ID        pgtype.UUID
+	ID        string
 	CreatedBy pgtype.Text
 }
 
@@ -134,12 +132,12 @@ func (q *Queries) GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat,
 }
 
 const getChatMessages = `-- name: GetChatMessages :many
-select id, key, chat_id, choices, object, model, created_at from chat_messages
+select id, chat_id, choices, object, model, created_at from chat_messages
 where chat_id = $1
 order by created_at asc
 `
 
-func (q *Queries) GetChatMessages(ctx context.Context, chatID pgtype.UUID) ([]ChatMessage, error) {
+func (q *Queries) GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error) {
 	rows, err := q.db.Query(ctx, getChatMessages, chatID)
 	if err != nil {
 		return nil, err
@@ -150,7 +148,6 @@ func (q *Queries) GetChatMessages(ctx context.Context, chatID pgtype.UUID) ([]Ch
 		var i ChatMessage
 		if err := rows.Scan(
 			&i.ID,
-			&i.Key,
 			&i.ChatID,
 			&i.Choices,
 			&i.Object,
@@ -182,7 +179,7 @@ order by m.created_at asc
 `
 
 type GetChatWithMessagesRow struct {
-	ID               pgtype.UUID
+	ID               string
 	Title            pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
@@ -194,7 +191,7 @@ type GetChatWithMessagesRow struct {
 	MessageCreatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) GetChatWithMessages(ctx context.Context, id pgtype.UUID) ([]GetChatWithMessagesRow, error) {
+func (q *Queries) GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error) {
 	rows, err := q.db.Query(ctx, getChatWithMessages, id)
 	if err != nil {
 		return nil, err
@@ -269,13 +266,13 @@ update chat_messages
 set choices = $2
 where id = $1
 and chat_id = $3
-returning id, key, chat_id, choices, object, model, created_at
+returning id, chat_id, choices, object, model, created_at
 `
 
 type UpdateChatMessageParams struct {
 	ID      pgtype.UUID
 	Choices []byte
-	ChatID  pgtype.UUID
+	ChatID  string
 }
 
 func (q *Queries) UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error) {
@@ -283,7 +280,6 @@ func (q *Queries) UpdateChatMessage(ctx context.Context, arg UpdateChatMessagePa
 	var i ChatMessage
 	err := row.Scan(
 		&i.ID,
-		&i.Key,
 		&i.ChatID,
 		&i.Choices,
 		&i.Object,
@@ -302,7 +298,7 @@ returning id, title, created_at, updated_at, created_by
 `
 
 type UpdateChatTitleParams struct {
-	ID        pgtype.UUID
+	ID        string
 	Title     pgtype.Text
 	CreatedBy pgtype.Text
 }

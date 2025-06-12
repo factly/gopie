@@ -18,6 +18,7 @@ import (
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -352,9 +353,17 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 			})
 		}
 	} else {
-		sessionID = pkg.RandomString(16) // Generate a random session ID if not provided
+		sessionUUID, err := uuid.NewV6()
+		if err != nil {
+			h.logger.Error("Error generating new session ID", zap.Error(err))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Failed to generate session ID",
+				"message": err.Error(),
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+		sessionID = sessionUUID.String()
 	}
-	keyStart := len(prevMessages)
 
 	aiPrevMessages := make([]models.AIChatMessage, 0, len(prevMessages))
 	for _, msg := range prevMessages {
@@ -386,44 +395,11 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		h.logger.Debug("SSE: Connection established, starting stream.", zap.String("session_id", sessionID))
 
-		// Send initial OpenAI-compatible chunk with session ID
-		// initEvent := map[string]interface{}{
-		// 	"id":      sessionID,
-		// 	"object":  "chat.completion.chunk",
-		// 	"created": time.Now().Unix(),
-		// 	"model":   body.Model,
-		// 	"choices": []map[string]interface{}{
-		// 		{
-		// 			"index": 0,
-		// 			"delta": map[string]interface{}{
-		// 				"role": "assistant",
-		// 			},
-		// 			"finish_reason": nil,
-		// 		},
-		// 	},
-		// }
-		// initData, marshalErr := json.Marshal(initEvent)
-		// if marshalErr != nil {
-		// 	h.logger.Error("SSE: Failed to marshal init event", zap.Error(marshalErr), zap.String("session_id", sessionID))
-		// 	fmt.Fprintf(w, "data: {\"error\":\"internal server error preparing stream\"}\n\n")
-		// 	w.Flush()
-		// 	return
-		// }
-		// if _, err := fmt.Fprintf(w, "data: %s\n\n", initData); err != nil {
-		// 	h.logger.Error("SSE: Error writing init event to stream", zap.Error(err), zap.String("session_id", sessionID))
-		// 	return
-		// }
-		// if err := w.Flush(); err != nil {
-		// 	h.logger.Error("SSE: Error flushing init event", zap.Error(err), zap.String("session_id", sessionID))
-		// 	return
-		// }
-
 		assistantMessageBuilder := strings.Builder{}
 		assistantMessage := models.ChatMessage{}
 		role := "user"
 		messages := []models.ChatMessage{
 			{
-				ID:        sessionID,
 				CreatedAt: time.Now(),
 				Model:     body.Model,
 				Object:    "user.message",
@@ -451,6 +427,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				// accumulate assistant messages
 				var data models.ChatMessage
 				_ = json.Unmarshal(dataChunk, &data)
+				data.ID = sessionID
 
 				if data.Choices != nil && len(data.Choices) > 0 &&
 					data.Choices[0].Delta.Role != nil &&
@@ -478,23 +455,8 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				} else {
 					messages = append(messages, data)
 				}
-				var jsonObj interface{}
 
-				trimmedChunk := bytes.TrimSpace(dataChunk)
-				if len(trimmedChunk) > 0 && (trimmedChunk[0] == '{' || trimmedChunk[0] == '[') {
-					if err := json.Unmarshal(trimmedChunk, &jsonObj); err == nil {
-						compactData, marshalErr := json.Marshal(jsonObj)
-						if marshalErr == nil {
-							dataToSend = compactData
-						} else {
-							h.logger.Error("SSE: Failed to re-marshal JSON data", zap.Error(marshalErr), zap.String("session_id", sessionID))
-						}
-					} else {
-						h.logger.Warn("SSE: Invalid JSON data received", zap.Error(err), zap.String("session_id", sessionID))
-					}
-				} else {
-					h.logger.Debug("SSE: Non-JSON data chunk received", zap.String("session_id", sessionID))
-				}
+				dataToSend, _ = json.Marshal(data)
 
 				if _, err := fmt.Fprintf(w, "data: %s\n\n", dataToSend); err != nil {
 					h.logger.Error("SSE: Error writing data to stream", zap.Error(err), zap.String("session_id", sessionID))
@@ -520,6 +482,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					var err error
 					if chatIdHeader == "" {
 						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
+							ID:        sessionID,
 							Messages:  messages,
 							CreatedBy: userID,
 						})
@@ -537,7 +500,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 							return
 						}
 					} else {
-						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages, keyStart)
+						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages)
 						if err != nil {
 							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)
