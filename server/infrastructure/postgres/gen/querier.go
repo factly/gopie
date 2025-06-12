@@ -28,7 +28,7 @@ type Querier interface {
 	DeleteDataset(ctx context.Context, id string) error
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
-	DeleteProject(ctx context.Context, id string) error
+	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID pgtype.UUID) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id pgtype.UUID) ([]GetChatWithMessagesRow, error)
