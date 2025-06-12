@@ -12,7 +12,7 @@ import (
 func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error) {
 	c, err := s.q.GetChatById(ctx, gen.GetChatByIdParams{
 		ID:        pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
-		CreatedBy: pgtype.Text{String: userID, Valid: false},
+		CreatedBy: pgtype.Text{String: userID, Valid: true},
 	})
 	if err != nil {
 		return nil, err

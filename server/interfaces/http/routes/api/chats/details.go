@@ -14,7 +14,7 @@ import "github.com/gofiber/fiber/v2"
 // @Failure 400 {object} map[string]interface{} "Bad request - Chat ID is required"
 // @Failure 401 {object} map[string]interface{} "Unauthorized - User ID is required"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
-// @Router /api/chats/{chatID} [get]
+// @Router /v1/api/chat/{chatID} [get]
 func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
 	if chatID == "" {

@@ -468,48 +468,6 @@ info:
   title: GoPie API
   version: "1.0"
 paths:
-  /api/chats/{chatID}:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve detailed information about a specific chat by its ID
-      parameters:
-      - description: Chat ID
-        in: path
-        name: chatID
-        required: true
-        type: string
-      - description: User ID
-        in: header
-        name: userID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Chat details retrieved successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request - Chat ID is required
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized - User ID is required
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get chat details
-      tags:
-      - chat
   /source/database/upload:
     post:
       consumes:
@@ -769,6 +727,47 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Delete chat
+      tags:
+      - chat
+    get:
+      consumes:
+      - application/json
+      description: Retrieve detailed information about a specific chat by its ID
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - description: User ID
+        in: header
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat details retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request - Chat ID is required
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - User ID is required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get chat details
       tags:
       - chat
   /v1/api/chat/{chatID}/messages:
