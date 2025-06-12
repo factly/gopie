@@ -11,14 +11,14 @@ import (
 // @Accept json
 // @Produce json
 // @Param chatID path string true "Chat ID" example:"550e8400-e29b-41d4-a716-446655440000"
-// @Param user-id header string true "User ID" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param x-user-id header string true "User ID" example:"550e8400-e29b-41d4-a716-446655440000"
 // @Success 204 "Chat deleted successfully"
 // @Failure 404 {object} responses.ErrorResponse "Chat not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /v1/api/chat/{chatID} [delete]
 func (h *httpHandler) deleteChat(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
-	userID := ctx.Get("user-id")
+	userID := ctx.Get("x-user-id")
 
 	err := h.chatSvc.DeleteChat(chatID, userID)
 	if err != nil {
