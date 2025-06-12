@@ -62,7 +62,7 @@ func (s *httpHandler) listUserChats(ctx *fiber.Ctx) error {
 	limit, page := pkg.ParseLimitAndPage(ctx.Query("limit"), ctx.Query("page"))
 
 	pagination.Limit = limit
-	pagination.Offset = page
+	pagination.Offset = (page - 1) * limit
 
 	chats, err := s.chatSvc.ListUserChats(userID, pagination)
 	if err != nil {
