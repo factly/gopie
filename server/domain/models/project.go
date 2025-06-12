@@ -30,6 +30,7 @@ type CreateProjectParams struct {
 	// Description of the project
 	Description string `json:"description" validate:"required" example:"This is a sample project description"`
 	CreatedBy   string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID       string `json:"orgId" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the project belongs
 }
 
 // UpdateProjectParams represents parameters for updating a project

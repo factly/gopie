@@ -18,6 +18,7 @@ import (
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
+	"github.com/factly/gopie/infrastructure/zitadel"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	"github.com/factly/gopie/interfaces/http/routes/api/ai"
@@ -54,7 +55,7 @@ func ServeHttp() error {
 	logger.Info("logger initialized")
 
 	// zitadel interceptor setup
-	// zitadel.SetupZitadelInterceptor(config, logger)
+	zitadel.SetupZitadelInterceptor(config, logger)
 
 	source := s3.NewS3SourceRepository(&config.S3, logger)
 	olap, err := duckdb.NewOlapDBDriver(&config.OlapDB, logger, &config.S3)

@@ -18,6 +18,7 @@ create table if not exists datasets(
 create table if not exists projects(
     id text primary key default uuid_generate_v4(),
     name text not null,
+    org_id text,
     description text default null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),

@@ -23,8 +23,8 @@ func (service *ProjectService) Create(params models.CreateProjectParams) (*model
 }
 
 // Details - Get project by id
-func (service *ProjectService) Details(id string) (*models.Project, error) {
-	return service.projectRepo.Details(context.Background(), id)
+func (service *ProjectService) Details(id, orgID string) (*models.Project, error) {
+	return service.projectRepo.Details(context.Background(), id, orgID)
 }
 
 // Update - Update project
@@ -33,17 +33,17 @@ func (service *ProjectService) Update(projectID string, params *models.UpdatePro
 }
 
 // Delete - Delete project
-func (service *ProjectService) Delete(id string) error {
-	return service.projectRepo.Delete(context.Background(), id)
+func (service *ProjectService) Delete(id, orgID string) error {
+	return service.projectRepo.Delete(context.Background(), id, orgID)
 }
 
 // List - Search projects
-func (service *ProjectService) List(query string, limit, offset int) (*models.PaginationView[*models.SearchProjectsResults], error) {
+func (service *ProjectService) List(query string, limit, offset int, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
-	return service.projectRepo.SearchProject(context.Background(), query, pagination)
+	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
 }
 
 type DatasetService struct {

@@ -8,7 +8,7 @@ create table if not exists chats (
     created_by text default null
 );
 
-CREATE index idx_chats_user_id on chats(created_by);
+create index idx_chats_user_id on chats(created_by);
 
 create table if not exists chat_messages (
     id uuid primary key default uuid_generate_v4(),

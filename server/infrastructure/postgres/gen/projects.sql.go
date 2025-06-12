@@ -16,9 +16,10 @@ insert into projects (
     name,
     description,
     created_by,
-    updated_by
-) values ($1, $2, $3, $4)
-returning id, name, description, created_at, updated_at, created_by, updated_by
+    updated_by,
+    org_id
+) values ($1, $2, $3, $4, $5)
+returning id, name, org_id, description, created_at, updated_at, created_by, updated_by
 `
 
 type CreateProjectParams struct {
@@ -26,6 +27,7 @@ type CreateProjectParams struct {
 	Description pgtype.Text
 	CreatedBy   pgtype.Text
 	UpdatedBy   pgtype.Text
+	OrgID       pgtype.Text
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -34,11 +36,13 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.Description,
 		arg.CreatedBy,
 		arg.UpdatedBy,
+		arg.OrgID,
 	)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.OrgID,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -49,28 +53,39 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 }
 
 const deleteProject = `-- name: DeleteProject :exec
-delete from projects where id = $1
+delete from projects where id = $1 and org_id = $2
 `
 
-func (q *Queries) DeleteProject(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, deleteProject, id)
+type DeleteProjectParams struct {
+	ID    string
+	OrgID pgtype.Text
+}
+
+func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) error {
+	_, err := q.db.Exec(ctx, deleteProject, arg.ID, arg.OrgID)
 	return err
 }
 
 const getProject = `-- name: GetProject :one
 select 
-    p.id, p.name, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
+    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
     array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
 from projects p
 left join project_datasets pd on p.id = pd.project_id
-where p.id = $1
+where p.id = $1 and p.org_id = $2
 group by p.id
 `
+
+type GetProjectParams struct {
+	ID    string
+	OrgID pgtype.Text
+}
 
 type GetProjectRow struct {
 	ID           string
 	Name         string
+	OrgID        pgtype.Text
 	Description  pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -80,12 +95,13 @@ type GetProjectRow struct {
 	DatasetCount int64
 }
 
-func (q *Queries) GetProject(ctx context.Context, id string) (GetProjectRow, error) {
-	row := q.db.QueryRow(ctx, getProject, id)
+func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProjectRow, error) {
+	row := q.db.QueryRow(ctx, getProject, arg.ID, arg.OrgID)
 	var i GetProjectRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.OrgID,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -98,11 +114,11 @@ func (q *Queries) GetProject(ctx context.Context, id string) (GetProjectRow, err
 }
 
 const getProjectsCount = `-- name: GetProjectsCount :one
-select count(*) from projects
+select count(*) from projects where org_id = $1
 `
 
-func (q *Queries) GetProjectsCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, getProjectsCount)
+func (q *Queries) GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, getProjectsCount, orgID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -110,26 +126,28 @@ func (q *Queries) GetProjectsCount(ctx context.Context) (int64, error) {
 
 const searchProjects = `-- name: SearchProjects :many
 SELECT 
-    p.id, p.name, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
+    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
     count(pd.dataset_id) as dataset_count
 FROM projects p
 LEFT JOIN project_datasets pd ON p.id = pd.project_id
 WHERE 
-    p.name ILIKE concat('%', $1::text, '%') OR
-    p.description ILIKE concat('%', $1::text, '%')
+    p.org_id = $1 AND
+    (p.name ILIKE concat('%', $2::text, '%') OR
+    p.description ILIKE concat('%', $2::text, '%'))
 GROUP BY p.id
 ORDER BY 
     CASE 
-        WHEN p.name ILIKE concat($1::text, '%') THEN 1
-        WHEN p.name ILIKE concat('%', $1::text, '%') THEN 2
+        WHEN p.name ILIKE concat($2::text, '%') THEN 1
+        WHEN p.name ILIKE concat('%', $2::text, '%') THEN 2
         ELSE 3
     END,
     p.created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $4
 `
 
 type SearchProjectsParams struct {
-	Column1 string
+	OrgID   pgtype.Text
+	Column2 string
 	Limit   int32
 	Offset  int32
 }
@@ -137,6 +155,7 @@ type SearchProjectsParams struct {
 type SearchProjectsRow struct {
 	ID           string
 	Name         string
+	OrgID        pgtype.Text
 	Description  pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -146,7 +165,12 @@ type SearchProjectsRow struct {
 }
 
 func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error) {
-	rows, err := q.db.Query(ctx, searchProjects, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, searchProjects,
+		arg.OrgID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +181,7 @@ func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.OrgID,
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -179,16 +204,19 @@ update projects
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by)
-where id = $4
-returning id, name, description, created_at, updated_at, created_by, updated_by
+    updated_by = coalesce($3, updated_by),
+    org_id = coalesce($4, org_id)
+where id = $5 and org_id = $6
+returning id, name, org_id, description, created_at, updated_at, created_by, updated_by
 `
 
 type UpdateProjectParams struct {
 	Name        string
 	Description pgtype.Text
 	UpdatedBy   pgtype.Text
+	OrgID       pgtype.Text
 	ID          string
+	OrgID_2     pgtype.Text
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -196,12 +224,15 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.Name,
 		arg.Description,
 		arg.UpdatedBy,
+		arg.OrgID,
 		arg.ID,
+		arg.OrgID_2,
 	)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.OrgID,
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,

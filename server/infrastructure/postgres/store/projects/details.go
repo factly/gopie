@@ -7,12 +7,17 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
-func (s *PostgresProjectStore) Details(ctx context.Context, id string) (*models.Project, error) {
-	p, err := s.q.GetProject(ctx, id)
+func (s *PostgresProjectStore) Details(ctx context.Context, id, orgID string) (*models.Project, error) {
+	p, err := s.q.GetProject(ctx, gen.GetProjectParams{
+		ID:    id,
+		OrgID: pgtype.Text{String: orgID, Valid: true},
+	})
 	if err != nil {
 		s.logger.Error("Error fetching project", zap.Error(err))
 		if errors.Is(err, pgx.ErrNoRows) {

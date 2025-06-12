@@ -6,12 +6,14 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
-func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, pagination models.Pagination) (*models.PaginationView[*models.SearchProjectsResults], error) {
+func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	ps, err := s.q.SearchProjects(ctx, gen.SearchProjectsParams{
-		Column1: query,
+		OrgID:   pgtype.Text{String: orgID, Valid: true},
+		Column2: query,
 		Limit:   int32(pagination.Limit),
 		Offset:  int32(pagination.Offset),
 	})
@@ -31,7 +33,7 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 			DatasetCount: int(p.DatasetCount),
 		})
 	}
-	count, err := s.q.GetProjectsCount(ctx)
+	count, err := s.q.GetProjectsCount(ctx, pgtype.Text{String: orgID, Valid: true})
 	if err != nil {
 		s.logger.Error("Error fetching projects count", zap.Error(err))
 		return nil, err

@@ -15,10 +15,10 @@ type StoreRepository interface {
 
 type ProjectStoreRepository interface {
 	Create(ctx context.Context, params models.CreateProjectParams) (*models.Project, error)
-	Delete(ctx context.Context, id string) error
-	Details(ctx context.Context, id string) (*models.Project, error)
+	Delete(ctx context.Context, id string, orgID string) error
+	Details(ctx context.Context, id string, orgID string) (*models.Project, error)
 	Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error)
-	SearchProject(ctx context.Context, query string, pagination models.Pagination) (*models.PaginationView[*models.SearchProjectsResults], error)
+	SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error)
 }
 
 type DatasetStoreRepository interface {

@@ -12,7 +12,10 @@ import (
 
 func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatasetParams) (*models.Dataset, error) {
 	// check if project exists
-	project, err := s.q.GetProject(ctx, params.ProjectID)
+	project, err := s.q.GetProject(ctx, gen.GetProjectParams{
+		ID:    params.ProjectID,
+		OrgID: pgtype.Text{String: params.OrgID, Valid: true},
+	})
 	if err != nil {
 		s.logger.Error("Error fetching project", zap.Error(err))
 		return nil, err

@@ -66,6 +66,7 @@ type FailedDatasetUpload struct {
 type Project struct {
 	ID          string
 	Name        string
+	OrgID       pgtype.Text
 	Description pgtype.Text
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
