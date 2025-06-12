@@ -15,13 +15,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 export function SidebarUser() {
   const { data: session, status } = useAuthSession();
   const isLoading = status === "loading";
-  const { open: isSidebarOpen } = useSidebar();
   const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const user = session?.user;
 
@@ -42,72 +40,47 @@ export function SidebarUser() {
   // If auth is disabled, show a disabled auth indicator
   if (isAuthDisabled) {
     return (
-      <div
-        className={cn(
-          "flex items-center",
-          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
-        )}
-      >
+      <div className={cn("flex items-center", "px-3 py-2")}>
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-amber-100 text-amber-800">
             AD
           </AvatarFallback>
         </Avatar>
-        {isSidebarOpen && (
-          <div className="ml-2 text-sm font-medium">Auth Disabled</div>
-        )}
+        <div className="ml-2 text-sm font-medium">Auth Disabled</div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div
-        className={cn(
-          "flex items-center",
-          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
-        )}
-      >
+      <div className={cn("flex items-center", "px-3 py-2")}>
         <Avatar className="h-8 w-8">
           <AvatarFallback>...</AvatarFallback>
         </Avatar>
-        {isSidebarOpen && <div className="ml-2 h-4 w-24 bg-gray-200 rounded" />}
+        <div className="ml-2 h-4 w-24 bg-gray-200 rounded" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div
-        className={cn(
-          "flex items-center",
-          isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
-        )}
-      >
-        {isSidebarOpen ? (
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/api/auth/signin">Sign In</Link>
-          </Button>
-        ) : (
-          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href="/api/auth/signin">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>SI</AvatarFallback>
-              </Avatar>
-            </Link>
-          </Button>
-        )}
+      <div className={cn("flex items-center", "px-3 py-2")}>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/api/auth/signin">Sign In</Link>
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <Link href="/api/auth/signin">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>SI</AvatarFallback>
+            </Avatar>
+          </Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "flex items-center",
-        isSidebarOpen ? "px-3 py-2" : "px-2 py-2 justify-center"
-      )}
-    >
+    <div className={cn("flex items-center", "px-3 py-2")}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -136,16 +109,14 @@ export function SidebarUser() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {isSidebarOpen && (
-        <div className="ml-2 flex flex-col items-start gap-0.5 overflow-hidden">
-          <p className="text-sm font-medium leading-none truncate max-w-[140px]">
-            {user.name}
-          </p>
-          <p className="text-xs text-muted-foreground truncate max-w-[140px]">
-            {user.email}
-          </p>
-        </div>
-      )}
+      <div className="ml-2 flex flex-col items-start gap-0.5 overflow-hidden">
+        <p className="text-sm font-medium leading-none truncate max-w-[140px]">
+          {user.name}
+        </p>
+        <p className="text-xs text-muted-foreground truncate max-w-[140px]">
+          {user.email}
+        </p>
+      </div>
     </div>
   );
 }

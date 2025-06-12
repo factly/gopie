@@ -638,7 +638,7 @@ function ChatPageClient() {
   const queryClient = useQueryClient();
   const [inputValue, setInputValue] = useState("");
 
-  const { setOpen, open: isSidebarOpen, isMobile } = useSidebar();
+  const { open: isSidebarOpen, isMobile } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { selectedChatId, selectedChatTitle, selectChatForDataset } =
     useChatStore();
@@ -790,9 +790,9 @@ function ChatPageClient() {
     resetExecutedQueries();
   }, [selectedChatId, resetExecutedQueries]);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
+  // useEffect(() => {
+  //   setOpen(false);
+  // }, [setOpen]);
 
   const sendMessage = useCallback(
     async (message: string) => {
