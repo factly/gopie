@@ -65,10 +65,12 @@ CREATE index idx_chats_user_id on chats(user_id);
 
 create table if not exists chat_messages (
     id uuid primary key default uuid_generate_v4(),
+    key integer not null,
     chat_id uuid not null references chats(id) on delete cascade,
     choices jsonb not null,
     object text not null,
     model text default null,
-    created_at timestamp with time zone default now()
+    created_at timestamp with time zone default now(),
+    unique (chat_id, key)
 );
 

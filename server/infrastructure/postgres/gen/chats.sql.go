@@ -56,11 +56,12 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model
+  model,
+  key
 ) values (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
-returning id, chat_id, choices, object, model, created_at
+returning id, key, chat_id, choices, object, model, created_at
 `
 
 type CreateChatMessageParams struct {
@@ -68,6 +69,7 @@ type CreateChatMessageParams struct {
 	Choices []byte
 	Object  string
 	Model   pgtype.Text
+	Key     int32
 }
 
 func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error) {
@@ -76,10 +78,12 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 		arg.Choices,
 		arg.Object,
 		arg.Model,
+		arg.Key,
 	)
 	var i ChatMessage
 	err := row.Scan(
 		&i.ID,
+		&i.Key,
 		&i.ChatID,
 		&i.Choices,
 		&i.Object,
@@ -105,8 +109,32 @@ func (q *Queries) DeleteChat(ctx context.Context, arg DeleteChatParams) error {
 	return err
 }
 
+const getChatById = `-- name: GetChatById :one
+select id, title, created_at, updated_at, created_by from chats
+where id = $1
+and created_by = $2
+`
+
+type GetChatByIdParams struct {
+	ID        pgtype.UUID
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat, error) {
+	row := q.db.QueryRow(ctx, getChatById, arg.ID, arg.CreatedBy)
+	var i Chat
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const getChatMessages = `-- name: GetChatMessages :many
-select id, chat_id, choices, object, model, created_at from chat_messages
+select id, key, chat_id, choices, object, model, created_at from chat_messages
 where chat_id = $1
 order by created_at asc
 `
@@ -122,6 +150,7 @@ func (q *Queries) GetChatMessages(ctx context.Context, chatID pgtype.UUID) ([]Ch
 		var i ChatMessage
 		if err := rows.Scan(
 			&i.ID,
+			&i.Key,
 			&i.ChatID,
 			&i.Choices,
 			&i.Object,
@@ -240,7 +269,7 @@ update chat_messages
 set choices = $2
 where id = $1
 and chat_id = $3
-returning id, chat_id, choices, object, model, created_at
+returning id, key, chat_id, choices, object, model, created_at
 `
 
 type UpdateChatMessageParams struct {
@@ -254,6 +283,7 @@ func (q *Queries) UpdateChatMessage(ctx context.Context, arg UpdateChatMessagePa
 	var i ChatMessage
 	err := row.Scan(
 		&i.ID,
+		&i.Key,
 		&i.ChatID,
 		&i.Choices,
 		&i.Object,

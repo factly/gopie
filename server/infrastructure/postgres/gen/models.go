@@ -18,6 +18,7 @@ type Chat struct {
 
 type ChatMessage struct {
 	ID        pgtype.UUID
+	Key       int32
 	ChatID    pgtype.UUID
 	Choices   []byte
 	Object    string

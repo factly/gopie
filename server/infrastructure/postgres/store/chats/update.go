@@ -33,7 +33,7 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 	}, nil
 }
 
-func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
+func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage, keyStart int) ([]models.ChatMessage, error) {
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		s.logger.Error("Error starting transaction", zap.Error(err))
@@ -43,13 +43,15 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 	qtx := s.q.WithTx(tx)
 	var chatMessages []models.ChatMessage
 
-	for _, msg := range messages {
+	for i, msg := range messages {
+		msg.Key = keyStart + i
 		choiceBytes, _ := json.Marshal(msg.Choices)
 		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
 			ChatID:  pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
 			Choices: choiceBytes,
 			Object:  msg.Object,
 			Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
+			Key:     int32(msg.Key),
 		})
 		if err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))
@@ -67,6 +69,7 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 			Model:     chat.Model.String,
 			Object:    chat.Object,
 			Choices:   choiceList,
+			Key:       int(msg.Key),
 		}
 		chatMessages = append(chatMessages, chatMessage)
 	}
