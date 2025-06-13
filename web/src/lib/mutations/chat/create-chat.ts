@@ -17,9 +17,9 @@ interface CreateChatParams {
 export const useCreateChat = createMutation({
   mutationKey: ["create-chat"],
   mutationFn: async (
-    params: CreateChatParams,
+    params: CreateChatParams
   ): Promise<{ data: ChatWithMessages }> => {
-    const response = await apiClient.post("v1/api/chats", {
+    const response = await apiClient.post("v1/api/chat", {
       json: {
         chat_id: params.chatId,
         dataset_id: params.datasetId,

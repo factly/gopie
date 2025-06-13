@@ -254,9 +254,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/api/chats": {
+        "/v1/api/chat": {
             "get": {
-                "description": "Get all chats associated with a specific dataset with pagination",
+                "description": "Get all chats for a specific user with pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -264,15 +264,15 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
-                "summary": "List dataset chats",
+                "summary": "List user chats",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Dataset ID",
-                        "name": "dataset_id",
-                        "in": "query",
+                        "description": "User ID",
+                        "name": "x-user-id",
+                        "in": "header",
                         "required": true
                     },
                     {
@@ -292,36 +292,24 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Dataset chats retrieved successfully",
+                        "description": "User chats retrieved successfully",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/responses.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.Chat"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Dataset ID is required",
+                    "401": {
+                        "description": "Unauthorized - User ID is required",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -335,7 +323,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
                 "summary": "Create or continue chat",
                 "parameters": [
@@ -351,45 +339,36 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Chat created/continued successfully",
+                        "description": "Chat created/continued successfully\" // Ensure models.ChatWithMessages is the correct response structure",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/responses.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.ChatWithMessages"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/models.ChatWithMessages"
                         }
                     },
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "404": {
                         "description": "Dataset not found",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
             }
         },
-        "/v1/api/chats/agent": {
+        "/v1/api/chat/completions": {
             "post": {
                 "description": "Create a streaming chat conversation with an AI agent about datasets or projects",
                 "consumes": [
@@ -399,7 +378,7 @@ const docTemplate = `{
                     "text/event-stream"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
                 "summary": "Chat with AI agent",
                 "parameters": [
@@ -411,6 +390,31 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/chats.chatWithAgentRequestBody"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "x-user-id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated project IDs",
+                        "name": "x-project-ids",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated dataset IDs",
+                        "name": "x-dataset-ids",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat ID for continuing existing conversation",
+                        "name": "x-chat-id",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -426,6 +430,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized - User ID is required",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -435,7 +445,66 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/api/chats/{chatID}": {
+        "/v1/api/chat/{chatID}": {
+            "get": {
+                "description": "Retrieve detailed information about a specific chat by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Get chat details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat ID",
+                        "name": "chatID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chat details retrieved successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Chat ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Delete an entire chat and all its messages",
                 "consumes": [
@@ -445,7 +514,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
                 "summary": "Delete chat",
                 "parameters": [
@@ -454,6 +523,13 @@ const docTemplate = `{
                         "description": "Chat ID",
                         "name": "chatID",
                         "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user-id",
+                        "in": "header",
                         "required": true
                     }
                 ],
@@ -476,7 +552,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/api/chats/{chatID}/messages": {
+        "/v1/api/chat/{chatID}/messages": {
             "get": {
                 "description": "Get all messages from a specific chat with pagination",
                 "consumes": [
@@ -486,7 +562,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "chat"
                 ],
                 "summary": "Get chat messages",
                 "parameters": [
@@ -532,54 +608,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/api/chats/{chatID}/messages/{messageID}": {
-            "delete": {
-                "description": "Delete a specific message from a chat",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chats"
-                ],
-                "summary": "Delete chat message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Chat ID",
-                        "name": "chatID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Message ID",
-                        "name": "messageID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Message deleted successfully"
-                    },
-                    "404": {
-                        "description": "Message not found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
                         }
                     },
                     "500": {
@@ -1463,43 +1491,30 @@ const docTemplate = `{
             }
         },
         "chats.chatWithAgentRequestBody": {
-            "description": "Request body for creating a streaming chat conversation with an AI agent",
+            "description": "Request body for creating a streaming chat conversation with an AI agent - OpenAI compatible",
             "type": "object",
             "required": [
                 "messages"
             ],
             "properties": {
-                "chat_id": {
-                    "description": "Chat ID for the conversation (optional)",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "dataset_ids": {
-                    "description": "Array of dataset IDs to analyze",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "['550e8400-e29b-41d4-a716-446655440000']"
-                    ]
+                "max_tokens": {
+                    "type": "integer"
                 },
                 "messages": {
-                    "description": "Array of chat messages",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.AIChatMessage"
                     }
                 },
-                "project_ids": {
-                    "description": "Array of project IDs to analyze",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "['550e8400-e29b-41d4-a716-446655440000']"
-                    ]
+                "model": {
+                    "type": "string"
+                },
+                "stream": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "temperature": {
+                    "type": "number"
                 }
             }
         },
@@ -1587,31 +1602,17 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Chat": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "models.ChatMessage": {
             "type": "object",
             "properties": {
-                "content": {
+                "chat_id": {
                     "type": "string"
+                },
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Choice"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -1619,7 +1620,13 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "role": {
+                "key": {
+                    "type": "integer"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
                     "type": "string"
                 }
             }
@@ -1642,12 +1649,27 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.ChatMessage"
                     }
                 },
-                "name": {
+                "title": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
                 }
+            }
+        },
+        "models.Choice": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "$ref": "#/definitions/models.Delta"
+                },
+                "finish_reason": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "logprobs": {}
             }
         },
         "models.Dataset": {
@@ -1724,6 +1746,38 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Delta": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "function_call": {
+                    "$ref": "#/definitions/models.FunctionCall"
+                },
+                "refusal": {},
+                "role": {
+                    "type": "string"
+                },
+                "tool_calls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ToolCall"
+                    }
+                }
+            }
+        },
+        "models.FunctionCall": {
+            "type": "object",
+            "properties": {
+                "arguments": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Project": {
             "description": "Project model",
             "type": "object",
@@ -1760,6 +1814,34 @@ const docTemplate = `{
                 "updated_by": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "models.ToolCall": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/models.ToolFunction"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ToolFunction": {
+            "type": "object",
+            "properties": {
+                "arguments": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

@@ -2,6 +2,7 @@ package portkey
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/factly/gopie/domain"
@@ -34,7 +35,6 @@ func (t *defaultHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 
 // Create new portkey client from config
 func NewPortKeyClient(cfg config.PortKeyConfig, logger *logger.Logger) *PortkeyClient {
-
 	// set portkey config in for request
 	header := http.Header{}
 	header.Set("x-portkey-virtual-key", cfg.VirtualKey)
@@ -71,20 +71,19 @@ func (c *PortkeyClient) GenerateResponse(content string) (string, error) {
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: []openai.ChatCompletionMessage{msgs},
-		// Temperature: 0.2,
 	})
 	if err != nil {
+		c.logger.Error("failed to generate sql from portkey", zap.Error(err))
 		return "", err
 	}
 
 	if len(res.Choices) == 0 {
 		return "", domain.ErrFailedToGenerateSql
 	}
-	c.logger.Debug("generated sql from portkey", zap.String("sql", res.Choices[0].Message.Content))
 	return res.Choices[0].Message.Content, nil
 }
 
-func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.ChatMessage) (string, error) {
+func (c *PortkeyClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.D_ChatMessage) (string, error) {
 	c.logger.Debug("generating sql from portkey")
 	msgs := make([]openai.ChatCompletionMessage, 0, len(prevMsgs)+1)
 	for _, msg := range prevMsgs {
@@ -120,18 +119,18 @@ func (c *PortkeyClient) GenerateSql(content string) (string, error) {
 	return c.GenerateResponse(content)
 }
 
-func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.ChatMessage) (*models.AiChatResponse, error) {
+func (c *PortkeyClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.D_ChatMessage) (*models.D_AiChatResponse, error) {
 	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessages)
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.AiChatResponse{
+	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
 }
 
-func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*models.AiChatResponse, error) {
+func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*models.D_AiChatResponse, error) {
 	systemPrompt := `
 	!! IMPORTANT: In the response only provide the title of the content. Do not provide any other information. !!
 		Generate a title for the following content:
@@ -142,7 +141,53 @@ func (c *PortkeyClient) GenerateTitle(ctx context.Context, content string) (*mod
 		return nil, err
 	}
 
-	return &models.AiChatResponse{
+	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
+}
+
+func (c *PortkeyClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error) {
+	systemPrompt := `
+	!! IMPORTANT: In the response only provide the column descriptions in JSON format. Do not provide any other information. !!
+	Valid format is:
+	{
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	Invalid format is:
+	response: {
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	or
+	result: {
+		"column_name_1": "description of column 1",
+		"column_name_2": "description of column 2",
+		...
+		"column_name_n": "description of column n"
+	}
+	and so on.
+
+	Generate column descriptions for the following rows and summary:
+	Rows: ` + rows + `
+	Summary: ` + summary
+
+	resp, err := c.GenerateResponse(systemPrompt)
+	if err != nil {
+		return nil, err
+	}
+	// Parse the response into a map
+	descriptions := make(map[string]string)
+	// conver string to map
+	err = json.Unmarshal([]byte(resp), &descriptions)
+	if err != nil {
+		c.logger.Error("failed to parse column descriptions", zap.Error(err))
+		return nil, err
+	}
+
+	return descriptions, nil
 }

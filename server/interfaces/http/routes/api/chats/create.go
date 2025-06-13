@@ -3,17 +3,22 @@ package chats
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
+	// Assuming these are your correct project paths
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -38,15 +43,15 @@ type chatRequestBody struct {
 
 // @Summary Create or continue chat
 // @Description Create a new chat or continue an existing chat conversation with AI about a dataset
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param body body chatRequestBody true "Chat request parameters"
-// @Success 201 {object} responses.SuccessResponse{data=models.ChatWithMessages} "Chat created/continued successfully"
-// @Failure 400 {object} responses.ErrorResponse "Invalid request body"
-// @Failure 404 {object} responses.ErrorResponse "Dataset not found"
-// @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/chats [post]
+// @Success 201 {object} models.ChatWithMessages "Chat created/continued successfully" // Ensure models.ChatWithMessages is the correct response structure
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 404 {object} map[string]interface{} "Dataset not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /v1/api/chat [post]
 func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	body := chatRequestBody{}
 	if err := ctx.BodyParser(&body); err != nil {
@@ -61,14 +66,14 @@ func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
-			"message": "Invalid request body",
+			"message": "Invalid request body (validation failed)",
 			"code":    fiber.StatusBadRequest,
 		})
 	}
 
 	if len(body.Messages) == 0 {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "messages field is required",
+			"error":   "messages field is required and cannot be empty",
 			"message": "Invalid request body",
 			"code":    fiber.StatusBadRequest,
 		})
@@ -77,98 +82,99 @@ func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 
 	dataset, err := h.datasetSvc.Details(body.DatasetID)
 	if err != nil {
-		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+		if domain.IsStoreError(err) && errors.Is(err, domain.ErrRecordNotFound) {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   err.Error(),
 				"message": "Dataset not found",
 				"code":    fiber.StatusNotFound,
 			})
 		}
+		h.logger.Error("Error fetching dataset details", zap.Error(err), zap.String("dataset_id", body.DatasetID))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching dataset",
+			"error":   "Failed to fetch dataset details",
+			"message": err.Error(), // Provide error message for better debugging on client side if appropriate
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
 
 	schemaRes, err := h.olapSvc.GetTableSchema(dataset.Name)
 	if err != nil {
-		h.logger.Error("Error getting table schema", zap.Error(err))
-		if strings.Contains(err.Error(), "does not exist") {
+		h.logger.Error("Error getting table schema", zap.Error(err), zap.String("table_name", dataset.Name))
+		if strings.Contains(err.Error(), "does not exist") { // Simpler check
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error":   domain.ErrTableNotFound.Error(),
-				"message": fmt.Sprintf("Table '%s' not found", dataset.Name),
+				"message": fmt.Sprintf("Table '%s' not found in OLAP source", dataset.Name),
 				"code":    fiber.StatusNotFound,
 			})
 		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error validating table",
+			"error":   "Failed to get table schema",
+			"message": err.Error(),
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
 
 	randomNRows, err := h.olapSvc.ExecuteQuery(fmt.Sprintf("select * from %s order by random() limit 50", dataset.Name))
 	if err != nil {
-		h.logger.Error("Error fetching sample data", zap.Error(err))
+		h.logger.Error("Error fetching sample data", zap.Error(err), zap.String("table_name", dataset.Name))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching sample data from table",
+			"error":   "Failed to fetch sample data",
+			"message": err.Error(),
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
 
-	schemaJson := convertSchemaToJson(schemaRes)
-	rowsCsv := convertRowsToCSV(randomNRows)
+	schemaJson := convertSchemaToJson(h.logger, schemaRes)
+	rowsCsv := convertRowsToCSV(h.logger, randomNRows)
 
 	prompt := fmt.Sprintf(`
-    You are a DuckDB and data expert. Review the user's question and respond appropriately:
+You are a DuckDB and data expert. Review the user's question and respond appropriately:
 
-    1. For SQL queries, format your response as:
-    ---SQL---
-    <SQL query here without semicolon>
-    ---SQL---
+1. For SQL queries, format your response as:
+---SQL---
+<SQL query here without semicolon>
+---SQL---
 
-    2. For non-SQL responses (like general questions), format as:
-    ---TEXT---
-    <Your response here>
-    ---TEXT---
+2. For non-SQL responses (like general questions), format as:
+---TEXT---
+<Your response here>
+---TEXT---
 
-	USER QUESTION: %s 
+USER QUESTION: %s 
 
-	TABLE NAME: %s
+TABLE NAME: %s
 
-	TABLE SCHEMA IN JSON: 
-	---------------------
-	%s
-	---------------------
+TABLE SCHEMA IN JSON: 
+---------------------
+%s
+---------------------
 
-	RANDOM 50 ROWS IN CSV: 
-	---------------------
-	%s
-	---------------------
+RANDOM 50 ROWS IN CSV: 
+---------------------
+%s
+---------------------
 
-	RULES FOR SQL QUERIES:
-	- No semicolon at end of query
-	- Use double quotes for table/column names, single quotes for values
-	- Exclude rows with state='All India' when filtering/aggregating by state 
-	- For share/percentage calculations, calculate as: (value/total)*100
-	- Exclude 'Total' category from categorical field calculations
-	- Include units/unit column when displaying value columns
-	- Use Levenshtein for fuzzy string matching
-	- Use ILIKE for case-insensitive matching
-	- Generate only read queries (SELECT)
-		`, body.Messages[len(body.Messages)-1].Content, dataset.Name, schemaJson, rowsCsv)
+RULES FOR SQL QUERIES:
+- No semicolon at end of query
+- Use double quotes for table/column names, single quotes for values
+- Exclude rows with state='All India' when filtering/aggregating by state 
+- For share/percentage calculations, calculate as: (value/total)*100
+- Exclude 'Total' category from categorical field calculations
+- Include units/unit column when displaying value columns
+- Use Levenshtein for fuzzy string matching
+- Use ILIKE for case-insensitive matching
+- Generate only read queries (SELECT)
+        `, body.Messages[len(body.Messages)-1].Content, dataset.Name, schemaJson, rowsCsv)
 
-	messages := make([]models.ChatMessage, 0, len(body.Messages))
+	messages := make([]models.D_ChatMessage, 0, len(body.Messages))
 	for _, m := range body.Messages {
-		messages = append(messages, models.ChatMessage{
+		messages = append(messages, models.D_ChatMessage{
 			Content: m.Content,
 			Role:    m.Role,
 		})
 	}
 
-	chatWithMessages, err := h.chatSvc.ChatWithAi(&models.ChatWithAiParams{
+	chatWithMessages, err := h.chatSvc.D_ChatWithAi(&models.D_ChatWithAiParams{
 		ChatID:    body.ChatID,
 		DatasetID: body.DatasetID,
 		CreatedBy: body.CreatedBy,
@@ -176,9 +182,10 @@ func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 		Prompt:    prompt,
 	})
 	if err != nil {
+		h.logger.Error("Error chatting with AI", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error chating with AI",
+			"error":   "Failed to chat with AI",
+			"message": err.Error(),
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
@@ -188,138 +195,383 @@ func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	})
 }
 
-func convertSchemaToJson(schema any) string {
-	schemaJson, _ := json.Marshal(schema)
-	return string(schemaJson)
+func convertSchemaToJson(logger *logger.Logger, schema any) string {
+	schemaJsonBytes, err := json.Marshal(schema)
+	if err != nil {
+		logger.Error("Failed to marshal schema to JSON", zap.Error(err))
+		return "{}" // Return empty JSON object on error
+	}
+	return string(schemaJsonBytes)
 }
 
-func convertRowsToCSV(rows []map[string]any) string {
+func convertRowsToCSV(logger *logger.Logger, rows []map[string]any) string {
+	if len(rows) == 0 {
+		return "" // No data, no CSV
+	}
+
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
-	// Write CSV headers (column names)
-	if len(rows) > 0 {
-		headers := make([]string, 0, len(rows[0]))
-		for key := range rows[0] {
-			headers = append(headers, key)
-		}
-		writer.Write(headers)
-
-		// Write CSV data rows
-		for _, row := range rows {
-			record := make([]string, 0, len(row))
-			for _, value := range row {
-				record = append(record, fmt.Sprintf("%v", value))
+	headers := make([]string, 0, len(rows[0]))
+	headerMap := make(map[string]bool) // To keep track of added headers
+	for key := range rows[0] {
+		headers = append(headers, key)
+		headerMap[key] = true
+	}
+	for i := 1; i < len(rows); i++ {
+		for key := range rows[i] {
+			if !headerMap[key] {
+				headers = append(headers, key)
+				headerMap[key] = true
 			}
-			writer.Write(record)
+		}
+	}
+
+	if err := writer.Write(headers); err != nil {
+		logger.Error("Failed to write CSV headers", zap.Error(err))
+		return "" // Error writing headers
+	}
+
+	for _, row := range rows {
+		record := make([]string, len(headers))
+		for i, header := range headers {
+			if value, ok := row[header]; ok {
+				record[i] = fmt.Sprintf("%v", value)
+			} else {
+				record[i] = ""
+			}
+		}
+		if err := writer.Write(record); err != nil {
+			logger.Error("Failed to write CSV record", zap.Error(err))
 		}
 	}
 
 	writer.Flush()
+	if err := writer.Error(); err != nil {
+		logger.Error("CSV writer error after flush", zap.Error(err))
+		return "" // Return empty string on final writer error
+	}
 	return buf.String()
 }
 
-// chatWithAgentRequestBody represents the request body for chat interaction with an AI agent
-// @Description Request body for creating a streaming chat conversation with an AI agent
+// @Description Request body for creating a streaming chat conversation with an AI agent - OpenAI compatible
 type chatWithAgentRequestBody struct {
-	// Array of dataset IDs to analyze
-	DatasetIDs []string `json:"dataset_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
-	// Array of project IDs to analyze
-	ProjectIDs []string `json:"project_ids" validate:"omitempty" example:"['550e8400-e29b-41d4-a716-446655440000']"`
-	// Array of chat messages
-	Messages []models.AIChatMessage `json:"messages" validate:"required"`
-	// Chat ID for the conversation (optional)
-	ChatID string `json:"chat_id" validate:"omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Model       string                 `json:"model"`
+	Messages    []models.AIChatMessage `json:"messages" validate:"required,dive"`
+	Stream      bool                   `json:"stream" validate:"omitempty" default:"true"`
+	Temperature float64                `json:"temperature" validate:"omitempty"`
+	MaxTokens   int                    `json:"max_tokens" validate:"omitempty"`
 }
 
 // @Summary Chat with AI agent
 // @Description Create a streaming chat conversation with an AI agent about datasets or projects
-// @Tags chats
+// @Tags chat
 // @Accept json
 // @Produce text/event-stream
 // @Param body body chatWithAgentRequestBody true "Chat request parameters"
+// @Param x-user-id header string true "User ID" example:"550e8400-e29b-41d4-a716-446655440000"
+// @Param x-project-ids header string false "Comma-separated project IDs" example:"550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+// @Param x-dataset-ids header string false "Comma-separated dataset IDs" example:"550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001"
+// @Param x-chat-id header string false "Chat ID for continuing existing conversation" example:"550e8400-e29b-41d4-a716-446655440000"
 // @Success 200 {string} string "Server-sent events stream started"
 // @Failure 400 {string} string "Invalid request body"
+// @Failure 401 {string} string "Unauthorized - User ID is required"
 // @Failure 500 {string} string "Internal server error"
-// @Router /v1/api/chats/agent [post]
+// @Router /v1/api/chat/completions [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
-	// Parse the request body using Fiber's BodyParser
+	userID := ctx.Get("x-user-id")
+	if userID == "" {
+		h.logger.Error("Unauthorized request: Missing userID header")
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":   "Unauthorized",
+			"message": "User ID is required",
+			"code":    fiber.StatusUnauthorized,
+		})
+	}
+
 	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).SendString("Invalid request body")
+		h.logger.Error("Error parsing request body for agent chat", zap.Error(err))
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Invalid request body",
+			"message": err.Error(),
+			"code":    fiber.StatusBadRequest,
+		})
 	}
 
-	// Validate the input
-	if len(body.DatasetIDs) == 0 && len(body.ProjectIDs) == 0 {
-		return ctx.Status(fiber.StatusBadRequest).SendString("At least one dataset_id or project_id is required")
+	if err := pkg.ValidateRequest(h.logger, &body); err != nil {
+		h.logger.Error("Invalid request body for agent chat", zap.Error(err))
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"message": err.Error(),
+			"code":    fiber.StatusBadRequest,
+		})
+	}
+
+	// Retrieve identifiers from headers
+	projectIDs := ctx.Get("x-project-ids")
+	datasetIDs := ctx.Get("x-dataset-ids")
+
+	if projectIDs == "" && datasetIDs == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Missing identifiers",
+			"message": "At least one x-project-ids or x-dataset-ids header is required",
+			"code":    fiber.StatusBadRequest,
+		})
 	}
 	if len(body.Messages) == 0 {
-		return ctx.Status(fiber.StatusBadRequest).SendString("messages field is required")
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Missing messages",
+			"message": "messages field is required and cannot be empty",
+			"code":    fiber.StatusBadRequest,
+		})
 	}
 
-	// Set headers for SSE
 	ctx.Set("Content-Type", "text/event-stream")
 	ctx.Set("Cache-Control", "no-cache")
 	ctx.Set("Connection", "keep-alive")
 	ctx.Set("Transfer-Encoding", "chunked")
 	ctx.Set("X-Accel-Buffering", "no")
 
-	// Create buffered channels for communication to prevent blocking
-	dataChan := make(chan []byte, 10)
-	errChan := make(chan error, 10)
+	dataChan := make(chan []byte, 10) // Buffered channel
+	errChan := make(chan error, 1)    // Buffered channel for errors
 
-	params := &models.AIAgentChatParams{
-		ProjectIDs: body.ProjectIDs,
-		DatasetIDs: body.DatasetIDs,
-		Messages:   body.Messages,
-		DataChan:   dataChan,
-		ErrChan:    errChan,
+	chatIdHeader := ctx.Get("x-chat-id")
+	sessionID := chatIdHeader
+
+	prevMessages := []*models.ChatMessage{}
+	var err error
+	if sessionID != "" {
+		// Fetch previous messages if chat ID is provided
+		prevMessages, err = h.chatSvc.GetChatMessages(sessionID)
+		if err != nil {
+			h.logger.Error("Error fetching previous chat messages", zap.Error(err), zap.String("session_id", sessionID))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Failed to fetch previous chat messages",
+				"message": err.Error(),
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+	} else {
+		sessionUUID, err := uuid.NewV6()
+		if err != nil {
+			h.logger.Error("Error generating new session ID", zap.Error(err))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Failed to generate session ID",
+				"message": err.Error(),
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+		sessionID = sessionUUID.String()
 	}
 
-	ctx.Status(fiber.StatusOK).Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-		go h.chatSvc.ChatWithAiAgent(ctx.Context(), params)
+	aiPrevMessages := make([]models.AIChatMessage, 0, len(prevMessages))
+	for _, msg := range prevMessages {
+		if msg.Choices != nil && len(msg.Choices) > 0 {
+			if msg.Choices[0].Delta.Role != nil && msg.Choices[0].Delta.Content != nil {
+				aiPrevMessages = append(aiPrevMessages, models.AIChatMessage{
+					Role:    *msg.Choices[0].Delta.Role,
+					Content: *msg.Choices[0].Delta.Content,
+				})
+			}
+		}
+	}
 
-		h.logger.Debug("SSE connection established")
+	params := &models.AIAgentChatParams{
+		ProjectIDs:   projectIDs,
+		DatasetIDs:   datasetIDs,
+		Messages:     body.Messages,
+		PrevMessages: aiPrevMessages,
+		DataChan:     dataChan,
+		ErrChan:      errChan,
+	}
+
+	ctx.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+		defer func() {
+			h.logger.Info("SSE: Stream writer finished.", zap.String("session_id", sessionID))
+		}()
+
+		go h.chatSvc.ChatWithAiAgent(context.Background(), params)
+
+		h.logger.Debug("SSE: Connection established, starting stream.", zap.String("session_id", sessionID))
+
+		assistantMessageBuilder := strings.Builder{}
+		assistantMessage := models.ChatMessage{}
+		role := "user"
+		messages := []models.ChatMessage{
+			{
+				CreatedAt: time.Now(),
+				Model:     body.Model,
+				Object:    "user.message",
+				Choices: []models.Choice{
+					{
+						Delta: models.Delta{
+							Role:    &role,
+							Content: &body.Messages[len(body.Messages)-1].Content,
+						},
+					},
+				},
+			},
+		}
 
 		for {
 			select {
-			case data := <-dataChan:
-				_, err := fmt.Fprintf(w, "data: %s\n\n", string(data))
-				if err != nil {
-					h.logger.Error("Error writing to response stream", zap.Error(err))
+			case dataChunk, ok := <-dataChan:
+				if !ok { // dataChan was closed by the service
+					h.logger.Info("SSE: Data channel closed by service.", zap.String("session_id", sessionID))
 					return
 				}
 
-				// Flush to ensure the message is sent immediately
-				err = w.Flush()
-				if err != nil {
-					h.logger.Error("Error while flushing stream", zap.Error(err))
+				dataToSend := dataChunk
+
+				// accumulate assistant messages
+				var data models.ChatMessage
+				_ = json.Unmarshal(dataChunk, &data)
+				data.ID = sessionID
+
+				if data.Choices != nil && len(data.Choices) > 0 &&
+					data.Choices[0].Delta.Role != nil &&
+					*data.Choices[0].Delta.Role == "assistant" {
+					fmt.Println("Received assistant message chunk:", *data.Choices[0].Delta.Content)
+					assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
+					s := assistantMessageBuilder.String()
+					assistantMessage = models.ChatMessage{
+						ID:        data.ID,
+						CreatedAt: data.CreatedAt,
+						Model:     data.Model,
+						Object:    data.Object,
+						Choices: []models.Choice{
+							{
+								Delta: models.Delta{
+									Role:         data.Choices[0].Delta.Role,
+									FunctionCall: data.Choices[0].Delta.FunctionCall,
+									Refusal:      data.Choices[0].Delta.Refusal,
+									ToolCalls:    data.Choices[0].Delta.ToolCalls,
+									Content:      &s,
+								},
+							},
+						},
+					}
+				} else {
+					messages = append(messages, data)
+				}
+
+				dataToSend, _ = json.Marshal(data)
+
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", dataToSend); err != nil {
+					h.logger.Error("SSE: Error writing data to stream", zap.Error(err), zap.String("session_id", sessionID))
+					return
+				}
+				if err := w.Flush(); err != nil {
+					h.logger.Error("SSE: Error flushing data to stream", zap.Error(err), zap.String("session_id", sessionID))
 					return
 				}
 
-			case err, ok := <-errChan:
+			case serviceErr, ok := <-errChan:
 				if !ok {
-					// Error channel was closed
-					h.logger.Info("Error channel closed")
+					h.logger.Info("SSE: Error channel closed by service", zap.String("session_id", sessionID))
 					return
 				}
 
-				if errors.Is(err, io.EOF) {
-					// End of data from service
-					h.logger.Debug("Chat completed successfully")
+				if errors.Is(serviceErr, io.EOF) {
+
+					// save the messages to database
+					messages = append(messages, assistantMessage)
+
+					var chatWithMessages *models.ChatWithMessages
+					var err error
+					if chatIdHeader == "" {
+						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
+							ID:        sessionID,
+							Messages:  messages,
+							CreatedBy: userID,
+						})
+						if err != nil {
+							h.logger.Error("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
+							errorEvent := pkg.ChatMessageFromError(err)
+							errorEvent.ID = sessionID // Ensure session ID is set for error event
+							errorData, marshalErr := json.Marshal(errorEvent)
+							if marshalErr != nil {
+								h.logger.Error("SSE: Failed to marshal error event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+							}
+							if _, err := fmt.Fprintf(w, "data: %s\n\n", errorData); err != nil {
+								h.logger.Error("SSE: Error writing error event to stream", zap.Error(err), zap.String("session_id", sessionID))
+							}
+							return
+						}
+					} else {
+						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages)
+						if err != nil {
+							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
+							errorEvent := pkg.ChatMessageFromError(err)
+							errorEvent.ID = sessionID // Ensure session ID is set for error event
+							errorData, marshalErr := json.Marshal(errorEvent)
+							if marshalErr != nil {
+								h.logger.Error("SSE: Failed to marshal error event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+							}
+							if _, err := fmt.Fprintf(w, "data: %s\n\n", errorData); err != nil {
+								h.logger.Error("SSE: Error writing error event to stream", zap.Error(err), zap.String("session_id", sessionID))
+							}
+							return
+						}
+					}
+					if sessionID == "" {
+						sessionID = chatWithMessages.ID
+					}
+
+					h.logger.Info("SSE: Stream finished successfully (EOF received).", zap.String("session_id", sessionID))
+					doneEvent := map[string]interface{}{
+						"id":      sessionID,
+						"object":  "chat.completion.chunk",
+						"created": time.Now().Unix(),
+						"model":   body.Model,
+						"choices": []map[string]interface{}{
+							{
+								"index":         0,
+								"delta":         map[string]interface{}{},
+								"finish_reason": "stop",
+							},
+						},
+					}
+					doneData, marshalErr := json.Marshal(doneEvent)
+					if marshalErr != nil {
+						h.logger.Error("SSE: Failed to marshal final done event", zap.Error(marshalErr), zap.String("session_id", sessionID))
+					} else {
+						if _, err := fmt.Fprintf(w, "data: %s\n\n", doneData); err != nil {
+							h.logger.Error("SSE: Error writing final done event to stream", zap.Error(err), zap.String("session_id", sessionID))
+						}
+					}
+					if _, err := fmt.Fprintf(w, "data: [DONE]\n\n"); err != nil {
+						h.logger.Error("SSE: Error writing [DONE] marker to stream", zap.Error(err), zap.String("session_id", sessionID))
+					}
+					if err := w.Flush(); err != nil {
+						h.logger.Error("SSE: Error flushing [DONE] marker", zap.Error(err), zap.String("session_id", sessionID))
+					}
+
 					return
 				}
 
-				if err != nil {
-					h.logger.Error("Error in chat service", zap.Error(err))
-					fmt.Fprintf(w, "data: {\"event_node\":\"error\",\"message\":\"%s\"}\n\n", err.Error())
-					w.Flush()
-					return
+				h.logger.Error("SSE: Error received from AI service.", zap.Error(serviceErr), zap.String("session_id", sessionID))
+				errorPayload := map[string]interface{}{
+					"error": map[string]interface{}{
+						"message": serviceErr.Error(),
+						"type":    "service_error",
+					},
 				}
-
+				errorData, marshalErr := json.Marshal(errorPayload)
+				if marshalErr != nil {
+					h.logger.Error("SSE: Failed to marshal service error payload", zap.Error(marshalErr), zap.String("session_id", sessionID))
+					fmt.Fprintf(w, "data: {\"error\": \"An unrecoverable error occurred in the service.\"}\n\n")
+				} else {
+					fmt.Fprintf(w, "data: %s\n\n", errorData)
+				}
+				fmt.Fprintf(w, "data: [DONE]\n\n")
+				if err := w.Flush(); err != nil {
+					h.logger.Error("SSE: Error flushing service error message and [DONE] marker", zap.Error(err), zap.String("session_id", sessionID))
+				}
+				return
 			}
 		}
 	}))
-
 	return nil
 }

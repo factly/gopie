@@ -10,11 +10,13 @@ import (
 type PostgresChatStore struct {
 	q      *gen.Queries
 	logger *logger.Logger
+	db     *pgxpool.Pool
 }
 
 func NewChatStoreRepository(db interface{}, logger *logger.Logger) repositories.ChatStoreRepository {
 	return &PostgresChatStore{
 		q:      gen.New(db.(*pgxpool.Pool)),
 		logger: logger,
+		db:     db.(*pgxpool.Pool),
 	}
 }

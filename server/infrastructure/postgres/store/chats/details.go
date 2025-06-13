@@ -2,29 +2,24 @@ package chats
 
 import (
 	"context"
-	"errors"
 
-	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/jackc/pgx/v5/pgtype"
-	"go.uber.org/zap"
 )
 
-func (s *PostgresChatStore) DetailsChat(ctx context.Context, id string) (*models.Chat, error) {
-	c, err := s.q.GetChat(ctx, pgtype.UUID{Bytes: uuid.MustParse(id), Valid: true})
+func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error) {
+	c, err := s.q.GetChatById(ctx, gen.GetChatByIdParams{
+		ID:        chatID,
+		CreatedBy: pgtype.Text{String: userID, Valid: true},
+	})
 	if err != nil {
-		s.logger.Error("Error fetching chat", zap.Error(err))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrRecordNotFound
-		}
 		return nil, err
 	}
 
 	return &models.Chat{
-		ID:        c.ID.String(),
-		Name:      c.Name,
+		ID:        c.ID,
+		Title:     c.Title.String,
 		CreatedAt: c.CreatedAt.Time,
 		UpdatedAt: c.UpdatedAt.Time,
 		CreatedBy: c.CreatedBy.String,

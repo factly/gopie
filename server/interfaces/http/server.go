@@ -20,6 +20,7 @@ import (
 	"github.com/factly/gopie/infrastructure/s3"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
+	"github.com/factly/gopie/interfaces/http/routes/api/ai"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
@@ -95,7 +96,7 @@ func ServeHttp() error {
 		cors.Config{
 			AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
 			AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-			AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token",
+			AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id",
 			AllowCredentials: true,
 			MaxAge:           86400,
 		},
@@ -148,6 +149,7 @@ func ServeHttp() error {
 		)
 	}
 
+	ai.Routes(app.Group("/v1/api/ai"), aiService, logger)
 	api.Routes(app.Group("/v1/api"), olapService, aiService, datasetService, logger)
 	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
 		Logger:         logger,
@@ -155,7 +157,7 @@ func ServeHttp() error {
 		DatasetService: datasetService,
 		OlapService:    olapService,
 	})
-	chatApi.Routes(app.Group("/v1/api/chats"), chatApi.RouterParams{
+	chatApi.Routes(app.Group("/v1/api/chat"), chatApi.RouterParams{
 		Logger:         logger,
 		ChatService:    chatService,
 		DatasetService: datasetService,
