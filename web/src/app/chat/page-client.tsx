@@ -608,6 +608,7 @@ function ChatPageClient() {
       console.log("Chat message finished:", message);
       console.log("Usage:", usage);
       console.log("Finish reason:", finishReason);
+      console.log("Current selectedChatId when finishing:", selectedChatId);
 
       // Update latest assistant message for voice mode
       if (message.role === "assistant") {
@@ -677,39 +678,62 @@ function ChatPageClient() {
   useEffect(() => {
     if (data && data.length > 0) {
       console.log("Data stream received:", data);
+      console.log("Current selectedChatId in data effect:", selectedChatId);
 
-      // Check for chat creation message
-      const chatCreatedData = data.find((item: unknown) => {
+      // Check for chat creation message - look for the most recent one
+      const chatCreatedMessages = data.filter((item: unknown) => {
         return (
           typeof item === "object" &&
           item !== null &&
           "type" in item &&
           (item as { type: string }).type === "chat-created"
         );
-      }) as { type: string; chatId: string } | undefined;
+      }) as { type: string; chatId: string }[];
 
-      if (chatCreatedData && !selectedChatId) {
+      console.log("Found chat creation messages:", chatCreatedMessages);
+
+      // Get the latest chat creation message
+      const latestChatCreated =
+        chatCreatedMessages[chatCreatedMessages.length - 1];
+
+      if (latestChatCreated) {
         console.log(
-          "New chat ID created via data stream:",
-          chatCreatedData.chatId
-        );
-        // Update the chat store with the new chat ID and a default title
-        const datasetContext = selectedContexts.find(
-          (ctx) => ctx.type === "dataset"
-        );
-        const chatTitle = `Chat ${new Date().toLocaleTimeString()}`;
-
-        selectChatForDataset(
-          datasetContext?.id || null,
-          chatCreatedData.chatId,
-          chatTitle
+          "Processing chat creation data:",
+          latestChatCreated,
+          "Current selectedChatId:",
+          selectedChatId
         );
 
-        // Invalidate both chat list and messages queries to refresh
-        queryClient.invalidateQueries({ queryKey: ["chats"] });
-        queryClient.invalidateQueries({
-          queryKey: ["chat-messages", { chatId: chatCreatedData.chatId }],
-        });
+        if (!selectedChatId) {
+          console.log(
+            "New chat ID created via data stream:",
+            latestChatCreated.chatId
+          );
+          // Update the chat store with the new chat ID and a default title
+          const datasetContext = selectedContexts.find(
+            (ctx) => ctx.type === "dataset"
+          );
+          const chatTitle = `Chat ${new Date().toLocaleTimeString()}`;
+
+          selectChatForDataset(
+            datasetContext?.id || null,
+            latestChatCreated.chatId,
+            chatTitle
+          );
+
+          // Update URL with the new chat ID
+          updateUrlWithChatId(latestChatCreated.chatId);
+
+          // Invalidate both chat list and messages queries to refresh
+          queryClient.invalidateQueries({ queryKey: ["chats"] });
+          queryClient.invalidateQueries({
+            queryKey: ["chat-messages", { chatId: latestChatCreated.chatId }],
+          });
+        } else {
+          console.log(
+            "Chat ID already set, ignoring data stream chat creation"
+          );
+        }
       }
     }
   }, [
@@ -718,6 +742,7 @@ function ChatPageClient() {
     selectedContexts,
     selectChatForDataset,
     queryClient,
+    updateUrlWithChatId,
   ]);
 
   // Display any errors in the UI

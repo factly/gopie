@@ -44,9 +44,6 @@ export async function POST(req: Request) {
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
-        // Store chat ID for later use
-        let newChatId: string | null = null;
-
         // Stream the text response
         const result = streamText({
           model: openAI("chatgpt-4o-latest"),
@@ -72,21 +69,6 @@ export async function POST(req: Request) {
               );
             } else {
               console.log("📦 Other chunk:", chunk.type, chunk);
-
-              // Check if this chunk has finish_reason === "stop" and capture its ID
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const chunkData = chunk as Record<string, any>;
-              if (
-                chunkData.finish_reason === "stop" &&
-                chunkData.id &&
-                !chat_id
-              ) {
-                console.log(
-                  "🏁 Found event with stop reason, ID:",
-                  chunkData.id
-                );
-                newChatId = chunkData.id;
-              }
             }
           },
           onFinish: (result) => {
@@ -95,6 +77,15 @@ export async function POST(req: Request) {
             console.log("📊 Usage:", result.usage);
             console.log("🔧 Tool calls:", result.toolCalls?.length || 0);
             console.log("🔧 Tool results:", result.toolResults?.length || 0);
+
+            // Send chat ID immediately if this is a new chat
+            if (!chat_id && result.response?.id) {
+              console.log("💬 New chat created with ID:", result.response.id);
+              dataStream.writeData({
+                type: "chat-created",
+                chatId: result.response.id,
+              });
+            }
           },
           onStepFinish: (result) => {
             console.log("🔧 Step finish:", result);
@@ -160,15 +151,6 @@ export async function POST(req: Request) {
 
         console.log("📡 Merging AI stream into data stream");
         await result.mergeIntoDataStream(dataStream);
-
-        // Send chat ID as the last event if this is a new chat
-        if (newChatId) {
-          console.log("💬 New chat created with ID:", newChatId);
-          dataStream.writeData({
-            type: "chat-created",
-            chatId: newChatId,
-          });
-        }
       },
       onError: (error) => {
         console.error("Data stream error:", error);
