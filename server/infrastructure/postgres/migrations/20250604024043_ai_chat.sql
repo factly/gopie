@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 create table if not exists chats (
-    id text primary key default,
+    id text primary key default uuid_generate_v4(),
     title TEXT,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now(),
@@ -16,8 +16,7 @@ create table if not exists chat_messages (
     choices jsonb not null,
     object text not null,
     model text default null,
-    created_at timestamp with time zone default now(),
-    unique (chat_id, key)
+    created_at timestamp with time zone default now()
 );
 
 create index idx_chat_messages_chat_id on chat_messages(chat_id);
