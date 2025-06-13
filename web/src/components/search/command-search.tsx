@@ -17,7 +17,6 @@ import { useDatasets } from "@/lib/queries/dataset/list-datasets";
 import { DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useSidebar } from "../ui/sidebar";
 
 interface CommandSearchProps {
   projectId?: string;
@@ -72,8 +71,6 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
     setOpen(false);
   };
 
-  const { open: isSidebarOpen } = useSidebar();
-
   const highlightMatch = (text: string) => {
     if (!search) return text;
     const parts = text.split(new RegExp(`(${search})`, "gi"));
@@ -84,7 +81,7 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
         </span>
       ) : (
         part
-      ),
+      )
     );
   };
 
@@ -92,19 +89,15 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-2 rounded-md border bg-background shadow-sm ${
-          isSidebarOpen ? "px-3 py-2" : "p-2"
-        } text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring`}
+        className={`inline-flex items-center gap-2 rounded-md border bg-background shadow-sm ${"px-3 py-2"} text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring`}
       >
         <Search className="h-4 w-4" />
-        {isSidebarOpen && (
-          <>
-            <span className="hidden md:inline-flex">Quick search...</span>
-            <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 md:inline-flex">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </>
-        )}
+        <>
+          <span className="hidden md:inline-flex">Quick search...</span>
+          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 md:inline-flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </>
       </button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <VisuallyHidden asChild>

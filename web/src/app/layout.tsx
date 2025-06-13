@@ -4,7 +4,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/navigation/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
 import { AuthProvider } from "@/components/auth/auth-provider";
 
 const geistSans = Geist({
@@ -38,13 +39,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full font-sans`}
       >
         <AuthProvider>
-          <SidebarProvider>
-            <Providers>
+          <Providers>
+            <SidebarProvider>
               <AppSidebar />
-              <SidebarInset>{children}</SidebarInset>
+              <SidebarInset>
+                <AppHeader />
+                {children}
+              </SidebarInset>
               <Toaster />
-            </Providers>
-          </SidebarProvider>
+            </SidebarProvider>
+          </Providers>
         </AuthProvider>
       </body>
     </html>
