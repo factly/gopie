@@ -25,6 +25,7 @@ import {
   useColumnNameStore,
   validateColumnName,
   VALID_DUCK_DB_TYPES,
+  toSnakeCase,
 } from "@/lib/stores/columnNameStore";
 import {
   Select,
@@ -74,6 +75,9 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
   const columnDescriptions = useColumnDescriptionStore(
     (state) => state.columnDescriptions
   );
+  const updateColumnDescriptionKey = useColumnDescriptionStore(
+    (state) => state.updateColumnDescriptionKey
+  );
 
   // Check if there are any invalid columns
   const hasInvalidColumns = Array.from(columnMappings.values()).some(
@@ -92,7 +96,17 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
   };
 
   const handleEditNameSave = (originalName: string) => {
+    const mapping = columnMappings.get(originalName);
+    const oldUpdatedName = mapping?.updatedName;
+
+    // Update the column name in the store
     updateColumnName(originalName, editNameValue);
+
+    // If there was a description for the old updated name, transfer it to the new name
+    if (oldUpdatedName && oldUpdatedName !== editNameValue) {
+      updateColumnDescriptionKey(oldUpdatedName, editNameValue);
+    }
+
     setEditingNameIndex(null);
     setEditNameValue("");
   };
@@ -165,7 +179,21 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
   };
 
   const handleAutoFixAll = () => {
+    // Get the current state before auto-fixing
+    const currentMappings = Array.from(columnMappings.values());
+
+    // Apply auto-fix
     autoFixAllColumns();
+
+    // Update description keys for changed column names
+    currentMappings.forEach((mapping) => {
+      if (!mapping.isValid) {
+        const fixedName = toSnakeCase(mapping.originalName);
+        if (mapping.updatedName !== fixedName) {
+          updateColumnDescriptionKey(mapping.updatedName, fixedName);
+        }
+      }
+    });
   };
 
   const hasDescription = (columnName: string) => {
