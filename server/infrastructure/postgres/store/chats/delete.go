@@ -6,7 +6,6 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
@@ -14,7 +13,7 @@ import (
 
 func (s *PostgresChatStore) DeleteChat(ctx context.Context, id, createdBy string) error {
 	err := s.q.DeleteChat(ctx, gen.DeleteChatParams{
-		ID:        pgtype.UUID{Bytes: uuid.MustParse(id), Valid: true},
+		ID:        id,
 		CreatedBy: pgtype.Text{String: "system", Valid: true}, // Assuming system user for deletion
 	})
 	if err != nil {

@@ -16,14 +16,14 @@ import (
 func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	// Convert messages to OpenAI format
 	messages := make([]openai.ChatCompletionMessage, 0, len(params.Messages))
-	for _, msg := range params.Messages {
+	for _, msg := range params.PrevMessages {
 		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
 		})
 	}
 
-	for _, msg := range params.PrevMessages {
+	for _, msg := range params.Messages {
 		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    msg.Role,
 			Content: msg.Content,

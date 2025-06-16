@@ -3,23 +3,26 @@ import { apiClient } from "@/lib/api-client";
 import { createInfiniteQuery } from "react-query-kit";
 
 interface ListChatsVariables {
-  datasetId: string;
+  userID: string;
   limit?: number;
   page?: number;
 }
 
 export async function fetchChats(
-  { datasetId, limit }: ListChatsVariables,
+  { userID, limit }: ListChatsVariables,
   context: { pageParam: number }
 ): Promise<{ data: PaginatedResponse<Chat> }> {
   try {
     const searchParams = new URLSearchParams({
-      dataset_id: datasetId,
       limit: (limit || 10).toString(),
       page: context.pageParam.toString(),
     });
 
-    const response = await apiClient.get(`v1/api/chat?${searchParams}`);
+    const response = await apiClient.get(`v1/api/chat?${searchParams}`, {
+      headers: {
+        "x-user-id": userID,
+      },
+    });
     return response.json();
   } catch (error) {
     throw new Error("Failed to fetch chats: " + error);

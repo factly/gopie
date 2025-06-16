@@ -9,7 +9,7 @@ import (
 )
 
 type Chat struct {
-	ID        pgtype.UUID
+	ID        string
 	Title     pgtype.Text
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
@@ -18,8 +18,7 @@ type Chat struct {
 
 type ChatMessage struct {
 	ID        pgtype.UUID
-	Key       int32
-	ChatID    pgtype.UUID
+	ChatID    string
 	Choices   []byte
 	Object    string
 	Model     pgtype.Text

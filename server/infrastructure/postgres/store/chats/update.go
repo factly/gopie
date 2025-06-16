@@ -8,14 +8,13 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
 func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, params *models.UpdateChatParams) (*models.Chat, error) {
 	c, err := s.q.UpdateChatTitle(ctx, gen.UpdateChatTitleParams{
-		ID: pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
+		ID: chatID,
 		Title: pgtype.Text{
 			String: params.Title,
 			Valid:  params.Title != "",
@@ -25,7 +24,7 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 		return nil, err
 	}
 	return &models.Chat{
-		ID:        c.ID.String(),
+		ID:        c.ID,
 		Title:     c.Title.String,
 		CreatedAt: c.CreatedAt.Time,
 		UpdatedAt: c.UpdatedAt.Time,
@@ -33,7 +32,7 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 	}, nil
 }
 
-func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage, keyStart int) ([]models.ChatMessage, error) {
+func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		s.logger.Error("Error starting transaction", zap.Error(err))
@@ -43,15 +42,13 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 	qtx := s.q.WithTx(tx)
 	var chatMessages []models.ChatMessage
 
-	for i, msg := range messages {
-		msg.Key = keyStart + i
+	for _, msg := range messages {
 		choiceBytes, _ := json.Marshal(msg.Choices)
 		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-			ChatID:  pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true},
+			ChatID:  chatID,
 			Choices: choiceBytes,
 			Object:  msg.Object,
 			Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
-			Key:     int32(msg.Key),
 		})
 		if err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))
@@ -69,7 +66,6 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 			Model:     chat.Model.String,
 			Object:    chat.Object,
 			Choices:   choiceList,
-			Key:       int(msg.Key),
 		}
 		chatMessages = append(chatMessages, chatMessage)
 	}

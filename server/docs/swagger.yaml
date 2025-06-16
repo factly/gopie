@@ -66,18 +66,12 @@ definitions:
     description: Request body for creating a streaming chat conversation with an AI
       agent - OpenAI compatible
     properties:
-      chat_id:
-        type: string
       max_tokens:
         type: integer
       messages:
         items:
           $ref: '#/definitions/models.AIChatMessage'
         type: array
-      metadata:
-        additionalProperties:
-          type: string
-        type: object
       model:
         type: string
       stream:
@@ -151,28 +145,23 @@ definitions:
       role:
         type: string
     type: object
-  models.Chat:
-    properties:
-      created_at:
-        type: string
-      created_by:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
   models.ChatMessage:
     properties:
-      content:
+      chat_id:
         type: string
+      choices:
+        items:
+          $ref: '#/definitions/models.Choice'
+        type: array
       created_at:
         type: string
       id:
         type: string
-      role:
+      key:
+        type: integer
+      model:
+        type: string
+      object:
         type: string
     type: object
   models.ChatWithMessages:
@@ -187,10 +176,20 @@ definitions:
         items:
           $ref: '#/definitions/models.ChatMessage'
         type: array
-      name:
+      title:
         type: string
       updated_at:
         type: string
+    type: object
+  models.Choice:
+    properties:
+      delta:
+        $ref: '#/definitions/models.Delta'
+      finish_reason:
+        type: string
+      index:
+        type: integer
+      logprobs: {}
     type: object
   models.Dataset:
     description: Dataset model
@@ -250,6 +249,27 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
+  models.Delta:
+    properties:
+      content:
+        type: string
+      function_call:
+        $ref: '#/definitions/models.FunctionCall'
+      refusal: {}
+      role:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/models.ToolCall'
+        type: array
+    type: object
+  models.FunctionCall:
+    properties:
+      arguments:
+        type: string
+      name:
+        type: string
+    type: object
   models.Project:
     description: Project model
     properties:
@@ -278,6 +298,24 @@ definitions:
       updatedAt:
         description: Last update timestamp
         example: "2024-02-05T12:00:00Z"
+        type: string
+    type: object
+  models.ToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/models.ToolFunction'
+      id:
+        type: string
+      index:
+        type: integer
+      type:
+        type: string
+    type: object
+  models.ToolFunction:
+    properties:
+      arguments:
+        type: string
+      name:
         type: string
     type: object
   projects.createRequestBody:
@@ -583,11 +621,11 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all chats associated with a specific dataset with pagination
+      description: Get all chats for a specific user with pagination
       parameters:
-      - description: Dataset ID
-        in: query
-        name: dataset_id
+      - description: User ID
+        in: header
+        name: x-user-id
         required: true
         type: string
       - default: 10
@@ -604,25 +642,21 @@ paths:
       - application/json
       responses:
         "200":
-          description: Dataset chats retrieved successfully
+          description: User chats retrieved successfully
           schema:
-            allOf:
-            - $ref: '#/definitions/responses.SuccessResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.Chat'
-                  type: array
-              type: object
-        "400":
-          description: Dataset ID is required
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - User ID is required
           schema:
-            $ref: '#/definitions/responses.ErrorResponse'
+            additionalProperties: true
+            type: object
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/responses.ErrorResponse'
-      summary: List dataset chats
+            additionalProperties: true
+            type: object
+      summary: List user chats
       tags:
       - chat
     post:
@@ -674,6 +708,11 @@ paths:
         name: chatID
         required: true
         type: string
+      - description: User ID
+        in: header
+        name: user-id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -688,6 +727,47 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Delete chat
+      tags:
+      - chat
+    get:
+      consumes:
+      - application/json
+      description: Retrieve detailed information about a specific chat by its ID
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chatID
+        required: true
+        type: string
+      - description: User ID
+        in: header
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat details retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request - Chat ID is required
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - User ID is required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get chat details
       tags:
       - chat
   /v1/api/chat/{chatID}/messages:
@@ -732,38 +812,6 @@ paths:
       summary: Get chat messages
       tags:
       - chat
-  /v1/api/chat/{chatID}/messages/{messageID}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a specific message from a chat
-      parameters:
-      - description: Chat ID
-        in: path
-        name: chatID
-        required: true
-        type: string
-      - description: Message ID
-        in: path
-        name: messageID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Message deleted successfully
-        "404":
-          description: Message not found
-          schema:
-            $ref: '#/definitions/responses.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/responses.ErrorResponse'
-      summary: Delete chat message
-      tags:
-      - chat
   /v1/api/chat/completions:
     post:
       consumes:
@@ -777,6 +825,23 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/chats.chatWithAgentRequestBody'
+      - description: User ID
+        in: header
+        name: x-user-id
+        required: true
+        type: string
+      - description: Comma-separated project IDs
+        in: header
+        name: x-project-ids
+        type: string
+      - description: Comma-separated dataset IDs
+        in: header
+        name: x-dataset-ids
+        type: string
+      - description: Chat ID for continuing existing conversation
+        in: header
+        name: x-chat-id
+        type: string
       produces:
       - text/event-stream
       responses:
@@ -788,8 +853,12 @@ paths:
           description: Invalid request body
           schema:
             type: string
+        "401":
+          description: Unauthorized - User ID is required
+          schema:
+            type: string
         "500":
-          description: Internal server error" // Should ideally be JSON for API consistency
+          description: Internal server error
           schema:
             type: string
       summary: Chat with AI agent

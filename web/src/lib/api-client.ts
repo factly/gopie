@@ -54,10 +54,10 @@ export interface ChatMessage {
 
 export interface Chat {
   id: string;
-  name: string;
-  created_by: string;
+  title: string;
   created_at: string;
   updated_at: string;
+  created_by: string;
 }
 
 export interface ChatWithMessages extends Chat {

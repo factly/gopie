@@ -68,7 +68,7 @@
     "ky": "^1.7.3",
     "livekit-client": "^2.9.8",
     "livekit-server-sdk": "^2.10.2",
-    "lucide-react": "^0.511.0",
+    "lucide-react": "^0.514.0",
     "nanoid": "^5.1.5",
     "next": "15.1.0",
     "next-auth": "^5.0.0-beta.25",

@@ -6,12 +6,11 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (s *PostgresChatStore) GetChatMessages(ctx context.Context, chatID string) ([]*models.ChatMessage, error) {
-	msgs, err := s.q.GetChatMessages(ctx, pgtype.UUID{Bytes: uuid.MustParse(chatID), Valid: true})
+	msgs, err := s.q.GetChatMessages(ctx, chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +49,7 @@ func (s *PostgresChatStore) ListUserChats(ctx context.Context, userID string, pa
 	chats := make([]*models.Chat, len(res))
 	for _, c := range res {
 		chats = append(chats, &models.Chat{
-			ID:        c.ID.String(),
+			ID:        c.ID,
 			Title:     c.Title.String,
 			CreatedAt: c.CreatedAt.Time,
 			UpdatedAt: c.UpdatedAt.Time,

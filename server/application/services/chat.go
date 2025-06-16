@@ -37,13 +37,13 @@ func (service *ChatService) GetChatMessages(chatID string) ([]*models.ChatMessag
 	return service.store.GetChatMessages(context.Background(), chatID)
 }
 
-func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage, keyStart int) ([]models.ChatMessage, error) {
+func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
 	for i, msg := range messages {
 		if msg.CreatedAt.IsZero() {
 			messages[i].CreatedAt = time.Now()
 		}
 	}
-	return service.store.AddNewMessage(ctx, chatID, messages, keyStart)
+	return service.store.AddNewMessage(ctx, chatID, messages)
 }
 
 func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams) (*models.D_ChatWithMessages, error) {
@@ -97,8 +97,7 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	var userMessage *models.ChatMessage
 	var filteredMessages []models.ChatMessage
 
-	for i, msg := range params.Messages {
-		msg.Key = i
+	for _, msg := range params.Messages {
 		if msg.Object == "user.message" {
 			userMessage = &msg
 		}

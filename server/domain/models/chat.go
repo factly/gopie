@@ -68,7 +68,6 @@ type ChatMessage struct {
 	CreatedAt time.Time `json:"created_at"`
 	Model     string    `json:"model"`
 	Object    string    `json:"object"`
-	Key       int       `json:"key"`
 }
 
 type ChatWithMessages struct {
@@ -81,6 +80,7 @@ type ChatWithMessages struct {
 }
 
 type CreateChatParams struct {
+	ID        string        `json:"id"`
 	Title     string        `json:"title"`
 	CreatedBy string        `json:"created_by"`
 	Messages  []ChatMessage `json:"messages"`

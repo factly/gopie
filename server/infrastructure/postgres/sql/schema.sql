@@ -55,23 +55,22 @@ create table if not exists database_sources (
 );
 
 create table if not exists chats (
-    id uuid primary key default uuid_generate_v4(),
-    title TEXT,
+    id text primary key,
+    title text,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now(),
     created_by text default null
 );
 
-CREATE index idx_chats_user_id on chats(user_id);
+create index idx_chats_created_by on chats(created_by);
 
 create table if not exists chat_messages (
     id uuid primary key default uuid_generate_v4(),
-    key integer not null,
-    chat_id uuid not null references chats(id) on delete cascade,
+
+    chat_id text not null references chats(id) on delete cascade,
     choices jsonb not null,
     object text not null,
     model text default null,
-    created_at timestamp with time zone default now(),
-    unique (chat_id, key)
+    created_at timestamp with time zone default now()
 );
 
