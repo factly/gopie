@@ -1,5 +1,7 @@
 basePath: /
 definitions:
+  ai.genColumnsDescBody:
+    type: object
   api.nl2SqlRequest:
     description: Request body for converting natural language to SQL
     properties:
@@ -157,8 +159,6 @@ definitions:
         type: string
       id:
         type: string
-      key:
-        type: integer
       model:
         type: string
       object:
@@ -617,6 +617,40 @@ paths:
       summary: Get dataset summary
       tags:
       - dataset
+  /v1/api/ai/generate-column-descriptions:
+    post:
+      consumes:
+      - application/json
+      description: Generate descriptive explanations for dataset columns using AI
+        analysis of summary statistics and sample data
+      parameters:
+      - description: Column description request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ai.genColumnsDescBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Column descriptions generated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body or missing required fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to generate column descriptions
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Generate AI-powered column descriptions
+      tags:
+      - ai
   /v1/api/chat:
     get:
       consumes:
@@ -710,7 +744,7 @@ paths:
         type: string
       - description: User ID
         in: header
-        name: user-id
+        name: x-user-id
         required: true
         type: string
       produces:

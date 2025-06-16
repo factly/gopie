@@ -254,6 +254,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/api/ai/generate-column-descriptions": {
+            "post": {
+                "description": "Generate descriptive explanations for dataset columns using AI analysis of summary statistics and sample data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ai"
+                ],
+                "summary": "Generate AI-powered column descriptions",
+                "parameters": [
+                    {
+                        "description": "Column description request parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ai.genColumnsDescBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Column descriptions generated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or missing required fields",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to generate column descriptions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/chat": {
             "get": {
                 "description": "Get all chats for a specific user with pagination",
@@ -528,7 +577,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "user-id",
+                        "name": "x-user-id",
                         "in": "header",
                         "required": true
                     }
@@ -1407,6 +1456,9 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "ai.genColumnsDescBody": {
+            "type": "object"
+        },
         "api.nl2SqlRequest": {
             "description": "Request body for converting natural language to SQL",
             "type": "object",
@@ -1619,9 +1671,6 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
-                },
-                "key": {
-                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
