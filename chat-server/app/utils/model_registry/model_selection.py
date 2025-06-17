@@ -20,6 +20,7 @@ NODE_TO_MODEL = {
     # Visualization graph nodes
     "choose_visualization": settings.DEFAULT_OPENAI_MODEL,
     "format_data_for_visualization": settings.DEFAULT_OPENAI_MODEL,
+    "visualization_response": settings.MODEL_GENERATE_RESULT,
 }
 
 

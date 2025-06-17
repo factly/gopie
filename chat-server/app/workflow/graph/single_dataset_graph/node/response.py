@@ -9,7 +9,6 @@ from app.workflow.graph.single_dataset_graph.types import State
 
 
 async def response(state: State, config: RunnableConfig) -> dict:
-    visualization_result = state.get("viz_result", {})
     query_result = state.get("query_result", {})
 
     if not query_result:
@@ -18,15 +17,6 @@ async def response(state: State, config: RunnableConfig) -> dict:
     user_query = query_result.get("user_query", "")
     dataset_name = query_result.get("dataset_name", "Error occurred")
     sql_queries = query_result.get("sql_queries", [])
-
-    if visualization_result:
-        return await visualization_response(
-            dataset_name,
-            config,
-            visualization_result,
-            user_query,
-            query_result,
-        )
 
     successful_results = [r for r in sql_queries if r.get("success", True)]
 
@@ -64,40 +54,3 @@ information that isn't present in the results.
     )
 
     return {"messages": [AIMessage(content=str(response_result.content))]}
-
-
-async def visualization_response(
-    dataset_name: str,
-    config: RunnableConfig,
-    viz_result: dict,
-    user_query: str,
-    query_result: dict,
-) -> dict:
-    viz_type = viz_result.get("viz_type", "bar")
-
-    prompt = f"""
-The user asked: "{user_query}"
-I've created a {viz_type} chart from {dataset_name}.
-
-Visualization result: {viz_result}
-SQL queries results: {query_result}
-
-Describe what the visualization shows in a helpful, conversational way.
-Focus on key insights and patterns.
-
-IMPORTANT: Base your response ONLY on the data provided above. Do not add
-information that isn't present in the results.
-"""
-
-    llm = get_llm_for_node("response", config)
-    text_response = await llm.ainvoke(
-        {"input": prompt, "chat_history": get_chat_history(config)}
-    )
-
-    response = {
-        "type": "visualization_response",
-        "text": str(text_response.content),
-        "visualization_result": viz_result,
-    }
-
-    return {"messages": [AIMessage(content=str(response))]}

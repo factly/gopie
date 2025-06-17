@@ -9,8 +9,8 @@ class State(TypedDict):
     user_query: str | None
     viz_data: list[dict] | None
     viz_type: str | None
-    viz_reason: str | None
     formatted_viz_data: dict | None
+    query_result: dict | None
 
 
 class ConfigSchema(TypedDict):
