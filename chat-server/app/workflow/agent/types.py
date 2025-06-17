@@ -8,6 +8,7 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     dataset_ids: list[str] | None
     project_ids: list[str] | None
+    user_query: str | None
 
 
 class ConfigSchema(TypedDict):

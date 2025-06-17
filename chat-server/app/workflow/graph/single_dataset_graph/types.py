@@ -7,10 +7,6 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     dataset_ids: list[str] | None
     project_ids: list[str] | None
-    query: str | None
+    user_query: str | None
     query_result: dict | None
-
-    next_action: str | None  # Agent routing
-    viz_data: list[dict] | None
-
-    viz_result: dict | None
+    wants_visualization: bool | None
