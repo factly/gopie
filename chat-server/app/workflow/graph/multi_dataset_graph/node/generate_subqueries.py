@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
@@ -19,12 +18,7 @@ from app.workflow.prompts.generate_subqueries_prompt import (
 
 
 async def generate_subqueries(state: State, config: RunnableConfig):
-    messages = state.get("messages", [])
-
-    if messages and isinstance(messages[-1], HumanMessage):
-        user_input = str(messages[-1].content)
-    else:
-        raise Exception("Last Message must be a user message")
+    user_input = state.get("user_query", "")
 
     query_result_object = QueryResult(
         original_user_query=user_input,

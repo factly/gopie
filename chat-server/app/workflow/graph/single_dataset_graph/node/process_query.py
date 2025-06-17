@@ -2,7 +2,6 @@ import csv
 import io
 import json
 from datetime import datetime
-from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
@@ -15,6 +14,7 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
+from app.workflow.graph.single_dataset_graph.types import State
 
 
 def convert_rows_to_csv(rows: list[dict]) -> str:
@@ -38,7 +38,7 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
     return output.getvalue()
 
 
-async def process_query(state: Any, config: RunnableConfig) -> dict:
+async def process_query(state: State, config: RunnableConfig) -> dict:
     """
     Process the user query for single dataset workflow:
     1. Get dataset schema and sample data
@@ -48,18 +48,12 @@ async def process_query(state: Any, config: RunnableConfig) -> dict:
     5. Generate final user-friendly response
     """
     try:
-        messages = state.get("messages", [])
         dataset_ids = state.get("dataset_ids", [])
-        user_query = state.get("query", "")
+        user_query = state.get("user_query", "")
 
-        if not user_query and messages:
-            last_message = messages[-1]
-            if hasattr(last_message, "content"):
-                user_query = str(last_message.content)
-            elif isinstance(last_message, dict):
-                user_query = last_message.get("content", "")
-
-        dataset_id = dataset_ids[0]
+        dataset_id = dataset_ids[0] if dataset_ids else None
+        if not dataset_id:
+            raise Exception("No dataset ID provided")
 
         schema_info = await get_schema_from_qdrant(dataset_id)
         if "error" in schema_info:
@@ -208,7 +202,6 @@ Always respond with valid JSON only.
     except Exception as e:
         error_message = f"Error processing query: {str(e)}"
         error_result = {
-            "user_query": user_query if "user_query" in locals() else "",
             "error": error_message,
             "timestamp": datetime.now().isoformat(),
         }
