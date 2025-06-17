@@ -6,15 +6,15 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	process_query(process_query)
-	supervisor(supervisor)
+	check_visualization(check_visualization)
+	handoff_to_visualizer(handoff_to_visualizer)
 	response(response)
-	visualizer_agent(visualizer_agent)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> process_query;
-	process_query --> supervisor;
-	supervisor -.-> response;
-	supervisor -.-> visualizer_agent;
-	visualizer_agent --> response;
+	check_visualization -. &nbsp;handoff_to_visualizer_agent&nbsp; .-> handoff_to_visualizer;
+	check_visualization -.-> response;
+	process_query --> check_visualization;
+	handoff_to_visualizer --> __end__;
 	response --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
