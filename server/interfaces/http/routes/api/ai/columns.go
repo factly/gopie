@@ -7,11 +7,24 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Description Request body for generating column descriptions using AI
 type genColumnsDescBody struct {
-	Summary any `json:"summary"`
-	Rows    any `json:"rows"`
+	// Dataset summary information containing statistics about columns
+	Summary any `json:"summary" validate:"required" example:"{\"column_name\": {\"type\": \"string\", \"count\": 1000}}"`
+	// Sample rows from the dataset to help AI understand the data context
+	Rows any `json:"rows" validate:"required" example:"[[\"value1\", \"value2\"], [\"value3\", \"value4\"]]"`
 }
 
+// @Summary Generate AI-powered column descriptions
+// @Description Generate descriptive explanations for dataset columns using AI analysis of summary statistics and sample data
+// @Tags ai
+// @Accept json
+// @Produce json
+// @Param body body genColumnsDescBody true "Column description request parameters"
+// @Success 200 {object} map[string]interface{} "Column descriptions generated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body or missing required fields"
+// @Failure 500 {object} map[string]interface{} "Failed to generate column descriptions"
+// @Router /v1/api/ai/generate-column-descriptions [post]
 func (h *httpHandler) genColumnsDesc(c *fiber.Ctx) error {
 	body := new(genColumnsDescBody)
 	if err := c.BodyParser(body); err != nil {

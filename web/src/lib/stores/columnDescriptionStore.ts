@@ -5,6 +5,7 @@ interface ColumnDescriptionState {
   setColumnDescription: (columnName: string, description: string) => void;
   getColumnDescriptions: () => Record<string, string>;
   clearColumnDescriptions: () => void;
+  updateColumnDescriptionKey: (oldKey: string, newKey: string) => void;
 }
 
 export const useColumnDescriptionStore = create<ColumnDescriptionState>()(
@@ -19,5 +20,14 @@ export const useColumnDescriptionStore = create<ColumnDescriptionState>()(
       })),
     getColumnDescriptions: () => get().columnDescriptions,
     clearColumnDescriptions: () => set({ columnDescriptions: {} }),
+    updateColumnDescriptionKey: (oldKey: string, newKey: string) =>
+      set((state) => {
+        const newDescriptions = { ...state.columnDescriptions };
+        if (newDescriptions[oldKey] && oldKey !== newKey) {
+          newDescriptions[newKey] = newDescriptions[oldKey];
+          delete newDescriptions[oldKey];
+        }
+        return { columnDescriptions: newDescriptions };
+      }),
   })
 );
