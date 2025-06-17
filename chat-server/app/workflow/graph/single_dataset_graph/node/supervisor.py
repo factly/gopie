@@ -65,7 +65,7 @@ Respond with JSON:
 
             return {
                 "next_action": "visualizer_agent",
-                "visualization_data": all_data,
+                "viz_data": all_data,
             }
         else:
             return {"next_action": "response"}

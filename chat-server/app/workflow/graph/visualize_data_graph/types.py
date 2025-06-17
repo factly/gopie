@@ -7,10 +7,10 @@ from langgraph.graph.message import add_messages
 class State(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     user_query: str | None
-    visualization_data: list[dict] | None
-    visualization_type: str | None
-    visualization_reason: str | None
-    formatted_data_for_visualization: dict | None
+    viz_data: list[dict] | None
+    viz_type: str | None
+    viz_reason: str | None
+    formatted_viz_data: dict | None
 
 
 class ConfigSchema(TypedDict):

@@ -2,24 +2,22 @@ from langgraph.graph import END, START, StateGraph
 
 from app.tools import TOOL_METADATA, TOOLS
 from app.tools.tool_node import ToolNode
-from app.workflow.graph.multi_dataset_graph.types import ConfigSchema, State
-from app.workflow.node.analyze_dataset import analyze_dataset
-from app.workflow.node.analyze_query import analyze_query, route_from_analysis
-from app.workflow.node.execute_query import execute_query, route_query_replan
-from app.workflow.node.extract_summary import extract_summary
-from app.workflow.node.generate_subqueries import generate_subqueries
-from app.workflow.node.identify_datasets import (
-    identify_datasets,
-    route_from_datasets,
-)
-from app.workflow.node.plan_query import plan_query
-from app.workflow.node.response.generate_result import generate_result
-from app.workflow.node.response.response_handler import route_response_handler
-from app.workflow.node.response.stream_updates import (
+
+from .node.analyze_dataset import analyze_dataset
+from .node.analyze_query import analyze_query, route_from_analysis
+from .node.execute_query import execute_query, route_query_replan
+from .node.extract_summary import extract_summary
+from .node.generate_subqueries import generate_subqueries
+from .node.identify_datasets import identify_datasets, route_from_datasets
+from .node.plan_query import plan_query
+from .node.response.generate_result import generate_result
+from .node.response.response_handler import route_response_handler
+from .node.response.stream_updates import (
     check_further_execution_requirement,
     stream_updates,
 )
-from app.workflow.node.validate_query_result import validate_query_result
+from .node.validate_query_result import validate_query_result
+from .types import ConfigSchema, State
 
 graph_builder = StateGraph(State, config_schema=ConfigSchema)
 

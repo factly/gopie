@@ -1,5 +1,3 @@
-from typing import Any
-
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
@@ -7,18 +5,28 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
+from app.workflow.graph.single_dataset_graph.types import State
 
 
-async def response(state: Any, config: RunnableConfig) -> dict:
-    visualization_result = state.get("visualization_result")
+async def response(state: State, config: RunnableConfig) -> dict:
+    visualization_result = state.get("viz_result", {})
+    query_result = state.get("query_result", {})
 
-    query_result = state.get("query_result")
+    if not query_result:
+        return {"messages": [AIMessage(content="No query result found")]}
+
     user_query = query_result.get("user_query", "")
-    dataset_name = query_result.get("dataset_name", "Unknown dataset")
+    dataset_name = query_result.get("dataset_name", "Error occurred")
     sql_queries = query_result.get("sql_queries", [])
 
     if visualization_result:
-        return await visualization_response(dataset_name, state, config)
+        return await visualization_response(
+            dataset_name,
+            config,
+            visualization_result,
+            user_query,
+            query_result,
+        )
 
     successful_results = [r for r in sql_queries if r.get("success", True)]
 
@@ -59,12 +67,13 @@ information that isn't present in the results.
 
 
 async def visualization_response(
-    dataset_name: str, state: Any, config: RunnableConfig
+    dataset_name: str,
+    config: RunnableConfig,
+    viz_result: dict,
+    user_query: str,
+    query_result: dict,
 ) -> dict:
-    user_query = state.get("user_query", "")
-    viz_result = state.get("visualization_result")
-    viz_type = viz_result.get("visualization_type")
-    query_result = state.get("query_result")
+    viz_type = viz_result.get("viz_type", "bar")
 
     prompt = f"""
 The user asked: "{user_query}"

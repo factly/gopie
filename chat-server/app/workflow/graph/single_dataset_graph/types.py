@@ -11,6 +11,6 @@ class State(TypedDict):
     query_result: dict | None
 
     next_action: str | None  # Agent routing
-    visualization_data: list[dict] | None
+    viz_data: list[dict] | None
 
-    visualization_result: dict | None
+    viz_result: dict | None

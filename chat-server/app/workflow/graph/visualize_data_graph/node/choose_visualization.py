@@ -17,7 +17,7 @@ async def choose_visualization(state: State, config: RunnableConfig) -> dict:
     This runs in parallel with format_results.
     """
     question = state.get("user_query", "")
-    results = state.get("visualization_data", [])
+    results = state.get("viz_data", [])
 
     prompt = f"""
     You are a data visualization expert. Given a user's question and query
@@ -28,16 +28,27 @@ async def choose_visualization(state: State, config: RunnableConfig) -> dict:
     User question: {question}
     Query results: {results}
 
-    Choose from these visualization types:
-    - bar: For categorical comparisons
-    - line: For trends over time or continuous data
+    Choose from these 5 essential visualization types:
+    - bar: For categorical comparisons and discrete data
+    - line: For trends over time or continuous data progression
     - scatter: For relationships between two continuous variables
-    - pie: For part-to-whole relationships
-    - horizontal_bar: For categorical data with long labels
+    - pie: For part-to-whole relationships (percentages, proportions)
+    - histogram: For distribution of a single continuous variable
+
+    Guidelines:
+    - Use 'bar' for comparing categories, groups, or discrete values
+    - Use 'line' for time series data, trends, or ordered sequences
+    - Use 'scatter' for correlation analysis between two variables
+    - Use 'pie' for percentages, market share, or composition data
+    - Use 'histogram' for frequency distributions or value ranges
+
+    - If the user explicitly provides a visualization type, use that but ensure
+      it's one of the above 5 types, otherwise use the most appropriate
+      default.
 
     Respond with JSON containing:
     {{
-        "visualization_type": "chosen_type",
+        "viz_type": "chosen_type",
         "reason": "explanation for why this visualization is appropriate"
     }}
     """
@@ -55,10 +66,8 @@ async def choose_visualization(state: State, config: RunnableConfig) -> dict:
         parsed_response = parser.parse(str(response.content))
 
         return {
-            "visualization_type": parsed_response.get(
-                "visualization_type", "bar"
-            ),
-            "visualization_reason": parsed_response.get("reason", ""),
+            "viz_type": parsed_response.get("viz_type", "bar"),
+            "viz_reason": parsed_response.get("reason", ""),
             "messages": [
                 IntermediateStep.from_json(
                     {
@@ -71,8 +80,8 @@ async def choose_visualization(state: State, config: RunnableConfig) -> dict:
         error_message = f"Error during choosing visualization: {str(e)}"
 
         return {
-            "visualization_type": "bar",
-            "visualization_reason": error_message,
+            "viz_type": "bar",
+            "viz_reason": error_message,
             "messages": [
                 IntermediateStep.from_json(
                     {
