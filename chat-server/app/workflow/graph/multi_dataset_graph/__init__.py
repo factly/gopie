@@ -1,3 +1,4 @@
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
 from app.tools import TOOL_METADATA, TOOLS
@@ -94,3 +95,7 @@ graph_builder.add_edge("extract_summary", "route_response")
 graph_builder.add_edge("generate_result", END)
 
 multi_dataset_graph = graph_builder.compile()
+
+
+async def call_multidataset_graph(input_state: State, config: RunnableConfig):
+    return await multi_dataset_graph.ainvoke(input_state, config)

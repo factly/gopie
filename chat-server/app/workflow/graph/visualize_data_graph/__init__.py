@@ -1,3 +1,4 @@
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
 from app.workflow.graph.visualize_data_graph.node.choose_visualization import (
@@ -24,3 +25,9 @@ graph_builder.add_edge("choose_visualization", "format_data_for_visualization")
 graph_builder.add_edge("format_data_for_visualization", END)
 
 visualize_data_graph = graph_builder.compile()
+
+
+async def call_visualize_data_graph(
+    input_state: State, config: RunnableConfig
+):
+    return await visualize_data_graph.ainvoke(input_state, config)

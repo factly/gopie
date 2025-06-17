@@ -1,3 +1,4 @@
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
 from app.workflow.graph.multi_dataset_graph.types import ConfigSchema
@@ -36,4 +37,10 @@ graph_builder.add_conditional_edges(
 graph_builder.add_edge("response", END)
 graph_builder.add_edge("visualizer_agent", "response")
 
-simple_graph = graph_builder.compile()
+single_dataset_graph = graph_builder.compile()
+
+
+async def call_single_dataset_graph(
+    input_state: State, config: RunnableConfig
+):
+    return await single_dataset_graph.ainvoke(input_state, config)
