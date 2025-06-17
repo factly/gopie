@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 	"go.uber.org/zap"
-	"fmt"
 )
 
 // contains checks if a string is present in a slice of strings.
@@ -67,17 +67,10 @@ func ServeHttp() error {
 			"log_file":  cfg.Logger.LogFile,
 		},
 	)
-	logger.Info("logger initialized")
+	appLogger.Info("logger initialized")
 
 	// zitadel interceptor setup
-	zitadel.SetupZitadelInterceptor(config, logger)
-
-	source := s3.NewS3SourceRepository(&config.S3, logger)
-	olap, err := duckdb.NewOlapDBDriver(&config.OlapDB, logger, &config.S3)
-	if err != nil {
-		log.Fatal("error initializing logger: ", err)
-		return err
-	}
+	zitadel.SetupZitadelInterceptor(cfg, appLogger)
 
 	// Initialize repositories and services
 	source := s3.NewS3SourceRepository(&cfg.S3, appLogger)
