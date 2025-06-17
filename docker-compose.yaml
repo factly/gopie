@@ -235,8 +235,6 @@ services:
       - "8001:8001"
     volumes:
       - ./chat-server/app:/code/app
-      - ./chat-server/app/workflow/graph/multi_dataset_graph:/graph/multi_dataset_graph
-      - ./chat-server/app/workflow/graph/single_dataset_graph:/graph/single_dataset_graph
     env_file:
       - ./chat-server/.env
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload"

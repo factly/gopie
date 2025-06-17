@@ -12,18 +12,11 @@ def visualize_graph():
         current_dir = os.path.dirname(os.path.abspath(__file__))
         graph_dir = os.path.join(current_dir, "..", "..", "workflow", "graph")
 
-        os.makedirs(
-            os.path.join(graph_dir, "multi_dataset_graph"), exist_ok=True
-        )
-        os.makedirs(
-            os.path.join(graph_dir, "single_dataset_graph"), exist_ok=True
-        )
-        os.makedirs(
-            os.path.join(graph_dir, "visualize_data_graph"), exist_ok=True
-        )
+        generated_graphs_dir = os.path.join(graph_dir, "graph_mermaid")
+        os.makedirs(generated_graphs_dir, exist_ok=True)
 
         with open(
-            os.path.join(graph_dir, "multi_dataset_graph", "graph.mmd"), "w"
+            os.path.join(generated_graphs_dir, "multi_dataset_graph.mmd"), "w"
         ) as f:
             f.write(
                 multi_dataset_graph.get_graph().draw_mermaid(
@@ -32,7 +25,7 @@ def visualize_graph():
             )
 
         with open(
-            os.path.join(graph_dir, "single_dataset_graph", "graph.mmd"), "w"
+            os.path.join(generated_graphs_dir, "single_dataset_graph.mmd"), "w"
         ) as f:
             f.write(
                 simple_graph.get_graph().draw_mermaid(
@@ -41,7 +34,7 @@ def visualize_graph():
             )
 
         with open(
-            os.path.join(graph_dir, "visualize_data_graph", "graph.mmd"), "w"
+            os.path.join(generated_graphs_dir, "visualize_data_graph.mmd"), "w"
         ) as f:
             f.write(
                 visualize_data_graph.get_graph().draw_mermaid(
@@ -49,15 +42,9 @@ def visualize_graph():
                 )
             )
 
-        print("Graph visualizations generated successfully:")
         print(
-            f"- Multi-dataset graph: {graph_dir}/multi_dataset_graph/graph.mmd"  # noqa: E501
-        )
-        print(
-            f"- Single-dataset graph: {graph_dir}/single_dataset_graph/graph.mmd"  # noqa: E501
-        )
-        print(
-            f"- Visualize data graph: {graph_dir}/visualize_data_graph/graph.mmd"  # noqa: E501
+            f"Graph visualizations generated successfully: "
+            f"{generated_graphs_dir}"
         )
 
     except Exception as e:
