@@ -2,9 +2,15 @@ package http
 
 import (
 	"github.com/factly/gopie/domain/pkg/config"
+	"github.com/factly/gopie/interfaces/http/routes/api"
+	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
+	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
+	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
+	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +40,44 @@ func serveApiServer(cfg *config.GopieConfig, params *ServerParams) error {
 		return c.JSON(fiber.Map{
 			"status": "ok",
 		})
+	})
+
+	// Swagger route
+	app.Get("/swagger/*", swagger.HandlerDefault)
+
+	if cfg.OlapDB.AccessMode != "read_only" {
+		params.Logger.Info("Initializing read-write routes...")
+
+		// S3 routes
+		s3Routes.Routes(app.Group("/source/s3"), params.OlapService, params.DatasetService, params.ProjectService, params.AIAgentService, params.Logger)
+
+		// Database source routes
+		databaseRoutes.Routes(
+			app.Group("/source/database"),
+			params.OlapService,
+			params.DatasetService,
+			params.ProjectService,
+			params.AIAgentService,
+			params.DbSourceService,
+			params.Logger,
+		)
+	} else {
+		params.Logger.Info("Running in read-only mode, write endpoints are disabled")
+	}
+
+	api.Routes(app.Group("/v1/api"), params.OlapService, params.AIService, params.DatasetService, params.Logger)
+
+	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
+		Logger:         params.Logger,
+		ProjectService: params.ProjectService,
+		DatasetService: params.DatasetService,
+		OlapService:    params.OlapService,
+	})
+	chatApi.Routes(app.Group("/v1/api/chat"), chatApi.RouterParams{
+		Logger:         params.Logger,
+		ChatService:    params.ChatService,
+		DatasetService: params.DatasetService,
+		OlapService:    params.OlapService,
 	})
 
 	// Start the server

@@ -113,13 +113,13 @@ func ServeHttp() error {
 
 	// Start the API server in a separate goroutine if enabled
 	if cfg.ApiServerOnly {
-		appLogger.Info("Starting in api-server-only mode,web-client server will not be started")
+		appLogger.Info("Starting in api-server-only mode,zitadel auth server will not be started")
 	} else {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			appLogger.Info("Starting API server...")
-			if err := webClientServer(cfg, params, ctx); err != nil {
+			if err := serverZitadelAuthServer(cfg, params, ctx); err != nil {
 				appLogger.Error("API server error", zap.Error(err))
 				cancel()
 			}
@@ -138,8 +138,8 @@ func ServeHttp() error {
 	return nil
 }
 
-// webClientServer starts the main application server
-func webClientServer(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+// serverZitadelAuthServer starts the main application server
+func serverZitadelAuthServer(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
 	// zitadel interceptor setup
 	// zitadel.SetupZitadelInterceptor(cfg, appLogger)
 
