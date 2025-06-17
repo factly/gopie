@@ -32,7 +32,18 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 	"go.uber.org/zap"
+	"fmt"
 )
+
+// contains checks if a string is present in a slice of strings.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
 
 // @title GoPie API
 // @version 1.1
@@ -111,26 +122,39 @@ func ServeHttp() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start the API server in a separate goroutine if enabled
-	if cfg.ApiServerOnly {
-		appLogger.Info("Starting in api-server-only mode,zitadel auth server will not be started")
-	} else {
+	// Determine which servers to start based on config
+	runWebAppServer := contains(cfg.EnabledServers, "webapp")
+	runApiServer := contains(cfg.EnabledServers, "api")
+
+	if !runWebAppServer && !runApiServer {
+		errMsg := "No servers enabled to start. Check GOPIE_ENABLED_SERVERS. Valid options: 'api', 'webapp'."
+		appLogger.Error(errMsg)
+		return fmt.Errorf("%s", errMsg)
+	}
+
+	if runWebAppServer {
+		appLogger.Info("Web Application server is enabled via config. Starting in a goroutine...")
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			appLogger.Info("Starting API server...")
-			if err := serverZitadelAuthServer(cfg, params, ctx); err != nil {
-				appLogger.Error("API server error", zap.Error(err))
+			if err := serveWebApp(cfg, params, ctx); err != nil {
+				appLogger.Error("Web Application server failed to start", zap.Error(err))
 				cancel()
 			}
 		}()
+	} else {
+		appLogger.Info("Web Application server is disabled via config.")
 	}
 
-	// Start the main server in the main goroutine
-	appLogger.Info("Starting api server...")
-	if err := serveApiServer(cfg, params); err != nil {
-		appLogger.Error("api server error", zap.Error(err))
-		cancel()
+	if runApiServer {
+		appLogger.Info("API server is enabled via config. Starting...")
+		if err := serveApiServer(cfg, params); err != nil {
+			appLogger.Error("API server failed to start", zap.Error(err))
+			cancel()
+			return err
+		}
+	} else {
+		appLogger.Info("API server is disabled via config. Main goroutine will wait for other active servers if any.")
 	}
 
 	// Wait for both servers to shut down
@@ -138,8 +162,8 @@ func ServeHttp() error {
 	return nil
 }
 
-// serverZitadelAuthServer starts the main application server
-func serverZitadelAuthServer(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+// serveWebApp starts the web application server
+func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
 	// zitadel interceptor setup
 	// zitadel.SetupZitadelInterceptor(cfg, appLogger)
 

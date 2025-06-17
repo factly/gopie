@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -50,7 +51,7 @@ type GopieConfig struct {
 	AIAgent       AIAgentConfig
 	ApiServer     ApiServerConfig
 	EncryptionKey string
-	ApiServerOnly bool
+	EnabledServers []string
 }
 
 type OlapDBConfig struct {
@@ -231,7 +232,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
 	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
 	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
-	viper.SetDefault("GOPIE_API_SERVER_ONLY", false)
+	viper.SetDefault("GOPIE_ENABLED_SERVERS", "api,webapp") // Default to running both servers
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
@@ -300,8 +301,20 @@ func LoadConfig() (*GopieConfig, error) {
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
-		ApiServerOnly: viper.GetBool("GOPIE_API_SERVER_ONLY"),
 	}
+
+	enabledServersStr := viper.GetString("GOPIE_ENABLED_SERVERS")
+	var enabledServersList []string
+	if enabledServersStr != "" {
+		servers := strings.Split(enabledServersStr, ",")
+		for _, server := range servers {
+			trimmedServer := strings.TrimSpace(server)
+			if trimmedServer != "" {
+				enabledServersList = append(enabledServersList, trimmedServer)
+			}
+		}
+	}
+	config.EnabledServers = enabledServersList
 
 	var err error
 	if config, err = validateConfig(config); err != nil {
