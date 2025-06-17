@@ -253,4 +253,5 @@ goose.env
 
 tests
 data
+/*/tmp
 .windsurf

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -79,7 +81,18 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 	}
 
 	if cfg.DB == "motherduck" && cfg.AccessMode != "read_only" {
-		m.helperDB, err = m.connectToMotherDuckHelperDB(cfg.MotherDuck.HelperDBPath, fmt.Sprintf("md:%s", cfg.MotherDuck.DBName), cfg.MotherDuck.Token)
+		helperDBFileName := fmt.Sprintf("gopie_%s.db", pkg.RandomString(10))
+		helperDBPath := filepath.Join(cfg.MotherDuck.HelperDBDirPath, helperDBFileName)
+
+		// Ensure the directory exists before creating the helper DB file
+		if err := os.MkdirAll(cfg.MotherDuck.HelperDBDirPath, 0755); err != nil {
+			m.logger.Error("failed to create helper DB directory",
+				zap.String("directory", cfg.MotherDuck.HelperDBDirPath),
+				zap.Error(err))
+			return fmt.Errorf("failed to create helper DB directory: %w", err)
+		}
+
+		m.helperDB, err = m.connectToMotherDuckHelperDB(helperDBPath, fmt.Sprintf("md:%s", cfg.MotherDuck.DBName), cfg.MotherDuck.Token)
 		if err != nil {
 			return err
 		}
