@@ -14,6 +14,11 @@ type ServerConfig struct {
 	Port string
 }
 
+type ApiServerConfig struct {
+	Host string
+	Port string
+}
+
 type MeterusConfig struct {
 	Addr   string
 	ApiKey string
@@ -43,7 +48,9 @@ type GopieConfig struct {
 	Postgres      PostgresConfig
 	Zitadel       ZitadelConfig
 	AIAgent       AIAgentConfig
+	ApiServer     ApiServerConfig
 	EncryptionKey string
+	ApiServerOnly bool
 }
 
 type OlapDBConfig struct {
@@ -61,9 +68,9 @@ type DuckDBConfig struct {
 }
 
 type MotherDuckConfig struct {
-	DBName       string
-	Token        string
-	HelperDBPath string
+	DBName          string
+	Token           string
+	HelperDBDirPath string
 }
 
 type PortKeyConfig struct {
@@ -173,9 +180,9 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 
 	case "motherduck":
 		config.OlapDB.MotherDuck = &MotherDuckConfig{
-			DBName:       viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
-			Token:        viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
-			HelperDBPath: viper.GetString("GOPIE_MOTHERDUCK_HELPER_DB_PATH"),
+			DBName:          viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
+			Token:           viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
+			HelperDBDirPath: viper.GetString("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH"),
 		}
 		validations = append(validations,
 			validation{config.OlapDB.MotherDuck.DBName, "MotherDuck DB name"},
@@ -215,6 +222,8 @@ func ensureDirectoryExists(path string) error {
 func setDefaults() {
 	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
 	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
+	viper.SetDefault("GOPIE_API_SERVER_HOST", "localhost")
+	viper.SetDefault("GOPIE_API_SERVER_PORT", "8001")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_S3_SSL", false)
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
@@ -222,10 +231,11 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
 	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
 	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
+	viper.SetDefault("GOPIE_API_SERVER_ONLY", false)
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
-	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_PATH", "./motherduck/gopie.db")
+	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH", "./motherduck")
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -239,6 +249,10 @@ func LoadConfig() (*GopieConfig, error) {
 		Server: ServerConfig{
 			Host: viper.GetString("GOPIE_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_SERVER_PORT"),
+		},
+		ApiServer: ApiServerConfig{
+			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
+			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
 		},
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
@@ -286,6 +300,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
+		ApiServerOnly: viper.GetBool("GOPIE_API_SERVER_ONLY"),
 	}
 
 	var err error
