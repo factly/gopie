@@ -37,6 +37,8 @@ func Routes(
 	}
 
 	router.Post("/upload", httpHandler.create)
+	router.Get("/", httpHandler.list)
+	router.Delete("/:id", httpHandler.deleteHandler)
 }
 
 func (h *httpHandler) getMetrics(tableName string) (int, []map[string]any, error) {
