@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -10,7 +10,7 @@ class State(TypedDict):
     viz_data: list[dict] | None
     viz_type: str | None
     formatted_viz_data: dict | None
-    query_result: dict | None
+    query_result: Any
 
 
 class ConfigSchema(TypedDict):

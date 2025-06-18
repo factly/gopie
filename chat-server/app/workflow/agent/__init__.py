@@ -1,7 +1,8 @@
 from langgraph.graph import END, StateGraph
 
+from app.models.schema import ConfigSchema
 from app.workflow.agent.supervisor import dummy_supervisor, supervisor
-from app.workflow.agent.types import ConfigSchema, State
+from app.workflow.agent.types import State
 from app.workflow.graph.multi_dataset_graph import multi_dataset_graph
 from app.workflow.graph.single_dataset_graph import single_dataset_graph
 from app.workflow.graph.visualize_data_graph import visualize_data_graph
