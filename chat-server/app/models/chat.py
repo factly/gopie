@@ -4,6 +4,18 @@ from typing import TypedDict
 from pydantic import BaseModel, ConfigDict
 
 
+class Role(str, Enum):
+    AI = "ai"
+    SYSTEM = "system"
+    INTERMEDIATE = "intermediate"
+
+
+class NodeConfig(BaseModel):
+    streams_ai_content: bool = False
+    role: Role = Role.INTERMEDIATE
+    progress_message: str = "Processing..."
+
+
 # This nodes are used to streaming purposes
 class AgentNode(Enum):
     GENERATE_SUBQUERIES = "generate_subqueries"
@@ -31,12 +43,6 @@ class Error(BaseModel):
     message: str
 
 
-class Role(str, Enum):
-    AI = "ai"
-    SYSTEM = "system"
-    INTERMEDIATE = "intermediate"
-
-
 class ChatTextChunk(BaseModel):
     role: Role
     content: str
@@ -49,7 +55,7 @@ class ToolMessage(ChatTextChunk):
 
 class EventChunkData(BaseModel):
     role: Role | None
-    graph_node: AgentNode
+    graph_node: str
     content: str | None
     type: ChunkType
     category: str | None

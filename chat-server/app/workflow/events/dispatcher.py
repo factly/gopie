@@ -1,42 +1,26 @@
 from langchain_core.callbacks import BaseCallbackHandler
 
 from app.models.chat import (
-    AgentNode,
     ChatTextChunk,
     ChunkType,
     Role,
     StructuredChatStreamChunk,
     ToolMessage,
 )
+from app.workflow.events.node_config_manager import node_config_manager
 
 
-def create_progress_message(agent_node: AgentNode) -> str:
-    event_messages = {
-        AgentNode.GENERATE_SUBQUERIES: "Breaking down your query into "
-        "manageable parts...",
-        AgentNode.IDENTIFY_DATASETS: "Identifying relevant datasets...",
-        AgentNode.ANALYZE_DATASETS: "Analyzing datasets...",
-        AgentNode.PLAN_QUERY: "Planning the database query...",
-        AgentNode.STREAM_UPDATES: "",
-        AgentNode.GENERATE_RESULT: "",
-        AgentNode.TOOLS: "Executing tool...",
-        AgentNode.UNKNOWN: "Processing...",
-        AgentNode.PROCESS_QUERY: "Processing your query...",
-        AgentNode.RESPONSE: ".",
-    }
-
-    return event_messages.get(agent_node, "Processing...")
+def create_progress_message(node_name: str) -> str:
+    return node_config_manager.get_progress_message(node_name)
 
 
 class AgentEventDispatcher(BaseCallbackHandler):
-    """Custom event dispatcher for the Dataful Agent."""
-
     def __init__(self):
         super().__init__()
 
     def dispatch_event(
         self,
-        agent_node: AgentNode,
+        node_name: str,
         chunk_type: ChunkType,
         role: Role,
         chat_id: str | None = None,
@@ -50,7 +34,7 @@ class AgentEventDispatcher(BaseCallbackHandler):
         Dispatch an event with the appropriate chunk type and content.
 
         Args:
-            agent_node: The current node in the agent workflow
+            node_name: The name of the current node in the workflow
             chat_id: Unique identifier for the chat session
             trace_id: Unique identifier for the trace (optional)
             chunk_type: Type of chunk (START, STREAM, END, BODY)
@@ -60,7 +44,7 @@ class AgentEventDispatcher(BaseCallbackHandler):
             tool_category: Tool category if the message is from a tool
         """
         if content is None:
-            content = create_progress_message(agent_node)
+            content = create_progress_message(node_name)
 
         if tool_category:
             message = ToolMessage(

@@ -3,7 +3,8 @@ from enum import Enum
 
 from langchain_core.runnables.schema import StreamEvent
 
-from app.models.chat import AgentNode, ChunkType, EventChunkData, Role
+from app.models.chat import ChunkType, EventChunkData, Role
+from app.workflow.events.node_config_manager import node_config_manager
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -16,13 +17,6 @@ class CustomJSONEncoder(json.JSONEncoder):
             if hasattr(obj, "model_dump"):
                 return obj.model_dump()
             return str(obj)
-
-
-AI_STREAMING_NODES = [
-    AgentNode.RESPONSE,
-    AgentNode.STREAM_UPDATES,
-    AgentNode.GENERATE_RESULT,
-]
 
 
 class EventStreamHandler:
@@ -56,23 +50,25 @@ class EventStreamHandler:
                 self._stream_content = True
                 return EventChunkData(
                     role=role,
-                    graph_node=AgentNode.UNKNOWN,
+                    graph_node="unknown",
                     content=content,
                     type=type,
                     category=category,
                 )
 
         if (
-            graph_node not in [node.value for node in AgentNode]
+            not node_config_manager.is_valid_node(graph_node)
             or not self._stream_content
         ):
             return EventChunkData(
                 role=role,
-                graph_node=AgentNode.UNKNOWN,
+                graph_node="unknown",
                 content=content,
                 type=type,
                 category=category,
             )
+
+        node_config = node_config_manager.get_config(graph_node)
 
         tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
         category = event.get("metadata", {}).get("tool_category", "")
@@ -95,7 +91,7 @@ class EventStreamHandler:
             self._tool_start = False
 
         if event_type == "on_chat_model_start":
-            role = self.get_chat_role(graph_node)
+            role = node_config.role
             content = ""
             type = ChunkType.START
 
@@ -104,13 +100,13 @@ class EventStreamHandler:
 
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
-            role = self.get_chat_role(graph_node)
+            role = node_config.role
 
             if role == Role.INTERMEDIATE:
                 if self._intermediate_stream_sent:
                     return EventChunkData(
                         role=None,
-                        graph_node=AgentNode.UNKNOWN,
+                        graph_node="unknown",
                         content=None,
                         type=ChunkType.BODY,
                         category=None,
@@ -118,17 +114,13 @@ class EventStreamHandler:
                 else:
                     self._intermediate_stream_sent = True
 
-            if (
-                chunk
-                and chunk.content
-                and graph_node in [node.value for node in AI_STREAMING_NODES]
-            ):
+            if chunk and chunk.content and node_config.streams_ai_content:
                 content = chunk.content
 
             type = ChunkType.STREAM
 
         elif event_type == "on_chat_model_end":
-            role = self.get_chat_role(graph_node)
+            role = node_config.role
             content = ""
             type = ChunkType.END
 
@@ -143,15 +135,10 @@ class EventStreamHandler:
 
         return EventChunkData(
             role=role,
-            graph_node=AgentNode(graph_node),
+            graph_node=graph_node,
             content=content,
             type=type,
             category=category,
             datasets_used=datasets_used,
             generated_sql_query=generated_sql_query,
         )
-
-    def get_chat_role(self, node: str) -> Role:
-        if node in [node.value for node in AI_STREAMING_NODES]:
-            return Role.AI
-        return Role.INTERMEDIATE

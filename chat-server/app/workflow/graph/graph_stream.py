@@ -80,7 +80,7 @@ async def stream_graph_updates(
                     chat_id=chat_id,
                     trace_id=trace_id,
                     role=extracted_event_data.role,
-                    agent_node=extracted_event_data.graph_node,
+                    node_name=extracted_event_data.graph_node,
                     chunk_type=extracted_event_data.type,
                     content=extracted_event_data.content,
                     datasets_used=extracted_event_data.datasets_used,
