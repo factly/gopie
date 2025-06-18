@@ -6,7 +6,6 @@ import (
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
-	"go.uber.org/zap"
 )
 
 // DatabaseSourceService handles database source operations
@@ -25,24 +24,20 @@ func NewDatabaseSourceService(dbSourceRepo repositories.DatabaseSourceStoreRepos
 
 // Create creates a new database source
 func (s *DatabaseSourceService) Create(params *models.CreateDatabaseSourceParams) (*models.DatabaseSource, error) {
-	s.logger.Info("Creating database source", zap.String("project_id", params.ProjectID))
 	return s.dbSourceRepo.Create(context.Background(), *params)
 }
 
 // Get retrieves a database source by ID
 func (s *DatabaseSourceService) Get(id string) (*models.DatabaseSource, error) {
-	s.logger.Info("Getting database source", zap.String("id", id))
 	return s.dbSourceRepo.Get(context.Background(), id)
 }
 
 // Delete deletes a database source
 func (s *DatabaseSourceService) Delete(id string) error {
-	s.logger.Info("Deleting database source", zap.String("id", id))
 	return s.dbSourceRepo.Delete(context.Background(), id)
 }
 
 // List lists all database sources
 func (s *DatabaseSourceService) List(limit, offset int) ([]*models.DatabaseSource, error) {
-	s.logger.Info("Listing database sources", zap.Int("limit", limit), zap.Int("offset", offset))
 	return s.dbSourceRepo.List(context.Background(), limit, offset)
 }
