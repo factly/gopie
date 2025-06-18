@@ -18,8 +18,3 @@ class GatewayProvider(str, Enum):
     LITELLM = "litellm"
     CLOUDFLARE = "cloudflare"
     OPENROUTER = "openrouter"
-
-
-DEFAULT_VENDOR = ModelVendor.OPENAI
-DEFAULT_CATEGORY = ModelCategory.ADVANCED
-DEFAULT_GATEWAY = GatewayProvider.PORTKEY_HOSTED

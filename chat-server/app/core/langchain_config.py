@@ -23,7 +23,7 @@ class ModelConfig:
     ):
         self.user = user
         self.trace_id = trace_id
-        self.model_provider = ModelVendor.OPENAI
+        self.model_provider = ModelVendor(settings.DEFAULT_VENDOR)
 
         self.openai_model = settings.DEFAULT_OPENAI_MODEL
         self.openai_embeddings_model = settings.DEFAULT_EMBEDDING_MODEL

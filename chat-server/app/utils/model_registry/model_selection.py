@@ -1,40 +1,44 @@
 from app.core.config import settings
-from app.models.router import ModelInfo
-from app.utils.model_registry.model_config import AVAILABLE_MODELS
+from app.models.provider import ModelCategory
 
-NODE_TO_MODEL = {
-    "analyze_query": settings.MODEL_ANALYZE_QUERY,
-    "route_query_replan": settings.MODEL_ROUTE_QUERY_REPLAN,
-    "generate_subqueries": settings.MODEL_GENERATE_SUBQUERIES,
-    "identify_datasets": settings.MODEL_IDENTIFY_DATASETS,
-    "plan_query": settings.MODEL_PLAN_QUERY,
-    "generate_result": settings.MODEL_GENERATE_RESULT,
-    "stream_updates": settings.MODEL_STREAM_UPDATES,
-    "check_further_execution_requirement": (
-        settings.MODEL_CHECK_FURTHER_EXECUTION_REQUIREMENT
-    ),
-    # Single dataset graph nodes
-    "process_query": settings.MODEL_PROCESS_QUERY,
-    "response": settings.MODEL_RESPONSE,
-    "supervisor": settings.DEFAULT_OPENAI_MODEL,
-    # Visualization graph nodes
-    "choose_visualization": settings.DEFAULT_OPENAI_MODEL,
-    "format_data_for_visualization": settings.DEFAULT_OPENAI_MODEL,
-    "visualization_response": settings.MODEL_GENERATE_RESULT,
+NODE_TO_COMPLEXITY = {
+    "analyze_query": ModelCategory.ADVANCED,
+    "route_query_replan": ModelCategory.FAST,
+    "generate_subqueries": ModelCategory.BALANCED,
+    "identify_datasets": ModelCategory.BALANCED,
+    "plan_query": ModelCategory.ADVANCED,
+    "generate_result": ModelCategory.BALANCED,
+    "stream_updates": ModelCategory.BALANCED,
+    "check_further_execution_requirement": ModelCategory.FAST,
+    "process_query": ModelCategory.ADVANCED,
+    "response": ModelCategory.BALANCED,
+    "choose_visualization": ModelCategory.BALANCED,
+    "format_data_for_visualization": ModelCategory.FAST,
+    "visualization_response": ModelCategory.BALANCED,
 }
 
 
-def get_model_info(model_id: str) -> ModelInfo:
-    model_info = AVAILABLE_MODELS.get(model_id)
+COMPLEXITY_TO_MODEL = {
+    ModelCategory.FAST: settings.FAST_MODEL,
+    ModelCategory.BALANCED: settings.BALANCED_MODEL,
+    ModelCategory.ADVANCED: settings.ADVANCED_MODEL,
+}
 
-    if model_info is None:
-        default_model_info = AVAILABLE_MODELS.get(
-            settings.DEFAULT_OPENAI_MODEL
-        )
-        if default_model_info is None:
+
+def get_node_complexity(node_name: str) -> ModelCategory:
+    return NODE_TO_COMPLEXITY.get(node_name, ModelCategory.BALANCED)
+
+
+def get_node_model(node_name: str) -> str:
+    complexity = get_node_complexity(node_name)
+    model_id = COMPLEXITY_TO_MODEL[complexity]
+
+    if not model_id:
+        model_id = settings.DEFAULT_OPENAI_MODEL
+        if not model_id:
             raise ValueError(
-                f"Default model {settings.DEFAULT_OPENAI_MODEL} not found"
+                f"No model configured for {complexity.value} complexity "
+                f"and no default model available"
             )
-        return default_model_info
 
-    return model_info
+    return model_id

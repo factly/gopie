@@ -48,21 +48,15 @@ class Settings(BaseSettings):
 
     GOPIE_API_ENDPOINT: str = ""
 
-    MODEL_ANALYZE_QUERY: str = ""
-    MODEL_ROUTE_QUERY_REPLAN: str = ""
-    MODEL_GENERATE_SUBQUERIES: str = ""
-    MODEL_IDENTIFY_DATASETS: str = ""
-    MODEL_PLAN_QUERY: str = ""
-    MODEL_GENERATE_RESULT: str = ""
-    MODEL_STREAM_UPDATES: str = ""
-    MODEL_CHECK_FURTHER_EXECUTION_REQUIREMENT: str = ""
-
-    MODEL_PROCESS_QUERY: str = ""
-    MODEL_RESPONSE: str = ""
+    ADVANCED_MODEL: str = ""
+    BALANCED_MODEL: str = ""
+    FAST_MODEL: str = ""
 
     DEFAULT_OPENAI_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_GEMINI_MODEL: str = ""
+
+    DEFAULT_VENDOR: str = ""
 
     class Config:
         env_file = ".env"
