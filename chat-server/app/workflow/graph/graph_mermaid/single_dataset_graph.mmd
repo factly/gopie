@@ -13,9 +13,10 @@ graph TD;
 	__start__ --> process_query;
 	check_visualization -. &nbsp;handoff_to_visualizer_agent&nbsp; .-> handoff_to_visualizer;
 	check_visualization -.-> response;
-	process_query --> check_visualization;
+	process_query -.-> check_visualization;
 	handoff_to_visualizer --> __end__;
 	response --> __end__;
+	process_query -. &nbsp;retry&nbsp; .-> process_query;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
