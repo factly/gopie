@@ -7,11 +7,6 @@ from app.models.chat import (
     StructuredChatStreamChunk,
     ToolMessage,
 )
-from app.workflow.events.node_config_manager import node_config_manager
-
-
-def create_progress_message(node_name: str) -> str:
-    return node_config_manager.get_progress_message(node_name)
 
 
 class AgentEventDispatcher(BaseCallbackHandler):
@@ -20,12 +15,11 @@ class AgentEventDispatcher(BaseCallbackHandler):
 
     def dispatch_event(
         self,
-        node_name: str,
         chunk_type: ChunkType,
         role: Role,
+        content: str,
         chat_id: str | None = None,
         trace_id: str | None = None,
-        content: str | None = None,
         datasets_used: list[str] | None = None,
         generated_sql_query: list[str] | None = None,
         tool_category: str | None = None,
@@ -34,7 +28,6 @@ class AgentEventDispatcher(BaseCallbackHandler):
         Dispatch an event with the appropriate chunk type and content.
 
         Args:
-            node_name: The name of the current node in the workflow
             chat_id: Unique identifier for the chat session
             trace_id: Unique identifier for the trace (optional)
             chunk_type: Type of chunk (START, STREAM, END, BODY)
@@ -43,9 +36,6 @@ class AgentEventDispatcher(BaseCallbackHandler):
             generated_sql_query: Generated SQL query if applicable
             tool_category: Tool category if the message is from a tool
         """
-        if content is None:
-            content = create_progress_message(node_name)
-
         if tool_category:
             message = ToolMessage(
                 role=role,

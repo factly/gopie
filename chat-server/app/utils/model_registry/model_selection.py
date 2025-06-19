@@ -4,7 +4,7 @@ from app.models.provider import ModelCategory
 NODE_TO_COMPLEXITY = {
     "analyze_query": ModelCategory.ADVANCED,
     "route_query_replan": ModelCategory.FAST,
-    "generate_subqueries": ModelCategory.BALANCED,
+    "generate_subqueries": ModelCategory.ADVANCED,
     "identify_datasets": ModelCategory.BALANCED,
     "plan_query": ModelCategory.ADVANCED,
     "generate_result": ModelCategory.BALANCED,

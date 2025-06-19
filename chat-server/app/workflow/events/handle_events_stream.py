@@ -1,97 +1,96 @@
-import json
-from enum import Enum
+from typing import Any
 
 from langchain_core.runnables.schema import StreamEvent
 
 from app.models.chat import ChunkType, EventChunkData, Role
-from app.workflow.events.node_config_manager import node_config_manager
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Enum):
-            return obj.value
-        try:
-            return obj.__dict__
-        except AttributeError:
-            if hasattr(obj, "model_dump"):
-                return obj.model_dump()
-            return str(obj)
 
 
 class EventStreamHandler:
     def __init__(self):
-        self._tool_start = False
-        self._stream_content = True
         self._intermediate_stream_sent = False
 
     def handle_events_stream(
         self,
-        event: StreamEvent,
+        event: Any,
     ) -> EventChunkData:
-
         event_type = event["event"]
-        graph_node = event.get("metadata", {}).get("langgraph_node", "unknown")
 
-        role = None
-        content = None
+        event_metadata = event.get("metadata", {})
+        role_value = event_metadata.get("role", None)
+        progress_message = event_metadata.get("progress_message", "")
+
         type = ChunkType.BODY
+        content = None
         category = None
         datasets_used = None
         generated_sql_query = None
 
-        if event_type == "on_custom_event":
-            event_data = event.get("data", {})
-            content = event_data.get("content", "")
-
-            if content == "do not stream":
-                self._stream_content = False
-            elif content == "continue streaming":
-                self._stream_content = True
-                return EventChunkData(
-                    role=role,
-                    graph_node="unknown",
-                    content=content,
-                    type=type,
-                    category=category,
-                )
-
-        if (
-            not node_config_manager.is_valid_node(graph_node)
-            or not self._stream_content
-        ):
-            return EventChunkData(
-                role=role,
-                graph_node="unknown",
-                content=content,
-                type=type,
-                category=category,
-            )
-
-        node_config = node_config_manager.get_config(graph_node)
-
-        tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
-        category = event.get("metadata", {}).get("tool_category", "")
+        role = Role(role_value) if role_value else None
 
         if event_type.startswith("on_tool"):
-            role = Role.SYSTEM
-            category = category
-            content = ""
+            role = Role.INTERMEDIATE
+            content, type, category = self._handle_tool_events(event)
 
-        if event_type == "on_tool_start":
-            self._tool_start = True
-            type = ChunkType.START
-        elif event_type == "on_tool_end":
-            self._tool_start = False
-            type = ChunkType.END
-        elif self._tool_start:
-            content = tool_text
-            type = ChunkType.STREAM
-        else:
-            self._tool_start = False
+        elif self._is_custom_event(event_type):
+            type = ChunkType.BODY
+            (
+                content,
+                datasets_used,
+                generated_sql_query,
+            ) = self._handle_custom_events(event, progress_message)
+            role = Role.INTERMEDIATE
+
+        elif not (role and self._is_chat_model_event(event_type)):
+            return self._create_empty_event_data()
+
+        elif self._is_chat_model_event(event_type):
+            content, type = self._handle_chat_model_events(
+                event_type, event, role, progress_message
+            )
+            if content is None and type == ChunkType.STREAM:
+                return self._create_empty_event_data()
+
+        if not content and content != "":
+            content = progress_message
+
+        return EventChunkData(
+            role=role,
+            content=content,
+            type=type,
+            category=category,
+            datasets_used=datasets_used,
+            generated_sql_query=generated_sql_query,
+        )
+
+    def _is_chat_model_event(self, event_type: str) -> bool:
+        return event_type in [
+            "on_chat_model_start",
+            "on_chat_model_stream",
+            "on_chat_model_end",
+        ]
+
+    def _is_custom_event(self, event_type: str) -> bool:
+        return event_type == "on_custom_event"
+
+    def _create_empty_event_data(self) -> EventChunkData:
+        return EventChunkData(
+            role=None,
+            content="",
+            type=ChunkType.BODY,
+            category=None,
+        )
+
+    def _handle_chat_model_events(
+        self,
+        event_type: str,
+        event: StreamEvent,
+        role: Role,
+        progress_message: str,
+    ) -> tuple[str | None, ChunkType]:
+        content = None
+        type = ChunkType.BODY
 
         if event_type == "on_chat_model_start":
-            role = node_config.role
             content = ""
             type = ChunkType.START
 
@@ -100,45 +99,50 @@ class EventStreamHandler:
 
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
-            role = node_config.role
+            type = ChunkType.STREAM
 
             if role == Role.INTERMEDIATE:
                 if self._intermediate_stream_sent:
-                    return EventChunkData(
-                        role=None,
-                        graph_node="unknown",
-                        content=None,
-                        type=ChunkType.BODY,
-                        category=None,
-                    )
+                    return None, type
                 else:
                     self._intermediate_stream_sent = True
+                    content = progress_message
 
-            if chunk and chunk.content and node_config.streams_ai_content:
+            elif role == Role.AI and chunk and chunk.content:
                 content = chunk.content
 
-            type = ChunkType.STREAM
-
         elif event_type == "on_chat_model_end":
-            role = node_config.role
             content = ""
             type = ChunkType.END
 
-        if event_type == "on_custom_event":
-            role = Role.INTERMEDIATE
-            type = ChunkType.BODY
+        return content, type
 
-            event_data = event.get("data", {})
-            content = event_data.get("content", "")
-            datasets_used = event_data.get("identified_datasets", [])
-            generated_sql_query = event_data.get("queries", [])
+    def _handle_custom_events(
+        self, event: StreamEvent, progress_message: str
+    ) -> tuple[str, list, list]:
+        event_data = event.get("data", {})
+        content = event_data.get("content", "")
+        datasets_used = event_data.get("identified_datasets", [])
+        generated_sql_query = event_data.get("queries", [])
 
-        return EventChunkData(
-            role=role,
-            graph_node=graph_node,
-            content=content,
-            type=type,
-            category=category,
-            datasets_used=datasets_used,
-            generated_sql_query=generated_sql_query,
-        )
+        if not content:
+            content = progress_message
+
+        return content, datasets_used, generated_sql_query
+
+    def _handle_tool_events(
+        self, event: StreamEvent
+    ) -> tuple[str, ChunkType, str]:
+        event_type = event["event"]
+        tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
+        category = event.get("metadata", {}).get("tool_category", "")
+
+        content = tool_text
+        type = ChunkType.BODY
+
+        if event_type == "on_tool_start":
+            type = ChunkType.START
+        elif event_type == "on_tool_end":
+            type = ChunkType.END
+
+        return content, type, category

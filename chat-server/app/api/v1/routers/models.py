@@ -6,7 +6,6 @@ from app.utils.model_registry.model_selection import (
     get_node_complexity,
     get_node_model,
 )
-from app.workflow.events.node_config_manager import node_config_manager
 
 router = APIRouter()
 
@@ -42,16 +41,12 @@ async def get_nodes_info() -> list:
     """
     nodes_info = []
 
-    for node_name in node_config_manager.get_all_nodes():
-        config = node_config_manager.get_config(node_name)
+    for node_name in AVAILABLE_MODELS.keys():
         complexity = get_node_complexity(node_name)
         assigned_model = get_node_model(node_name)
 
         node_info = {
             "node_name": node_name,
-            "streams_ai_content": config.streams_ai_content,
-            "role": config.role.value,
-            "progress_message": config.progress_message,
             "complexity": complexity.value,
             "assigned_model": assigned_model,
         }

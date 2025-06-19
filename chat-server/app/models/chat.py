@@ -11,7 +11,6 @@ class Role(str, Enum):
 
 
 class NodeConfig(BaseModel):
-    streams_ai_content: bool = False
     role: Role = Role.INTERMEDIATE
     progress_message: str = "Processing..."
 
@@ -55,8 +54,7 @@ class ToolMessage(ChatTextChunk):
 
 class EventChunkData(BaseModel):
     role: Role | None
-    graph_node: str
-    content: str | None
+    content: str
     type: ChunkType
     category: str | None
     datasets_used: list[str] | None = None
