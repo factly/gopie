@@ -43,6 +43,7 @@ jobs:
           push: true
           tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie:${{ env.RELEASE_VERSION }}
           file: server/Dockerfile
+          context: server
 
       # - name: Run GoReleaser
       #   uses: goreleaser/goreleaser-action@v6
