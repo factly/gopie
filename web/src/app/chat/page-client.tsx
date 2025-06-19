@@ -51,10 +51,14 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
+  searchParams,
+  router,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
+  searchParams: URLSearchParams;
+  router: ReturnType<typeof useRouter>;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -107,6 +111,13 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setActiveTab("chat");
     setSelectedContexts([]);
     setLinkedDatasetId(null);
+
+    // Clear URL parameters when starting a new chat
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("chatId");
+    params.delete("initialMessage");
+    params.delete("contextData");
+    router.replace(`/chat?${params.toString()}`);
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -527,6 +538,8 @@ function ChatPageClient() {
         params.set("chatId", chatId);
       } else {
         params.delete("chatId");
+        params.delete("initialMessage");
+        params.delete("contextData");
       }
       router.replace(`/chat?${params.toString()}`);
     },
@@ -1018,6 +1031,14 @@ function ChatPageClient() {
                     selectChatForDataset(null, null, null);
                     setLinkedDatasetId(null);
                     setActiveTab("chat");
+                    setSelectedContexts([]);
+
+                    // Clear URL parameters when starting a new chat
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("chatId");
+                    params.delete("initialMessage");
+                    params.delete("contextData");
+                    router.replace(`/chat?${params.toString()}`);
                   }}
                 >
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
@@ -1064,6 +1085,8 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
+                  searchParams={searchParams}
+                  router={router}
                 />
               </TabsContent>
             </Tabs>
