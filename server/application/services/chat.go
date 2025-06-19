@@ -112,7 +112,9 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content)
 	if err != nil {
 		fmt.Printf("Error generating title from AI: %v\n", err)
-		return nil, fmt.Errorf("error generating title from AI: %w", err)
+		title = &models.D_AiChatResponse{
+			Response: "Untitled Chat",
+		}
 	}
 
 	params.Title = title.Response
