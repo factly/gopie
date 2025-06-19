@@ -3,7 +3,7 @@
 import {
   DatabaseIcon,
   TableIcon,
-  MessageSquareIcon,
+  // MessageSquareIcon,
   CodeIcon,
   NetworkIcon,
   ChevronDown,
@@ -192,7 +192,7 @@ export function NavProjects() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(`/${projectId}/${datasetId}/chat`)}
@@ -202,7 +202,7 @@ export function NavProjects() {
                     <span>Chat</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild

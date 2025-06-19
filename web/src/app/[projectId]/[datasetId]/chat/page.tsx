@@ -122,11 +122,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   // Combine all pages of messages
   const allMessages = useMemo(() => {
-    const messages =
-      messagesData?.pages.flatMap((page) => page.data.results) ?? [];
+    const messages = messagesData?.pages.flatMap((page) => page.data) ?? [];
     return messages.sort((a, b) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
+      const timeA = new Date(a.createdAt || "").getTime();
+      const timeB = new Date(b.createdAt || "").getTime();
       if (timeA === timeB) {
         // If timestamps are equal, show user message first
         return a.role === "user" ? -1 : 1;
@@ -495,8 +494,8 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                 key={message.id}
                                 id={message.id}
                                 content={message.content}
-                                role={message.role}
-                                createdAt={message.created_at}
+                                role={message.role as "user" | "assistant"}
+                                createdAt={message.createdAt?.toString() || ""} // TODO: fix this
                                 chatId={selectedChatId || undefined}
                                 isLatest={
                                   index === allMessages.length - 1 &&

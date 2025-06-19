@@ -35,7 +35,7 @@ export function ChatTabs({
     refetch: refetchChats,
   } = useChats({
     variables: {
-      datasetId,
+      userID: "1",
       limit: 10,
     },
   });
@@ -46,7 +46,7 @@ export function ChatTabs({
 
   const handleDeleteChat = async (chatId: string) => {
     try {
-      await deleteChat.mutateAsync(chatId);
+      await deleteChat.mutateAsync({ chatId, userId: "1" });
       if (chatId === selectedChatId) {
         selectChatForDataset(datasetId, null, null);
       }
@@ -146,12 +146,12 @@ export function ChatTabs({
                           "bg-muted/80 border border-border/10"
                       )}
                       onClick={() =>
-                        handleSelectChat(chat.id, chat.name || "New Chat")
+                        handleSelectChat(chat.id, chat.title || "New Chat")
                       }
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="font-medium text-foreground/90 text-sm truncate max-w-[80%]">
-                          {chat.name || "New Chat"}
+                          {chat.title || "New Chat"}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">

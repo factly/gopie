@@ -26,8 +26,7 @@ async function fetchChat({
       },
     });
 
-    const chatDetails: ChatDetails = await response.json();
-    return chatDetails;
+    return await response.json();
   } catch (error) {
     throw new Error("Failed to fetch chat details: " + error);
   }
