@@ -28,13 +28,6 @@ async def generate_subqueries(state: State, config: RunnableConfig):
     )
 
     try:
-        await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": "do not stream",
-            },
-        )
-
         assessment_prompt = get_prompt(
             "assess_query_complexity", user_input=user_input
         )
@@ -44,13 +37,6 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 "input": assessment_prompt,
                 "chat_history": get_chat_history(config),
             }
-        )
-
-        await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": "continue streaming",
-            },
         )
 
         parser = JsonOutputParser()

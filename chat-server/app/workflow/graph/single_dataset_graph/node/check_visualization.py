@@ -6,9 +6,14 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
+from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Checking visualization needs...",
+)
 async def check_visualization(state: State, config: RunnableConfig) -> dict:
     user_query = state.get("user_query", "")
 

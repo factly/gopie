@@ -99,13 +99,6 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         and query_result.subqueries[query_index].retry_count
         < settings.MAX_RETRY_COUNT
     ):
-        await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": "do not stream",
-            },
-        )
-
         llm = get_llm_for_node("route_query_replan", config)
 
         prompt = f"""
@@ -157,13 +150,6 @@ Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
                 "chat_history": get_chat_history(config),
                 "input": prompt,
             }
-        )
-
-        await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": "continue streaming",
-            },
         )
 
         response_text = str(response.content).lower()

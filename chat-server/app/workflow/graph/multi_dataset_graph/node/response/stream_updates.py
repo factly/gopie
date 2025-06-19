@@ -1,6 +1,5 @@
 import json
 
-from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
@@ -11,9 +10,14 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
+from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
+@configure_node(
+    role="ai",
+    progress_message="",
+)
 async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
@@ -63,12 +67,6 @@ async def check_further_execution_requirement(
     Returns a string indicating the next step: "next_sub_query" or
     "end_execution".
     """
-    await adispatch_custom_event(
-        "dataful-agent",
-        {
-            "content": "do not stream",
-        },
-    )
 
     last_stream_message = state.get("messages", [])[-1]
 
@@ -83,13 +81,6 @@ async def check_further_execution_requirement(
             "input": analysis_prompt,
             "chat_history": get_chat_history(config),
         }
-    )
-
-    await adispatch_custom_event(
-        "dataful-agent",
-        {
-            "content": "continue streaming",
-        },
     )
 
     try:

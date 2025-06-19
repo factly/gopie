@@ -1,8 +1,13 @@
 from langgraph.types import Command
 
+from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Transferring visual call...",
+)
 async def transfer_visual_call(state: State) -> Command:
     user_query = state.get("user_query", "")
     query_result = state.get("query_result") or {}

@@ -11,9 +11,14 @@ from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
+from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Planning query...",
+)
 async def plan_query(state: State, config: RunnableConfig) -> dict:
     """
     Plan the SQL query based on user input and dataset information.
