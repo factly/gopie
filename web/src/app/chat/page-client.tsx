@@ -507,7 +507,12 @@ function ChatPageClient() {
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
-  const { open: isSidebarOpen, isMobile } = useSidebar();
+  const {
+    open: isSidebarOpen,
+    isMobile,
+    setOpen,
+    setOpenMobile,
+  } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     selectedChatId,
@@ -993,6 +998,15 @@ function ChatPageClient() {
       )
     );
   }, [selectedChatId, displayMessages]);
+
+  // Close sidebar when chat page opens
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  }, []); // Empty dependency array means this runs only once on mount
 
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
