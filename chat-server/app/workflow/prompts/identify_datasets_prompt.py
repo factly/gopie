@@ -1,11 +1,10 @@
+import json
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
 def create_identify_datasets_prompt(
-    user_query: str,
-    available_datasets_schemas: str,
-    confidence_score: float | None = None,
-    query_type: str | None = None,
+    input: str,
 ) -> list:
     system_content = """
 TASK: Identify the most relevant dataset(s) for this user query.
@@ -80,16 +79,115 @@ IMPORTANT:
 """
 
     human_content = f"""
-USER QUERY: "{user_query}"
-
-QUERY TYPE: {query_type}
-QUERY CONFIDENCE SCORE: {confidence_score}
-
-AVAILABLE DATASETS (pre-filtered by relevance):
-{available_datasets_schemas}
+{input}
 """
 
     return [
         SystemMessage(content=system_content),
         HumanMessage(content=human_content),
     ]
+
+
+def format_identify_datasets_input(
+    user_query: str,
+    available_datasets_schemas: str,
+    confidence_score: float | None = None,
+    query_type: str | None = None,
+) -> dict:
+    input_parts = [
+        f"USER QUERY: {user_query}",
+    ]
+
+    if query_type:
+        input_parts.append(f"QUERY TYPE: {query_type}")
+
+    if confidence_score is not None:
+        input_parts.append(f"CONFIDENCE SCORE: {confidence_score}/10")
+
+    try:
+        schemas = (
+            json.loads(available_datasets_schemas)
+            if isinstance(available_datasets_schemas, str)
+            else available_datasets_schemas
+        )
+
+        if schemas:
+            input_parts.append(f"\nAVAILABLE DATASETS: {len(schemas)}")
+
+            for i, schema in enumerate(schemas, 1):
+                dataset_section = [f"\n--- DATASET {i} ---"]
+                dataset_section.append(
+                    f"Name: {schema.get('name', 'Unknown')}"
+                )
+
+                if schema.get("dataset_description"):
+                    dataset_section.append(
+                        f"Description: {schema.get('dataset_description')}"
+                    )
+
+                columns = schema.get("columns", [])
+                if columns:
+                    dataset_section.append(f"Columns ({len(columns)}):")
+
+                    for column in columns:
+                        col_info = []
+                        col_name = column.get("column_name", "unknown")
+                        col_type = column.get("column_type", "unknown")
+                        col_info.append(f"- {col_name} ({col_type})")
+
+                        if column.get("column_description"):
+                            col_info.append(
+                                f"  Description: {column.get('column_description')}"
+                            )
+
+                        if col_type in [
+                            "BIGINT",
+                            "INTEGER",
+                            "DOUBLE",
+                            "FLOAT",
+                            "DECIMAL",
+                            "NUMERIC",
+                        ]:
+                            stats = []
+                            if column.get("min") is not None:
+                                stats.append(
+                                    f"Range: {column.get('min')}-{column.get('max')}"
+                                )
+                            if column.get("avg") is not None:
+                                stats.append(f"Avg: {column.get('avg')}")
+                            if column.get("count"):
+                                stats.append(f"Count: {column.get('count')}")
+                            if stats:
+                                col_info.append(f"  Stats: {', '.join(stats)}")
+
+                        sample_values = column.get("sample_values", [])
+                        if sample_values:
+                            unique_samples = list(
+                                dict.fromkeys(sample_values)
+                            )[:5]
+                            samples_str = ", ".join(
+                                str(s) for s in unique_samples if s is not None
+                            )
+                            if samples_str:
+                                col_info.append(f"  Samples: {samples_str}")
+
+                        if column.get("approx_unique") is not None:
+                            col_info.append(
+                                f"  Unique values: ~{column.get('approx_unique')}"
+                            )
+
+                        dataset_section.extend(col_info)
+
+                input_parts.extend(dataset_section)
+        else:
+            input_parts.append("\nNo datasets available for analysis")
+
+    except (json.JSONDecodeError, TypeError) as e:
+        input_parts.append(f"\nError parsing dataset schemas: {str(e)}")
+        input_parts.append(f"Raw schemas data: {available_datasets_schemas}")
+
+    formatted_input = "\n".join(input_parts)
+
+    return {
+        "input": formatted_input,
+    }

@@ -1,5 +1,3 @@
-import json
-
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
@@ -63,47 +61,13 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                 "datasets"
             )
 
-        # TEMP
-        formatted_datasets = json.dumps(datasets_info, indent=2)
-
-        error_context = ""
-        if error_messages and retry_count > 1:
-            error_context = f"""
-Previous attempt failed with this error:
-{error_messages}
-
-Please fix the issues in the query and try again. This is attempt
-{retry_count} of 3.
-"""
-
-        dataset_analysis_context = ""
-        if datasets_info.get("correct_column_requirements"):
-            dataset_analysis_context = f"""
-Analysis of column values from database:
-{json.dumps(datasets_info.get("correct_column_requirements"), indent=2)}
-
-IMPORTANT: Utilize these analyzed column values when constructing your
-query, especially for matching conditions. This represents actual
-values found or not found in the database.
-"""
-
-        node_messages_context = ""
-        if node_messages:
-            node_messages_context = f"""
-Previous workflow steps information:
-{json.dumps(node_messages, indent=2)}
-
-Use this information to better understand the context and reasoning
-from previous steps.
-"""
-
         llm_prompt = get_prompt(
             "plan_query",
             user_query=user_query,
-            formatted_datasets=formatted_datasets,
-            error_context=error_context,
-            dataset_analysis_context=dataset_analysis_context,
-            node_messages_context=node_messages_context,
+            datasets_info=datasets_info,
+            error_messages=error_messages,
+            retry_count=retry_count,
+            node_messages=node_messages,
         )
 
         llm = get_llm_for_node("plan_query", config)

@@ -26,14 +26,24 @@ class PromptManager:
             LangSmith prompt template or formatted fallback prompt string
         """
 
+        formatted_input = PromptSelector().format_prompt_input(
+            langsmith_prompt_name, *args, **kwargs
+        )
+
         if self.is_langsmith_enabled():
             try:
                 langsmith_prompt = pull_prompt(langsmith_prompt_name)
                 logger.info(f"LangSmith prompt: {langsmith_prompt}")
 
-                formatted_prompt = langsmith_prompt.format_messages(
-                    *args, **kwargs
-                )
+                if formatted_input:
+                    formatted_prompt = langsmith_prompt.format_messages(
+                        formatted_input
+                    )
+                else:
+                    formatted_prompt = langsmith_prompt.format_messages(
+                        *args, **kwargs
+                    )
+
                 return formatted_prompt
 
             except Exception as e:
