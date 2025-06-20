@@ -12,10 +12,6 @@ from app.workflow.graph.visualize_data_graph.types import State
 
 
 async def choose_visualization(state: State, config: RunnableConfig) -> dict:
-    """
-    Choose the appropriate visualization type based on the data and question.
-    This runs in parallel with format_results.
-    """
     question = state.get("user_query", "")
     results = state.get("viz_data", [])
 

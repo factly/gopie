@@ -1,25 +1,12 @@
+from langchain_core.messages import HumanMessage, SystemMessage
+
+
 def create_conversational_query_prompt(
     user_query: str, query_result: str
-) -> str:
-    """
-    Create a prompt for handling conversational or tool-only queries.
-
-    Args:
-        user_query: The original user query
-        query_result: The query result object
-
-    Returns:
-        A formatted prompt string for conversational queries
-    """
-
-    prompt = f"""
+) -> list:
+    system_content = """
 You are generating the final response to a user query.
 This is the LAST step in the workflow.
-
-USER QUERY: "{user_query}"
-
-QUERY RESULT:
-{query_result}
 
 RESPONSE INSTRUCTIONS:
 1. Answer the query directly and confidently based on all available
@@ -41,29 +28,23 @@ RESPONSE INSTRUCTIONS:
     error codes, or processing steps
 """
 
-    return prompt
-
-
-def create_data_query_prompt(user_query: str, query_result: str) -> str:
-    """
-    Create a prompt for handling data analysis queries.
-
-    Args:
-        user_query: The original user query
-        query_result: The query result object
-
-    Returns:
-        A formatted prompt string for data queries
-    """
-
-    prompt = f"""
-You are generating the final response to a data analysis query.
-This is the LAST step in the workflow.
-
+    human_content = f"""
 USER QUERY: "{user_query}"
 
 QUERY RESULT:
 {query_result}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
+
+
+def create_data_query_prompt(user_query: str, query_result: str) -> list:
+    system_content = """
+You are generating the final response to a data analysis query.
+This is the LAST step in the workflow.
 
 RESPONSE INSTRUCTIONS:
 1. Begin with a direct, confident answer to the user's query
@@ -111,29 +92,23 @@ RESPONSE INSTRUCTIONS:
    - Neutral and objective when presenting facts
 """
 
-    return prompt
-
-
-def create_empty_results_prompt(user_query: str, query_result: str) -> str:
-    """
-    Create a prompt for handling empty query results.
-
-    Args:
-        user_query: The original user query
-        query_result: The query result object
-
-    Returns:
-        A formatted prompt string for empty results
-    """
-
-    prompt = f"""
-You are generating a response for a query that returned no results.
-This is the LAST step in the workflow.
-
+    human_content = f"""
 USER QUERY: "{user_query}"
 
 QUERY RESULT:
 {query_result}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
+
+
+def create_empty_results_prompt(user_query: str, query_result: str) -> list:
+    system_content = """
+You are generating a response for a query that returned no results.
+This is the LAST step in the workflow.
 
 RESPONSE INSTRUCTIONS:
 1. Acknowledge that no matching data was found for their specific query
@@ -164,4 +139,14 @@ RESPONSE INSTRUCTIONS:
     approach
 """
 
-    return prompt
+    human_content = f"""
+USER QUERY: "{user_query}"
+
+QUERY RESULT:
+{query_result}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

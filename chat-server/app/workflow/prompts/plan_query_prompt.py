@@ -1,5 +1,7 @@
 from typing import Any
 
+from langchain_core.messages import HumanMessage, SystemMessage
+
 
 def create_plan_query_prompt(
     user_query: str,
@@ -7,41 +9,11 @@ def create_plan_query_prompt(
     error_context: str | None = None,
     dataset_analysis_context: str | None = None,
     node_messages_context: str | None = None,
-) -> str:
-    """
-    Create a prompt for planning a SQL query based on user input and dataset
-    information.
-
-    Args:
-        user_query: The natural language query from the user
-        formatted_datasets: Information about the available datasets
-        error_context: Any error messages from previous attempts
-        dataset_analysis_context: Analysis of column values from database
-        node_messages_context: Messages from previous nodes in the workflow
-
-    Returns:
-        A formatted prompt string
-    """
-
-    prompt = f"""
+) -> list:
+    system_content = """
 # QUERY TASK
 Given the following natural language query and detailed information
 about multiple datasets, create appropriate SQL query or queries.
-
-User Query: "{user_query}"
-
-# DATASETS INFORMATION
-Selected Datasets Information:
-{formatted_datasets}
-
-# DATASET ANALYSIS RESULTS
-{dataset_analysis_context}
-
-# WORKFLOW CONTEXT
-{node_messages_context}
-
-# ERROR INFORMATION
-{error_context}
 
 # DATABASE COMPATIBILITY REQUIREMENTS
 IMPORTANT:
@@ -68,8 +40,7 @@ IMPORTANT - DATASET NAMING:
 # DATASET RELATIONSHIP ASSESSMENT
 1. ANALYZE whether the selected datasets can be related through common
    fields
-   - Look for matching column names, primary/foreign keys, or semantic
-     relationships
+   - Look for matching column names, primary/foreign keys, or semantic relationships
    - Determine if JOIN operations are possible between datasets
 
 2. DECISION POINT:
@@ -111,22 +82,19 @@ You must provide two versions of the SQL query (or queries):
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{{
-    "reasoning": "Explain your overall thought process for planning the query.
-                  Discuss whether datasets can be joined.",
+{
+    "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {{
+        {
             "sql_query": "the SQL query to fetch the required data",
-            "formatted_sql_query": "the well-formatted SQL query for UI
-                                    display",
+            "formatted_sql_query": "the well-formatted SQL query for UI display",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }}
+        }
     ],
-    "limitations": "Any limitations or assumptions made when planning the
-                    query"
-}}
+    "limitations": "Any limitations or assumptions made when planning the query"
+}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
@@ -134,4 +102,24 @@ related, include multiple queries in the "sql_queries" array, one for
 each dataset needed.
 """
 
-    return prompt
+    human_content = f"""
+User Query: "{user_query}"
+
+# DATASETS INFORMATION
+Selected Datasets Information:
+{formatted_datasets}
+
+# DATASET ANALYSIS RESULTS
+{dataset_analysis_context}
+
+# WORKFLOW CONTEXT
+{node_messages_context}
+
+# ERROR INFORMATION
+{error_context}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

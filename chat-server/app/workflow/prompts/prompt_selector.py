@@ -1,5 +1,7 @@
 from typing import Literal
 
+from langchain_core.messages import BaseMessage
+
 from app.workflow.prompts.analyze_query_prompt import (
     create_analyze_query_prompt,
 )
@@ -27,7 +29,6 @@ NodeName = Literal[
     "analyze_query",
     "generate_subqueries",
     "assess_query_complexity",
-    "system_prompt",
     "conversational_query",
     "data_query",
     "empty_results",
@@ -51,10 +52,9 @@ class PromptSelector:
             "execution_analysis": create_execution_analysis_prompt,
         }
 
-    def get_prompt(self, node_name: NodeName, **kwargs) -> str:
-        """
-        Get the appropriate prompt for a workflow node based on the node name.
-        """
+    def get_prompt(
+        self, node_name: NodeName, **kwargs
+    ) -> list[BaseMessage] | str:
         if node_name not in self.prompt_map:
             raise ValueError(f"No prompt available for node: {node_name}")
 

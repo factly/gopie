@@ -1,3 +1,5 @@
+from langchain_core.messages import BaseMessage
+
 from app.core.config import settings
 from app.core.log import logger
 from app.utils.langsmith.client import pull_prompt
@@ -17,7 +19,7 @@ class PromptManager:
         langsmith_prompt_name: NodeName,
         *args,
         **kwargs,
-    ):
+    ) -> list[BaseMessage] | str:
         """
         Get a prompt from LangSmith hub if enabled, otherwise return fallback.
         Returns:
@@ -50,9 +52,13 @@ class PromptManager:
                 langsmith_prompt_name, *args, **kwargs
             )
 
-    def get_fallback_prompt(self, node_name: NodeName, *args, **kwargs) -> str:
+    def get_fallback_prompt(
+        self, node_name: NodeName, *args, **kwargs
+    ) -> list[BaseMessage] | str:
         return PromptSelector().get_prompt(node_name, *args, **kwargs)
 
 
-def get_prompt(node_name: NodeName, *args, **kwargs) -> str:
+def get_prompt(
+    node_name: NodeName, *args, **kwargs
+) -> list[BaseMessage] | str:
     return PromptManager().get_prompt(node_name, *args, **kwargs)

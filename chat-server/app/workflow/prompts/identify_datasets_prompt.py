@@ -1,31 +1,14 @@
+from langchain_core.messages import HumanMessage, SystemMessage
+
+
 def create_identify_datasets_prompt(
     user_query: str,
     available_datasets_schemas: str,
     confidence_score: float | None = None,
     query_type: str | None = None,
-) -> str:
-    """
-    Create a prompt for identifying datasets based on user query.
-
-    Args:
-        user_query: The natural language query from the user
-        available_datasets_schemas: List of available dataset schemas
-        confidence_score: Confidence score for the query classification
-        query_type: Type of query determined by previous analysis
-
-    Returns:
-        A formatted prompt string
-    """
-    return f"""
+) -> list:
+    system_content = """
 TASK: Identify the most relevant dataset(s) for this user query.
-
-USER QUERY: "{user_query}"
-
-QUERY TYPE: {query_type}
-QUERY CONFIDENCE SCORE: {confidence_score}
-
-AVAILABLE DATASETS (pre-filtered by relevance):
-{available_datasets_schemas}
 
 INSTRUCTIONS:
 
@@ -68,24 +51,24 @@ INSTRUCTIONS:
 * Be concise but informative - this will help guide later processing
 
 FORMAT YOUR RESPONSE AS JSON:
-{{
+{
     "selected_dataset": ["dataset_name1", "dataset_name2", ...],
     "reasoning": "1-2 sentences explaining why these datasets were selected",
     "column_assumptions": [
-        {{
+        {
             "dataset": "dataset_name1",
             "columns": [
-                {{
+                {
                     "name": "column_name",
                     "exact_values": ["value1", ...],
                     "fuzzy_values": ["value2", ...]
-                }}
+                }
             ]
-        }}
+        }
     ],
     "node_message": "Brief message about datasets found/not found and why
                      they're relevant to the query"
-}}
+}
 
 IMPORTANT:
 * Be specific and precise
@@ -95,3 +78,18 @@ IMPORTANT:
 * Only use exact_values when completely confident the value exists
 * Make your node_message informative providing context on the datasets you selected
 """
+
+    human_content = f"""
+USER QUERY: "{user_query}"
+
+QUERY TYPE: {query_type}
+QUERY CONFIDENCE SCORE: {confidence_score}
+
+AVAILABLE DATASETS (pre-filtered by relevance):
+{available_datasets_schemas}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
