@@ -3,14 +3,14 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.core.config import settings
 from app.models.provider import GatewayProvider, ModelVendor
 from app.tools import TOOLS
-from app.utils.gateway_providers.cloudflare import CloudflareGatewayProvider
-from app.utils.gateway_providers.litellm import LiteLLMGatewayProvider
-from app.utils.gateway_providers.openrouter import OpenrouterGatewayProvider
-from app.utils.gateway_providers.portkey import PortkeyGatewayProvider
-from app.utils.gateway_providers.portkey_self_hosted import (
+from app.utils.model_registry.model_config import AVAILABLE_MODELS
+from app.utils.providers.cloudflare import CloudflareGatewayProvider
+from app.utils.providers.litellm import LiteLLMGatewayProvider
+from app.utils.providers.openrouter import OpenrouterGatewayProvider
+from app.utils.providers.portkey import PortkeyGatewayProvider
+from app.utils.providers.portkey_self_hosted import (
     PortkeySelfHostedGatewayProvider,
 )
-from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 
 class ModelConfig:

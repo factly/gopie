@@ -11,6 +11,7 @@ NODE_TO_COMPLEXITY = {
     "stream_updates": ModelCategory.BALANCED,
     "check_further_execution_requirement": ModelCategory.FAST,
     "process_query": ModelCategory.ADVANCED,
+    "check_visualization": ModelCategory.FAST,
     "response": ModelCategory.BALANCED,
     "choose_visualization": ModelCategory.BALANCED,
     "format_data_for_visualization": ModelCategory.FAST,

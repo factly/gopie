@@ -2,7 +2,6 @@ from typing import Literal
 
 from langchain_core.messages import BaseMessage
 
-from app.core.log import logger
 from app.workflow.prompts.analyze_query_prompt import (
     create_analyze_query_prompt,
 )
@@ -29,7 +28,10 @@ from app.workflow.prompts.process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
 )
-from app.workflow.prompts.response_prompt import create_response_prompt
+from app.workflow.prompts.response_prompt import (
+    create_response_prompt,
+    format_response_input,
+)
 from app.workflow.prompts.stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
@@ -71,6 +73,7 @@ class PromptSelector:
             "identify_datasets": format_identify_datasets_input,
             "plan_query": format_plan_query_input,
             "process_query": format_process_query_input,
+            "response": format_response_input,
         }
 
     def get_prompt(
@@ -90,9 +93,6 @@ class PromptSelector:
         self, node_name: NodeName, **kwargs
     ) -> dict | None:
         if node_name not in self.format_prompt_input_map:
-            logger.debug(
-                f"No format prompt input available for node: {node_name}"
-            )
             return None
 
         return self.format_prompt_input_map[node_name](**kwargs)

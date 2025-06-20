@@ -36,7 +36,7 @@ class PromptManager:
 
                 if formatted_input:
                     formatted_prompt = langsmith_prompt.format_messages(
-                        formatted_input
+                        **formatted_input
                     )
                 else:
                     formatted_prompt = langsmith_prompt.format_messages(

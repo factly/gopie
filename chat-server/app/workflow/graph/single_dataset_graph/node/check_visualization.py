@@ -38,7 +38,7 @@ async def check_visualization(state: State, config: RunnableConfig) -> dict:
         user_query=user_query,
     )
 
-    llm = get_llm_for_node("supervisor", config)
+    llm = get_llm_for_node("check_visualization", config)
     response = await llm.ainvoke(
         {
             "input": prompt_messages,

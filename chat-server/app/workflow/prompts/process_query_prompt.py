@@ -3,9 +3,10 @@ import json
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
 
-def create_process_query_prompt(input_text: str) -> list[BaseMessage]:
+def create_process_query_prompt(input: str) -> list[BaseMessage]:
     system_message = SystemMessage(
-        content="""You are a DuckDB and data expert. Analyze the user's
+        content="""
+You are a DuckDB and data expert. Analyze the user's
 question and determine if you need to generate SQL queries to get new data or
 if you can answer using available context.
 
@@ -39,7 +40,11 @@ Return a JSON object in one of these formats:
 Always respond with valid JSON only."""
     )
 
-    human_message = HumanMessage(content=input_text)
+    human_content = f"""
+{input}
+"""
+
+    human_message = HumanMessage(content=human_content)
 
     return [system_message, human_message]
 
@@ -117,9 +122,13 @@ COLUMNS ({len(columns)} total):"""
     except (json.JSONDecodeError, Exception):
         formatted_schema = f"TABLE SCHEMA IN JSON:\n{schema_json}"
 
-    formatted_input = f"""USER QUESTION: {user_query}
+    formatted_input = f"""
+USER QUESTION: {user_query}
 
+DATASET INFORMATION:
 {formatted_schema}
+
+DATASET NAME: {dataset_name}
 
 SAMPLE DATA (50 ROWS) IN CSV:
 ---------------------

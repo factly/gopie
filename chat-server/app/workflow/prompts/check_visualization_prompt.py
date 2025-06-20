@@ -5,7 +5,8 @@ def create_check_visualization_prompt(
     user_query: str, **kwargs
 ) -> list[BaseMessage]:
     system_message = SystemMessage(
-        content="""You are a strict routing supervisor for a data analysis
+        content="""
+You are a strict routing supervisor for a data analysis
 system. Your job is to determine if the user EXPLICITLY and CLEARLY requested
 data visualization.
 
