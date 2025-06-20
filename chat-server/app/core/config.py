@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     OPENROUTER_BASE_URL: str = ""
 
     LANGSMITH_PROMPT: bool = False
+    LANGSMITH_API_KEY: str = ""
 
     QDRANT_HOST: str = "host.docker.internal"
     QDRANT_COLLECTION: str = "dataset_collection"

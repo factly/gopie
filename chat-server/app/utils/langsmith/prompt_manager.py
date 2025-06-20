@@ -1,9 +1,6 @@
 from app.core.config import settings
 from app.core.log import logger
-from app.utils.langsmith.client import (
-    extract_content_from_prompt_template,
-    pull_prompt,
-)
+from app.utils.langsmith.client import pull_prompt
 from app.workflow.prompts.prompt_selector import NodeName, PromptSelector
 
 
@@ -20,7 +17,7 @@ class PromptManager:
         langsmith_prompt_name: NodeName,
         *args,
         **kwargs,
-    ) -> str:
+    ):
         """
         Get a prompt from LangSmith hub if enabled, otherwise return fallback.
         Returns:
@@ -30,13 +27,12 @@ class PromptManager:
         if self.is_langsmith_enabled():
             try:
                 langsmith_prompt = pull_prompt(langsmith_prompt_name)
-                formatted_prompt = langsmith_prompt.format(*args, **kwargs)
+                logger.info(f"LangSmith prompt: {langsmith_prompt}")
 
-                prompt_content = extract_content_from_prompt_template(
-                    formatted_prompt
+                formatted_prompt = langsmith_prompt.format_messages(
+                    *args, **kwargs
                 )
-
-                return prompt_content
+                return formatted_prompt
 
             except Exception as e:
                 logger.warning(

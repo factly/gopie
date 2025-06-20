@@ -10,7 +10,6 @@ from app.utils.gateway_providers.portkey import PortkeyGatewayProvider
 from app.utils.gateway_providers.portkey_self_hosted import (
     PortkeySelfHostedGatewayProvider,
 )
-from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_config import AVAILABLE_MODELS
 
 
@@ -94,13 +93,10 @@ class LangchainConfig:
         return model
 
     def _create_prompt_chain(self):
-        system_prompt = get_prompt("system_prompt")
-
         return ChatPromptTemplate.from_messages(
             [
-                ("system", system_prompt),
                 MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="input"),
             ]
         )
 

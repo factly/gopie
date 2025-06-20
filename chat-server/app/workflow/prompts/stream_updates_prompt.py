@@ -1,13 +1,7 @@
 def create_stream_update_prompt(
-    query_text: str,
-    subquery_count: int,
     original_user_query: str,
-    query_index: int,
     subquery_result: str,
-    error_message: str,
-    sql_queries: str,
-    node_messages: str,
-    remaining_subqueries: str,
+    subquery_messages: str,
 ) -> str:
     """
     Create a prompt for generating stream updates about subquery execution.
@@ -29,23 +23,10 @@ I need to create a brief update about the execution of a subquery.
 
 Original User Query: "{original_user_query}"
 
-This is subquery {query_index} / {subquery_count}:
-"{query_text}"
-
-SQL Queries Used:
-{sql_queries}
+{subquery_messages}
 
 Subquery Result Information:
 {subquery_result}
-
-Node Messages:
-{node_messages}
-
-Error Information (if any):
-{error_message}
-
-Remaining Subqueries:
-{remaining_subqueries}
 
 INSTRUCTIONS:
 1. First, determine if this subquery was successful or failed by examining

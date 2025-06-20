@@ -21,29 +21,26 @@ from app.workflow.graph.multi_dataset_graph.types import State
 async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
+    subqueries = state.get("subqueries", [])
 
     subquery_result = query_result.subqueries[query_index]
-    sql_queries = [
-        sql_info.sql_query for sql_info in subquery_result.sql_queries
-    ]
-    node_messages = subquery_result.node_messages
 
     remaining_index = query_index + 1
-    remaining_subqueries = [
-        sq.query_text for sq in query_result.subqueries[remaining_index:]
-    ]
+    remaining_subqueries = [sq for sq in subqueries[remaining_index:]]
+
+    subquery_messages = f"""
+        This is subquery {query_index + 1} / {len(subqueries)}:\n
+        {subquery_result.query_text}\n\n
+
+        Remaining subqueries:
+        {remaining_subqueries}
+    """
 
     stream_update_prompt = get_prompt(
         node_name="stream_updates",
-        query_text=subquery_result.query_text,
-        original_user_query=query_result.original_user_query,
-        subquery_count=len(query_result.subqueries),
-        query_index=query_index + 1,
         subquery_result=json.dumps(subquery_result.to_dict()),
-        error_message=json.dumps(subquery_result.error_message),
-        sql_queries=json.dumps(sql_queries),
-        node_messages=json.dumps(node_messages),
-        remaining_subqueries=json.dumps(remaining_subqueries),
+        original_user_query=query_result.original_user_query,
+        subquery_messages=subquery_messages,
     )
 
     llm = get_llm_for_node("stream_updates", config)
