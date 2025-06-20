@@ -33,7 +33,6 @@ class PromptManager:
         if self.is_langsmith_enabled():
             try:
                 langsmith_prompt = pull_prompt(langsmith_prompt_name)
-                logger.info(f"LangSmith prompt: {langsmith_prompt}")
 
                 if formatted_input:
                     formatted_prompt = langsmith_prompt.format_messages(

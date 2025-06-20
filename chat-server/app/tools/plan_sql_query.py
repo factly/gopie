@@ -4,7 +4,7 @@ from typing import Any
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.tools import tool
 
-from app.workflow.prompts.plan_query_prompt import create_plan_query_prompt
+from app.utils.langsmith.prompt_manager import get_prompt
 
 
 @tool
@@ -48,7 +48,8 @@ async def plan_sql_query(
         else:
             formatted_schemas = unorganised_dataset_info
 
-        prompt = create_plan_query_prompt(
+        prompt = get_prompt(
+            "plan_query",
             user_query=user_query,
             formatted_datasets=formatted_schemas,
             error_context=None,

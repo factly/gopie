@@ -12,9 +12,6 @@ from app.utils.model_registry.model_provider import (
     get_llm_for_node,
 )
 from app.workflow.graph.multi_dataset_graph.types import State
-from app.workflow.prompts.generate_subqueries_prompt import (
-    create_generate_subqueries_prompt,
-)
 
 
 async def generate_subqueries(state: State, config: RunnableConfig):
@@ -48,8 +45,8 @@ async def generate_subqueries(state: State, config: RunnableConfig):
         subqueries = []
 
         if needs_breakdown:
-            subqueries_prompt = create_generate_subqueries_prompt(
-                user_input=user_input
+            subqueries_prompt = get_prompt(
+                "generate_subqueries", user_input=user_input
             )
             subqueries_response = await llm.ainvoke(
                 {
