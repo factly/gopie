@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
@@ -40,22 +41,16 @@ async def response(state: State, config: RunnableConfig) -> dict:
         for result in failed_results:
             data_context += f"{result}\n\n"
 
-    prompt = f"""
-Answer the user's question: "{user_query}"
-Dataset: {dataset_name}
-
-{data_context}
-
-Provide a clear, helpful response based on the available data.
-Be conversational and focus on insights.
-
-IMPORTANT: Base your response ONLY on the data provided above. Do not add
-information that isn't present in the results.
-"""
+    prompt_messages = get_prompt(
+        "response",
+        user_query=user_query,
+        dataset_name=dataset_name,
+        data_context=data_context,
+    )
 
     llm = get_llm_for_node("response", config)
     response_result = await llm.ainvoke(
-        {"input": prompt, "chat_history": get_chat_history(config)}
+        {"input": prompt_messages, "chat_history": get_chat_history(config)}
     )
 
     return {"messages": [AIMessage(content=str(response_result.content))]}

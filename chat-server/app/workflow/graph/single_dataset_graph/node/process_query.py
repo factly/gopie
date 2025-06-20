@@ -10,6 +10,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.services.gopie.sql_executor import execute_sql
 from app.services.qdrant.get_schema import get_schema_from_qdrant
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
@@ -88,62 +89,23 @@ Please analyze the error and generate corrected SQL queries.
   that works on every sql engine.
 """
 
-        prompt = f"""
-You are a DuckDB and data expert. Analyze the user's question and determine
-if you need to generate SQL queries to get new data or if you can answer using
-available context.
-
-USER QUESTION: {user_query}
-
-TABLE NAME: {dataset_name} (This is the name of the table in the database
-                            so use this in forming SQL queries)
-
-TABLE SCHEMA IN JSON:
----------------------
-{schema_json}
----------------------
-
-SAMPLE DATA (50 ROWS) IN CSV:
----------------------
-{rows_csv}
----------------------
-
-{error_context}
-
-INSTRUCTIONS:
-1. If the user's question can be answered using the sample data or previous
-   context, generate a response with empty SQL queries and give response for
-   non-sql queries.
-2. If new data analysis is needed, generate appropriate SQL queries
-
-RULES FOR SQL QUERIES (when needed):
-- No semicolon at end of query
-- Use double quotes for table/column names, single quotes for values
-- Exclude rows with state='All India' when filtering/aggregating by state
-- For share/percentage calculations, calculate as: (value/total)*100
-- Exclude 'Total' category from categorical field calculations
-- Include units/unit column when displaying value columns
-- Use Levenshtein for fuzzy string matching
-- Use ILIKE for case-insensitive matching
-- Generate only read queries (SELECT)
-- Pay careful attention to exact column names from the schema
-
-RESPONSE FORMAT:
-Return a JSON object in one of these formats:
-{{
-    "sql_queries": ["<SQL query here without semicolon>", ...],
-    "explanations": ["<Brief explanation for each query>", ...],
-    "response_for_non_sql": "<Brief explanation for non-sql response>"
-}}
-
-Always respond with valid JSON only.
-        """
+        prompt_messages = get_prompt(
+            "process_query",
+            user_query=user_query,
+            dataset_name=dataset_name,
+            schema_json=schema_json,
+            rows_csv=rows_csv,
+            error_context=error_context,
+        )
 
         llm = get_llm_for_node("process_query", config)
         parser = JsonOutputParser()
 
         llm_response = await llm.ainvoke(
-            {"input": prompt, "chat_history": get_chat_history(config)}
+            {
+                "input": prompt_messages,
+                "chat_history": get_chat_history(config),
+            }
         )
 
         response_content = str(llm_response.content)
