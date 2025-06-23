@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import plotly.express as px
 from langchain_core.tools import tool
@@ -8,9 +8,9 @@ from langchain_core.tools import tool
 async def generate_visualisation(
     data: list[dict],
     chart_type: str = "bar",
-    x: str | None = None,
-    y: str | None = None,
-    title: str | None = None,
+    x: Optional[str] = "",
+    y: Optional[str] = "",
+    title: Optional[str] = "",
 ) -> Any:
     """
     Generate a Plotly chart from data.
