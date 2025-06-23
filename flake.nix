@@ -29,6 +29,7 @@
               jq
               goose
               pgcli
+              bun
             ];
             shellHook = ''
               export GOPATH="$HOME/go"

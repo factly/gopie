@@ -17,6 +17,7 @@ import (
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
@@ -80,7 +81,9 @@ func (h *httpHandler) chat(ctx *fiber.Ctx) error {
 	}
 	body.Messages[len(body.Messages)-1].Role = "user"
 
-	dataset, err := h.datasetSvc.Details(body.DatasetID)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+
+	dataset, err := h.datasetSvc.Details(body.DatasetID, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && errors.Is(err, domain.ErrRecordNotFound) {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{

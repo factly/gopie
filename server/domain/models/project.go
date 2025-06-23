@@ -20,6 +20,7 @@ type Project struct {
 
 	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID     string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // CreateProjectParams represents parameters for creating a project
@@ -59,5 +60,6 @@ type SearchProjectsResults struct {
 	// Number of datasets in the project
 	DatasetCount int    `json:"datasetCount" example:"5"`
 	CreatedBy    string `json:"createdBy" example:"550e8400-e29b-41d4-a716-446655440000"`
-	UpdateBy     string `json:"updateBy" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UpdatedBy    string `json:"updateBy" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID        string `json:"orgId" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the project belongs
 }

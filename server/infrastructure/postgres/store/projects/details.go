@@ -32,5 +32,8 @@ func (s *PostgresProjectStore) Details(ctx context.Context, id, orgID string) (*
 		Description: p.Description.String,
 		CreatedAt:   time.Time(p.CreatedAt.Time),
 		UpdatedAt:   time.Time(p.UpdatedAt.Time),
+		CreatedBy:   p.CreatedBy.String,
+		UpdatedBy:   p.UpdatedBy.String,
+		OrgID:       p.OrgID.String,
 	}, nil
 }

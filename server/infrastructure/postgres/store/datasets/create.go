@@ -37,6 +37,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Alias:       pgtype.Text{String: params.Alias, Valid: true},
 		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
 		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
+		OrgID:       pgtype.Text{String: params.OrgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating dataset", zap.Error(err))

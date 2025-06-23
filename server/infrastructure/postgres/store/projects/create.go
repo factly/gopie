@@ -31,5 +31,6 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 		UpdatedAt:   time.Time(p.UpdatedAt.Time),
 		CreatedBy:   p.CreatedBy.String,
 		UpdatedBy:   p.UpdatedBy.String,
+		OrgID:       p.OrgID.String,
 	}, nil
 }

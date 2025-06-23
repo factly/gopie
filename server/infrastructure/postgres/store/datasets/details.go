@@ -8,12 +8,17 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
-func (s *PgDatasetStore) Details(ctx context.Context, datasetID string) (*models.Dataset, error) {
-	d, err := s.q.GetDataset(ctx, datasetID)
+func (s *PgDatasetStore) Details(ctx context.Context, datasetID string, orgID string) (*models.Dataset, error) {
+	d, err := s.q.GetDataset(ctx, gen.GetDatasetParams{
+		ID:    datasetID,
+		OrgID: pgtype.Text{String: orgID, Valid: true},
+	})
 	if err != nil {
 		s.logger.Error("Error fetching dataset", zap.Error(err))
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -45,8 +50,11 @@ func (s *PgDatasetStore) Details(ctx context.Context, datasetID string) (*models
 	}, nil
 }
 
-func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string) (*models.Dataset, error) {
-	d, err := s.q.GetDatasetByName(ctx, tableName)
+func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string, orgID string) (*models.Dataset, error) {
+	d, err := s.q.GetDatasetByName(ctx, gen.GetDatasetByNameParams{
+		Name:  tableName,
+		OrgID: pgtype.Text{String: orgID, Valid: false},
+	})
 	if err != nil {
 		s.logger.Error("Error fetching dataset", zap.Error(err))
 		if errors.Is(err, pgx.ErrNoRows) {

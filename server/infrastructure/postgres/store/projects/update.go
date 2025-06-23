@@ -29,5 +29,6 @@ func (s *PostgresProjectStore) Update(ctx context.Context, projectID string, par
 		UpdatedAt:   p.UpdatedAt.Time,
 		CreatedBy:   p.CreatedBy.String,
 		UpdatedBy:   p.UpdatedBy.String,
+		OrgID:       p.OrgID.String,
 	}, nil
 }

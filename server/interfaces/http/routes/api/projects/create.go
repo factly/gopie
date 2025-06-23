@@ -3,6 +3,7 @@ package projects
 import (
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -13,7 +14,6 @@ type createRequestBody struct {
 	Name string `json:"name" validate:"required,min=3,max=50" example:"My New Project"`
 	// Description of the project
 	Description string `json:"description" validate:"required,min=10,max=500" example:"This is a detailed description of my new project"`
-	CreatedBy   string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Create a new project
@@ -27,6 +27,9 @@ type createRequestBody struct {
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /v1/api/projects [post]
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+
 	body := createRequestBody{}
 	if err := ctx.BodyParser(&body); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -48,9 +51,9 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	project, err := h.svc.Create(models.CreateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
-		CreatedBy:   body.CreatedBy,
+		CreatedBy:   userID,
+		OrgID:       orgID,
 	})
-
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

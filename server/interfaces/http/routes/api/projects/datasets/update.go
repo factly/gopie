@@ -4,6 +4,7 @@ import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -29,6 +30,7 @@ type updateDatasetParams struct {
 // @Router /v1/api/projects/{projectID}/datasets/{datasetID} [put]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
 	var body updateDatasetParams
 	if err := ctx.BodyParser(&body); err != nil {
@@ -48,7 +50,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	existingDataset, err := h.datasetsSvc.Details(datasetID)
+	existingDataset, err := h.datasetsSvc.Details(datasetID, orgID)
 	if err != nil {
 		h.logger.Error("Error updating dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -75,7 +77,6 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		RowCount:    existingDataset.RowCount,
 		Size:        existingDataset.Size,
 	})
-
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

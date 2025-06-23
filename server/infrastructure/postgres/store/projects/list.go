@@ -31,6 +31,9 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 			CreatedAt:    time.Time(p.CreatedAt.Time),
 			UpdatedAt:    time.Time(p.UpdatedAt.Time),
 			DatasetCount: int(p.DatasetCount),
+			CreatedBy:    p.CreatedBy.String,
+			UpdatedBy:    p.UpdatedBy.String,
+			OrgID:        p.OrgID.String,
 		})
 	}
 	count, err := s.q.GetProjectsCount(ctx, pgtype.Text{String: orgID, Valid: true})

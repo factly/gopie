@@ -2,6 +2,7 @@ package datasets
 
 import (
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -19,7 +20,9 @@ import (
 // @Router /v1/api/projects/{projectID}/datasets/{datasetID} [delete]
 func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
-	dataset, err := h.datasetsSvc.Details(datasetID)
+
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
 	if err != nil {
 		h.logger.Error("Error deleting dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -36,7 +39,7 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.datasetsSvc.Delete(datasetID)
+	err = h.datasetsSvc.Delete(datasetID, orgID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

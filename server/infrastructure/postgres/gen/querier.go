@@ -25,7 +25,7 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DeleteChat(ctx context.Context, arg DeleteChatParams) error
 	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
-	DeleteDataset(ctx context.Context, id string) error
+	DeleteDataset(ctx context.Context, arg DeleteDatasetParams) error
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
@@ -33,8 +33,8 @@ type Querier interface {
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
 	GetDatabaseSource(ctx context.Context, id pgtype.UUID) (DatabaseSource, error)
-	GetDataset(ctx context.Context, id string) (Dataset, error)
-	GetDatasetByName(ctx context.Context, name string) (Dataset, error)
+	GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset, error)
+	GetDatasetByName(ctx context.Context, arg GetDatasetByNameParams) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)
 	GetDatasetSummary(ctx context.Context, datasetName string) (DatasetSummary, error)
 	GetFailedDatasetUploadsCount(ctx context.Context) (int64, error)

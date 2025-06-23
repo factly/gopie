@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/factly/gopie/domain/pkg/config"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
@@ -34,6 +35,8 @@ func serveApiServer(cfg *config.GopieConfig, params *ServerParams) error {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: log.Logger,
 	}))
+
+	app.Use(middleware.SetupApiServerAuthCtx(params.Logger))
 
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {

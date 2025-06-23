@@ -12,7 +12,8 @@ create table if not exists datasets(
     -- in bytes
     size bigint,
     file_path text not null,
-    columns jsonb
+    columns jsonb,
+    org_id text
 );
 
 create table if not exists projects(

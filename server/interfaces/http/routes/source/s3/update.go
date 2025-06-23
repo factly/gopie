@@ -6,6 +6,7 @@ import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -55,9 +56,10 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
 	// Check if d exists
-	d, err := h.datasetSvc.GetByTableName(body.Dataset)
+	d, err := h.datasetSvc.GetByTableName(body.Dataset, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.Dataset))

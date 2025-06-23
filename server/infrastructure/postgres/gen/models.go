@@ -48,6 +48,7 @@ type Dataset struct {
 	Size        pgtype.Int8
 	FilePath    string
 	Columns     []byte
+	OrgID       pgtype.Text
 }
 
 type DatasetSummary struct {
