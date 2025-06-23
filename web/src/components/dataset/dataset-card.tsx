@@ -4,7 +4,6 @@ import {
   Trash,
   Calendar,
   Database,
-  ChevronRight,
   MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
@@ -64,9 +63,9 @@ export function DatasetCard({
   };
 
   // Function to create a simple initial avatar from dataset name
-  const getInitialAvatar = (name: string) => {
-    return name.charAt(0).toUpperCase();
-  };
+  // const getInitialAvatar = (name: string) => {
+  //   return name.charAt(0).toUpperCase();
+  // };
 
   const preventLinkNavigation = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -115,9 +114,9 @@ export function DatasetCard({
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
+              {/* <div className="flex-shrink-0 w-10 h-10  bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
                 {getInitialAvatar(dataset.alias || dataset.name)}
-              </div>
+              </div> */}
               <div>
                 <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
                   {dataset.alias || dataset.name}
@@ -234,8 +233,8 @@ export function DatasetCard({
                     isHovered ? "opacity-100 translate-x-0" : ""
                   )}
                 >
-                  <span>View</span>
-                  <ChevronRight className="h-3 w-3" />
+                  {/* <span>View</span>
+                  <ChevronRight className="h-3 w-3" /> */}
                 </div>
               </div>
             </div>

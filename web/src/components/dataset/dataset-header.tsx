@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateDataset } from "@/lib/mutations/dataset/update-dataset";
 import { Dataset } from "@/lib/api-client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ export function DatasetHeader({
   onUpdate,
 }: DatasetHeaderProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -105,6 +107,22 @@ export function DatasetHeader({
     setEditedAlias(dataset.alias || "");
     setEditedDescription(dataset.description || "");
     setIsEditing(false);
+  };
+
+  const handleChatClick = () => {
+    // Create context data for this dataset
+    const contextData = encodeURIComponent(
+      JSON.stringify([
+        {
+          id: dataset.id,
+          type: "dataset",
+          name: dataset.alias || dataset.name,
+          projectId: projectId,
+        },
+      ])
+    );
+
+    router.push(`/chat?contextData=${contextData}`);
   };
 
   return (
@@ -215,16 +233,15 @@ export function DatasetHeader({
                     >
                       <DownloadIcon className="h-5 w-5" />
                     </Button>
-                    <Link href={`/${projectId}/${dataset.id}/chat/`}>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-secondary/80"
-                        title="Chat with Dataset"
-                      >
-                        <MessageSquareIcon className="h-5 w-5" />
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 hover:bg-secondary/80"
+                      title="Chat with Dataset"
+                      onClick={handleChatClick}
+                    >
+                      <MessageSquareIcon className="h-5 w-5" />
+                    </Button>
                     <Link href={`/${projectId}/${dataset.id}/data/`}>
                       <Button
                         variant="outline"

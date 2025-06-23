@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { redirect } from "next/navigation";
+import { PageLoading } from "@/components/ui/loading";
 
 interface ProtectedPageProps {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ export function ProtectedPage({ children }: ProtectedPageProps) {
 
   // Show loading state
   if (status === "loading") {
-    return <div>Loading...</div>;
+    return <PageLoading />;
   }
 
   // Redirect to login if not authenticated

@@ -51,10 +51,14 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
+  searchParams,
+  router,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
+  searchParams: URLSearchParams;
+  router: ReturnType<typeof useRouter>;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -107,6 +111,13 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setActiveTab("chat");
     setSelectedContexts([]);
     setLinkedDatasetId(null);
+
+    // Clear URL parameters when starting a new chat
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("chatId");
+    params.delete("initialMessage");
+    params.delete("contextData");
+    router.replace(`/chat?${params.toString()}`);
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -496,7 +507,12 @@ function ChatPageClient() {
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
-  const { open: isSidebarOpen, isMobile } = useSidebar();
+  const {
+    open: isSidebarOpen,
+    isMobile,
+    setOpen,
+    setOpenMobile,
+  } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     selectedChatId,
@@ -527,6 +543,8 @@ function ChatPageClient() {
         params.set("chatId", chatId);
       } else {
         params.delete("chatId");
+        params.delete("initialMessage");
+        params.delete("contextData");
       }
       router.replace(`/chat?${params.toString()}`);
     },
@@ -981,6 +999,15 @@ function ChatPageClient() {
     );
   }, [selectedChatId, displayMessages]);
 
+  // Close sidebar when chat page opens
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  }, []); // Empty dependency array means this runs only once on mount
+
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
       <div className="flex w-full relative overflow-hidden max-h-screen">
@@ -1018,6 +1045,14 @@ function ChatPageClient() {
                     selectChatForDataset(null, null, null);
                     setLinkedDatasetId(null);
                     setActiveTab("chat");
+                    setSelectedContexts([]);
+
+                    // Clear URL parameters when starting a new chat
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("chatId");
+                    params.delete("initialMessage");
+                    params.delete("contextData");
+                    router.replace(`/chat?${params.toString()}`);
                   }}
                 >
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
@@ -1064,6 +1099,8 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
+                  searchParams={searchParams}
+                  router={router}
                 />
               </TabsContent>
             </Tabs>

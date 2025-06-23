@@ -27,7 +27,7 @@ export function AuthStatus({
   if (isAuthDisabled) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <div className="px-3 py-1 text-xs bg-amber-100 text-amber-800 rounded-md">
+        <div className="px-3 py-1 text-xs bg-amber-100 text-amber-800 ">
           Auth Disabled
         </div>
       </div>

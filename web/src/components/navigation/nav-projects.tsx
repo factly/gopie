@@ -5,7 +5,7 @@ import {
   TableIcon,
   DatabaseIcon,
   CodeIcon,
-  MessageSquareIcon,
+  // MessageSquareIcon,
   NetworkIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -102,12 +102,12 @@ export function NavProjects() {
             icon: TableIcon,
             isActive: isActive(`/${projectId}/${datasetId}`, true),
           },
-          {
-            title: "Chat",
-            url: `/${projectId}/${datasetId}/chat`,
-            icon: MessageSquareIcon,
-            isActive: isActive(`/${projectId}/${datasetId}/chat`),
-          },
+          // {
+          //   title: "Chat",
+          //   url: `/${projectId}/${datasetId}/chat`,
+          //   icon: MessageSquareIcon,
+          //   isActive: isActive(`/${projectId}/${datasetId}/chat`),
+          // },
           {
             title: "Query",
             url: `/${projectId}/${datasetId}/data`,
