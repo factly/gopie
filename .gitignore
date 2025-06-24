@@ -3,7 +3,7 @@ zitadel_key.json
 
 # Chat-server: Google service account credentials
 **/service-account*.json
-
+chat-server/user_scripts
 main
 /dataful
 /data

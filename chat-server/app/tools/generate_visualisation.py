@@ -54,6 +54,6 @@ def get_dynamic_tool_text(args: dict) -> str:
     return f"Generating Plotly {ct or 'chart'}"
 
 
-__tool__ = generate_visualisation
-__tool_category__ = "Data Visualization"
-__get_dynamic_tool_text__ = get_dynamic_tool_text
+# __tool__ = generate_visualisation
+# __tool_category__ = "Data Visualization"
+# __get_dynamic_tool_text__ = get_dynamic_tool_text

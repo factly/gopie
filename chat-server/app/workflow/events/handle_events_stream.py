@@ -2,7 +2,7 @@ from typing import Any
 
 from langchain_core.runnables.schema import StreamEvent
 
-from app.models.chat import ChunkType, EventChunkData, Role
+from app.models.chat import EventChunkData, ExtraData, Role
 
 
 class EventStreamHandler:
@@ -19,24 +19,20 @@ class EventStreamHandler:
         role_value = event_metadata.get("role", None)
         progress_message = event_metadata.get("progress_message", "")
 
-        type = ChunkType.BODY
         content = None
         category = None
-        datasets_used = None
-        generated_sql_query = None
+        extra_data = None
 
         role = Role(role_value) if role_value else None
 
         if event_type.startswith("on_tool"):
             role = Role.INTERMEDIATE
-            content, type, category = self._handle_tool_events(event)
+            content, category = self._handle_tool_events(event)
 
         elif self._is_custom_event(event_type):
-            type = ChunkType.BODY
             (
                 content,
-                datasets_used,
-                generated_sql_query,
+                extra_data,
             ) = self._handle_custom_events(event, progress_message)
             role = Role.INTERMEDIATE
 
@@ -44,10 +40,10 @@ class EventStreamHandler:
             return self._create_empty_event_data()
 
         elif self._is_chat_model_event(event_type):
-            content, type = self._handle_chat_model_events(
+            content = self._handle_chat_model_events(
                 event_type, event, role, progress_message
             )
-            if content is None and type == ChunkType.STREAM:
+            if content is None:
                 return self._create_empty_event_data()
 
         if not content and content != "":
@@ -56,10 +52,8 @@ class EventStreamHandler:
         return EventChunkData(
             role=role,
             content=content,
-            type=type,
             category=category,
-            datasets_used=datasets_used,
-            generated_sql_query=generated_sql_query,
+            extra_data=extra_data,
         )
 
     def _is_chat_model_event(self, event_type: str) -> bool:
@@ -76,8 +70,8 @@ class EventStreamHandler:
         return EventChunkData(
             role=None,
             content="",
-            type=ChunkType.BODY,
             category=None,
+            extra_data=None,
         )
 
     def _handle_chat_model_events(
@@ -86,24 +80,21 @@ class EventStreamHandler:
         event: StreamEvent,
         role: Role,
         progress_message: str,
-    ) -> tuple[str | None, ChunkType]:
+    ) -> str | None:
         content = None
-        type = ChunkType.BODY
 
         if event_type == "on_chat_model_start":
             content = ""
-            type = ChunkType.START
 
             if role == Role.INTERMEDIATE:
                 self._intermediate_stream_sent = False
 
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
-            type = ChunkType.STREAM
 
             if role == Role.INTERMEDIATE:
                 if self._intermediate_stream_sent:
-                    return None, type
+                    return None
                 else:
                     self._intermediate_stream_sent = True
                     content = progress_message
@@ -113,36 +104,27 @@ class EventStreamHandler:
 
         elif event_type == "on_chat_model_end":
             content = ""
-            type = ChunkType.END
 
-        return content, type
+        return content
 
     def _handle_custom_events(
         self, event: StreamEvent, progress_message: str
-    ) -> tuple[str, list, list]:
+    ) -> tuple[str, ExtraData | None]:
+        extra_data = None
         event_data = event.get("data", {})
         content = event_data.get("content", "")
-        datasets_used = event_data.get("identified_datasets", [])
-        generated_sql_query = event_data.get("queries", [])
-
+        data_name = event_data.get("name", "")
+        if data_name:
+            data_args = event_data.get("values", {})
+            extra_data = ExtraData(name=data_name, args=data_args)
         if not content:
             content = progress_message
+        return content, extra_data
 
-        return content, datasets_used, generated_sql_query
-
-    def _handle_tool_events(
-        self, event: StreamEvent
-    ) -> tuple[str, ChunkType, str]:
-        event_type = event["event"]
+    def _handle_tool_events(self, event: StreamEvent) -> tuple[str, str]:
         tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
         category = event.get("metadata", {}).get("tool_category", "")
 
         content = tool_text
-        type = ChunkType.BODY
 
-        if event_type == "on_tool_start":
-            type = ChunkType.START
-        elif event_type == "on_tool_end":
-            type = ChunkType.END
-
-        return content, type, category
+        return content, category

@@ -1,21 +1,26 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
     get_llm_for_node,
 )
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.single_dataset_graph.types import State
+from app.workflow.graph.visualize_with_code_graph import (
+    graph as visualize_with_code_graph,
+)
+
+from ..types import AgentState
 
 
 @configure_node(
     role="intermediate",
     progress_message="Checking visualization needs...",
 )
-async def check_visualization(state: State, config: RunnableConfig) -> dict:
+async def check_visualization(
+    state: AgentState, config: RunnableConfig
+) -> dict:
     user_query = state.get("user_query", "")
 
     raw_sql_queries_data = []
@@ -46,28 +51,18 @@ async def check_visualization(state: State, config: RunnableConfig) -> dict:
         }
     )
 
-    try:
-        parser = JsonOutputParser()
-        parsed_response = parser.parse(str(response.content))
-        wants_visualization = parsed_response.get("wants_visualization", False)
-
-        return {
-            "raw_sql_queries_data": raw_sql_queries_data,
-            "wants_visualization": wants_visualization,
-            "reasoning": parsed_response.get("reasoning", ""),
-        }
-    except Exception as e:
-        logger.error(f"Error parsing check_visualization response: {e}")
-        return {
-            "raw_sql_queries_data": raw_sql_queries_data,
-            "wants_visualization": False,
-            "reasoning": "",
-        }
+    parser = JsonOutputParser()
+    parsed_response = parser.parse(str(response.content))
+    needs_visualization = parsed_response.get("wants_visualization", False)
+    return {"needs_visualization": needs_visualization}
 
 
-def route_next_node(state: State, config: RunnableConfig) -> str:
-    wants_visualization = state.get("wants_visualization", False)
-    if wants_visualization:
-        return "handoff_to_visualizer_agent"
-    else:
-        return "response"
+async def call_visualization_agent(
+    state: AgentState, config: RunnableConfig
+) -> AgentState:
+    input_state = {
+        "user_query": state.get("user_query", ""),
+        "datasets": state.get("datasets", []),
+    }
+
+    _ = await visualize_with_code_graph.ainvoke(input_state, config=config)

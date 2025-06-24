@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_GEMINI_MODEL: str = ""
 
+    E2B_API_KEY: str = ""
+    E2B_TIMEOUT: int = 120
+
+    S3_HOST: str = ""
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
+    S3_BUCKET: str = ""
+    S3_REGION: str = ""
+
     DEFAULT_VENDOR: str = ""
 
     class Config:

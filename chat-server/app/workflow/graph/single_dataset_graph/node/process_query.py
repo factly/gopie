@@ -46,13 +46,12 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
 )
 async def process_query(state: State, config: RunnableConfig) -> dict:
     try:
-        dataset_ids = state.get("dataset_ids", [])
+        dataset_id = state.get("dataset_id", None)
         user_query = state.get("user_query", "")
         retry_count = state.get("retry_count", 0)
         error = state.get("error")
         failed_queries = state.get("failed_queries", [])
 
-        dataset_id = dataset_ids[0] if dataset_ids else None
         if not dataset_id:
             raise Exception("No dataset ID provided")
 
@@ -117,11 +116,14 @@ Please analyze the error and generate corrected SQL queries.
         current_failed_queries = []
 
         if sql_queries:
+            data_name = "sql_queries"
+            data_args = {"queries": sql_queries}
             await adispatch_custom_event(
-                "dataful-agent",
+                "gopie-agent",
                 {
                     "content": "SQL queries generated",
-                    "queries": sql_queries,
+                    "name": data_name,
+                    "values": data_args,
                 },
             )
 
@@ -219,5 +221,5 @@ def should_retry(state: State) -> str:
 
     if (error or failed_queries) and retry_count < 3:
         return "retry"
-
-    return "check_visualization"
+    else:
+        return "response"

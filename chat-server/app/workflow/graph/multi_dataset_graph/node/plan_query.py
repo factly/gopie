@@ -123,12 +123,14 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                     "limitations": limitations,
                 },
             )
-
+            data_name = "sql_queries"
+            data_args = {"queries": formatted_sql_queries}
             await adispatch_custom_event(
-                "dataful-agent",
+                "gopie-agent",
                 {
                     "content": "Generated SQL query",
-                    "queries": formatted_sql_queries,
+                    "name": data_name,
+                    "values": data_args,
                 },
             )
 
@@ -147,10 +149,9 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         error_msg = f"Unexpected error in query planning: {e!s}"
 
         await adispatch_custom_event(
-            "dataful-agent",
+            "gopie-agent",
             {
                 "content": "Error in query planning",
-                "query": None,
             },
         )
 

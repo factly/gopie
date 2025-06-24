@@ -8,17 +8,20 @@ graph TD;
 	supervisor(supervisor)
 	multi_dataset_agent(multi_dataset_agent)
 	single_dataset_agent(single_dataset_agent)
-	visualizer_agent(visualizer_agent)
-	dummy_supervisor(dummy_supervisor)
+	visualization_agent(visualization_agent)
+	check_visualization(check_visualization)
+	empty_node(empty_node)
 	__end__([<p>__end__</p>]):::last
+	__start__ --> check_visualization;
 	__start__ --> supervisor;
-	dummy_supervisor -.-> __end__;
-	dummy_supervisor -.-> visualizer_agent;
-	multi_dataset_agent --> dummy_supervisor;
-	single_dataset_agent --> dummy_supervisor;
+	check_visualization --> empty_node;
+	empty_node -.-> __end__;
+	empty_node -.-> visualization_agent;
+	multi_dataset_agent --> empty_node;
+	single_dataset_agent --> empty_node;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
-	visualizer_agent --> __end__;
+	visualization_agent --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

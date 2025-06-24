@@ -72,7 +72,9 @@ async def generate_result(
                         ).to_dict()
                     ]
                 )
-            ]
+            ],
+            "query_result": query_result,
+            "response_text": str(response.content),
         }
     except Exception as e:
         return {

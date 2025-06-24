@@ -1,31 +1,51 @@
-from langgraph.graph import END, StateGraph
+from langgraph.graph import END, START, StateGraph
 
 from app.models.schema import ConfigSchema
-from app.workflow.agent.supervisor import dummy_supervisor, supervisor
-from app.workflow.agent.types import State
-from app.workflow.graph.multi_dataset_graph import multi_dataset_graph
-from app.workflow.graph.single_dataset_graph import single_dataset_graph
-from app.workflow.graph.visualize_data_graph import visualize_data_graph
 
-graph_builder = StateGraph(State, config_schema=ConfigSchema)
+from .node.multi_dataset import call_multi_dataset_agent
+from .node.single_dataset import call_single_dataset_agent
+from .node.supervisor import supervisor
+from .node.visualisation import call_visualization_agent, check_visualization
+from .types import AgentState
+
+
+async def empty_node(state, config):
+    return state
+
+
+async def should_visualize(state, config):
+    if state.get("needs_visualization", False):
+        return "visualization_agent"
+    else:
+        return END
+
+
+graph_builder = StateGraph(AgentState, config_schema=ConfigSchema)
 
 
 graph_builder.add_node(
     supervisor,
     destinations=("multi_dataset_agent", "single_dataset_agent"),
 )
-graph_builder.add_node("multi_dataset_agent", multi_dataset_graph)
-graph_builder.add_node("single_dataset_agent", single_dataset_graph)
-graph_builder.add_node("visualizer_agent", visualize_data_graph)
+graph_builder.add_node("multi_dataset_agent", call_multi_dataset_agent)
+graph_builder.add_node("single_dataset_agent", call_single_dataset_agent)
+graph_builder.add_node("visualization_agent", call_visualization_agent)
+graph_builder.add_node("check_visualization", check_visualization)
+graph_builder.add_node("empty_node", empty_node)
 
-# NOTE: This is just for sake of visualization of graph.
-graph_builder.add_node(
-    dummy_supervisor, destinations=("visualizer_agent", END)
+graph_builder.add_edge(START, "supervisor")
+graph_builder.add_edge(START, "check_visualization")
+graph_builder.add_edge("multi_dataset_agent", "empty_node")
+graph_builder.add_edge("check_visualization", "empty_node")
+graph_builder.add_edge("single_dataset_agent", "empty_node")
+graph_builder.add_conditional_edges(
+    "empty_node",
+    should_visualize,
+    {
+        "visualization_agent": "visualization_agent",
+        END: END,
+    },
 )
-
-graph_builder.set_entry_point("supervisor")
-graph_builder.add_edge("multi_dataset_agent", "dummy_supervisor")
-graph_builder.add_edge("single_dataset_agent", "dummy_supervisor")
-graph_builder.add_edge("visualizer_agent", END)
+graph_builder.add_edge("visualization_agent", END)
 
 agent_graph = graph_builder.compile()

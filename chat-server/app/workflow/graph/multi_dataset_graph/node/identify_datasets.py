@@ -78,11 +78,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
             )
 
             await adispatch_custom_event(
-                "dataful-agent",
-                {
-                    "content": "No relevant datasets found",
-                    "identified_datasets": None,
-                },
+                "gopie-agent",
+                {"content": "No relevant datasets found"},
             )
 
             # convert data_query to conversational if no datasets found
@@ -155,12 +152,14 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "schemas": filtered_dataset_schemas,
             "column_assumptions": column_assumptions,
         }
-
+        data_name = "datasets_used"
+        data_args = {"datasets": selected_dataset_ids}
         await adispatch_custom_event(
-            "dataful-agent",
+            "gopie-agent",
             {
                 "content": "Datasets identified",
-                "identified_datasets": selected_dataset_ids,
+                "name": data_name,
+                "values": data_args,
             },
         )
 
@@ -176,11 +175,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
         query_result.add_error_message(str(e), "Error identifying datasets")
 
         await adispatch_custom_event(
-            "dataful-agent",
-            {
-                "content": "Error identifying datasets",
-                "identified_datasets": None,
-            },
+            "gopie-agent",
+            {"content": "Error identifying datasets"},
         )
 
         return {

@@ -29,5 +29,9 @@ async def response(state: State, config: RunnableConfig) -> dict:
     response_result = await llm.ainvoke(
         {"input": prompt_messages, "chat_history": get_chat_history(config)}
     )
+    response_text = str(response_result.content)
 
-    return {"messages": [AIMessage(content=str(response_result.content))]}
+    return {
+        "messages": [AIMessage(content=response_text)],
+        "response_text": response_text,
+    }

@@ -1,14 +1,12 @@
-import json
 import uuid
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
-from app.models.chat import Error, StructuredChatStreamChunk
+from app.models.chat import EventChunkData, Role
 from app.models.router import Message
 from app.workflow.agent import agent_graph
-from app.workflow.events.dispatcher import AgentEventDispatcher
 from app.workflow.events.handle_events_stream import EventStreamHandler
 
 
@@ -40,6 +38,8 @@ async def stream_graph_updates(
     """
     if not trace_id:
         trace_id = str(uuid.uuid4())
+    if len(project_ids) == 0 and len(dataset_ids) == 0:
+        raise ValueError("At least one dataset or project ID must be provided")
 
     chat_history = [
         convert_to_langchain_message(message) for message in messages[:-1]
@@ -72,36 +72,14 @@ async def stream_graph_updates(
             extracted_event_data = event_stream_handler.handle_events_stream(
                 event
             )
-
-            agent_event_dispatcher = AgentEventDispatcher()
-
             if extracted_event_data.role:
-                chunk = agent_event_dispatcher.dispatch_event(
-                    chat_id=chat_id,
-                    trace_id=trace_id,
-                    role=extracted_event_data.role,
-                    chunk_type=extracted_event_data.type,
-                    content=extracted_event_data.content,
-                    datasets_used=extracted_event_data.datasets_used,
-                    generated_sql_query=(
-                        extracted_event_data.generated_sql_query
-                    ),
-                    tool_category=extracted_event_data.category,
-                )
-
-                logger.debug(
-                    json.dumps(chunk.model_dump(mode="json"), indent=2)
-                )
-
-                yield chunk
+                yield extracted_event_data
 
     except Exception as e:
-        error = Error(
-            type="error",
-            message="Sorry, something went wrong. Please try again later",
-        )
-        output = StructuredChatStreamChunk(
-            chat_id=chat_id, error=error, finish_reason="error"
+        output = EventChunkData(
+            role=Role.INTERMEDIATE,
+            content="Sorry, something went wrong. Please try again later",
+            category="error",
         )
         yield output
         logger.exception(e)
@@ -114,11 +92,3 @@ def convert_to_langchain_message(message: Message):
         return AIMessage(content=message.content)
     else:
         raise ValueError(f"Unknown role: {message.role}")
-
-
-async def stream_graph_updates_json(
-    *args,
-    **kwargs,
-):
-    async for chunk in stream_graph_updates(*args, **kwargs):
-        yield "data: " + json.dumps(chunk.model_dump(mode="json")) + "\n \n"

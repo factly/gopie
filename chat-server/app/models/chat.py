@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import TypedDict
+from typing import Any, Dict
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class Role(str, Enum):
@@ -30,62 +30,13 @@ class AgentNode(Enum):
     RESPONSE = "response"
 
 
-class ChunkType(Enum):
-    START = "start"
-    END = "end"
-    BODY = "body"
-    STREAM = "stream"
-
-
-class Error(BaseModel):
-    type: str
-    message: str
-
-
-class ChatTextChunk(BaseModel):
-    role: Role
-    content: str
-    type: ChunkType
-
-
-class ToolMessage(ChatTextChunk):
-    category: str
+class ExtraData(BaseModel):
+    name: str
+    args: Dict[str, Any]
 
 
 class EventChunkData(BaseModel):
     role: Role | None
     content: str
-    type: ChunkType
     category: str | None
-    datasets_used: list[str] | None = None
-    generated_sql_query: list[str] | None = None
-
-
-class StructuredChatStreamChunk(BaseModel):
-    chat_id: str | None = None
-    trace_id: str | None = None
-    message: ChatTextChunk | ToolMessage | None = None
-    datasets_used: list[str] | None = None
-    generated_sql_query: list[str] | None = None
-    error: Error | None = None
-    finish_reason: str | None = None
-
-    model_config = ConfigDict(coerce_numbers_to_str=True, extra="forbid")
-
-
-# OpenAI Compatibility
-class OpenAiStreamingState(TypedDict):
-    completion_id: str
-    created: int
-    model: str | None
-    tool_messages: list
-    datasets_used: list
-    content_so_far: str
-    chunk_count: int
-    tool_call_id: int
-    last_sent_tool_messages: list
-    last_sent_datasets: list
-    last_sent_sql_query: list[str]
-    yield_content: bool
-    delta_content: str
-    finish_reason: str
+    extra_data: ExtraData | None = None

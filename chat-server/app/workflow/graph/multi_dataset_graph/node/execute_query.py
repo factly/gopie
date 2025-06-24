@@ -47,7 +47,7 @@ async def execute_query(state: State) -> dict:
             ].sql_query_result = result_records
 
         await adispatch_custom_event(
-            "dataful-agent",
+            "gopie-agent",
             {
                 "content": "SQL Execution completed",
             },
@@ -63,7 +63,7 @@ async def execute_query(state: State) -> dict:
         query_result.subqueries[query_index].retry_count += 1
 
         await adispatch_custom_event(
-            "dataful-agent",
+            "gopie-agent",
             {
                 "content": "Error in SQL Execution",
             },

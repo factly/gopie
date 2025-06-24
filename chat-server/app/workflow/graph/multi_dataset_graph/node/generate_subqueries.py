@@ -67,7 +67,7 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 subqueries_message += f"\n\nStep {i}: {subquery}"
 
             await adispatch_custom_event(
-                "dataful-agent",
+                "gopie-agent",
                 {
                     "content": subqueries_message,
                 },
@@ -82,7 +82,7 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             subqueries = [user_input]
 
             await adispatch_custom_event(
-                "dataful-agent",
+                "gopie-agent",
                 {
                     "content": "Analyzing query...",
                 },

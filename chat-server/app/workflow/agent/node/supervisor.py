@@ -1,15 +1,13 @@
 from langchain_core.messages import HumanMessage
-from langgraph.graph import END
 from langgraph.types import Command
 
-from app.workflow.agent.types import State
+from ..types import AgentState
 
 
 def supervisor(
-    state: State,
+    state: AgentState,
 ) -> Command:
     dataset_ids = state.get("dataset_ids", None)
-    project_ids = state.get("project_ids", None)
     messages = state.get("messages", [])
 
     if messages and isinstance(messages[-1], HumanMessage):
@@ -20,9 +18,6 @@ def supervisor(
     datasets_count = len(dataset_ids) if dataset_ids else 0
 
     input_state = {
-        "messages": state["messages"],
-        "dataset_ids": dataset_ids,
-        "project_ids": project_ids,
         "user_query": user_input,
     }
 
@@ -36,7 +31,3 @@ def supervisor(
             goto="multi_dataset_agent",
             update=input_state,
         )
-
-
-def dummy_supervisor(state: State) -> Command:
-    return Command(goto=END)

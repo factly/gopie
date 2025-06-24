@@ -17,9 +17,11 @@ from .node.response.stream_updates import (
     stream_updates,
 )
 from .node.validate_query_result import validate_query_result
-from .types import ConfigSchema, State
+from .types import ConfigSchema, InputState, OutputState, State
 
-graph_builder = StateGraph(State, config_schema=ConfigSchema)
+graph_builder = StateGraph(
+    State, config_schema=ConfigSchema, input=InputState, output=OutputState
+)
 
 graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("identify_datasets", identify_datasets)
