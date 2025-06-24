@@ -1,4 +1,5 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
@@ -148,7 +149,7 @@ Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
         response = await llm.ainvoke(
             {
                 "chat_history": get_chat_history(config),
-                "input": prompt,
+                "input": HumanMessage(content=prompt),
             }
         )
 

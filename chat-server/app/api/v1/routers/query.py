@@ -28,7 +28,7 @@ async def create(
     chat_id = request.chat_id or uuid.uuid4().hex
     user = request.user or "gopie.chat.server"
     adapter = OpenAIOutputAdapter(chat_id, trace_id)
-    if len(request.project_ids) == 0 and len(request.dataset_ids) == 0:
+    if request.project_ids is None and request.dataset_ids is None:
         return JSONResponse(
             status_code=500,
             content={
