@@ -5,15 +5,63 @@
 package gen
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ChatVisibility string
+
+const (
+	ChatVisibilityPrivate      ChatVisibility = "private"
+	ChatVisibilityPublic       ChatVisibility = "public"
+	ChatVisibilityOrganization ChatVisibility = "organization"
+)
+
+func (e *ChatVisibility) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ChatVisibility(s)
+	case string:
+		*e = ChatVisibility(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ChatVisibility: %T", src)
+	}
+	return nil
+}
+
+type NullChatVisibility struct {
+	ChatVisibility ChatVisibility
+	Valid          bool // Valid is true if ChatVisibility is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullChatVisibility) Scan(value interface{}) error {
+	if value == nil {
+		ns.ChatVisibility, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ChatVisibility.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullChatVisibility) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ChatVisibility), nil
+}
+
 type Chat struct {
-	ID        string
-	Title     pgtype.Text
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	CreatedBy pgtype.Text
+	ID             string
+	Title          pgtype.Text
+	Visibility     NullChatVisibility
+	OrganizationID pgtype.Text
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	CreatedBy      pgtype.Text
 }
 
 type ChatMessage struct {

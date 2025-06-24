@@ -14,10 +14,16 @@ import (
 const countChatsByUser = `-- name: CountChatsByUser :one
 select count(*) from chats
 where created_by = $1
+and organization_id = $2
 `
 
-func (q *Queries) CountChatsByUser(ctx context.Context, createdBy pgtype.Text) (int64, error) {
-	row := q.db.QueryRow(ctx, countChatsByUser, createdBy)
+type CountChatsByUserParams struct {
+	CreatedBy      pgtype.Text
+	OrganizationID pgtype.Text
+}
+
+func (q *Queries) CountChatsByUser(ctx context.Context, arg CountChatsByUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countChatsByUser, arg.CreatedBy, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,25 +33,34 @@ const createChat = `-- name: CreateChat :one
 insert into chats (
   id, 
   title,
-  created_by
+  created_by,
+  organization_id
 ) values (
-  $1, $2, $3
+  $1, $2, $3, $4
 )
-returning id, title, created_at, updated_at, created_by
+returning id, title, visibility, organization_id, created_at, updated_at, created_by
 `
 
 type CreateChatParams struct {
-	ID        string
-	Title     pgtype.Text
-	CreatedBy pgtype.Text
+	ID             string
+	Title          pgtype.Text
+	CreatedBy      pgtype.Text
+	OrganizationID pgtype.Text
 }
 
 func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, createChat, arg.ID, arg.Title, arg.CreatedBy)
+	row := q.db.QueryRow(ctx, createChat,
+		arg.ID,
+		arg.Title,
+		arg.CreatedBy,
+		arg.OrganizationID,
+	)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
+		&i.Visibility,
+		&i.OrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
@@ -95,22 +110,23 @@ const deleteChat = `-- name: DeleteChat :exec
 delete from chats
 where id = $1
 and created_by = $2
+and organization_id = $3
 `
 
 type DeleteChatParams struct {
-	ID        string
-	CreatedBy pgtype.Text
+	ID             string
+	CreatedBy      pgtype.Text
+	OrganizationID pgtype.Text
 }
 
 func (q *Queries) DeleteChat(ctx context.Context, arg DeleteChatParams) error {
-	_, err := q.db.Exec(ctx, deleteChat, arg.ID, arg.CreatedBy)
+	_, err := q.db.Exec(ctx, deleteChat, arg.ID, arg.CreatedBy, arg.OrganizationID)
 	return err
 }
 
 const getChatById = `-- name: GetChatById :one
-select id, title, created_at, updated_at, created_by from chats
-where id = $1
-and created_by = $2
+select id, title, visibility, organization_id, created_at, updated_at, created_by from chats
+where id = $1 and created_by = $2
 `
 
 type GetChatByIdParams struct {
@@ -124,6 +140,8 @@ func (q *Queries) GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat,
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
+		&i.Visibility,
+		&i.OrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
@@ -166,7 +184,7 @@ func (q *Queries) GetChatMessages(ctx context.Context, chatID string) ([]ChatMes
 
 const getChatWithMessages = `-- name: GetChatWithMessages :many
 select 
-  c.id, c.title, c.created_at, c.updated_at, c.created_by,
+  c.id, c.title, c.visibility, c.organization_id, c.created_at, c.updated_at, c.created_by,
   m.id as message_id,
   m.choices,
   m.object,
@@ -181,6 +199,8 @@ order by m.created_at asc
 type GetChatWithMessagesRow struct {
 	ID               string
 	Title            pgtype.Text
+	Visibility       NullChatVisibility
+	OrganizationID   pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	CreatedBy        pgtype.Text
@@ -203,6 +223,8 @@ func (q *Queries) GetChatWithMessages(ctx context.Context, id string) ([]GetChat
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.Visibility,
+			&i.OrganizationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
@@ -223,20 +245,27 @@ func (q *Queries) GetChatWithMessages(ctx context.Context, id string) ([]GetChat
 }
 
 const listChatsByUser = `-- name: ListChatsByUser :many
-select id, title, created_at, updated_at, created_by from chats
+select id, title, visibility, organization_id, created_at, updated_at, created_by from chats
 where created_by = $1
+and organization_id = $2
 order by updated_at desc
-limit $2 offset $3
+limit $3 offset $4
 `
 
 type ListChatsByUserParams struct {
-	CreatedBy pgtype.Text
-	Limit     int32
-	Offset    int32
+	CreatedBy      pgtype.Text
+	OrganizationID pgtype.Text
+	Limit          int32
+	Offset         int32
 }
 
 func (q *Queries) ListChatsByUser(ctx context.Context, arg ListChatsByUserParams) ([]Chat, error) {
-	rows, err := q.db.Query(ctx, listChatsByUser, arg.CreatedBy, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listChatsByUser,
+		arg.CreatedBy,
+		arg.OrganizationID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +276,8 @@ func (q *Queries) ListChatsByUser(ctx context.Context, arg ListChatsByUserParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.Visibility,
+			&i.OrganizationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedBy,
@@ -294,7 +325,7 @@ update chats
 set title = $2
 where id = $1
 and created_by = $3
-returning id, title, created_at, updated_at, created_by
+returning id, title, visibility, organization_id, created_at, updated_at, created_by
 `
 
 type UpdateChatTitleParams struct {
@@ -309,6 +340,44 @@ func (q *Queries) UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
+		&i.Visibility,
+		&i.OrganizationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
+const updateChatVisibility = `-- name: UpdateChatVisibility :one
+update chats
+set
+  visibility = $2,
+  organization_id = $3
+where id = $1 and created_by = $4
+returning id, title, visibility, organization_id, created_at, updated_at, created_by
+`
+
+type UpdateChatVisibilityParams struct {
+	ID             string
+	Visibility     NullChatVisibility
+	OrganizationID pgtype.Text
+	CreatedBy      pgtype.Text
+}
+
+func (q *Queries) UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error) {
+	row := q.db.QueryRow(ctx, updateChatVisibility,
+		arg.ID,
+		arg.Visibility,
+		arg.OrganizationID,
+		arg.CreatedBy,
+	)
+	var i Chat
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Visibility,
+		&i.OrganizationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,

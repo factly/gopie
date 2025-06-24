@@ -3,6 +3,7 @@ package chats
 import (
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -50,21 +51,15 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /v1/api/chat [get]
 func (s *httpHandler) listUserChats(ctx *fiber.Ctx) error {
-	userID := ctx.Get("x-user-id")
-	if userID == "" {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error":   "Unauthorized",
-			"message": "User ID is required",
-			"code":    fiber.StatusUnauthorized,
-		})
-	}
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	pagination := models.NewPagination()
 	limit, page := pkg.ParseLimitAndPage(ctx.Query("limit"), ctx.Query("page"))
 
 	pagination.Limit = limit
 	pagination.Offset = (page - 1) * limit
 
-	chats, err := s.chatSvc.ListUserChats(userID, pagination)
+	chats, err := s.chatSvc.ListUserChats(userID, orgID, pagination)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

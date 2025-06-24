@@ -15,7 +15,7 @@ type Querier interface {
 	// Batch Operations
 	BatchAddDatasetsToProject(ctx context.Context, arg BatchAddDatasetsToProjectParams) error
 	BatchRemoveDatasetsFromProject(ctx context.Context, arg BatchRemoveDatasetsFromProjectParams) error
-	CountChatsByUser(ctx context.Context, createdBy pgtype.Text) (int64, error)
+	CountChatsByUser(ctx context.Context, arg CountChatsByUserParams) (int64, error)
 	CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error)
 	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
 	CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error)
@@ -50,6 +50,7 @@ type Querier interface {
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error)
 	UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams) (Chat, error)
+	UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error)
 	UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 }

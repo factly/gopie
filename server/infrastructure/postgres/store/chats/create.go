@@ -27,9 +27,10 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 	qtx := s.q.WithTx(tx)
 
 	c, err := qtx.CreateChat(ctx, gen.CreateChatParams{
-		ID:        params.ID,
-		Title:     pgtype.Text{String: params.Title, Valid: true},
-		CreatedBy: pgtype.Text{String: params.CreatedBy, Valid: true},
+		ID:             params.ID,
+		Title:          pgtype.Text{String: params.Title, Valid: true},
+		CreatedBy:      pgtype.Text{String: params.CreatedBy, Valid: true},
+		OrganizationID: pgtype.Text{String: params.OrganizationID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating chat", zap.Error(err))
@@ -78,11 +79,13 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 	}
 
 	return &models.ChatWithMessages{
-		ID:        c.ID,
-		Title:     c.Title.String,
-		CreatedAt: c.CreatedAt.Time,
-		UpdatedAt: c.UpdatedAt.Time,
-		CreatedBy: c.CreatedBy.String,
-		Messages:  messages,
+		ID:             c.ID,
+		Title:          c.Title.String,
+		CreatedAt:      c.CreatedAt.Time,
+		UpdatedAt:      c.UpdatedAt.Time,
+		CreatedBy:      c.CreatedBy.String,
+		Messages:       messages,
+		Visibility:     string(c.Visibility.ChatVisibility),
+		OrganizationID: c.OrganizationID.String,
 	}, nil
 }

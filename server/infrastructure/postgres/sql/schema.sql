@@ -55,9 +55,13 @@ create table if not exists database_sources (
     updated_at timestamp with time zone not null default now()
 );
 
+create type chat_visibility as enum ('private', 'public', 'organization');
+
 create table if not exists chats (
     id text primary key,
     title text,
+    visibility chat_visibility default 'private',
+    organization_id text default null,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now(),
     created_by text default null

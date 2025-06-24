@@ -18,10 +18,12 @@ func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID, userID stri
 	}
 
 	return &models.Chat{
-		ID:        c.ID,
-		Title:     c.Title.String,
-		CreatedAt: c.CreatedAt.Time,
-		UpdatedAt: c.UpdatedAt.Time,
-		CreatedBy: c.CreatedBy.String,
+		ID:             c.ID,
+		Title:          c.Title.String,
+		CreatedAt:      c.CreatedAt.Time,
+		UpdatedAt:      c.UpdatedAt.Time,
+		CreatedBy:      c.CreatedBy.String,
+		Visibility:     string(c.Visibility.ChatVisibility),
+		OrganizationID: c.OrganizationID.String,
 	}, nil
 }

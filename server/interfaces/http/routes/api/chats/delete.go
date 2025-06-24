@@ -2,6 +2,7 @@ package chats
 
 import (
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,9 +19,10 @@ import (
 // @Router /v1/api/chat/{chatID} [delete]
 func (h *httpHandler) deleteChat(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
-	userID := ctx.Get("x-user-id")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
-	err := h.chatSvc.DeleteChat(chatID, userID)
+	err := h.chatSvc.DeleteChat(chatID, userID, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{

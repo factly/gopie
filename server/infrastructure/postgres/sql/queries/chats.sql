@@ -1,20 +1,24 @@
 -- name: ListChatsByUser :many
 select * from chats
 where created_by = $1
+and organization_id = $2
 order by updated_at desc
-limit $2 offset $3;
+limit $3 offset $4;
 
 -- name: CountChatsByUser :one
 select count(*) from chats
-where created_by = $1;
+where created_by = $1
+and organization_id = $2;
+;
 
 -- name: CreateChat :one
 insert into chats (
   id, 
   title,
-  created_by
+  created_by,
+  organization_id
 ) values (
-  $1, $2, $3
+  $1, $2, $3, $4
 )
 returning *;
 
@@ -28,7 +32,8 @@ returning *;
 -- name: DeleteChat :exec
 delete from chats
 where id = $1
-and created_by = $2;
+and created_by = $2
+and organization_id = $3;
 
 -- name: GetChatMessages :many
 select * from chat_messages
@@ -68,6 +73,13 @@ order by m.created_at asc;
 
 -- name: GetChatById :one
 select * from chats
-where id = $1
-and created_by = $2;
+where id = $1 and created_by = $2;
+
+-- name: UpdateChatVisibility :one
+update chats
+set
+  visibility = $2,
+  organization_id = $3
+where id = $1 and created_by = $4
+returning *;
 

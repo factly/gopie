@@ -1,6 +1,9 @@
 package chats
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/factly/gopie/interfaces/http/middleware"
+	"github.com/gofiber/fiber/v2"
+)
 
 // GetChatDetails godoc
 // @Summary Get chat details
@@ -25,7 +28,7 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 		})
 	}
 
-	userID := ctx.Get("userID")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	if userID == "" {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error":   "Unauthorized",

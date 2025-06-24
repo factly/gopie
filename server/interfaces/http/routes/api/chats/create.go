@@ -282,15 +282,8 @@ type chatWithAgentRequestBody struct {
 // @Failure 500 {string} string "Internal server error"
 // @Router /v1/api/chat/completions [post]
 func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
-	userID := ctx.Get("x-user-id")
-	if userID == "" {
-		h.logger.Error("Unauthorized request: Missing userID header")
-		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error":   "Unauthorized",
-			"message": "User ID is required",
-			"code":    fiber.StatusUnauthorized,
-		})
-	}
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
 	var body chatWithAgentRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
@@ -485,9 +478,10 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					var err error
 					if chatIdHeader == "" {
 						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
-							ID:        sessionID,
-							Messages:  messages,
-							CreatedBy: userID,
+							ID:             sessionID,
+							Messages:       messages,
+							CreatedBy:      userID,
+							OrganizationID: orgID,
 						})
 						if err != nil {
 							h.logger.Error("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
