@@ -1,5 +1,4 @@
 import json
-from typing import Any
 
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.tools import tool
@@ -10,8 +9,7 @@ from app.utils.langsmith.prompt_manager import get_prompt
 @tool
 async def plan_sql_query(
     user_query: str,
-    schemas: list[dict] = [],
-    unorganised_dataset_info: Any = "",
+    schemas: list[dict],
 ) -> dict:
     """
     Plan a SQL query given a user natural language query and dataset schemas.
@@ -23,13 +21,11 @@ async def plan_sql_query(
           the query by using this tool.
 
     IMPORTANT:
-        - Pass atleast one of the schemas or unorganised_dataset_info.
+        - Don't use this tool if the above situation is not true.
 
     Args:
         user_query: The natural language query from the user.
         schemas: List of dataset schema dicts with table and column details.
-        unorganised_dataset_info: If you don't have the schema of the datasets
-                                  in an organised manner,
 
     Returns:
         A dict with keys:
@@ -45,8 +41,6 @@ async def plan_sql_query(
 
         if schemas:
             formatted_schemas = json.dumps(schemas, indent=2)
-        else:
-            formatted_schemas = unorganised_dataset_info
 
         prompt = get_prompt(
             "plan_query",
