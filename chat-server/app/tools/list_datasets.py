@@ -15,6 +15,9 @@ async def list_datasets(
     """
     List all datasets for a specific project.
 
+    Situation where it can be used:
+        - User wants to know the list of datasets for a specific project.
+
     Args:
         project_id: The ID of the project to get datasets for
         limit: Maximum number of datasets to return per page

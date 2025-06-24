@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 from langchain_core.tools import tool
 from qdrant_client.http.models import FieldCondition, Filter, MatchAny
@@ -10,8 +9,8 @@ from app.services.qdrant.qdrant_setup import initialize_qdrant_client
 
 @tool
 async def get_datasets_schemas(
-    dataset_ids: Optional[list[str]] = None,
-    project_ids: Optional[list[str]] = None,
+    dataset_ids: list[str] = [],
+    project_ids: list[str] = [],
 ) -> list[dict] | dict:
     """
     Get the schema of a specific tables from Qdrant database.
@@ -25,7 +24,7 @@ async def get_datasets_schemas(
         project_ids: The ids of the projects to retrieve schema for.
 
         Caution:
-            Requires atleast one of the dataset_ids or project_ids.
+            - Requires atleast one of the dataset_ids or project_ids.
 
     Returns:
         A dictionary with schema information for the provided dataset ids.
