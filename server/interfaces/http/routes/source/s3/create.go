@@ -200,6 +200,11 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error uploading schema to AI agent",
+			"code":    fiber.StatusInternalServerError,
+		})
 	}
 
 	h.logger.Info("File upload completed successfully",
