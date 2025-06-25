@@ -1,4 +1,5 @@
 import json
+from typing import Dict
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
@@ -11,13 +12,12 @@ from app.utils.providers.base import BaseProvider
 class PortkeySelfHostedGatewayProvider(BaseProvider):
     def __init__(
         self,
-        user: str,
-        trace_id: str,
-        chat_id: str,
+        metadata: Dict[str, str],
     ):
-        self.user = user
-        self.trace_id = trace_id
-        self.chat_id = chat_id
+        self.user = metadata.pop("user", "")
+        self.trace_id = metadata.pop("trace_id", "")
+        self.chat_id = metadata.pop("chat_id", "")
+        self.metadata = metadata
         self.headers = {
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "x-portkey-provider": "openai",
@@ -26,7 +26,7 @@ class PortkeySelfHostedGatewayProvider(BaseProvider):
                 {
                     "_user": self.user,
                     "chat_id": self.chat_id,
-                    "project": "gopie-chat-server",
+                    **self.metadata,
                 }
             ),
         }

@@ -1,3 +1,5 @@
+from typing import Dict
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
@@ -5,10 +7,8 @@ from app.utils.providers.base import BaseProvider
 
 
 class OpenrouterGatewayProvider(BaseProvider):
-    def __init__(self, user: str, trace_id: str, chat_id: str):
-        self.user = user
-        self.trace_id = trace_id
-        self.chat_id = chat_id
+    def __init__(self, metadata: Dict[str, str]):
+        self.metadata = metadata
 
     def get_openai_model(self, model_name: str):
         return ChatOpenAI(
@@ -16,10 +16,7 @@ class OpenrouterGatewayProvider(BaseProvider):
             base_url=settings.OPENROUTER_BASE_URL,
             model=f"openai/{model_name}",
             metadata={
-                "user": self.user,
-                "trace_id": self.trace_id,
-                "chat_id": self.chat_id,
-                "project": "gopie-chat-server",
+                **self.metadata,
             },
         )
 
@@ -29,10 +26,7 @@ class OpenrouterGatewayProvider(BaseProvider):
             base_url=settings.OPENROUTER_BASE_URL,
             model=f"google/{model_name}",
             metadata={
-                "user": self.user,
-                "trace_id": self.trace_id,
-                "chat_id": self.chat_id,
-                "project": "gopie-chat-server",
+                **self.metadata,
             },
         )
 

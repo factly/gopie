@@ -1,16 +1,8 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.workflow.graph.multi_dataset_graph.types import ConfigSchema
-from app.workflow.graph.single_dataset_graph.node.process_query import (
-    process_query,
-    should_retry,
-)
-from app.workflow.graph.single_dataset_graph.node.response import response
-from app.workflow.graph.single_dataset_graph.types import (
-    InputState,
-    OutputState,
-    State,
-)
+from .node.process_query import process_query, should_retry
+from .node.response import response
+from .types import ConfigSchema, InputState, OutputState, State
 
 graph_builder = StateGraph(
     State, config_schema=ConfigSchema, input=InputState, output=OutputState

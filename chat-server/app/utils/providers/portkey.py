@@ -1,3 +1,5 @@
+from typing import Dict
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
@@ -8,13 +10,12 @@ from app.utils.providers.base import BaseProvider
 class PortkeyGatewayProvider(BaseProvider):
     def __init__(
         self,
-        user: str,
-        trace_id: str,
-        chat_id: str,
+        metadata: Dict[str, str],
     ):
-        self.user = user
-        self.trace_id = trace_id
-        self.chat_id = chat_id
+        self.user = metadata.pop("user", "")
+        self.trace_id = metadata.pop("trace_id", "")
+        self.chat_id = metadata.pop("chat_id", "")
+        self.metadata = metadata
 
     def get_headers(self, virtual_key: str):
         return createHeaders(
@@ -24,7 +25,7 @@ class PortkeyGatewayProvider(BaseProvider):
             chat_id=self.chat_id,
             metadata={
                 "_user": self.user,
-                "project": "gopie-chat-server",
+                **self.metadata,
             },
         )
 

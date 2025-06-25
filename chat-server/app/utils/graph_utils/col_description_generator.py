@@ -1,9 +1,11 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
 from app.models.schema import DatasetSchema
-from app.utils.model_registry.model_provider import get_custom_model
+from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_selection import get_node_model
 
 
 async def generate_column_descriptions(
@@ -36,8 +38,7 @@ async def generate_column_descriptions(
         dataset_schema: {dataset_schema}
 
         INSTRUCTIONS:
-        1. Generate a concise description for each column, strictly under 10
-           words
+        1. Generate a concise description for each column, strictly under 10 words
         2. Focus only on what the column represents functionally
         3. Do NOT include data types, statistics, or null information
 
@@ -45,10 +46,16 @@ async def generate_column_descriptions(
         descriptions as values.
         Example format:
         {example_format}
-    """
+    """  # noqa: E501
 
     prompt = ChatPromptTemplate.from_template(template)
-    llm = get_custom_model("gpt-4o-mini")
+    config = RunnableConfig(
+        configurable={
+            "metadata": {"type": "col_description_generator"},
+        }
+    )
+    model_id = get_node_model("generate_col_descriptions")
+    llm = get_model_provider(config).get_llm(model_id)
 
     try:
         chain = prompt | llm | JsonOutputParser()

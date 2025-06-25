@@ -18,6 +18,8 @@ NODE_TO_COMPLEXITY = {
     "visualization_response": ModelCategory.BALANCED,
     "visualize_data": ModelCategory.FAST,
     "process_context": ModelCategory.BALANCED,
+    "plan_sql_query": ModelCategory.ADVANCED,
+    "generate_col_descriptions": ModelCategory.FAST,
 }
 
 

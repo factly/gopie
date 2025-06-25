@@ -1,3 +1,5 @@
+from typing import Dict
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
@@ -7,13 +9,9 @@ from app.utils.providers.base import BaseProvider
 class LiteLLMGatewayProvider(BaseProvider):
     def __init__(
         self,
-        user: str,
-        trace_id: str,
-        chat_id: str,
+        metadata: Dict[str, str],
     ):
-        self.user = user
-        self.trace_id = trace_id
-        self.chat_id = chat_id
+        self.metadata = metadata
         self.headers = {
             "Authorization": f"Bearer {settings.LITELLM_MASTER_KEY}",
         }
@@ -29,9 +27,7 @@ class LiteLLMGatewayProvider(BaseProvider):
             streaming=streaming,
             extra_body={
                 "metadata": {
-                    "user": self.user,
-                    "trace_id": self.trace_id,
-                    "chat_id": self.chat_id,
+                    **self.metadata,
                 },
             },
         )
@@ -47,9 +43,7 @@ class LiteLLMGatewayProvider(BaseProvider):
             streaming=streaming,
             extra_body={
                 "metadata": {
-                    "user": self.user,
-                    "trace_id": self.trace_id,
-                    "chat_id": self.chat_id,
+                    **self.metadata,
                 },
             },
         )

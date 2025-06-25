@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from langchain_core.runnables import RunnableConfig
 
@@ -17,22 +17,19 @@ from app.utils.providers.portkey_self_hosted import (
 )
 
 
-def get_gateway_provider(
-    user: str, trace_id: str, chat_id: str
-) -> BaseProvider:
+def get_gateway_provider(metadata: Dict[str, str]) -> BaseProvider:
     gateway_type = GatewayProvider(settings.GATEWAY_PROVIDER)
-    if gateway_type == GatewayProvider.PORTKEY_HOSTED:
-        return PortkeyGatewayProvider(user, trace_id, chat_id)
-    elif gateway_type == GatewayProvider.PORTKEY_SELF_HOSTED:
-        return PortkeySelfHostedGatewayProvider(user, trace_id, chat_id)
-    elif gateway_type == GatewayProvider.LITELLM:
-        return LiteLLMGatewayProvider(user, trace_id, chat_id)
-    elif gateway_type == GatewayProvider.CLOUDFLARE:
-        return CloudflareGatewayProvider(user, trace_id, chat_id)
-    elif gateway_type == GatewayProvider.OPENROUTER:
-        return OpenrouterGatewayProvider(user, trace_id, chat_id)
-    else:
-        raise ValueError(f"Unsupported gateway provider: {gateway_type}")
+    match gateway_type:
+        case GatewayProvider.PORTKEY_HOSTED:
+            return PortkeyGatewayProvider(metadata)
+        case GatewayProvider.PORTKEY_SELF_HOSTED:
+            return PortkeySelfHostedGatewayProvider(metadata)
+        case GatewayProvider.LITELLM:
+            return LiteLLMGatewayProvider(metadata)
+        case GatewayProvider.CLOUDFLARE:
+            return CloudflareGatewayProvider(metadata)
+        case GatewayProvider.OPENROUTER:
+            return OpenrouterGatewayProvider(metadata)
 
 
 class ModelConfig:
@@ -63,13 +60,10 @@ class ModelConfig:
 class ModelProvider:
     def __init__(
         self,
-        trace_id: str = "",
-        user: str = "",
-        chat_id: str = "",
+        metadata: Dict[str, str],
     ):
-        self.trace_id = trace_id
-        self.user = user
-        self.gateway_provider = get_gateway_provider(user, trace_id, chat_id)
+        self.metadata = metadata
+        self.gateway_provider = get_gateway_provider(metadata)
 
     def _create_llm(self, model_id: str):
         model_config = ModelConfig(model_id=model_id)
@@ -116,12 +110,10 @@ class ModelProvider:
 
 
 def get_model_provider(
-    config: RunnableConfig,
+    config: RunnableConfig = RunnableConfig(),
 ):
-    trace_id = config.get("configurable", {}).get("trace_id", "")
-    user = config.get("configurable", {}).get("user", "")
-    chat_id = config.get("configurable", {}).get("chat_id", "")
-    return ModelProvider(trace_id=trace_id, user=user, chat_id=chat_id)
+    metadata = config.get("configurable", {}).get("metadata", {})
+    return ModelProvider(metadata=metadata)
 
 
 def get_custom_model(model_id: str):
