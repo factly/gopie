@@ -1,6 +1,6 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.tool_utils.tool_node import ToolNode
+from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
 
 from .node.analyze_dataset import analyze_dataset

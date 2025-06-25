@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from app.models.schema import ConfigSchema
-from app.tool_utils.tool_node import ToolNode
+from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
 from app.utils.model_registry.model_provider import get_model_provider
 
@@ -16,9 +16,6 @@ from .utils import (
     upload_csv_files,
     upload_visualization_result_data,
 )
-
-# from langgraph.prebuilt import ToolNode
-
 
 # fmt: off
 SYSTEM_PROMPT = """\

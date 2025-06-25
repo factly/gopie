@@ -1,100 +1,68 @@
-from typing import List
+from typing import List, Literal
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import ToolCall, ToolMessage
+from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import merge_configs
+from langgraph.prebuilt import ToolNode
 
 from app.tool_utils.tools import ToolNames
 
 from .tools import get_tools
 
 
-class ToolNode:
-    """
-    A node that runs the tools requested in the last AIMessage and
-    returns to the calling node
-    """
-
+class ModifiedToolNode(ToolNode):
     def __init__(
         self,
         tool_names: List[ToolNames],
+        *args,
+        **kwargs,
     ) -> None:
-        self.tools = get_tools(tool_names)
-
-    async def __call__(self, state: dict):
-        if messages := state.get("messages", []):
-            message = messages[-1]
-        else:
-            raise ValueError("No message found in input")
-
-        outputs = []
-        all_tool_results = []
-
-        for tool_call in message.tool_calls:
-            try:
-                tool_name = tool_call["name"]
-                tool_args = tool_call["args"]
-
-                if tool_name not in self.tools:
-                    error_message = f"Tool '{tool_name}' not found"
-                    all_tool_results.append(
-                        {
-                            "tool": tool_name,
-                            "error": error_message,
-                        }
-                    )
-                    continue
-
-                tool, metadata = self.tools[tool_name]
-
-                tool_text = f"Using {tool_name}"
-                get_dynamic_tool_text = metadata.get(
-                    "get_dynamic_tool_text", None
-                )
-                if get_dynamic_tool_text and callable(get_dynamic_tool_text):
-                    tool_text = get_dynamic_tool_text(tool_args)
-
-                tool_category = metadata.get("tool_category", tool_name)
-
-                tool_config = {
-                    "tags": ["chain_tool", "display"],
-                    "metadata": {
-                        "tool_text": tool_text,
-                        "tool_category": tool_category,
-                    },
-                }
-
-                tool_result = None
-                async for event in tool.astream_events(
-                    tool_args, config=tool_config
-                ):
-                    if event["event"] == "on_tool_end":
-                        tool_result = event["data"]["output"]
-
-                all_tool_results.append(
-                    {"tool": tool_name, "result": tool_result}
-                )
-
-                if tool_result is None:
-                    tool_result = "No result from tool"
-
-                outputs.append(
-                    ToolMessage(
-                        content=tool_result,
-                        name=tool_name,
-                        tool_call_id=tool_call["id"],
-                    )
-                )
-            except Exception as e:
-                error_message = f"Error executing tool: {str(e)}"
-                all_tool_results.append(
-                    {
-                        "tool": tool_name,
-                        "error": error_message,
-                    }
-                )
-
-        return {
-            "messages": outputs,
+        tools = get_tools(tool_names)
+        tool_functions = [tool for tool, _ in tools.values()]
+        tool_metadatas = {
+            tool_name: tool_data[1] for tool_name, tool_data in tools.items()
         }
+        self.tool_metadatas = tool_metadatas
+        super().__init__(*args, tools=tool_functions, **kwargs)
+
+    def get_tool_config(self, call: ToolCall) -> RunnableConfig:
+        tool_name = call.get("name")
+        tool_args = call.get("args")
+        metadata = self.tool_metadatas.get(tool_name, {})
+        tool_text = f"Using {tool_name}"
+        get_dynamic_tool_text = metadata.get("get_dynamic_tool_text", None)
+        if get_dynamic_tool_text and callable(get_dynamic_tool_text):
+            tool_text = get_dynamic_tool_text(tool_args)
+        tool_category = metadata.get("tool_category", tool_name)
+        return RunnableConfig(
+            tags=["chain_tool", "display"],
+            metadata={
+                "tool_text": tool_text,
+                "tool_category": tool_category,
+            },
+        )
+
+    def _run_one(
+        self,
+        call: ToolCall,
+        input_type: Literal["list", "dict", "tool_calls"],
+        config: RunnableConfig,
+    ) -> ToolMessage:
+        tool_config = self.get_tool_config(call)
+        return super()._run_one(
+            call, input_type, merge_configs(config, tool_config)
+        )
+
+    async def _arun_one(
+        self,
+        call: ToolCall,
+        input_type: Literal["list", "dict", "tool_calls"],
+        config: RunnableConfig,
+    ) -> ToolMessage:
+        tool_config = self.get_tool_config(call)
+        return await super()._arun_one(
+            call, input_type, merge_configs(config, tool_config)
+        )
 
 
 def has_tool_calls(message):
