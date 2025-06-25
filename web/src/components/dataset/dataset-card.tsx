@@ -4,9 +4,10 @@ import {
   Trash,
   Calendar,
   Database,
-  ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Dataset } from "@/lib/api-client";
 import {
   DropdownMenu,
@@ -40,6 +41,7 @@ export function DatasetCard({
   projectId,
   onDelete,
 }: DatasetCardProps) {
+  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -61,13 +63,32 @@ export function DatasetCard({
   };
 
   // Function to create a simple initial avatar from dataset name
-  const getInitialAvatar = (name: string) => {
-    return name.charAt(0).toUpperCase();
-  };
+  // const getInitialAvatar = (name: string) => {
+  //   return name.charAt(0).toUpperCase();
+  // };
 
   const preventLinkNavigation = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+  };
+
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Create context data for this dataset
+    const contextData = encodeURIComponent(
+      JSON.stringify([
+        {
+          id: dataset.id,
+          type: "dataset",
+          name: dataset.alias || dataset.name,
+          projectId: projectId,
+        },
+      ])
+    );
+
+    router.push(`/chat?contextData=${contextData}`);
   };
 
   return (
@@ -93,80 +114,35 @@ export function DatasetCard({
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
+              {/* <div className="flex-shrink-0 w-10 h-10  bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
                 {getInitialAvatar(dataset.alias || dataset.name)}
-              </div>
+              </div> */}
               <div>
                 <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
                   {dataset.alias || dataset.name}
                 </CardTitle>
-                {dataset.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                    {dataset.description}
-                  </p>
-                )}
+                <div className="h-[40px]">
+                  {dataset.description ? (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      {dataset.description}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground opacity-0 mt-1">
+                      &nbsp;
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             <div className="z-10 flex items-center gap-2">
-              {onDelete && (
-                <>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-full"
-                        onClick={preventLinkNavigation}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      onClick={preventLinkNavigation}
-                    >
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          preventLinkNavigation(e);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <AlertDialog
-                    open={showDeleteDialog}
-                    onOpenChange={setShowDeleteDialog}
-                  >
-                    <AlertDialogContent onClick={preventLinkNavigation}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete the dataset &quot;
-                          {dataset.alias || dataset.name}&quot;. This action
-                          cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel onClick={preventLinkNavigation}>
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={(e) => handleDelete(e)}
-                          disabled={isDeleting}
-                          className="bg-destructive hover:bg-destructive/90"
-                        >
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full relative z-10"
+                onClick={handleChatClick}
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -176,7 +152,7 @@ export function DatasetCard({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Database className="h-3.5 w-3.5" />
-                  <span>{dataset.format} Dataset</span>
+                  <span>{dataset.format}</span>
                 </div>
 
                 {dataset.created_at && (
@@ -189,15 +165,77 @@ export function DatasetCard({
                 )}
               </div>
 
-              <div
-                className={cn(
-                  "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
-                  "transition-all duration-300 ease-in-out",
-                  isHovered ? "opacity-100 translate-x-0" : ""
+              <div className="flex items-center gap-2">
+                {onDelete && (
+                  <>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={preventLinkNavigation}
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        onClick={preventLinkNavigation}
+                      >
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            preventLinkNavigation(e);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <AlertDialog
+                      open={showDeleteDialog}
+                      onOpenChange={setShowDeleteDialog}
+                    >
+                      <AlertDialogContent onClick={preventLinkNavigation}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the dataset &quot;
+                            {dataset.alias || dataset.name}&quot;. This action
+                            cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel onClick={preventLinkNavigation}>
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => handleDelete(e)}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
                 )}
-              >
-                <span>View Dataset</span>
-                <ChevronRight className="h-3 w-3" />
+
+                <div
+                  className={cn(
+                    "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
+                    "transition-all duration-300 ease-in-out",
+                    isHovered ? "opacity-100 translate-x-0" : ""
+                  )}
+                >
+                  {/* <span>View</span>
+                  <ChevronRight className="h-3 w-3" /> */}
+                </div>
               </div>
             </div>
           </div>

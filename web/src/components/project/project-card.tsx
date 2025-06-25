@@ -5,7 +5,7 @@ import {
   PencilIcon,
   Calendar,
   Layers,
-  ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { Project } from "@/lib/api-client";
@@ -41,6 +41,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
   project: Project;
@@ -53,6 +54,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -142,10 +144,28 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
     }
   };
 
-  // Function to create a simple initial avatar from project name
-  const getInitialAvatar = (name: string) => {
-    return name.charAt(0).toUpperCase();
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Create context data for this dataset
+    const contextData = encodeURIComponent(
+      JSON.stringify([
+        {
+          id: project.id,
+          type: "project",
+          name: project.name,
+        },
+      ])
+    );
+
+    router.push(`/chat?contextData=${contextData}`);
   };
+
+  // Function to create a simple initial avatar from project name
+  // const getInitialAvatar = (name: string) => {
+  //   return name.charAt(0).toUpperCase();
+  // };
 
   return (
     <>
@@ -171,9 +191,9 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-md bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
+                {/* <div className="flex-shrink-0 w-10 h-10  bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
                   {getInitialAvatar(project.name)}
-                </div>
+                </div> */}
                 <div>
                   <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
                     {project.name}
@@ -186,43 +206,16 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                 </div>
               </div>
               <div className="z-10">
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-full"
-                      onClick={(e: React.MouseEvent) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setIsEditing(true);
-                      }}
-                    >
-                      <PencilIcon className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setIsDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="z-10 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-full relative z-10"
+                    onClick={handleChatClick}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -256,8 +249,45 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                     isHovered ? "opacity-100 translate-x-0" : ""
                   )}
                 >
-                  <span>View Project</span>
-                  <ChevronRight className="h-3 w-3" />
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 "
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setIsEditing(true);
+                        }}
+                      >
+                        <PencilIcon className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {/* <span>View Project</span>
+                  <ChevronRight className="h-3 w-3" /> */}
                 </div>
               </div>
             </div>

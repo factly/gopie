@@ -9,8 +9,11 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { useChatMessages } from "@/lib/queries/chat";
-import { useDeleteChat, useChatWithAgent } from "@/lib/mutations/chat";
+import { useChat } from "@ai-sdk/react";
+import { useDeleteChat } from "@/lib/mutations/chat";
+import { useChats } from "@/lib/queries/chat/list-chats";
+import { useChatMessages } from "@/lib/queries/chat/get-messages";
+import { useChatDetails } from "@/lib/queries/chat/get-chat";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,227 +35,107 @@ import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useProjects } from "@/lib/queries/project/list-projects";
-import { useDatasets } from "@/lib/queries/dataset/list-datasets";
-import { fetchChats } from "@/lib/queries/chat/list-chats";
 import { useQueryClient } from "@tanstack/react-query";
-import { Chat, Project, Dataset } from "@/lib/api-client";
 import { useSidebar } from "@/components/ui/sidebar";
+import { UIMessage } from "ai";
 
-interface StreamEvent {
-  role: "intermediate" | "ai";
+// Type for the messages from AI SDK
+interface ChatMessage {
+  id: string;
+  role: string;
   content: string;
-  datasets_used?: string[];
-  generated_sql_query?: string;
-}
-
-// Add interface for client-side chat messages
-interface ClientChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface CachedDatasetsData {
-  results: Dataset[];
-  total_count?: number;
-}
-
-interface DatasetsFetcherResponse {
-  results: Dataset[];
-  total_count?: number;
-}
-
-// Helper function to derive datasets and SQL from stream events
-function deriveEnhancementsFromStream(streamEvents: StreamEvent[]): {
-  datasets: string[];
-  sql: string | null;
-} {
-  const allDatasets = new Set<string>();
-  let latestSql: string | null = null;
-  streamEvents.forEach((event) => {
-    if (event.datasets_used) {
-      event.datasets_used.forEach((dataset) => allDatasets.add(dataset));
-    }
-    if (event.generated_sql_query) {
-      latestSql = event.generated_sql_query;
-    }
-  });
-  return { datasets: Array.from(allDatasets), sql: latestSql };
+  createdAt?: string | Date;
 }
 
 const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
+  searchParams,
+  router,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
+  searchParams: URLSearchParams;
+  router: ReturnType<typeof useRouter>;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(true);
-  const [allChats, setAllChats] = useState<
-    (Chat & {
-      datasetId: string;
-      datasetName: string;
-      projectId: string;
-      projectName: string;
-    })[]
-  >([]);
-
-  const { data: projectsData } = useProjects({
-    variables: { limit: 100 },
-  });
 
   const deleteChat = useDeleteChat();
 
+  // Use the infinite query hook
+  const {
+    data: chatsData,
+    isLoading,
+    error,
+  } = useChats({
+    variables: { userID: "1", limit: 100 }, // Using hardcoded user ID "1" as in the API route
+  });
+
+  // Flatten all pages, filter out null values, and sort chats by updated_at descending
+  const allChats = useMemo(() => {
+    if (!chatsData?.pages) return [];
+
+    const allResults = chatsData.pages.flatMap(
+      (page) => page.data.results || []
+    );
+
+    // Filter out null values and ensure we have valid chat objects
+    const validChats = allResults.filter(
+      (chat) =>
+        chat !== null &&
+        chat !== undefined &&
+        typeof chat === "object" &&
+        "updated_at" in chat
+    );
+
+    return validChats.sort((a, b) => {
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    });
+  }, [chatsData]);
+
+  // Show error toast if there's an error
   useEffect(() => {
-    async function fetchAllChats() {
-      if (!projectsData?.results?.length) return;
-
-      setIsLoading(true);
-      const projects = projectsData.results;
-      const allChatsArray: (Chat & {
-        datasetId: string;
-        datasetName: string;
-        projectId: string;
-        projectName: string;
-      })[] = [];
-
-      try {
-        const datasetPromises = projects.map(async (project) => {
-          try {
-            const queryKey = [
-              "datasets",
-              { projectId: project.id, limit: 100 },
-            ];
-            const cachedData =
-              queryClient.getQueryData<CachedDatasetsData>(queryKey);
-
-            if (cachedData && cachedData.results) {
-              return { projectId: project.id, data: cachedData };
-            }
-
-            const data = await queryClient.fetchQuery<DatasetsFetcherResponse>({
-              queryKey,
-              queryFn: async () => {
-                const result = await useDatasets.fetcher({
-                  projectId: project.id,
-                  limit: 100,
-                });
-                return result;
-              },
-            });
-
-            return { projectId: project.id, data };
-          } catch (error) {
-            console.error(
-              `Failed to fetch datasets for project ${project.id}:`,
-              error
-            );
-            return { projectId: project.id, data: { results: [] } };
-          }
-        });
-
-        const datasetResults = await Promise.all(datasetPromises);
-
-        for (const result of datasetResults) {
-          const projectId = result.projectId;
-          const data = result.data;
-          const project = projects.find((p) => p.id === projectId);
-
-          if (!project || !data || !Array.isArray(data.results)) {
-            continue;
-          }
-
-          for (const dataset of data.results) {
-            try {
-              const chatsResponse = await fetchChats(
-                { datasetId: dataset.id, limit: 50 },
-                { pageParam: 1 }
-              );
-
-              if (chatsResponse.data.results) {
-                const chatsWithContext = chatsResponse.data.results.map(
-                  (chat: Chat) => ({
-                    ...chat,
-                    datasetId: dataset.id,
-                    datasetName: dataset.alias,
-                    projectId: project.id,
-                    projectName: project.name,
-                  })
-                );
-                allChatsArray.push(...chatsWithContext);
-              }
-            } catch (error) {
-              console.error(
-                `Failed to fetch chats for dataset ${dataset.id}:`,
-                error
-              );
-            }
-          }
-        }
-
-        allChatsArray.sort((a, b) => {
-          return (
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-          );
-        });
-
-        setAllChats(allChatsArray);
-
-        if (selectedChatId) {
-          const selectedChat = allChatsArray.find(
-            (chat) => chat.id === selectedChatId
-          );
-          if (selectedChat) {
-            setSelectedContexts([
-              {
-                id: selectedChat.datasetId,
-                type: "dataset",
-                name: selectedChat.datasetName,
-                projectId: selectedChat.projectId,
-              },
-            ]);
-            setLinkedDatasetId(selectedChat.datasetId);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching all chats:", error);
-        toast.error("Failed to load chat history");
-      } finally {
-        setIsLoading(false);
-      }
+    if (error) {
+      console.error("Error fetching user chats:", error);
+      toast.error("Failed to load chat history");
     }
-
-    fetchAllChats();
-  }, [
-    projectsData?.results,
-    selectedChatId,
-    setSelectedContexts,
-    setLinkedDatasetId,
-    queryClient,
-  ]);
+  }, [error]);
 
   const handleStartNewChat = () => {
     selectChatForDataset(null, null, null);
     setActiveTab("chat");
     setSelectedContexts([]);
     setLinkedDatasetId(null);
+
+    // Clear URL parameters when starting a new chat
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("chatId");
+    params.delete("initialMessage");
+    params.delete("contextData");
+    router.replace(`/chat?${params.toString()}`);
   };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
-      await deleteChat.mutateAsync(chatId);
-      setAllChats((prev) => {
-        const chatToDelete = prev.find((chat) => chat.id === chatId);
-        if (chatToDelete && chatToDelete.datasetId === selectedChatId) {
-          selectChatForDataset(null, null, null);
-        }
-        return prev.filter((chat) => chat.id !== chatId);
+      await deleteChat.mutateAsync({
+        chatId,
+        userId: "1", // Using hardcoded user ID "1" as in the API route
       });
+
+      // Invalidate the chats query to refetch data
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
+
+      // If the deleted chat was selected, clear the selection
+      const chatToDelete = allChats.find((chat) => chat.id === chatId);
+      if (chatToDelete && chatToDelete.id === selectedChatId) {
+        selectChatForDataset(null, null, null);
+      }
+
       if (selectedChatId === chatId) {
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
@@ -261,6 +144,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
           queryKey: ["chat-messages", { chatId }],
         });
       }
+
       toast.success("Chat deleted successfully");
     } catch {
       toast.error("Failed to delete chat");
@@ -364,16 +248,15 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                   onClick={() =>
                     handleSelectChat(
                       chat.id,
-                      chat.name || "New Chat",
-                      chat.datasetId,
-                      chat.datasetName,
-                      chat.projectId
+                      chat.title || "New Chat"
+                      // Note: Dataset and project info might need to be retrieved
+                      // from the chat messages or stored in the chat object
                     )
                   }
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="font-medium text-foreground/90 text-sm truncate max-w-[calc(100%-60px)]">
-                      {chat.name || "New Chat"}
+                      {chat.title || "New Chat"}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
@@ -392,8 +275,10 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       </Button>
                     </div>
                   </div>
+                  {/* Note: Since the API doesn't return dataset/project info with chats,
+                      we might need to fetch this information separately or store it differently */}
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    {chat.projectName} / {chat.datasetName}
+                    Chat History
                   </div>
                 </div>
               );
@@ -410,60 +295,45 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 });
 ChatHistoryList.displayName = "ChatHistoryList";
 
-interface OptimisticMessage {
-  id: string;
-  content: string | StreamEvent[];
-  role: "user" | "assistant" | "intermediate" | "ai";
-  created_at: string;
-  isLoading?: boolean;
-  streamAborted?: boolean;
-}
-
 interface ChatInputProps {
-  sendMessage: (message: string) => Promise<void>;
-  isSending: boolean;
+  onStop: () => void;
   isStreaming: boolean;
-  stopMessageStream: () => void;
   selectedContexts: ContextItem[];
   onSelectContext: (context: ContextItem) => void;
   onRemoveContext: (contextId: string) => void;
   isVoiceModeActive: boolean;
   setIsVoiceModeActive: (active: boolean) => void;
-  initialValue?: string;
   lockableContextIds?: string[];
   hasContext: boolean;
+  input: string;
+  handleInputChange: (value: string) => void;
+  handleSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
 }
 
 const ChatInput = React.memo(
   ({
-    sendMessage,
-    isSending,
+    onStop,
     isStreaming,
-    stopMessageStream,
     selectedContexts,
     onSelectContext,
     onRemoveContext,
     isVoiceModeActive,
     setIsVoiceModeActive,
-    initialValue = "",
     lockableContextIds = [],
     hasContext,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
   }: ChatInputProps) => {
-    const [inputValue, setInputValue] = useState(initialValue);
-
-    const handleSendMessage = useCallback(
-      (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!inputValue.trim() || isSending) return;
-        sendMessage(inputValue);
-        setInputValue("");
+    // Handle input change from MentionInput
+    const handleMentionInputChange = useCallback(
+      (value: string) => {
+        handleInputChange(value);
       },
-      [inputValue, isSending, sendMessage]
+      [handleInputChange]
     );
-
-    const handleInputChange = useCallback((value: string) => {
-      setInputValue(value);
-    }, []);
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
@@ -476,19 +346,19 @@ const ChatInput = React.memo(
             lockableContextIds={lockableContextIds}
           />
           <MentionInput
-            value={inputValue}
-            onChange={handleInputChange}
-            onSubmit={handleSendMessage}
-            disabled={isSending}
+            value={input}
+            onChange={handleMentionInputChange}
+            onSubmit={handleSubmit}
+            disabled={isLoading}
             placeholder="Ask a question..."
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
             className="flex-1"
             showSendButton={true}
-            isSending={isSending}
+            isSending={isLoading}
             isStreaming={isStreaming}
-            stopMessageStream={stopMessageStream}
+            stopMessageStream={onStop}
             lockableContextIds={lockableContextIds}
             hasContext={hasContext}
             actionButtons={
@@ -508,40 +378,33 @@ ChatInput.displayName = "ChatInput";
 interface ChatViewProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
-  isLoadingMessages: boolean;
-  optimisticMessages: OptimisticMessage[];
-  selectedChatId: string | null;
-  allMessages: Array<{
-    id: string;
-    content: string;
-    role: "user" | "assistant" | "intermediate" | "ai";
-    created_at: string;
-    chat_id?: string;
-  }>;
+  isLoading: boolean;
+  messages: UIMessage[];
   selectedContexts: ContextItem[];
-  enhancementsForFinalizedMessages: Map<
-    string,
-    { datasets: string[]; sql: string | null }
-  >;
+  selectedChatId: string | null;
+  isLoadingChatMessages?: boolean;
+  hasNextPage?: boolean;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 const ChatView = React.memo(
   ({
     scrollRef,
     handleScroll,
-    isLoadingMessages,
-    optimisticMessages,
-    selectedChatId,
-    allMessages,
+    isLoading,
+    messages,
     selectedContexts,
-    enhancementsForFinalizedMessages,
+    selectedChatId,
+    isLoadingChatMessages = false,
+    hasNextPage = false,
+    fetchNextPage,
+    isFetchingNextPage = false,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative">
       <div
         className={`z-10 absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background via-background to-transparent pointer-events-none ${
-          allMessages.length > 0 || optimisticMessages.length > 0
-            ? "opacity-100"
-            : "opacity-0"
+          messages.length > 0 ? "opacity-100" : "opacity-0"
         } transition-opacity duration-300`}
       />
       <ScrollArea
@@ -550,17 +413,34 @@ const ChatView = React.memo(
         onScroll={handleScroll}
       >
         <div className="pb-32 pt-8">
-          {isLoadingMessages &&
-          !optimisticMessages.length &&
-          allMessages.length === 0 ? (
+          {/* Load more button for pagination */}
+          {hasNextPage && selectedChatId && (
+            <div className="flex justify-center mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchNextPage}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load more messages"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {(isLoading || isLoadingChatMessages) && messages.length === 0 ? (
             <div className="space-y-4">
               <Skeleton className="h-16 w-3/4" />
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-16 w-2/3" />
             </div>
-          ) : !selectedChatId &&
-            !optimisticMessages.length &&
-            allMessages.length === 0 ? (
+          ) : !selectedChatId && messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-12 text-center max-w-lg mx-auto space-y-6">
               <div className="text-lg font-medium">
                 Start a new conversation
@@ -571,44 +451,38 @@ const ChatView = React.memo(
             </div>
           ) : (
             <div className="space-y-6">
-              {allMessages.map((message) => (
+              {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
                   id={message.id}
                   content={message.content}
+                  message={message}
                   role={
-                    message.role as "user" | "assistant" | "intermediate" | "ai"
+                    message.role === "system"
+                      ? "assistant"
+                      : (message.role as
+                          | "user"
+                          | "assistant"
+                          | "intermediate"
+                          | "ai")
                   }
-                  createdAt={message.created_at}
-                  chatId={selectedChatId || undefined}
-                  isLatest={false}
-                  datasetId={
-                    selectedContexts.find((ctx) => ctx.type === "dataset")?.id
+                  createdAt={
+                    typeof message.createdAt === "string"
+                      ? message.createdAt
+                      : message.createdAt instanceof Date
+                      ? message.createdAt.toISOString()
+                      : new Date().toISOString()
                   }
-                  finalizedDatasets={
-                    enhancementsForFinalizedMessages.get(message.id)?.datasets
-                  }
-                  finalizedSqlQuery={
-                    enhancementsForFinalizedMessages.get(message.id)?.sql
-                  }
-                />
-              ))}
-              {optimisticMessages.map((message, index) => (
-                <ChatMessage
-                  key={message.id}
-                  id={message.id}
-                  content={message.content}
-                  role={message.role}
-                  createdAt={message.created_at}
-                  isLoading={message.isLoading}
-                  streamAborted={message.streamAborted}
                   chatId={selectedChatId || undefined}
                   isLatest={
-                    index === optimisticMessages.length - 1 &&
+                    message === messages[messages.length - 1] &&
                     message.role !== "user"
                   }
                   datasetId={
                     selectedContexts.find((ctx) => ctx.type === "dataset")?.id
+                  }
+                  isLoading={
+                    message.role === "assistant" && message.content === ""
                   }
                 />
               ))}
@@ -629,19 +503,24 @@ function ChatPageClient() {
   const router = useRouter();
   const initialMessage = searchParams.get("initialMessage");
   const contextData = searchParams.get("contextData");
+  const chatIdFromUrl = searchParams.get("chatId");
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
-  const { setOpen, open: isSidebarOpen, isMobile } = useSidebar();
+  const {
+    open: isSidebarOpen,
+    isMobile,
+    setOpen,
+    setOpenMobile,
+  } = useSidebar();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { selectedChatId, selectedChatTitle, selectChatForDataset } =
-    useChatStore();
-  const [isSending, setIsSending] = useState(false);
+  const {
+    selectedChatId,
+    selectedChatTitle,
+    selectChatForDataset,
+    setSelectedChatTitle,
+  } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const [optimisticMessages, setOptimisticMessages] = useState<
-    OptimisticMessage[]
-  >([]);
   const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
@@ -651,27 +530,334 @@ function ChatPageClient() {
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // State to hold details from the most recently completed AI stream
-  const [lastCompletedStreamDetails, setLastCompletedStreamDetails] = useState<{
-    optimisticId: string;
-    chatId: string;
-    derivedDatasets: string[];
-    derivedSql: string | null;
-    // traceId?: string | null; // Future: if trace_id can be used for matching
-  } | null>(null);
+  const sqlPanelRef = useRef<HTMLDivElement>(null);
+  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
-  // State to store enhancements for finalized messages, keyed by backend message ID
-  const [
-    enhancementsForFinalizedMessages,
-    setEnhancementsForFinalizedMessages,
-  ] = useState<Map<string, { datasets: string[]; sql: string | null }>>(
-    new Map()
+  // Helper function to update URL with chat state
+  const updateUrlWithChatId = useCallback(
+    (chatId: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (chatId) {
+        params.set("chatId", chatId);
+      } else {
+        params.delete("chatId");
+        params.delete("initialMessage");
+        params.delete("contextData");
+      }
+      router.replace(`/chat?${params.toString()}`);
+    },
+    [searchParams, router]
   );
 
-  const [clientMessages, setClientMessages] = useState<ClientChatMessage[]>([]);
+  // Fetch all chat messages when a chat is selected
+  const {
+    data: chatMessagesData,
+    isLoading: isLoadingChatMessages,
+    error: chatMessagesError,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useChatMessages({
+    variables: {
+      chatId: selectedChatId || "",
+      limit: 50,
+    },
+    enabled: !!selectedChatId,
+  });
 
-  const chatWithAgent = useChatWithAgent();
+  const allChatMessages = useMemo(() => {
+    return chatMessagesData?.pages.flatMap((page) => page.data) || [];
+  }, [chatMessagesData]);
+
+  // Fetch chat details when a chat is selected
+  const {
+    data: chatDetailsData,
+    isLoading: isLoadingChatDetails,
+    error: chatDetailsError,
+  } = useChatDetails({
+    variables: {
+      chatId: selectedChatId || "",
+      userId: "1", // Using hardcoded user ID "1" as in other queries
+    },
+    enabled: !!selectedChatId,
+  });
+
+  const chatDetails = chatDetailsData?.data;
+
+  // State to control whether to use query messages or streaming messages
+  const [useStreamingMessages, setUseStreamingMessages] = useState(false);
+
+  // AI SDK Chat Implementation
+  const {
+    messages: streamingMessages,
+    input,
+    handleInputChange: sdkHandleInputChange,
+    handleSubmit: sdkHandleSubmit,
+    isLoading,
+    stop,
+    error,
+    data,
+  } = useChat({
+    api: "/api/chat",
+    id: selectedChatId || undefined,
+    body: {
+      // Pass project_ids and dataset_ids from the selected contexts
+      project_ids: selectedContexts
+        .filter((ctx) => ctx.type === "project")
+        .map((ctx) => ctx.id),
+      dataset_ids: selectedContexts
+        .filter((ctx) => ctx.type === "dataset")
+        .map((ctx) => ctx.id),
+      // Pass the current chat ID if available
+      chat_id: selectedChatId || undefined,
+    },
+    onResponse: async (response) => {
+      console.log(
+        "Chat response received:",
+        response.status,
+        response.statusText
+      );
+      // Switch to streaming messages when we start receiving a response
+      setUseStreamingMessages(true);
+    },
+    onFinish: (message, { usage, finishReason }) => {
+      console.log("Chat message finished:", message);
+      console.log("Usage:", usage);
+      console.log("Finish reason:", finishReason);
+      console.log("Current selectedChatId when finishing:", selectedChatId);
+
+      // Update latest assistant message for voice mode
+      if (message.role === "assistant") {
+        setLatestAssistantMessage(message.content);
+        setIsStreaming(false);
+      }
+
+      // If this was a new chat (no selectedChatId), invalidate chats list
+      if (!selectedChatId) {
+        console.log("New chat completed, invalidating chats list");
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+      }
+
+      // Switch back to query messages and invalidate to get the complete conversation
+      setUseStreamingMessages(false);
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", { chatId: selectedChatId }],
+      });
+    },
+    onError: (err) => {
+      console.error("Chat error:", err);
+      toast.error("Error processing chat: " + (err.message || "Unknown error"));
+      // Switch back to query messages on error
+      setUseStreamingMessages(false);
+    },
+    initialMessages: [], // Don't use initial messages from query
+  });
+
+  // Determine which messages to display
+  const displayMessages = useMemo(() => {
+    if (useStreamingMessages && streamingMessages.length > 0) {
+      // When streaming, combine query messages with streaming messages
+      return [...allChatMessages, ...streamingMessages];
+    }
+    // Otherwise, use query messages
+    return allChatMessages;
+  }, [useStreamingMessages, streamingMessages, allChatMessages]);
+
+  // Log messages for debugging
+  useEffect(() => {
+    console.log("Messages updated:", displayMessages);
+  }, [displayMessages]);
+
+  // Log chat title state for debugging
+  useEffect(() => {
+    console.log("Chat title state:", {
+      selectedChatTitle,
+      selectedChatId,
+      isLoadingChatDetails,
+      chatDetails: chatDetails?.title,
+    });
+    if (chatDetails && chatDetails.title) {
+      selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
+      setSelectedChatTitle(chatDetails.title);
+    }
+  }, [
+    selectedChatTitle,
+    selectedChatId,
+    isLoadingChatDetails,
+    chatDetails,
+    selectChatForDataset,
+    linkedDatasetId,
+    setSelectedChatTitle,
+  ]);
+
+  // Handle data stream for chat creation
+  useEffect(() => {
+    if (data && data.length > 0) {
+      console.log("Data stream received:", data);
+      console.log("Current selectedChatId in data effect:", selectedChatId);
+
+      // Check for chat creation message - look for the most recent one
+      const chatCreatedMessages = data.filter((item: unknown) => {
+        return (
+          typeof item === "object" &&
+          item !== null &&
+          "type" in item &&
+          (item as { type: string }).type === "chat-created"
+        );
+      }) as { type: string; chatId: string }[];
+
+      console.log("Found chat creation messages:", chatCreatedMessages);
+
+      // Get the latest chat creation message
+      const latestChatCreated =
+        chatCreatedMessages[chatCreatedMessages.length - 1];
+
+      if (latestChatCreated) {
+        console.log(
+          "Processing chat creation data:",
+          latestChatCreated,
+          "Current selectedChatId:",
+          selectedChatId
+        );
+
+        if (!selectedChatId) {
+          console.log(
+            "New chat ID created via data stream:",
+            latestChatCreated.chatId
+          );
+          // Update the chat store with the new chat ID and a default title
+          const datasetContext = selectedContexts.find(
+            (ctx) => ctx.type === "dataset"
+          );
+          const chatTitle = `Chat ${new Date().toLocaleTimeString()}`;
+
+          selectChatForDataset(
+            datasetContext?.id || null,
+            latestChatCreated.chatId,
+            chatTitle
+          );
+
+          // Update URL with the new chat ID
+          updateUrlWithChatId(latestChatCreated.chatId);
+
+          // Invalidate both chat list and messages queries to refresh
+          queryClient.invalidateQueries({ queryKey: ["chats"] });
+          queryClient.invalidateQueries({
+            queryKey: ["chat-messages", { chatId: latestChatCreated.chatId }],
+          });
+        } else {
+          console.log(
+            "Chat ID already set, ignoring data stream chat creation"
+          );
+        }
+      }
+    }
+  }, [
+    data,
+    selectedChatId,
+    selectedContexts,
+    selectChatForDataset,
+    queryClient,
+    updateUrlWithChatId,
+  ]);
+
+  // Display any errors in the UI
+  useEffect(() => {
+    if (error) {
+      console.error("Chat error state:", error);
+      toast.error(`Error: ${error.message || "Unknown error"}`);
+    }
+  }, [error]);
+
+  // Custom input handler that works with our MentionInput component
+  const handleInputChange = useCallback(
+    (value: string) => {
+      // Create a synthetic change event
+      const syntheticEvent = {
+        target: { value },
+        currentTarget: { value },
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as React.ChangeEvent<HTMLInputElement>;
+
+      sdkHandleInputChange(syntheticEvent);
+    },
+    [sdkHandleInputChange]
+  );
+
+  // Custom submit handler that works with our MentionInput component
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      sdkHandleSubmit(e as unknown as React.FormEvent);
+    },
+    [sdkHandleSubmit]
+  );
+
+  // Note: Projects are now fetched when needed for context selection
+
+  // Initialize chat from URL on first load
+  useEffect(() => {
+    if (!isInitialized && chatIdFromUrl && chatIdFromUrl !== selectedChatId) {
+      // Load the chat from URL if it's different from current selection
+      selectChatForDataset(null, chatIdFromUrl, "Loading...");
+      setIsInitialized(true);
+    } else if (!isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [chatIdFromUrl, selectedChatId, selectChatForDataset, isInitialized]);
+
+  // Update chat title when chat details are loaded
+  useEffect(() => {
+    console.log("Chat details effect:", {
+      chatDetails,
+      selectedChatId,
+      linkedDatasetId,
+      chatDetailsId: chatDetails?.id,
+      chatDetailsTitle: chatDetails?.title,
+    });
+
+    if (
+      chatDetails &&
+      selectedChatId &&
+      chatDetails.id === selectedChatId &&
+      chatDetails.title
+    ) {
+      console.log("Updating chat title to:", chatDetails.title);
+      selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
+    }
+  }, [chatDetails, selectedChatId, linkedDatasetId]);
+
+  // Handle chat details loading error
+  useEffect(() => {
+    if (chatDetailsError) {
+      console.error("Error fetching chat details:", chatDetailsError);
+      toast.error("Failed to load chat details");
+    }
+  }, [chatDetailsError]);
+
+  // Reset streaming state when switching chats
+  useEffect(() => {
+    setUseStreamingMessages(false);
+  }, [selectedChatId]);
+
+  // This logic is now handled by the useChatDetails hook above
+
+  // Handle chat messages loading error
+  useEffect(() => {
+    if (chatMessagesError) {
+      console.error("Error fetching chat messages:", chatMessagesError);
+      toast.error("Failed to load chat messages");
+    }
+  }, [chatMessagesError]);
+
+  // Update URL when selectedChatId changes
+  useEffect(() => {
+    if (isInitialized && selectedChatId !== chatIdFromUrl) {
+      updateUrlWithChatId(selectedChatId);
+    }
+  }, [selectedChatId, chatIdFromUrl, updateUrlWithChatId, isInitialized]);
 
   useEffect(() => {
     if (contextData) {
@@ -688,471 +874,27 @@ function ChatPageClient() {
     }
   }, [contextData]);
 
-  const { data: projectsData } = useProjects({
-    variables: { limit: 100 },
-  });
-
-  useEffect(() => {
-    if (selectedChatId && projectsData?.results?.length) {
-      const findChatDataset = async () => {
-        try {
-          const datasetPromises = projectsData.results.map(
-            async (project: Project) => {
-              try {
-                const queryKey = [
-                  "datasets",
-                  { projectId: project.id, limit: 100 },
-                ];
-                const cachedData =
-                  queryClient.getQueryData<CachedDatasetsData>(queryKey);
-                if (cachedData && cachedData.results) {
-                  return { project, data: cachedData };
-                }
-                const data =
-                  await queryClient.fetchQuery<DatasetsFetcherResponse>({
-                    queryKey,
-                    queryFn: async () => {
-                      const result = await useDatasets.fetcher({
-                        projectId: project.id,
-                        limit: 100,
-                      });
-                      return result;
-                    },
-                  });
-                return { project, data };
-              } catch (error) {
-                console.error(
-                  `Failed to fetch datasets for project ${project.id}:`,
-                  error
-                );
-                return { project, data: { results: [] } };
-              }
-            }
-          );
-
-          const datasetResults = await Promise.all(datasetPromises);
-
-          for (const result of datasetResults) {
-            const project = result.project;
-            const data = result.data;
-
-            if (!data || !Array.isArray(data.results)) {
-              continue;
-            }
-
-            for (const dataset of data.results) {
-              try {
-                const chatsResponse = await fetchChats(
-                  { datasetId: dataset.id, limit: 50 },
-                  { pageParam: 1 }
-                );
-
-                if (!chatsResponse?.data?.results?.length) continue;
-
-                const chatFound = chatsResponse.data.results.find(
-                  (chat: Chat) => chat.id === selectedChatId
-                );
-
-                if (chatFound) {
-                  const datasetContext: ContextItem = {
-                    id: dataset.id,
-                    type: "dataset",
-                    name: dataset.alias,
-                    projectId: project.id,
-                  };
-                  setSelectedContexts([datasetContext]);
-                  setLinkedDatasetId(dataset.id);
-                  return;
-                }
-              } catch (error) {
-                console.error(
-                  `Failed to fetch chats for dataset ${dataset.id}:`,
-                  error
-                );
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error finding dataset for chat:", error);
-        }
-      };
-      findChatDataset();
-    }
-  }, [selectedChatId, projectsData, queryClient]);
-
   useEffect(() => {
     resetExecutedQueries();
   }, [selectedChatId, resetExecutedQueries]);
 
+  // Handle initial message from URL params
   useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
+    if (
+      initialMessage &&
+      !initialMessageSent &&
+      selectedContexts.length > 0 &&
+      isInitialized
+    ) {
+      handleInputChange(initialMessage);
 
-  const sendMessage = useCallback(
-    async (message: string) => {
-      if (!message.trim()) return;
-      setIsSending(true);
-      setIsStreaming(true);
-      const optimisticId = Date.now().toString();
-      const currentChatId = selectedChatId;
+      // Create a submit event for the form
+      const submitEvent = new Event("submit", { bubbles: true });
+      handleSubmit(submitEvent as unknown as React.FormEvent);
 
-      // Create a new AbortController for this request
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
-
-      // Add the new user message to clientMessages
-      const userMessage: ClientChatMessage = {
-        role: "user",
-        content: message,
-      };
-      setClientMessages((prev) => [...prev, userMessage]);
-
-      setOptimisticMessages((prev) => [
-        ...prev,
-        {
-          id: `user-${optimisticId}`,
-          content: message,
-          role: "user",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-
-      setOptimisticMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${optimisticId}`,
-          content: [],
-          role: "assistant",
-          created_at: new Date().toISOString(),
-          isLoading: true,
-        },
-      ]);
-
-      try {
-        const datasetIds = selectedContexts
-          .filter((ctx) => ctx.type === "dataset")
-          .map((ctx) => ctx.id);
-        const projectIds = selectedContexts
-          .filter((ctx) => ctx.type === "project")
-          .map((ctx) => ctx.id);
-
-        // Filter out potential duplicate messages before sending
-        const messagesWithoutDuplicates = [
-          ...clientMessages,
-          userMessage,
-        ].reduce(
-          (
-            unique: ClientChatMessage[],
-            message: ClientChatMessage,
-            index,
-            array
-          ) => {
-            // Check if this is a duplicate of the previous message
-            const prevMessage = array[index - 1];
-            if (
-              prevMessage &&
-              prevMessage.role === message.role &&
-              prevMessage.content === message.content
-            ) {
-              return unique; // Skip this message
-            }
-            return [...unique, message];
-          },
-          []
-        );
-
-        const response = await chatWithAgent.mutateAsync({
-          chatId: currentChatId || undefined,
-          datasetIds,
-          projectIds,
-          messages: messagesWithoutDuplicates,
-          signal, // Pass the abort signal to the request
-        });
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let newChatIdFromStream: string | null = null;
-        let newChatNameFromStream: string | null = null;
-
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const jsonStr = line.substring(5).trim();
-                if (jsonStr === "[DONE]") continue;
-                if (!jsonStr) continue;
-
-                try {
-                  const data = JSON.parse(jsonStr);
-                  let newContent = "";
-                  let responseRole = data.role || "assistant";
-
-                  if (
-                    responseRole === "intermediate" ||
-                    responseRole === "ai"
-                  ) {
-                    // Keep role
-                  } else if (responseRole !== "user") {
-                    responseRole = "assistant";
-                  }
-
-                  if (data.choices && data.choices[0]?.delta?.content) {
-                    newContent = data.choices[0].delta.content;
-                    if (data.choices[0].delta.role) {
-                      responseRole = data.choices[0].delta.role;
-                    }
-                  } else if (data.content) {
-                    newContent = data.content;
-                  } else if (data.message?.content) {
-                    newContent = data.message.content;
-                    if (data.message.role) responseRole = data.message.role;
-                  } else if (data.text) {
-                    newContent = data.text;
-                  } else if (typeof data === "string") {
-                    newContent = data;
-                  }
-
-                  let eventRoleForStream: "intermediate" | "ai" | null = null;
-                  if (responseRole === "intermediate") {
-                    eventRoleForStream = "intermediate";
-                  } else if (
-                    responseRole === "ai" ||
-                    responseRole === "assistant"
-                  ) {
-                    eventRoleForStream = "ai";
-                  }
-
-                  if (eventRoleForStream && newContent) {
-                    const currentEvent: StreamEvent = {
-                      role: eventRoleForStream,
-                      content: newContent,
-                      datasets_used: data.datasets_used,
-                      generated_sql_query: data.generated_sql_query,
-                    };
-                    setOptimisticMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === `assistant-${optimisticId}`
-                          ? {
-                              ...msg,
-                              content: Array.isArray(msg.content)
-                                ? [...msg.content, currentEvent]
-                                : [currentEvent],
-                            }
-                          : msg
-                      )
-                    );
-                  }
-
-                  if (!currentChatId && data.chat_id && !newChatIdFromStream) {
-                    newChatIdFromStream = data.chat_id;
-                    newChatNameFromStream =
-                      data.name || message.substring(0, 30) + "...";
-                  }
-                } catch (e) {
-                  console.error(
-                    "Error parsing SSE JSON:",
-                    e,
-                    "Raw line:",
-                    jsonStr
-                  );
-                }
-              } else if (line.trim()) {
-                console.log("Received non-SSE line:", line);
-              }
-            }
-          }
-        }
-
-        if (buffer.startsWith("data: ")) {
-          const jsonStr = buffer.substring(5).trim();
-          if (jsonStr && jsonStr !== "[DONE]") {
-            try {
-              const data = JSON.parse(jsonStr);
-              let newContent = "";
-              let responseRole = data.role || "assistant";
-              if (data.choices && data.choices[0]?.delta?.content) {
-                newContent = data.choices[0].delta.content;
-                if (data.choices[0].delta.role)
-                  responseRole = data.choices[0].delta.role;
-              } else if (data.content) newContent = data.content;
-              else if (data.message?.content) {
-                newContent = data.message.content;
-                if (data.message.role) responseRole = data.message.role;
-              } else if (data.text) newContent = data.text;
-              else if (typeof data === "string") newContent = data;
-
-              let eventRoleForStream: "intermediate" | "ai" | null = null;
-              if (responseRole === "intermediate")
-                eventRoleForStream = "intermediate";
-              else if (responseRole === "ai" || responseRole === "assistant")
-                eventRoleForStream = "ai";
-
-              if (eventRoleForStream && newContent) {
-                const currentEvent: StreamEvent = {
-                  role: eventRoleForStream,
-                  content: newContent,
-                  datasets_used: data.datasets_used,
-                  generated_sql_query: data.generated_sql_query,
-                };
-                setOptimisticMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === `assistant-${optimisticId}`
-                      ? {
-                          ...msg,
-                          content: Array.isArray(msg.content)
-                            ? [...msg.content, currentEvent]
-                            : [currentEvent],
-                        }
-                      : msg
-                  )
-                );
-              }
-            } catch (e) {
-              console.error(
-                "Error parsing remaining SSE JSON:",
-                e,
-                "Raw buffer:",
-                jsonStr
-              );
-            }
-          }
-        }
-
-        // After stream completed, collect AI response content to add to clientMessages
-        setOptimisticMessages((prev) => {
-          const currentOptMsg = prev.find(
-            (msg) => msg.id === `assistant-${optimisticId}`
-          );
-
-          if (
-            currentOptMsg &&
-            Array.isArray(currentOptMsg.content) &&
-            currentOptMsg.content.length > 0
-          ) {
-            const { datasets, sql } = deriveEnhancementsFromStream(
-              currentOptMsg.content as StreamEvent[]
-            );
-
-            // Extract AI message content from stream events
-            const aiContent = (currentOptMsg.content as StreamEvent[])
-              .filter((event) => event.role === "ai")
-              .map((event) => event.content)
-              .join("");
-
-            // Add the AI response to clientMessages
-            if (aiContent) {
-              if (
-                clientMessages.length !== 0 &&
-                clientMessages.at(-1)?.role === "assistant" &&
-                clientMessages.at(-1)?.content === aiContent
-              ) {
-                console.log("Skipping duplicate AI response");
-              } else {
-                setClientMessages((prev) => [
-                  ...prev,
-                  { role: "assistant", content: aiContent },
-                ]);
-              }
-            }
-
-            setLastCompletedStreamDetails({
-              optimisticId: `assistant-${optimisticId}`,
-              chatId: currentChatId || newChatIdFromStream || "",
-              derivedDatasets: datasets,
-              derivedSql: sql,
-            });
-          }
-          return prev.map((msg) =>
-            msg.id === `assistant-${optimisticId}`
-              ? { ...msg, isLoading: false }
-              : msg
-          );
-        });
-
-        if (newChatIdFromStream && newChatNameFromStream) {
-          // Reset clientMessages when creating a new chat
-          setClientMessages([userMessage]);
-
-          const datasetIdForNewChat =
-            selectedContexts.find((ctx) => ctx.type === "dataset")?.id || null;
-          selectChatForDataset(
-            datasetIdForNewChat,
-            newChatIdFromStream,
-            newChatNameFromStream
-          );
-        }
-
-        await queryClient.invalidateQueries({
-          queryKey: [
-            "chat-messages",
-            { chatId: currentChatId || newChatIdFromStream },
-          ],
-        });
-        await queryClient.invalidateQueries({ queryKey: ["chats"] });
-
-        setActiveTab("chat");
-      } catch (error) {
-        if (!(error instanceof Error && error.name === "AbortError")) {
-          console.error("Error sending message:", error);
-          toast.error("Failed to send message");
-          setOptimisticMessages((prev) =>
-            prev.filter((msg) => !msg.id.endsWith(optimisticId))
-          );
-        }
-      } finally {
-        setIsSending(false);
-        setIsStreaming(false);
-        abortControllerRef.current = null;
-      }
-    },
-    [
-      selectedChatId,
-      selectedContexts,
-      chatWithAgent,
-      queryClient,
-      selectChatForDataset,
-      setActiveTab,
-      clientMessages,
-    ]
-  );
-
-  const stopMessageStream = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-
-      setOptimisticMessages((prevMessages) =>
-        prevMessages.map((msg) => {
-          if (
-            msg.isLoading &&
-            (msg.role === "assistant" || msg.role === "ai") &&
-            Array.isArray(msg.content)
-          ) {
-            return {
-              ...msg,
-              streamAborted: true,
-            };
-          }
-          return msg;
-        })
-      );
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (initialMessage && !initialMessageSent && selectedContexts.length > 0) {
-      // Send the message if any context is selected (not just datasets)
-      sendMessage(initialMessage);
       setInitialMessageSent(true);
+
+      // Only remove initialMessage and contextData, preserve chatId
       const params = new URLSearchParams(searchParams.toString());
       params.delete("initialMessage");
       params.delete("contextData");
@@ -1162,163 +904,17 @@ function ChatPageClient() {
     initialMessage,
     initialMessageSent,
     selectedContexts,
-    sendMessage,
+    handleInputChange,
+    handleSubmit,
     router,
     searchParams,
+    isInitialized,
   ]);
 
-  const {
-    data: messagesData,
-    isLoading: isLoadingMessages,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useChatMessages({
-    variables: {
-      chatId: selectedChatId || "",
-      limit: 20,
-    },
-    enabled: !!selectedChatId,
-  });
-
-  const allMessages = useMemo(() => {
-    const messages =
-      messagesData?.pages.flatMap((page) => page.data.results) ?? [];
-    const processedMessages = messages.map((message) => ({
-      ...message,
-      role: ["user", "assistant", "intermediate", "ai"].includes(message.role)
-        ? (message.role as "user" | "assistant" | "intermediate" | "ai")
-        : "assistant",
-    }));
-    return processedMessages.sort((a, b) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
-      if (timeA === timeB) return a.role === "user" ? -1 : 1;
-      return timeA - timeB;
-    });
-  }, [messagesData?.pages]);
-
-  // Effect to associate completed stream data with a finalized message
-  useEffect(() => {
-    if (lastCompletedStreamDetails && allMessages.length > 0) {
-      const { chatId, derivedDatasets, derivedSql } =
-        lastCompletedStreamDetails;
-
-      // Attempt to find the corresponding message in allMessages
-      // Match if the stream's chatID is the currently selectedChatId
-      if (selectedChatId === chatId) {
-        const potentialMatches = allMessages.filter(
-          (msg) =>
-            (msg.role === "assistant" || msg.role === "ai") &&
-            // msg.chat_id === chatId && // No longer needed, selectedChatId is the context
-            !enhancementsForFinalizedMessages.has(msg.id)
-        );
-
-        if (potentialMatches.length > 0) {
-          const matchedMessage = potentialMatches[potentialMatches.length - 1]; // Take the most recent
-          setEnhancementsForFinalizedMessages((prev) =>
-            new Map(prev).set(matchedMessage.id, {
-              datasets: derivedDatasets,
-              sql: derivedSql,
-            })
-          );
-          setLastCompletedStreamDetails(null); // Consume the details
-        }
-      }
-    }
-  }, [
-    allMessages,
-    lastCompletedStreamDetails,
-    enhancementsForFinalizedMessages,
-    selectedChatId, // Added selectedChatId dependency
-  ]);
-
-  const showSqlButton = useMemo(() => {
-    const checkContentForSql = (content: string | StreamEvent[]): boolean => {
-      if (typeof content === "string") {
-        return content.toLowerCase().includes("sql");
-      } else if (Array.isArray(content)) {
-        return content.some(
-          (event) =>
-            event.role === "ai" && event.content.toLowerCase().includes("sql")
-        );
-      }
-      return false;
-    };
-    return (
-      selectedChatId &&
-      (allMessages.some((msg) => checkContentForSql(msg.content)) ||
-        optimisticMessages.some(
-          (msg) => msg.role !== "user" && checkContentForSql(msg.content)
-        ))
-    );
-  }, [selectedChatId, allMessages, optimisticMessages]);
-
-  useEffect(() => {
-    let lastAssistantText: string | null = null;
-    const assistantMessagesFromApi = allMessages.filter(
-      (msg) => msg.role === "assistant" || msg.role === "ai"
-    );
-    if (assistantMessagesFromApi.length > 0) {
-      const lastApiMsgContent =
-        assistantMessagesFromApi[assistantMessagesFromApi.length - 1].content;
-      if (typeof lastApiMsgContent === "string") {
-        lastAssistantText = lastApiMsgContent;
-      }
-    }
-
-    const optimisticAssistantMsg = optimisticMessages.find(
-      (msg) => (msg.role === "assistant" || msg.role === "ai") && !msg.isLoading
-    );
-    if (
-      optimisticAssistantMsg &&
-      Array.isArray(optimisticAssistantMsg.content)
-    ) {
-      lastAssistantText = optimisticAssistantMsg.content
-        .filter((e) => e.role === "ai")
-        .map((e) => e.content)
-        .join("");
-    } else if (
-      optimisticAssistantMsg &&
-      typeof optimisticAssistantMsg.content === "string"
-    ) {
-      lastAssistantText = optimisticAssistantMsg.content;
-    }
-
-    setLatestAssistantMessage(lastAssistantText);
-  }, [allMessages, optimisticMessages]);
-
-  useEffect(() => {
-    if (isSending) {
-      setLatestAssistantMessage(null);
-    }
-  }, [isSending]);
-
-  useEffect(() => {
-    setOptimisticMessages([]);
-  }, [selectedChatId]);
-
-  useEffect(() => {
-    if (!isSending && messagesData && optimisticMessages.length > 0) {
-      setOptimisticMessages([]);
-    }
-  }, [messagesData, isSending, optimisticMessages.length]);
-
-  useEffect(() => {
-    if (selectedChatId) {
-      setActiveTab("chat");
-    }
-  }, [selectedChatId, setActiveTab]);
-
-  const handleScroll = useCallback(
-    (event: React.UIEvent<HTMLDivElement>) => {
-      const viewport = event.currentTarget;
-      if (viewport.scrollTop < 100 && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    // Handle scroll - can be used for loading more messages if needed
+  }, []);
 
   useLayoutEffect(() => {
     if (scrollRef.current) {
@@ -1329,14 +925,14 @@ function ChatPageClient() {
         const isNearBottom =
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
           100;
-        if (isNearBottom || !isFetchingNextPage) {
+        if (isNearBottom) {
           requestAnimationFrame(() => {
             viewport.scrollTop = viewport.scrollHeight;
           });
         }
       }
     }
-  }, [allMessages, optimisticMessages, isFetchingNextPage]);
+  }, [displayMessages]);
 
   const handleSelectContext = useCallback((context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
@@ -1348,13 +944,14 @@ function ChatPageClient() {
 
   const handleSendVoiceMessage = useCallback(
     async (message: string) => {
-      await sendMessage(message);
-    },
-    [sendMessage]
-  );
+      handleInputChange(message);
 
-  const sqlPanelRef = useRef<HTMLDivElement>(null);
-  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
+      // Create a submit event for the form
+      const submitEvent = new Event("submit", { bubbles: true });
+      handleSubmit(submitEvent as unknown as React.FormEvent);
+    },
+    [handleInputChange, handleSubmit]
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -1378,10 +975,38 @@ function ChatPageClient() {
     };
   }, [isOpen, sqlPanelRef]);
 
-  // Reset clientMessages when chat changes
+  // Update streaming state based on isLoading
   useEffect(() => {
-    setClientMessages([]);
-  }, [selectedChatId]);
+    setIsStreaming(isLoading);
+  }, [isLoading]);
+
+  // Handle stopping the stream
+  const handleStop = useCallback(() => {
+    stop();
+    setIsStreaming(false);
+  }, [stop]);
+
+  // Compute whether to show SQL button
+  const showSqlButton = useMemo(() => {
+    return (
+      selectedChatId &&
+      displayMessages.some(
+        (msg: UIMessage) =>
+          msg.role === "assistant" &&
+          typeof msg.content === "string" &&
+          msg.content.toLowerCase().includes("sql")
+      )
+    );
+  }, [selectedChatId, displayMessages]);
+
+  // Close sidebar when chat page opens
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  }, []); // Empty dependency array means this runs only once on mount
 
   return (
     <main className="flex flex-col h-screen w-full pt-0 pb-0">
@@ -1399,7 +1024,11 @@ function ChatPageClient() {
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
                   >
-                    {selectedChatTitle ? selectedChatTitle : "Chat"}
+                    {isLoadingChatDetails && selectedChatId
+                      ? "Loading..."
+                      : selectedChatTitle
+                      ? selectedChatTitle
+                      : "Chat"}
                   </TabsTrigger>
                   <TabsTrigger
                     value="history"
@@ -1416,6 +1045,14 @@ function ChatPageClient() {
                     selectChatForDataset(null, null, null);
                     setLinkedDatasetId(null);
                     setActiveTab("chat");
+                    setSelectedContexts([]);
+
+                    // Clear URL parameters when starting a new chat
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("chatId");
+                    params.delete("initialMessage");
+                    params.delete("contextData");
+                    router.replace(`/chat?${params.toString()}`);
                   }}
                 >
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
@@ -1442,14 +1079,14 @@ function ChatPageClient() {
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
-                    isLoadingMessages={isLoadingMessages}
-                    optimisticMessages={optimisticMessages}
-                    selectedChatId={selectedChatId}
-                    allMessages={allMessages}
+                    isLoading={isLoading}
+                    messages={displayMessages}
                     selectedContexts={selectedContexts}
-                    enhancementsForFinalizedMessages={
-                      enhancementsForFinalizedMessages
-                    }
+                    selectedChatId={selectedChatId}
+                    isLoadingChatMessages={isLoadingChatMessages}
+                    hasNextPage={hasNextPage}
+                    fetchNextPage={fetchNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
                   />
                 </div>
               </TabsContent>
@@ -1462,6 +1099,8 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
+                  searchParams={searchParams}
+                  router={router}
                 />
               </TabsContent>
             </Tabs>
@@ -1493,20 +1132,21 @@ function ChatPageClient() {
           }}
         >
           <ChatInput
-            sendMessage={sendMessage}
-            isSending={isSending}
+            onStop={handleStop}
             isStreaming={isStreaming}
-            stopMessageStream={stopMessageStream}
             selectedContexts={selectedContexts}
             onSelectContext={handleSelectContext}
             onRemoveContext={handleRemoveContext}
             isVoiceModeActive={isVoiceModeActive}
             setIsVoiceModeActive={setIsVoiceModeActive}
-            initialValue={initialMessage || ""}
             lockableContextIds={
               selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
             }
             hasContext={selectedContexts.length > 0}
+            input={input}
+            handleInputChange={handleInputChange}
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
           />
         </div>
       )}
@@ -1519,7 +1159,7 @@ function ChatPageClient() {
           datasetId={
             selectedContexts.find((ctx) => ctx.type === "dataset")?.id || ""
           }
-          isWaitingForResponse={isSending}
+          isWaitingForResponse={isLoading}
         />
       )}
     </main>

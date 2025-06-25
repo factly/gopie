@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
+	"github.com/google/uuid"
 )
 
 type ChatService struct {
@@ -19,12 +21,8 @@ func NewChatService(store repositories.ChatStoreRepository, ai repositories.AiCh
 	return &ChatService{store, ai, aiAgent}
 }
 
-func (service *ChatService) DeleteChat(id string) error {
-	return service.store.DeleteChat(context.Background(), id)
-}
-
-func (service *ChatService) DetailsChat(id string) (*models.Chat, error) {
-	return service.store.DetailsChat(context.Background(), id)
+func (service *ChatService) DeleteChat(id, createdBy string) error {
+	return service.store.DeleteChat(context.Background(), id, createdBy)
 }
 
 func (service *ChatService) ListUserChats(userID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
@@ -35,40 +33,29 @@ func (service *ChatService) UpdateChat(chatID string, params *models.UpdateChatP
 	return service.store.UpdateChat(context.Background(), chatID, params)
 }
 
-func (service *ChatService) GetChatMessages(chatID string, pagination models.Pagination) (*models.PaginationView[*models.ChatMessage], error) {
-	return service.store.GetChatMessages(context.Background(), chatID, pagination)
+func (service *ChatService) GetChatMessages(chatID string) ([]*models.ChatMessage, error) {
+	return service.store.GetChatMessages(context.Background(), chatID)
 }
 
-func (service *ChatService) GetChatsByDatasetID(datasetID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
-	return service.store.GetChatsByDatasetID(context.Background(), datasetID, pagination)
-}
-
-func (service *ChatService) AddNewMessage(chatID string, message models.ChatMessage) (*models.ChatMessage, error) {
-	message.CreatedAt = time.Now()
-	return service.store.AddNewMessage(context.Background(), chatID, message)
-}
-
-func (service *ChatService) DeleteMessage(chatID string, messageID string) error {
-	return service.store.DeleteMessage(context.Background(), chatID, messageID)
-}
-
-func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models.ChatWithMessages, error) {
-	messages := params.Messages
-	prevMsgs := &models.PaginationView[*models.ChatMessage]{}
-	var err error
-	if params.ChatID != "" {
-		prevMsgs, err = service.GetChatMessages(params.ChatID, models.Pagination{Offset: 0, Limit: 100})
-		if err != nil {
-			return nil, fmt.Errorf("Error getting chat messages: %v", err)
+func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
+	for i, msg := range messages {
+		if msg.CreatedAt.IsZero() {
+			messages[i].CreatedAt = time.Now()
 		}
 	}
+	return service.store.AddNewMessage(ctx, chatID, messages)
+}
+
+func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams) (*models.D_ChatWithMessages, error) {
+	messages := params.Messages
+	prevMsgs := &models.PaginationView[*models.D_ChatMessage]{}
 
 	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt, prevMsgs.Results)
 	if err != nil {
 		return nil, fmt.Errorf("Error generating chat response from ai: %v", err)
 	}
 	messages[len(messages)-1].CreatedAt = time.Now()
-	messages = append(messages, models.ChatMessage{
+	messages = append(messages, models.D_ChatMessage{
 		Content:   aiResponse.Response,
 		Role:      "assistant",
 		CreatedAt: time.Now(),
@@ -81,32 +68,65 @@ func (service *ChatService) ChatWithAi(params *models.ChatWithAiParams) (*models
 			return nil, fmt.Errorf("Error generating title from ai: %v", err)
 		}
 
-		chat, err := service.store.CreateChat(context.Background(), &models.CreateChatParams{
-			Messages:  messages,
+		uuid, err := uuid.NewV6()
+		chatWithMessages := &models.D_ChatWithMessages{
+			ID:        uuid.String(),
 			Name:      title.Response,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 			CreatedBy: params.CreatedBy,
-			DatasetID: params.DatasetID,
-		})
+			Messages:  messages,
+		}
 
-		return chat, err
+		return chatWithMessages, err
 	}
 
 	// existing chat
-	newUserMessage, err := service.store.AddNewMessage(context.Background(), params.ChatID, messages[len(messages)-2])
-	if err != nil {
-		return nil, fmt.Errorf("Error adding new message to chat: %v", err)
-	}
-	newMessage, err := service.store.AddNewMessage(context.Background(), params.ChatID, messages[len(messages)-1])
-	if err != nil {
-		return nil, fmt.Errorf("Error adding new message to chat: %v", err)
-	}
-	params.Messages = append(params.Messages, *newUserMessage, *newMessage)
+	params.Messages = append(params.Messages, messages[len(messages)-2], messages[len(messages)-1])
 
-	return &models.ChatWithMessages{
+	return &models.D_ChatWithMessages{
 		Messages: params.Messages,
 	}, nil
 }
 
 func (service *ChatService) ChatWithAiAgent(ctx context.Context, params *models.AIAgentChatParams) {
 	service.aiAgent.Chat(ctx, params)
+}
+
+func (service *ChatService) CreateChat(ctx context.Context, params *models.CreateChatParams) (*models.ChatWithMessages, error) {
+	var userMessage *models.ChatMessage
+	var filteredMessages []models.ChatMessage
+
+	for _, msg := range params.Messages {
+		if msg.Object == "user.message" {
+			userMessage = &msg
+		}
+		if msg.Choices != nil && len(msg.Choices) > 0 {
+			filteredMessages = append(filteredMessages, msg)
+		}
+	}
+	if userMessage == nil {
+		return nil, errors.New("no user message found in chat messages")
+	}
+
+	title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content)
+	if err != nil {
+		fmt.Printf("Error generating title from AI: %v\n", err)
+		title = &models.D_AiChatResponse{
+			Response: "Untitled Chat",
+		}
+	}
+
+	params.Title = title.Response
+	params.Messages = filteredMessages
+	chat, err := service.store.CreateChat(ctx, params)
+	return chat, err
+}
+
+func (service *ChatService) GetChatByID(chatID, userID string) (*models.Chat, error) {
+	chat, err := service.store.GetChatByID(context.Background(), chatID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting chat by ID: %w", err)
+	}
+	return chat, nil
 }

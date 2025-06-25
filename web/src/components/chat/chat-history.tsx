@@ -37,8 +37,7 @@ export function ChatHistory({
     refetch: refetchChats,
   } = useChats({
     variables: {
-      datasetId,
-      limit: 10,
+      userID: "1",
     },
   });
 
@@ -52,7 +51,7 @@ export function ChatHistory({
 
   const handleDeleteChat = async (chatId: string) => {
     try {
-      await deleteChat.mutateAsync(chatId);
+      await deleteChat.mutateAsync({ chatId, userId: "1" });
       if (chatId === selectedChatId) {
         selectChatForDataset(datasetId, null, null);
       }
@@ -136,12 +135,12 @@ export function ChatHistory({
                         selectedChatId === chat.id && "bg-muted"
                       )}
                       onClick={() =>
-                        handleSelectChat(chat.id, chat.name || "New Chat")
+                        handleSelectChat(chat.id, chat.title || "New Chat")
                       }
                     >
                       <div className="flex-1 min-w-0">
                         <div className="break-words font-medium">
-                          {chat.name || "New Chat"}
+                          {chat.title || "New Chat"}
                         </div>
                       </div>
                       <div className="flex items-center shrink-0">

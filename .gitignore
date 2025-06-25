@@ -255,7 +255,9 @@ Temporary Items
 goose.env
 
 tests
-
 data
+/*/tmp
+.windsurf
+
 TODO.md
 img

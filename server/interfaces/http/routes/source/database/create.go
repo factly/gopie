@@ -188,6 +188,19 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
+	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+		DatasetID: dataset.ID,
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error uploading schema to AI agent",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"dataset": dataset,
 		"summary": summary,

@@ -40,13 +40,11 @@ type DatasetStoreRepository interface {
 
 type ChatStoreRepository interface {
 	CreateChat(ctx context.Context, params *models.CreateChatParams) (*models.ChatWithMessages, error)
-	DeleteChat(ctx context.Context, id string) error
-	DetailsChat(ctx context.Context, id string) (*models.Chat, error)
+	DeleteChat(ctx context.Context, id, createdBy string) error
 	ListUserChats(ctx context.Context, userID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error)
 	UpdateChat(ctx context.Context, chatID string, params *models.UpdateChatParams) (*models.Chat, error)
+	GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error)
 
-	GetChatMessages(ctx context.Context, chatID string, pagination models.Pagination) (*models.PaginationView[*models.ChatMessage], error)
-	GetChatsByDatasetID(ctx context.Context, datasetID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error)
-	AddNewMessage(ctx context.Context, chatID string, message models.ChatMessage) (*models.ChatMessage, error)
-	DeleteMessage(ctx context.Context, chatID string, messageID string) error
+	GetChatMessages(ctx context.Context, chatID string) ([]*models.ChatMessage, error)
+	AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error)
 }

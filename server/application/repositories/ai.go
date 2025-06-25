@@ -8,9 +8,10 @@ import (
 
 type AiRepository interface {
 	GenerateSql(nl string) (string, error)
+	GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error)
 }
 
 type AiChatRepository interface {
-	GenerateChatResponse(ctx context.Context, userMessage string, prevMessage []*models.ChatMessage) (*models.AiChatResponse, error)
-	GenerateTitle(ctx context.Context, userMessage string) (*models.AiChatResponse, error)
+	GenerateChatResponse(ctx context.Context, userMessage string, prevMessage []*models.D_ChatMessage) (*models.D_AiChatResponse, error)
+	GenerateTitle(ctx context.Context, userMessage string) (*models.D_AiChatResponse, error)
 }

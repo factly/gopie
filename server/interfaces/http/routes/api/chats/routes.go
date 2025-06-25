@@ -27,10 +27,9 @@ func Routes(router fiber.Router, params RouterParams) {
 		olapSvc:    params.OlapService,
 		datasetSvc: params.DatasetService,
 	}
-	router.Post("/", httpHandler.chat)
-	router.Post("/agent", httpHandler.chatWithAgent)
+	router.Get("/", httpHandler.listUserChats)
+	router.Post("/completions", httpHandler.chatWithAgent)
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)
 	router.Delete("/:chatID", httpHandler.deleteChat)
-	router.Delete("/:chatID/messages/:messageID", httpHandler.deleteMessage)
-	router.Get("/", httpHandler.listDatasetChats)
+	router.Get("/:chatID", httpHandler.details)
 }

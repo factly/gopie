@@ -10,6 +10,7 @@ import {
   XIcon,
   CalendarIcon,
   UserIcon,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateProject } from "@/lib/mutations/project/update-project";
@@ -18,6 +19,7 @@ import { Project } from "@/lib/api-client";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useRouter } from "next/navigation";
 
 interface InlineProjectEditorProps {
   project: Project;
@@ -29,6 +31,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -71,6 +74,21 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
     setName(project.name);
     setDescription(project.description || "");
     setIsEditing(false);
+  };
+
+  const handleChatWithProject = () => {
+    // Create context data for this project
+    const contextData = encodeURIComponent(
+      JSON.stringify([
+        {
+          id: project.id,
+          type: "project",
+          name: project.name,
+        },
+      ])
+    );
+
+    router.push(`/chat?contextData=${contextData}`);
   };
 
   if (isEditing) {
@@ -150,12 +168,28 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
               </Button>
             </div>
 
-            {project.description && (
-              <p className="text-base text-muted-foreground/90 max-w-[800px]">
-                {project.description}
-              </p>
-            )}
+            <div className="min-h-[40px]">
+              {project.description ? (
+                <p className="text-base text-muted-foreground/90 max-w-[800px] line-clamp-2">
+                  {project.description}
+                </p>
+              ) : (
+                <p className="text-base text-muted-foreground/90 opacity-0">
+                  &nbsp;
+                </p>
+              )}
+            </div>
           </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full hover:bg-muted"
+            title="Chat with Project"
+            onClick={handleChatWithProject}
+          >
+            <MessageSquare className="size-4" />
+          </Button>
         </div>
 
         <Separator className="my-4" />

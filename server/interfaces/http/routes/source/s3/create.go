@@ -25,6 +25,8 @@ type uploadRequestBody struct {
 	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
 	// Column names to be altered
 	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
+	// Column descriptions
+	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
 }
 
 // @Summary Upload file from S3
@@ -167,6 +169,21 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if datasetSummary != nil {
+		summaryMap := make(map[string]int)
+		for i := range *datasetSummary {
+			summaryMap[(*datasetSummary)[i].ColumnName] = i
+		}
+
+		for colName, desc := range body.ColumnDescriptions {
+			if desc != "" {
+				if idx, exists := summaryMap[colName]; exists {
+					(*datasetSummary)[idx].Description = desc
+				}
+			}
+		}
+	}
+
 	summary, err := h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
 	if err != nil {
 		h.logger.Error("Error creating dataset summary", zap.Error(err))
@@ -183,6 +200,11 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		h.logger.Error("Error uploading schema to AI agent", zap.Error(err)) // No need to return error
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error uploading schema to AI agent",
+			"code":    fiber.StatusInternalServerError,
+		})
 	}
 
 	h.logger.Info("File upload completed successfully",
