@@ -32,6 +32,9 @@ from app.workflow.prompts.response_prompt import (
     create_response_prompt,
     format_response_input,
 )
+from app.workflow.prompts.route_query_replan_prompt import (
+    create_route_query_replan_prompt,
+)
 from app.workflow.prompts.stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
@@ -49,6 +52,7 @@ NodeName = Literal[
     "process_query",
     "response",
     "check_visualization",
+    "route_query_replan",
 ]
 
 
@@ -66,6 +70,7 @@ class PromptSelector:
             "process_query": create_process_query_prompt,
             "response": create_response_prompt,
             "check_visualization": create_check_visualization_prompt,
+            "route_query_replan": create_route_query_replan_prompt,
         }
 
         self.format_prompt_input_map = {

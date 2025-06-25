@@ -230,7 +230,7 @@ def collect_and_store_tool_messages(
     tool_messages = []
     messages = state.get("messages", [])
 
-    for msg in messages[-10:]:
+    for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             tool_messages.append(
                 {

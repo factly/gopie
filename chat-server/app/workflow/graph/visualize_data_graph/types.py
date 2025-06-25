@@ -33,7 +33,7 @@ class AgentState(TypedDict):
 
     messages: Annotated[Sequence[BaseMessage], add_messages]
     datasets: List[Dataset]
-    sandbox: AsyncSandbox | None = None
     user_query: str
+    sandbox: AsyncSandbox | None = None
     is_input_prepared: bool = False
     s3_paths: List[str] = []

@@ -34,6 +34,8 @@ QUERY TYPES - Select exactly ONE:
 TOOL USAGE GUIDELINES:
 * You can use tools within conversational queries
 * Evaluate if previous tool calls successfully answered the query
+* Please refer to the `Situation where it can be used`
+  section of the tool documentation to understand when to use the tool.
 * If a tool call failed or gave incomplete information:
   - Consider classifying as "data_query" to use database search
 * If previous tool calls successfully answered the query:
