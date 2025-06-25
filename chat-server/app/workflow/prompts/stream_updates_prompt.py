@@ -1,60 +1,13 @@
-import json
-
-from app.models.query import QueryResult
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 def create_stream_update_prompt(
-    query_result: QueryResult,
-    query_index: int,
-) -> str:
-    """
-    Create a prompt for generating stream updates about subquery execution.
-
-    Args:
-        query_result: The overall query result object
-        query_index: The current subquery index
-        subquery_result: The specific subquery result
-        sql_queries: List of SQL queries used
-        node_messages: Messages from the node execution
-        remaining_subqueries: List of remaining subqueries
-
-    Returns:
-        A formatted prompt string for stream updates
-    """
-
-    subquery_result = query_result.subqueries[query_index]
-    sql_queries = [
-        sql_info.sql_query for sql_info in subquery_result.sql_queries
-    ]
-    node_messages = subquery_result.node_messages
-
-    remaining_index = query_index + 1
-    remaining_subqueries = [
-        sq.query_text for sq in query_result.subqueries[remaining_index:]
-    ]
-
-    prompt = f"""
+    original_user_query: str,
+    subquery_result: str,
+    subquery_messages: str,
+) -> list:
+    system_content = """
 I need to create a brief update about the execution of a subquery.
-
-Original User Query: "{query_result.original_user_query}"
-
-This is subquery {query_index + 1} / {len(query_result.subqueries)}:
-"{subquery_result.query_text}"
-
-SQL Queries Used:
-{json.dumps(sql_queries, indent=2)}
-
-Subquery Result Information:
-{json.dumps(subquery_result.to_dict())}
-
-Node Messages:
-{json.dumps(node_messages, indent=2)}
-
-Error Information (if any):
-{json.dumps(subquery_result.error_message)}
-
-Remaining Subqueries:
-{json.dumps(remaining_subqueries)}
 
 INSTRUCTIONS:
 1. First, determine if this subquery was successful or failed by examining
@@ -79,25 +32,25 @@ INSTRUCTIONS:
 Your response should be informative, actionable, and user-friendly.
 """
 
-    return prompt
+    human_content = f"""
+Original User Query: "{original_user_query}"
+
+{subquery_messages}
+
+Subquery Result Information:
+{subquery_result}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
 
 
-def create_execution_analysis_prompt(last_stream_message_content: str) -> str:
-    """
-    Create a prompt for analyzing whether further execution should continue.
-
-    Args:
-        last_stream_message_content: Content of the last stream message
-
-    Returns:
-        A formatted prompt string for execution analysis
-    """
-
-    prompt = f"""
+def create_execution_analysis_prompt(last_stream_message_content: str) -> list:
+    system_content = """
 Analyze this message about a subquery execution and determine if
 further execution should continue.
-
-Message: {last_stream_message_content}
 
 Make a decision based on:
 1. If the message explicitly states to continue or stop
@@ -106,10 +59,17 @@ Make a decision based on:
 4. Whether the remaining subqueries can still provide value
 
 Return a JSON object with:
-{{
+{
     "continue_execution": true/false,
     "reasoning": "brief explanation"
-}}
+}
 """
 
-    return prompt
+    human_content = f"""
+Message: {last_stream_message_content}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

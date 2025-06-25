@@ -1,17 +1,8 @@
-def create_assess_query_complexity_prompt(user_input: str) -> str:
-    """
-    Create a prompt to assess if a user query needs to be broken down into
-    subqueries.
+from langchain_core.messages import HumanMessage, SystemMessage
 
-    Args:
-        user_input: The natural language query from the user
 
-    Returns:
-        A formatted prompt string
-    """
-    return f"""
-User Query: {user_input}
-
+def create_assess_query_complexity_prompt(user_input: str) -> list:
+    system_content = """
 Analyze the user query and determine if it needs to be broken down into
 sub-queries or simply improved.
 
@@ -47,31 +38,27 @@ Follow these STRICT guidelines:
    - Keep it simple and client-friendly
 
 RESPONSE FORMAT:
-{{
+{
   "needs_breakdown": true/false,
   "explanation": "Brief explanation of decision"
-}}
+}
 
 IMPORTANT: The default position is to NOT break down queries.
            Only do so when absolutely necessary.
 """
 
-
-def create_generate_subqueries_prompt(user_input: str) -> str:
-    """
-    Create a prompt for breaking down a user query into specific subqueries.
-
-    This should only be called after determining the query needs breakdown.
-
-    Args:
-        user_input: The natural language query from the user
-
-    Returns:
-        A formatted prompt string
-    """
-    return f"""
+    human_content = f"""
 User Query: {user_input}
+"""
 
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
+
+
+def create_generate_subqueries_prompt(user_input: str) -> list:
+    system_content = """
 This query has been determined to need breaking down into smaller
 subqueries. Generate effective subqueries following these STRICT guidelines:
 
@@ -105,10 +92,19 @@ STRICT PROHIBITIONS:
     procedural steps for information gathering
 
 RESPONSE FORMAT:
-{{
+{
   "subqueries": ["subquery1", "subquery2", "subquery3"]
-}}
+}
 
 IMPORTANT: Ensure each subquery is a natural language question
            that a human would ask.
 """
+
+    human_content = f"""
+User Query: {user_input}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

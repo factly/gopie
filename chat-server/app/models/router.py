@@ -20,6 +20,7 @@ class QueryRequest(BaseModel):
     messages: list[Message]
     project_ids: list[str] | None = None
     dataset_ids: list[str] | None = None
+    user: str | None = None
     chat_id: str | None = None
     trace_id: str | None = None
     model_id: str | None = None
