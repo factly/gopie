@@ -2,23 +2,23 @@ services:
   #########################################################################
   #####                        DATABASE                                 #####
   # #########################################################################
-  # postgres:
-  #   image: postgres:17-alpine
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - ./volumes/postgres:/var/lib/postgresql/data
-  #   environment:
-  #     - POSTGRES_USER=postgres
-  #     - POSTGRES_PASSWORD=postgres
-  #     - POSTGRES_DB=gopie
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - gopie
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gopie
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gopie
 
   ###########################################################################
   #######             Zitadel                                         #######
@@ -98,28 +98,28 @@ services:
     command: >
       sh -c "cd /home/gopie && goose up && gopie serve"
 
-  # gopie-web:
-  #   build:
-  #     context: ./web
-  #     dockerfile: Dockerfile.prod
-  #   environment:
-  #     - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
-  #     - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
-  #     - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
-  #     - NEXTAUTH_URL=${NEXTAUTH_URL}
-  #     - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-  #     - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-  #     - AUTH_SECRET=${AUTH_SECRET}
-  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-  #     - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID}
-  #     - ZITADEL_CLIENT_SECRET=${ZITADEL_CLIENT_SECRET}
-  #     - ZITADEL_ISSUER=${ZITADEL_ISSUER}
-  #     - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
-  #   ports:
-  #     - "3000:3000"
-  #   restart: unless-stopped
-  #   networks:
-  #     - gopie
+  gopie-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    environment:
+      - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
+      - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
+      - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID}
+      - ZITADEL_CLIENT_SECRET=${ZITADEL_CLIENT_SECRET}
+      - ZITADEL_ISSUER=${ZITADEL_ISSUER}
+      - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - gopie
 
   #########################################################################
   #####                        MINIO                                #######
@@ -162,25 +162,25 @@ services:
   #########################################################################
   #####                          COMPANION                            #####
   #########################################################################
-  # companion:
-  #   image: transloadit/companion:sha-e80a7f7
-  #   ports:
-  #     - "3020:3020"
-  #   environment:
-  #     - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
-  #     - COMPANION_AWS_REGION=${MINIO_REGION}
-  #     - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
-  #     - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
-  #     - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
-  #     - COMPANION_DOMAIN=${COMPANION_DOMAIN}
-  #     - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
-  #     - COMPANION_DATADIR=${COMPANION_DATADIR}
-  #     - COMPANION_SELF_ENDPOINT=${COMPANION_SELF_ENDPOINT}
-  #     - NODE_ENV=${COMPANION_NODE_ENV}
-  #   networks:
-  #     - gopie
-  #   depends_on:
-  #     - minio
+  companion:
+    image: transloadit/companion:sha-e80a7f7
+    ports:
+      - "3020:3020"
+    environment:
+      - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
+      - COMPANION_AWS_REGION=${MINIO_REGION}
+      - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
+      - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
+      - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
+      - COMPANION_DOMAIN=${COMPANION_DOMAIN}
+      - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
+      - COMPANION_DATADIR=${COMPANION_DATADIR}
+      - COMPANION_SELF_ENDPOINT=${COMPANION_SELF_ENDPOINT}
+      - NODE_ENV=${COMPANION_NODE_ENV}
+    networks:
+      - gopie
+    depends_on:
+      - minio
 
   #########################################################################
   #####                        LIVEKIT SERVICES                        #####
