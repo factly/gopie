@@ -1,6 +1,8 @@
 package datasets
 
 import (
+	"errors"
+
 	"github.com/factly/gopie/domain"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -45,7 +47,30 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 		})
 	}
 
-	h.olapSvc.DropTable(dataset.Name)
+	err = h.olapSvc.DropTable(dataset.Name)
+	if err != nil {
+		h.logger.Error("Error dropping OLAP table", zap.Error(err), zap.String("datasetName", dataset.Name))
+		err = retryDropTable(h, dataset.Name)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error dropping OLAP table",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func retryDropTable(h *httpHandler, datasetName string) error {
+	for i := 0; i < 3; i++ {
+		err := h.olapSvc.DropTable(datasetName)
+		if err == nil {
+			return nil
+		}
+		h.logger.Warn("Retrying to drop OLAP table", zap.Error(err), zap.String("datasetName", datasetName))
+	}
+
+	return errors.New("failed to drop OLAP table after retries")
 }
