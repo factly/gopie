@@ -17,18 +17,20 @@ from app.utils.providers.portkey_self_hosted import (
 )
 
 
-def get_gateway_provider(user: str, trace_id: str) -> BaseProvider:
+def get_gateway_provider(
+    user: str, trace_id: str, chat_id: str
+) -> BaseProvider:
     gateway_type = GatewayProvider(settings.GATEWAY_PROVIDER)
     if gateway_type == GatewayProvider.PORTKEY_HOSTED:
-        return PortkeyGatewayProvider(user=user, trace_id=trace_id)
+        return PortkeyGatewayProvider(user, trace_id, chat_id)
     elif gateway_type == GatewayProvider.PORTKEY_SELF_HOSTED:
-        return PortkeySelfHostedGatewayProvider(user=user, trace_id=trace_id)
+        return PortkeySelfHostedGatewayProvider(user, trace_id, chat_id)
     elif gateway_type == GatewayProvider.LITELLM:
-        return LiteLLMGatewayProvider(user=user, trace_id=trace_id)
+        return LiteLLMGatewayProvider(user, trace_id, chat_id)
     elif gateway_type == GatewayProvider.CLOUDFLARE:
-        return CloudflareGatewayProvider(user=user, trace_id=trace_id)
+        return CloudflareGatewayProvider(user, trace_id, chat_id)
     elif gateway_type == GatewayProvider.OPENROUTER:
-        return OpenrouterGatewayProvider(user=user, trace_id=trace_id)
+        return OpenrouterGatewayProvider(user, trace_id, chat_id)
     else:
         raise ValueError(f"Unsupported gateway provider: {gateway_type}")
 
@@ -63,10 +65,11 @@ class ModelProvider:
         self,
         trace_id: str = "",
         user: str = "",
+        chat_id: str = "",
     ):
         self.trace_id = trace_id
         self.user = user
-        self.gateway_provider = get_gateway_provider(user, trace_id)
+        self.gateway_provider = get_gateway_provider(user, trace_id, chat_id)
 
     def _create_llm(self, model_id: str):
         model_config = ModelConfig(model_id=model_id)
@@ -117,7 +120,8 @@ def get_model_provider(
 ):
     trace_id = config.get("configurable", {}).get("trace_id", "")
     user = config.get("configurable", {}).get("user", "")
-    return ModelProvider(trace_id=trace_id, user=user)
+    chat_id = config.get("configurable", {}).get("chat_id", "")
+    return ModelProvider(trace_id=trace_id, user=user, chat_id=chat_id)
 
 
 def get_custom_model(model_id: str):

@@ -9,9 +9,11 @@ class LiteLLMGatewayProvider(BaseProvider):
         self,
         user: str,
         trace_id: str,
+        chat_id: str,
     ):
         self.user = user
         self.trace_id = trace_id
+        self.chat_id = chat_id
         self.headers = {
             "Authorization": f"Bearer {settings.LITELLM_MASTER_KEY}",
         }
@@ -29,6 +31,7 @@ class LiteLLMGatewayProvider(BaseProvider):
                 "metadata": {
                     "user": self.user,
                     "trace_id": self.trace_id,
+                    "chat_id": self.chat_id,
                 },
             },
         )
@@ -46,6 +49,7 @@ class LiteLLMGatewayProvider(BaseProvider):
                 "metadata": {
                     "user": self.user,
                     "trace_id": self.trace_id,
+                    "chat_id": self.chat_id,
                 },
             },
         )

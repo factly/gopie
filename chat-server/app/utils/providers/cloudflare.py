@@ -9,9 +9,11 @@ class CloudflareGatewayProvider(BaseProvider):
         self,
         user: str,
         trace_id: str,
+        chat_id: str,
     ):
         self.user = user
         self.trace_id = trace_id
+        self.chat_id = chat_id
 
         url = f"{settings.CLOUDFLARE_GATEWAY_URL}"
         url = url.replace(

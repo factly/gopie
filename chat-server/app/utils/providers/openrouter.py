@@ -5,9 +5,10 @@ from app.utils.providers.base import BaseProvider
 
 
 class OpenrouterGatewayProvider(BaseProvider):
-    def __init__(self, user: str, trace_id: str):
+    def __init__(self, user: str, trace_id: str, chat_id: str):
         self.user = user
         self.trace_id = trace_id
+        self.chat_id = chat_id
 
     def get_openai_model(self, model_name: str):
         return ChatOpenAI(
@@ -17,6 +18,7 @@ class OpenrouterGatewayProvider(BaseProvider):
             metadata={
                 "user": self.user,
                 "trace_id": self.trace_id,
+                "chat_id": self.chat_id,
                 "project": "gopie-chat-server",
             },
         )
@@ -29,6 +31,7 @@ class OpenrouterGatewayProvider(BaseProvider):
             metadata={
                 "user": self.user,
                 "trace_id": self.trace_id,
+                "chat_id": self.chat_id,
                 "project": "gopie-chat-server",
             },
         )

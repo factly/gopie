@@ -10,15 +10,18 @@ class PortkeyGatewayProvider(BaseProvider):
         self,
         user: str,
         trace_id: str,
+        chat_id: str,
     ):
         self.user = user
         self.trace_id = trace_id
+        self.chat_id = chat_id
 
     def get_headers(self, virtual_key: str):
         return createHeaders(
             api_key=settings.PORTKEY_API_KEY,
             virtual_key=virtual_key,
             trace_id=self.trace_id,
+            chat_id=self.chat_id,
             metadata={
                 "_user": self.user,
                 "project": "gopie-chat-server",

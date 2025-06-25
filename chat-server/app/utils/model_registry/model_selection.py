@@ -17,6 +17,7 @@ NODE_TO_COMPLEXITY = {
     "format_data_for_visualization": ModelCategory.FAST,
     "visualization_response": ModelCategory.BALANCED,
     "visualize_data": ModelCategory.FAST,
+    "process_context": ModelCategory.BALANCED,
 }
 
 

@@ -13,10 +13,11 @@ class PortkeySelfHostedGatewayProvider(BaseProvider):
         self,
         user: str,
         trace_id: str,
+        chat_id: str,
     ):
         self.user = user
         self.trace_id = trace_id
-
+        self.chat_id = chat_id
         self.headers = {
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "x-portkey-provider": "openai",
@@ -24,6 +25,7 @@ class PortkeySelfHostedGatewayProvider(BaseProvider):
             "x-portkey-metadata": json.dumps(
                 {
                     "_user": self.user,
+                    "chat_id": self.chat_id,
                     "project": "gopie-chat-server",
                 }
             ),

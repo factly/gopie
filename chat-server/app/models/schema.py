@@ -6,6 +6,7 @@ from langchain_core.messages import BaseMessage
 class ConfigSchema(TypedDict):
     model_id: str
     trace_id: str
+    chat_id: str
     chat_history: list[BaseMessage]
     user: str
 

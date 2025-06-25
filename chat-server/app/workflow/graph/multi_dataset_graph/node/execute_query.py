@@ -4,7 +4,11 @@ from langchain_core.runnables import RunnableConfig
 from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.langsmith.prompt_manager import get_prompt
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_model_provider,
+)
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -96,52 +100,17 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         and query_result.subqueries[query_index].retry_count
         < settings.MAX_RETRY_COUNT
     ):
+        prompt_messages = get_prompt(
+            "route_query_replan",
+            last_message_content=last_message.content,
+            subquery_errors=subquery_errors,
+            node_messages=node_messages,
+            chat_history=get_chat_history(config),
+        )
+
         llm = get_model_provider(config).get_llm_for_node("route_query_replan")
 
-        prompt = f"""
-I encountered an error when executing the SQL query:
-{last_message.content}
-
-Previous error messages (including current attempt):
-{subquery_errors}
-
-Node execution messages and context:
-{node_messages}
-
-ANALYSIS INSTRUCTIONS:
-Analyze all available information carefully to determine the best next action.
-Consider the nature of the error, the execution context in node_messages,
-and what previous attempts have revealed.
-
-AVAILABLE OPTIONS:
-
-1. "reidentify_datasets"
-   Choose this when the underlying dataset structure doesn't match what was
-   expected
-
-2. "replan"
-   Choose this when the query itself needs reformulation but the dataset
-   understanding is correct
-
-3. "validate_query_result"
-   Choose this when either:
-   - The current results are sufficient despite the error
-   - Further retries would be futile
-   - The error is expected and doesn't prevent moving forward
-   - Analyzing the data and found that the error is not fixable by retrying
-     the query
-
-IMPORTANT NOTES:
-- "validate_query_result" doesn't mean success - it means we proceed with
-  what we have
-- Avoid making simplistic decisions based solely on error keywords
-- Synthesize all available context to determine the most appropriate action
-
-RESPONSE FORMAT:
-Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
-"validate_query_result"
-        """
-        response = await llm.ainvoke(prompt)
+        response = await llm.ainvoke(prompt_messages)
         response_text = str(response.content).lower()
 
         if "reidentify_datasets" in response_text:
