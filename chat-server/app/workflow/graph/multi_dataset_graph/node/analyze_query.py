@@ -5,6 +5,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
+from app.models.query import QueryResult
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -89,6 +90,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             },
         )
 
+    collect_and_store_tool_messages(query_result, query_index, state)
     tools_results = query_result.subqueries[query_index].tool_used_result
 
     try:
@@ -220,3 +222,41 @@ def route_from_analysis(state: State) -> str:
             return "identify_datasets"
     else:
         return "identify_datasets"
+
+
+def collect_and_store_tool_messages(
+    query_result: QueryResult, query_index: int, state: State
+):
+    tool_messages = []
+    messages = state.get("messages", [])
+
+    for msg in messages[-10:]:
+        if isinstance(msg, ToolMessage):
+            tool_messages.append(
+                {
+                    "tool_call_id": msg.tool_call_id,
+                    "content": msg.content,
+                    "name": getattr(msg, "name", None),
+                    "type": "tool_message",
+                }
+            )
+        else:
+            break
+
+    if (
+        tool_messages
+        and query_index >= 0
+        and query_index < len(query_result.subqueries)
+    ):
+        if query_result.subqueries[query_index].tool_used_result is None:
+            query_result.subqueries[query_index].tool_used_result = []
+        elif not isinstance(
+            query_result.subqueries[query_index].tool_used_result, list
+        ):
+            query_result.subqueries[query_index].tool_used_result = [
+                query_result.subqueries[query_index].tool_used_result
+            ]
+
+        query_result.subqueries[query_index].tool_used_result.extend(
+            tool_messages
+        )

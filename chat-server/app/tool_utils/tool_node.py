@@ -92,19 +92,7 @@ class ToolNode:
                     }
                 )
 
-        query_result = state.get("query_result")
-        query_index = state.get("subquery_index", -1)
-
-        if query_result and query_index >= 0:
-            if not query_result.subqueries[query_index].tool_used_result:
-                query_result.subqueries[query_index].tool_used_result = []
-
-            query_result.subqueries[query_index].tool_used_result.extend(
-                all_tool_results
-            )
-
         return {
-            "query_result": query_result,
             "messages": outputs,
         }
 
