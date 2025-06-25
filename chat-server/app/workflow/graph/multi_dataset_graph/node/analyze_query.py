@@ -243,14 +243,10 @@ def collect_and_store_tool_messages(
         and query_index >= 0
         and query_index < len(query_result.subqueries)
     ):
-        if query_result.subqueries[query_index].tool_used_result is None:
-            query_result.subqueries[query_index].tool_used_result = []
-        elif not isinstance(
-            query_result.subqueries[query_index].tool_used_result, list
-        ):
-            query_result.subqueries[query_index].tool_used_result = [
-                query_result.subqueries[query_index].tool_used_result
-            ]
+        current_subquery = query_result.subqueries[query_index]
+
+        if current_subquery.tool_used_result is None:
+            current_subquery.tool_used_result = []
 
         query_result.subqueries[query_index].tool_used_result.extend(
             tool_messages

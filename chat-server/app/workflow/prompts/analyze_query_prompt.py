@@ -68,8 +68,6 @@ IF NO TOOL CALL IS REQUIRED:
     {
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
-        "visualization_required": true OR false,
-        "visualization_already_created": true OR false,
         "reasoning": "Brief explanation of classification decision",
         "clarification_needed": "If conversational due to vagueness, specify what you need"
     }

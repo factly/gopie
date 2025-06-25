@@ -91,7 +91,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                     )
                 )
 
-                formatted_sql_queries.append(sql_query["formatted_sql_query"])
+                formatted_sql_queries.append(sql_query["sql_query"])
 
             query_result.subqueries[query_index].sql_queries = sql_queries_info
 

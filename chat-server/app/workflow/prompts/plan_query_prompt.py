@@ -64,9 +64,7 @@ IMPORTANT - DATASET NAMING:
 8. Never use ILIKE, LIKE operator while generating SQL query
 
 # SQL FORMATTING REQUIREMENTS
-You must provide two versions of the SQL query (or queries):
-1. "sql_query": A simple version for execution
-2. "formatted_sql_query": A well-formatted version for UI display with:
+You must provide a well-formatted version of the SQL query for UI display with:
    - SQL keywords in UPPERCASE
    - Each major clause on a new line
    - Proper indentation for readability
@@ -79,7 +77,6 @@ Respond in this JSON format:
     "sql_queries": [
         {
             "sql_query": "the SQL query to fetch the required data",
-            "formatted_sql_query": "the well-formatted SQL query for UI display",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"

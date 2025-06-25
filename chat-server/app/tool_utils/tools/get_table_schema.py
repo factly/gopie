@@ -17,7 +17,12 @@ async def get_datasets_schemas(
 
     Situation where it can be used:
         - User wants to know the schema of a specific dataset.
-        - Want information related to datasets or get summary of datasets.
+        - Want summary of datasets or info that doesn't requires forming
+          SQL queries.
+
+    IMPORTANT:
+        - Don't use this tool to plan sql queries after getting the schema
+          information from this tool.
 
     Args:
         dataset_ids: The ids of the datasets to retrieve schema for.

@@ -42,9 +42,6 @@ def get_tool(
             ),
         }
 
-        if not metadata["should_display_tool"]:
-            return None, None, None
-
         return tool_func_name, tool, metadata
     return None, None, None
 
