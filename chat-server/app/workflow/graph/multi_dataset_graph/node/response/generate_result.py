@@ -1,5 +1,4 @@
 import json
-from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
@@ -7,10 +6,7 @@ from app.core.log import logger
 from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
 from app.models.query import QueryResult
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -19,9 +15,7 @@ from app.workflow.graph.multi_dataset_graph.types import State
     role="ai",
     progress_message="",
 )
-async def generate_result(
-    state: State, config: RunnableConfig
-) -> dict[str, list[Any]]:
+async def generate_result(state: State, config: RunnableConfig) -> dict:
     """
     Generate a response based on the query result
     """
@@ -55,7 +49,6 @@ async def generate_result(
             node_name="generate_result",
             user_query=user_query,
             query_result=query_result,
-            chat_history=get_chat_history(config),
         )
 
         llm = get_model_provider(config).get_llm_for_node("generate_result")

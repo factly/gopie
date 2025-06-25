@@ -2,10 +2,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
@@ -23,7 +20,6 @@ async def response(state: State, config: RunnableConfig) -> dict:
     prompt_messages = get_prompt(
         "response",
         query_result=query_result,
-        chat_history=get_chat_history(config),
     )
 
     llm = get_model_provider(config).get_llm_for_node("response")

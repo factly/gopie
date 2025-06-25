@@ -5,10 +5,7 @@ from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -105,7 +102,6 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
             last_message_content=last_message.content,
             subquery_errors=subquery_errors,
             node_messages=node_messages,
-            chat_history=get_chat_history(config),
         )
 
         llm = get_model_provider(config).get_llm_for_node("route_query_replan")

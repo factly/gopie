@@ -5,10 +5,7 @@ from langchain_core.runnables import RunnableConfig
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -68,7 +65,6 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             error_messages=error_messages,
             retry_count=retry_count,
             node_messages=node_messages,
-            chat_history=get_chat_history(config),
         )
 
         llm = get_model_provider(config).get_llm_for_node("plan_query")

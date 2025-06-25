@@ -9,10 +9,7 @@ from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -110,7 +107,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
             ),
             confidence_score=confidence_score,
             query_type=query_type,
-            chat_history=get_chat_history(config),
         )
 
         response: Any = await llm.ainvoke(llm_prompt)

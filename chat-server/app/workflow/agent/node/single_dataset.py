@@ -19,7 +19,7 @@ def list_of_dict_to_list_of_lists(list_of_dict: List[dict]) -> List[List]:
 
 def transform_output_state(
     output_state: SingleDatasetOutputState,
-) -> AgentState:
+) -> AgentState | dict:
     datasets = []
     dataset_count = 0
     query_result = output_state.get("query_result")
@@ -47,11 +47,11 @@ async def call_single_dataset_agent(
 ) -> AgentState:
     input_state = {
         "messages": state["messages"],
-        "dataset_id": state["dataset_ids"][0],
-        "user_query": state["user_query"],
+        "dataset_id": state.get("dataset_ids", []),
+        "user_query": state.get("user_query", ""),
     }
 
     output_state = await single_dataset_graph.ainvoke(
         input_state, config=config
     )
-    return transform_output_state(output_state)
+    return transform_output_state(output_state)  # type: ignore

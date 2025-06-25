@@ -33,7 +33,7 @@ def query_result_to_datasets(query_result: QueryResult) -> List[Dataset]:
 
 def transform_output_state(
     output_state: MultiDatasetOutputState,
-) -> AgentState:
+) -> dict:
     datasets = query_result_to_datasets(output_state.get("query_result", None))
     response_text = output_state.get("response_text", "No response")
     return {
@@ -44,7 +44,7 @@ def transform_output_state(
 
 async def call_multi_dataset_agent(
     state: AgentState, config: RunnableConfig
-) -> AgentState:
+) -> dict:
     input_state = {
         "messages": state["messages"],
         "dataset_ids": state["dataset_ids"],
@@ -55,4 +55,4 @@ async def call_multi_dataset_agent(
     output_state = await multi_dataset_graph.ainvoke(
         input_state, config=config
     )
-    return transform_output_state(output_state)
+    return transform_output_state(output_state)  # type: ignore

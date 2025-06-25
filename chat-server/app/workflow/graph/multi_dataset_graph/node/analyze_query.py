@@ -9,10 +9,7 @@ from app.models.query import QueryResult
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -108,7 +105,6 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
-        chat_history = get_chat_history(config)
         prompt = get_prompt(
             "analyze_query",
             user_query=user_input,
@@ -116,7 +112,6 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             tool_call_count=tool_call_count,
             dataset_ids=state.get("dataset_ids", []),
             project_ids=state.get("project_ids", []),
-            chat_history=chat_history,
         )
         tools_names = [
             ToolNames.EXECUTE_SQL_QUERY,

@@ -2,10 +2,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_model_provider,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph import (
     graph as visualize_data_graph,
@@ -26,7 +23,6 @@ async def check_visualization(
     prompt_messages = get_prompt(
         "check_visualization",
         user_query=user_query,
-        chat_history=get_chat_history(config),
     )
 
     llm = get_model_provider(config).get_llm_for_node("check_visualization")
@@ -40,7 +36,7 @@ async def check_visualization(
 
 async def call_visualization_agent(
     state: AgentState, config: RunnableConfig
-) -> AgentState:
+) -> AgentState | None:
     input_state = {
         "user_query": state.get("user_query", ""),
         "datasets": state.get("datasets", []),
