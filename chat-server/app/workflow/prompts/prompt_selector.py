@@ -24,6 +24,9 @@ from app.workflow.prompts.plan_query_prompt import (
     create_plan_query_prompt,
     format_plan_query_input,
 )
+from app.workflow.prompts.process_context_prompt import (
+    create_process_context_prompt,
+)
 from app.workflow.prompts.process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
@@ -53,6 +56,7 @@ NodeName = Literal[
     "response",
     "check_visualization",
     "route_query_replan",
+    "process_context",
 ]
 
 
@@ -71,6 +75,7 @@ class PromptSelector:
             "response": create_response_prompt,
             "check_visualization": create_check_visualization_prompt,
             "route_query_replan": create_route_query_replan_prompt,
+            "process_context": create_process_context_prompt,
         }
 
         self.format_prompt_input_map = {

@@ -5,6 +5,7 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
+	process_context(process_context)
 	supervisor(supervisor)
 	multi_dataset_agent(multi_dataset_agent)
 	single_dataset_agent(single_dataset_agent)
@@ -13,11 +14,12 @@ graph TD;
 	empty_node(empty_node)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> check_visualization;
-	__start__ --> supervisor;
+	__start__ --> process_context;
 	check_visualization --> empty_node;
 	empty_node -.-> __end__;
 	empty_node -.-> visualization_agent;
 	multi_dataset_agent --> empty_node;
+	process_context --> supervisor;
 	single_dataset_agent --> empty_node;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;

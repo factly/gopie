@@ -38,7 +38,7 @@ async def stream_graph_updates(
     """
     if not trace_id:
         trace_id = str(uuid.uuid4())
-    if len(project_ids) == 0 and len(dataset_ids) == 0:
+    if project_ids is None and dataset_ids is None:
         raise ValueError("At least one dataset or project ID must be provided")
 
     chat_history = [
@@ -57,6 +57,7 @@ async def stream_graph_updates(
         configurable={
             "model_id": model_id,
             "trace_id": trace_id,
+            "chat_id": chat_id,
             "chat_history": chat_history,
             "user": user,
         },

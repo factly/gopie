@@ -1,0 +1,57 @@
+from langchain_core.messages import HumanMessage
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
+
+from app.utils.langsmith.prompt_manager import get_prompt
+from app.utils.model_registry.model_provider import (
+    get_chat_history,
+    get_model_provider,
+)
+from app.workflow.events.event_utils import configure_node
+
+from ..types import AgentState
+
+
+@configure_node(
+    role="intermediate",
+    progress_message="Processing chat context...",
+)
+async def process_context(state: AgentState, config: RunnableConfig) -> dict:
+    messages = state.get("messages", [])
+
+    if messages and isinstance(messages[-1], HumanMessage):
+        user_input = str(messages[-1].content)
+    else:
+        raise Exception("Last Message must be a user message")
+
+    chat_history = get_chat_history(config)
+    if not chat_history:
+        return {"user_query": user_input}
+
+    prompt_messages = get_prompt(
+        "process_context",
+        current_query=user_input,
+        chat_history=chat_history,
+    )
+
+    llm = get_model_provider(config).get_llm_for_node("process_context")
+    response = await llm.ainvoke(prompt_messages)
+
+    try:
+        parser = JsonOutputParser()
+        parsed_response = parser.parse(str(response.content))
+
+        enhanced_query = parsed_response.get("enhanced_query", user_input)
+        context_summary = parsed_response.get("context_summary", "")
+
+        if context_summary and context_summary.strip():
+            final_query = (
+                f"Context: {context_summary}\n\nQuery: {enhanced_query}"
+            )
+        else:
+            final_query = enhanced_query
+
+        return {"user_query": final_query}
+
+    except Exception:
+        return {"user_query": user_input}
