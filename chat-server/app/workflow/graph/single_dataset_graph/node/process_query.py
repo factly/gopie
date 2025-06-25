@@ -13,7 +13,7 @@ from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
+    get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
@@ -95,17 +95,13 @@ Please analyze the error and generate corrected SQL queries.
             schema_json=schema_json,
             rows_csv=rows_csv,
             error_context=error_context,
+            chat_history=get_chat_history(config),
         )
 
-        llm = get_llm_for_node("process_query", config)
+        llm = get_model_provider(config).get_llm_for_node("process_query")
         parser = JsonOutputParser()
 
-        llm_response = await llm.ainvoke(
-            {
-                "input": prompt_messages,
-                "chat_history": get_chat_history(config),
-            }
-        )
+        llm_response = await llm.ainvoke(prompt_messages)
 
         response_content = str(llm_response.content)
         parsed_response = parser.parse(response_content)

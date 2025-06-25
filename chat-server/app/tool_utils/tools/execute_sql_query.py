@@ -37,4 +37,5 @@ def get_dynamic_tool_text(args: dict) -> str:
 
 __tool__ = execute_sql_query
 __tool_category__ = "Data Execution"
+__should_display_tool__ = True
 __get_dynamic_tool_text__ = get_dynamic_tool_text

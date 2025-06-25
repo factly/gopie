@@ -1,9 +1,10 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
+from app.utils.providers.base import BaseProvider
 
 
-class OpenrouterGatewayProvider:
+class OpenrouterGatewayProvider(BaseProvider):
     def __init__(self, user: str, trace_id: str):
         self.user = user
         self.trace_id = trace_id

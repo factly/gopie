@@ -35,12 +35,11 @@ def transform_output_state(
             datasets.append(Dataset(data=data, description=description))
             dataset_count += 1
 
-    return AgentState(
-        messages=[
-            AIMessage(content=output_state.get("response_text", "No response"))
-        ],
-        datasets=datasets,
-    )
+    response_text = output_state.get("response_text", "No response")
+    return {
+        "datasets": datasets,
+        "messages": [AIMessage(content=response_text)],
+    }
 
 
 async def call_single_dataset_agent(

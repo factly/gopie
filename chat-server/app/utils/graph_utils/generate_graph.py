@@ -5,7 +5,9 @@ from langchain_core.runnables.graph import CurveStyle
 from app.workflow.agent import agent_graph
 from app.workflow.graph.multi_dataset_graph import multi_dataset_graph
 from app.workflow.graph.single_dataset_graph import single_dataset_graph
-from app.workflow.graph.visualize_data_graph import visualize_data_graph
+from app.workflow.graph.visualize_data_graph import (
+    graph as visualize_data_graph,
+)
 
 
 def visualize_graph():

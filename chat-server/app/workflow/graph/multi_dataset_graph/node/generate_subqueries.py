@@ -9,7 +9,7 @@ from app.models.query import QueryResult
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
+    get_model_provider,
 )
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -26,15 +26,14 @@ async def generate_subqueries(state: State, config: RunnableConfig):
 
     try:
         assessment_prompt = get_prompt(
-            "assess_query_complexity", user_input=user_input
+            "assess_query_complexity",
+            user_input=user_input,
+            chat_history=get_chat_history(config),
         )
-        llm = get_llm_for_node("generate_subqueries", config)
-        assessment_response = await llm.ainvoke(
-            {
-                "input": assessment_prompt,
-                "chat_history": get_chat_history(config),
-            }
+        llm = get_model_provider(config).get_llm_for_node(
+            "generate_subqueries"
         )
+        assessment_response = await llm.ainvoke(assessment_prompt)
 
         parser = JsonOutputParser()
         assessment_parsed = parser.parse(str(assessment_response.content))
@@ -46,14 +45,11 @@ async def generate_subqueries(state: State, config: RunnableConfig):
 
         if needs_breakdown:
             subqueries_prompt = get_prompt(
-                "generate_subqueries", user_input=user_input
+                "generate_subqueries",
+                user_input=user_input,
+                chat_history=get_chat_history(config),
             )
-            subqueries_response = await llm.ainvoke(
-                {
-                    "input": subqueries_prompt,
-                    "chat_history": get_chat_history(config),
-                }
-            )
+            subqueries_response = await llm.ainvoke(subqueries_prompt)
 
             subqueries_parsed = parser.parse(str(subqueries_response.content))
             subqueries = subqueries_parsed.get("subqueries", [])

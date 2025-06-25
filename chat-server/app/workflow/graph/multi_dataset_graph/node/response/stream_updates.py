@@ -8,7 +8,7 @@ from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
+    get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
@@ -41,15 +41,11 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         subquery_result=json.dumps(subquery_result.to_dict()),
         original_user_query=query_result.original_user_query,
         subquery_messages=subquery_messages,
+        chat_history=get_chat_history(config),
     )
 
-    llm = get_llm_for_node("stream_updates", config)
-    response = await llm.ainvoke(
-        {
-            "input": stream_update_prompt,
-            "chat_history": get_chat_history(config),
-        }
-    )
+    llm = get_model_provider(config).get_llm_for_node("stream_updates")
+    response = await llm.ainvoke(stream_update_prompt)
 
     logger.debug(f"Stream updates response: {response.content}")
 
@@ -70,15 +66,13 @@ async def check_further_execution_requirement(
     analysis_prompt = get_prompt(
         node_name="execution_analysis",
         last_stream_message_content=last_stream_message.content,
+        chat_history=get_chat_history(config),
     )
 
-    llm = get_llm_for_node("check_further_execution_requirement", config)
-    response = await llm.ainvoke(
-        {
-            "input": analysis_prompt,
-            "chat_history": get_chat_history(config),
-        }
+    llm = get_model_provider(config).get_llm_for_node(
+        "check_further_execution_requirement"
     )
+    response = await llm.ainvoke(analysis_prompt)
 
     try:
         result = JsonOutputParser().parse(str(response.content))

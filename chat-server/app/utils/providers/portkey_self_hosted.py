@@ -5,9 +5,10 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from app.core.config import settings
 from app.core.log import logger
 from app.services.google.google_access_token import get_google_access_token
+from app.utils.providers.base import BaseProvider
 
 
-class PortkeySelfHostedGatewayProvider:
+class PortkeySelfHostedGatewayProvider(BaseProvider):
     def __init__(
         self,
         user: str,

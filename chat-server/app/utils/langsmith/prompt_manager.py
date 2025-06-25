@@ -70,4 +70,6 @@ class PromptManager:
 def get_prompt(
     node_name: NodeName, *args, **kwargs
 ) -> list[BaseMessage] | str:
-    return PromptManager().get_prompt(node_name, *args, **kwargs)
+    chat_history = kwargs.pop("chat_history", [])
+    input_messages = PromptManager().get_prompt(node_name, *args, **kwargs)
+    return chat_history + input_messages

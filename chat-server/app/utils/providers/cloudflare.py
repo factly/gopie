@@ -1,9 +1,10 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
+from app.utils.providers.base import BaseProvider
 
 
-class CloudflareGatewayProvider:
+class CloudflareGatewayProvider(BaseProvider):
     def __init__(
         self,
         user: str,

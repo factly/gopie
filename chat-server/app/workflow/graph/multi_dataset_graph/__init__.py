@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.tools import TOOL_METADATA, TOOLS
-from app.tools.tool_node import ToolNode
+from app.tool_utils.tool_node import ToolNode
+from app.tool_utils.tools import ToolNames
 
 from .node.analyze_dataset import analyze_dataset
 from .node.analyze_query import analyze_query, route_from_analysis
@@ -33,9 +33,7 @@ graph_builder.add_node("analyze_dataset", analyze_dataset)
 graph_builder.add_node("validate_query_result", validate_query_result)
 graph_builder.add_node("extract_summary", extract_summary)
 graph_builder.add_node("stream_updates", stream_updates)
-graph_builder.add_node(
-    "tools", ToolNode(tools=TOOLS, tool_metadata=TOOL_METADATA)
-)
+graph_builder.add_node("tools", ToolNode(tool_names=list(ToolNames)))
 graph_builder.add_node("route_response", lambda x: x)
 
 graph_builder.add_conditional_edges(

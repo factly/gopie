@@ -11,7 +11,6 @@ from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
     get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
@@ -48,7 +47,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
     confidence_score = query_result.subqueries[query_index].confidence_score
 
     try:
-        llm = get_llm_for_node("identify_datasets", config)
+        llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
         semantic_searched_datasets = []
@@ -111,11 +110,10 @@ async def identify_datasets(state: State, config: RunnableConfig):
             ),
             confidence_score=confidence_score,
             query_type=query_type,
+            chat_history=get_chat_history(config),
         )
 
-        response: Any = await llm.ainvoke(
-            {"input": llm_prompt, "chat_history": get_chat_history(config)}
-        )
+        response: Any = await llm.ainvoke(llm_prompt)
 
         response_content = str(response.content)
         parsed_content = parser.parse(response_content)

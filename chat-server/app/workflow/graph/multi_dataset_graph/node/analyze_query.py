@@ -5,11 +5,12 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.tools.tool_node import has_tool_calls
+from app.tool_utils.tool_node import has_tool_calls
+from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
+    get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
@@ -105,6 +106,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "messages": [ErrorMessage.from_json(error_data)],
             }
 
+        chat_history = get_chat_history(config)
         prompt = get_prompt(
             "analyze_query",
             user_query=user_input,
@@ -112,15 +114,18 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             tool_call_count=tool_call_count,
             dataset_ids=state.get("dataset_ids", []),
             project_ids=state.get("project_ids", []),
+            chat_history=chat_history,
         )
-        llm = get_llm_for_node("analyze_query", config, with_tools=True)
-
-        response: Any = await llm.ainvoke(
-            {
-                "chat_history": get_chat_history(config),
-                "input": prompt,
-            }
+        tools_names = [
+            ToolNames.EXECUTE_SQL_QUERY,
+            ToolNames.GET_TABLE_SCHEMA,
+            ToolNames.LIST_DATASETS,
+            ToolNames.PLAN_SQL_QUERY,
+        ]
+        llm = get_model_provider(config).get_llm_with_tools(
+            "analyze_query", tools_names
         )
+        response: Any = await llm.ainvoke(prompt)
         parser = JsonOutputParser()
 
         if has_tool_calls(response):

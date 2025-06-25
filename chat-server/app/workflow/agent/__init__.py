@@ -14,7 +14,7 @@ async def empty_node(state, config):
 
 
 async def should_visualize(state, config):
-    if state.get("needs_visualization", False):
+    if state.get("needs_visualization", False) and state.get("datasets", []):
         return "visualization_agent"
     else:
         return END

@@ -4,11 +4,11 @@ from langchain_core.runnables import RunnableConfig
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_llm_for_node,
+    get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.visualize_with_code_graph import (
-    graph as visualize_with_code_graph,
+from app.workflow.graph.visualize_data_graph import (
+    graph as visualize_data_graph,
 )
 
 from ..types import AgentState
@@ -21,35 +21,16 @@ from ..types import AgentState
 async def check_visualization(
     state: AgentState, config: RunnableConfig
 ) -> dict:
-    user_query = state.get("user_query", "")
-
-    raw_sql_queries_data = []
-    query_result = state.get("query_result") or {}
-    sql_queries = query_result.get("sql_queries", [])
-
-    for result in sql_queries:
-        if result.get("result") and result.get("success", True):
-            raw_sql_queries_data.extend(result["result"])
-
-    if not raw_sql_queries_data:
-        return {
-            "raw_sql_queries_data": raw_sql_queries_data,
-            "wants_visualization": False,
-            "reasoning": "",
-        }
-
+    messages = state.get("messages", [])
+    user_query = str(messages[-1].content)
     prompt_messages = get_prompt(
         "check_visualization",
         user_query=user_query,
+        chat_history=get_chat_history(config),
     )
 
-    llm = get_llm_for_node("check_visualization", config)
-    response = await llm.ainvoke(
-        {
-            "input": prompt_messages,
-            "chat_history": get_chat_history(config),
-        }
-    )
+    llm = get_model_provider(config).get_llm_for_node("check_visualization")
+    response = await llm.ainvoke(prompt_messages)
 
     parser = JsonOutputParser()
     parsed_response = parser.parse(str(response.content))
@@ -65,4 +46,4 @@ async def call_visualization_agent(
         "datasets": state.get("datasets", []),
     }
 
-    _ = await visualize_with_code_graph.ainvoke(input_state, config=config)
+    _ = await visualize_data_graph.ainvoke(input_state, config=config)

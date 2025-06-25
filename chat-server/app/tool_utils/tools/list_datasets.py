@@ -108,4 +108,5 @@ def get_dynamic_tool_text(args: dict) -> str:
 
 __tool__ = get_all_datasets
 __get_dynamic_tool_text__ = get_dynamic_tool_text
+__should_display_tool__ = True
 __tool_category__ = "Data Discovery"

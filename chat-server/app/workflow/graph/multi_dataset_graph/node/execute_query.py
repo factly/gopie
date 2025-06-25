@@ -1,14 +1,10 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.gopie.sql_executor import execute_sql
-from app.utils.model_registry.model_provider import (
-    get_chat_history,
-    get_llm_for_node,
-)
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -100,7 +96,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         and query_result.subqueries[query_index].retry_count
         < settings.MAX_RETRY_COUNT
     ):
-        llm = get_llm_for_node("route_query_replan", config)
+        llm = get_model_provider(config).get_llm_for_node("route_query_replan")
 
         prompt = f"""
 I encountered an error when executing the SQL query:
@@ -145,14 +141,7 @@ RESPONSE FORMAT:
 Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
 "validate_query_result"
         """
-
-        response = await llm.ainvoke(
-            {
-                "chat_history": get_chat_history(config),
-                "input": HumanMessage(content=prompt),
-            }
-        )
-
+        response = await llm.ainvoke(prompt)
         response_text = str(response.content).lower()
 
         if "reidentify_datasets" in response_text:

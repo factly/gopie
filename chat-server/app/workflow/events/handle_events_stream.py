@@ -27,7 +27,11 @@ class EventStreamHandler:
 
         if event_type.startswith("on_tool"):
             role = Role.INTERMEDIATE
-            content, category = self._handle_tool_events(event)
+            content, category, should_display_tool = self._handle_tool_events(
+                event
+            )
+            if not should_display_tool:
+                return self._create_empty_event_data()
 
         elif self._is_custom_event(event_type):
             (
@@ -122,9 +126,10 @@ class EventStreamHandler:
         return content, extra_data
 
     def _handle_tool_events(self, event: StreamEvent) -> tuple[str, str]:
-        tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
+        content = event.get("metadata", {}).get("tool_text", "Using Tool")
         category = event.get("metadata", {}).get("tool_category", "")
+        should_display_tool = event.get("metadata", {}).get(
+            "should_display_tool", False
+        )
 
-        content = tool_text
-
-        return content, category
+        return content, category, should_display_tool

@@ -68,8 +68,7 @@ async def run_python_code(
 ):
     """Run python code in a jupyter notebook sandbox.
     Already has basic data visualization libraries installed.
-    Always use altair to create visualizations.
-    Save the visualizations to json.
+    Always use altair to create visualizations and save them to json.
     """
     execution = await sandbox.run_code(code)
     return execution.logs
@@ -128,7 +127,8 @@ async def upload_visualization_result_data(data: List[str]) -> List[str]:
                 Body=item_data.encode("utf-8"),
             )
             upload_tasks.append(task)
-            s3_path = f"s3://{bucket_name}/{file_key}"
+            # s3_path = f"s3://{bucket_name}/{file_key}"
+            s3_path = f"{s3_host}/{bucket_name}/{file_key}"
             s3_paths.append(s3_path)
         await asyncio.gather(*upload_tasks)
     return s3_paths

@@ -2,9 +2,10 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
+from app.utils.providers.base import BaseProvider
 
 
-class PortkeyGatewayProvider:
+class PortkeyGatewayProvider(BaseProvider):
     def __init__(
         self,
         user: str,

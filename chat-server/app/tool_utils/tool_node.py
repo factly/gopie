@@ -1,4 +1,10 @@
+from typing import List
+
 from langchain_core.messages import ToolMessage
+
+from app.tool_utils.tools import ToolNames
+
+from .tools import get_tools
 
 
 class ToolNode:
@@ -9,11 +15,9 @@ class ToolNode:
 
     def __init__(
         self,
-        tools: dict,
-        tool_metadata: dict[str, dict[str, str]] | None = None,
+        tool_names: List[ToolNames],
     ) -> None:
-        self.tools = tools
-        self.tool_metadata = tool_metadata or {}
+        self.tools = get_tools(tool_names)
 
     async def __call__(self, state: dict):
         if messages := state.get("messages", []):
@@ -39,9 +43,7 @@ class ToolNode:
                     )
                     continue
 
-                tool = self.tools[tool_name]
-
-                metadata = self.tool_metadata.get(tool_name, {})
+                tool, metadata = self.tools[tool_name]
 
                 tool_text = f"Using {tool_name}"
                 get_dynamic_tool_text = metadata.get(

@@ -23,8 +23,7 @@ def query_result_to_datasets(query_result: QueryResult) -> List[Dataset]:
     dataset_count = 0
     for subquery in query_result.subqueries:
         for sql_query in subquery.sql_queries:
-            description = "Dataset " + str(dataset_count) + "\n\n"
-            description += f"Query: {sql_query.sql_query}\n\n"
+            description = f"Query: {sql_query.sql_query}\n\n"
             description += f"Explanation: {sql_query.explanation}\n\n"
             data = list_of_dict_to_list_of_lists(sql_query.sql_query_result)
             datasets.append(Dataset(data=data, description=description))
@@ -36,14 +35,11 @@ def transform_output_state(
     output_state: MultiDatasetOutputState,
 ) -> AgentState:
     datasets = query_result_to_datasets(output_state.get("query_result", None))
-    return AgentState(
-        messages=[
-            AIMessage(
-                content=output_state.get("query_response", "No response")
-            )
-        ],
-        datasets=datasets,
-    )
+    response_text = output_state.get("response_text", "No response")
+    return {
+        "datasets": datasets,
+        "messages": [AIMessage(content=response_text)],
+    }
 
 
 async def call_multi_dataset_agent(
