@@ -16,11 +16,11 @@ graph_builder.add_conditional_edges(
     should_retry,
     {
         "retry": "process_query",
+        "response": "response",
     },
 )
 
 graph_builder.add_edge(START, "process_query")
-graph_builder.add_edge("process_query", "response")
 graph_builder.add_edge("response", END)
 
 single_dataset_graph = graph_builder.compile()

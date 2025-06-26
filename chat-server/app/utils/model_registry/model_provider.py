@@ -117,7 +117,7 @@ def get_model_provider(
 
 
 def get_custom_model(model_id: str):
-    return ModelProvider().get_llm(model_id=model_id)
+    return ModelProvider(metadata={}).get_llm(model_id=model_id)
 
 
 def get_chat_history(config: RunnableConfig):

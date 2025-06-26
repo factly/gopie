@@ -1,3 +1,4 @@
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -52,8 +53,28 @@ async def plan_sql_query(
 
         parser = JsonOutputParser()
         parsed = parser.parse(str(content))
+
+        sql_queries = parsed.get("sql_queries", [])
+
+        data_name = "sql_queries"
+        data_args = {"queries": sql_queries}
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": "SQL query planning tool",
+                "name": data_name,
+                "values": data_args,
+            },
+        )
+
         return parsed
     except Exception as e:
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": "Error in query planning tool",
+            },
+        )
         return {"error": str(e), "user_query": user_query}
 
 

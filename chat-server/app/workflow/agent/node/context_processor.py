@@ -45,9 +45,14 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         context_summary = parsed_response.get("context_summary", "")
 
         if context_summary and context_summary.strip():
-            final_query = (
-                f"Context: {context_summary}\n\nQuery: {enhanced_query}"
-            )
+            final_query = f"""
+The original user query and the previous conversation history were processed
+and the following context summary was added to the query:
+
+User Query: {enhanced_query}
+
+Context Summary: {context_summary}
+"""
         else:
             final_query = enhanced_query
 
