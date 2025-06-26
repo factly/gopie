@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
@@ -137,6 +138,8 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
+
+	time.Sleep(2 * time.Second) // Wait for the table to be created in OLAP
 
 	count, columns, err := h.getMetrics(tableName)
 	if err != nil {
