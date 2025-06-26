@@ -52,14 +52,15 @@ async def stream_graph_updates(
     }
 
     event_stream_handler = EventStreamHandler()
-
+    metadata = {
+        "trace_id": trace_id,
+        "chat_id": chat_id,
+        "user": user,
+    }
     config = RunnableConfig(
         configurable={
-            "model_id": model_id,
-            "trace_id": trace_id,
-            "chat_id": chat_id,
+            "metadata": metadata,
             "chat_history": chat_history,
-            "user": user,
         },
     )
 

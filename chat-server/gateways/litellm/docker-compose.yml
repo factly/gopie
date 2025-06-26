@@ -31,7 +31,7 @@ services:
       litellm-db:
         condition: service_healthy
     volumes:
-      - ../../litellm_config.yaml:/app/config.yaml
+      - ./litellm_config.yaml:/app/config.yaml
       - ${GOOGLE_SERVICE_ACCOUNT_JSON:-../../google/service-account.json}:/app/service-account.json:ro
     command:
       ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "8"]

@@ -1,3 +1,6 @@
+import json
+from typing import Dict
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
@@ -7,13 +10,9 @@ from app.utils.providers.base import BaseProvider
 class CloudflareGatewayProvider(BaseProvider):
     def __init__(
         self,
-        user: str,
-        trace_id: str,
-        chat_id: str,
+        metadata: Dict[str, str],
     ):
-        self.user = user
-        self.trace_id = trace_id
-        self.chat_id = chat_id
+        self.metadata = metadata
 
         url = f"{settings.CLOUDFLARE_GATEWAY_URL}"
         url = url.replace(
@@ -32,6 +31,11 @@ class CloudflareGatewayProvider(BaseProvider):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "cf-aig-authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
+            "cf-aig-metadata": json.dumps(
+                {
+                    **self.metadata,
+                }
+            ),
         }
 
         return ChatOpenAI(
@@ -51,6 +55,11 @@ class CloudflareGatewayProvider(BaseProvider):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {settings.GOOGLE_API_KEY}",
             "cf-aig-authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
+            "cf-aig-metadata": json.dumps(
+                {
+                    **self.metadata,
+                }
+            ),
         }
 
         formatted_model = f"google-ai-studio/{model_name}"

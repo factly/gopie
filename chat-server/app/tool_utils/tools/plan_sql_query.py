@@ -1,51 +1,18 @@
-import json
-
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.utils.model_registry.model_provider import get_custom_model
-
-
-def get_sql_planning_prompt(user_query: str, formatted_schemas: str) -> str:
-    return f"""You are an expert SQL analyst. Given a user's natural language
-query and dataset schemas, plan the appropriate SQL queries to answer their
-question.
-
-USER QUERY: {user_query}
-
-AVAILABLE DATASETS AND SCHEMAS:
-{formatted_schemas}
-
-INSTRUCTIONS:
-1. Analyze the user query to understand what data they need
-2. Examine the provided schemas to identify relevant tables and columns
-3. Use the actual dataset names (like 'gq_xxxxx') from the schema in your SQL,
-   NOT the user-friendly display names
-4. Plan the SQL query/queries needed to answer the question
-5. Consider joins, aggregations, filters, and ordering as needed
-6. Provide clear reasoning for your approach
-
-OUTPUT FORMAT (JSON):
-{{
-    "reasoning": "Step-by-step explanation of your thought process",
-    "sql_queries": ["list of executable SQL queries"],
-    "tables_used": ["list of table names used"],
-    "expected_result": "description of what the query results contain",
-    "limitations": "any assumptions, limitations, or considerations"
-}}
-
-CRITICAL: Always use the actual dataset name field from the schema in your
-SQL queries, never use display names or titles. Look for fields like
-"dataset_name" or similar in the schema.
-
-Ensure your SQL is syntactically correct and follows best practices. If
-multiple queries are needed, explain the sequence and purpose of each."""
+from app.utils.langsmith.prompt_manager import get_prompt
+from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_selection import get_node_model
 
 
 @tool
 async def plan_sql_query(
     user_query: str,
     schemas: list[dict],
+    config: RunnableConfig,
 ) -> dict:
     """
     Plan a SQL query given a user natural language query and dataset schemas.
@@ -74,12 +41,11 @@ async def plan_sql_query(
             limitations: any assumptions or limitations
     """
     try:
-        if schemas:
-            formatted_schemas = json.dumps(schemas, indent=2)
-
-        prompt = get_sql_planning_prompt(user_query, formatted_schemas)
-
-        llm = get_custom_model(model_id="gpt-4o")
+        prompt = get_prompt(
+            "sql_query_planning", user_query=user_query, schemas=schemas
+        )
+        model_id = get_node_model("plan_sql_query")
+        llm = get_model_provider(config).get_llm(model_id=model_id)
         response = await llm.ainvoke(prompt)
         content = (
             response.content if hasattr(response, "content") else str(response)
@@ -87,8 +53,28 @@ async def plan_sql_query(
 
         parser = JsonOutputParser()
         parsed = parser.parse(str(content))
+
+        sql_queries = parsed.get("sql_queries", [])
+
+        data_name = "sql_queries"
+        data_args = {"queries": sql_queries}
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": "SQL query planning tool",
+                "name": data_name,
+                "values": data_args,
+            },
+        )
+
         return parsed
     except Exception as e:
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": "Error in query planning tool",
+            },
+        )
         return {"error": str(e), "user_query": user_query}
 
 

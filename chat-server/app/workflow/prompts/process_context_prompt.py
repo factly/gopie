@@ -1,4 +1,9 @@
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 
 
 def create_process_context_prompt(
@@ -41,17 +46,20 @@ Context summary: ""
         formatted_history = []
 
         for msg in chat_history:
-            if hasattr(msg, "content"):
-                content = str(msg.content)
+            if isinstance(msg, AIMessage):
+                content = f"Assistant: {str(msg.content)}\n"
+            elif isinstance(msg, HumanMessage):
+                content = f"User: {str(msg.content)}\n"
             else:
-                content = str(msg)
-            formatted_history.append(content)
+                content = str(msg) + "\n"
+
+            formatted_history.append(content + "\n\n")
 
         chat_summary = formatted_history
     else:
         chat_summary = ["No previous conversation"]
 
-    human_content = f"""Current query: {current_query}
+    human_content = f"""Current user query: {current_query}
 
 Chat history: {chat_summary}
 

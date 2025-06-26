@@ -45,9 +45,12 @@ def transform_output_state(
 async def call_single_dataset_agent(
     state: AgentState, config: RunnableConfig
 ) -> AgentState:
+    dataset_ids = state.get("dataset_ids", [])
+    dataset_id = dataset_ids[0] if dataset_ids else None
+
     input_state = {
         "messages": state["messages"],
-        "dataset_id": state.get("dataset_ids", []),
+        "dataset_id": dataset_id,
         "user_query": state.get("user_query", ""),
     }
 

@@ -38,6 +38,10 @@ from app.workflow.prompts.response_prompt import (
 from app.workflow.prompts.route_query_replan_prompt import (
     create_route_query_replan_prompt,
 )
+from app.workflow.prompts.sql_query_planning_prompt import (
+    create_sql_planning_prompt,
+    format_sql_planning_input,
+)
 from app.workflow.prompts.stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
@@ -57,6 +61,7 @@ NodeName = Literal[
     "check_visualization",
     "route_query_replan",
     "process_context",
+    "sql_query_planning",
 ]
 
 
@@ -76,6 +81,7 @@ class PromptSelector:
             "check_visualization": create_check_visualization_prompt,
             "route_query_replan": create_route_query_replan_prompt,
             "process_context": create_process_context_prompt,
+            "sql_query_planning": create_sql_planning_prompt,
         }
 
         self.format_prompt_input_map = {
@@ -84,6 +90,7 @@ class PromptSelector:
             "plan_query": format_plan_query_input,
             "process_query": format_process_query_input,
             "response": format_response_input,
+            "sql_query_planning": format_sql_planning_input,
         }
 
     def get_prompt(

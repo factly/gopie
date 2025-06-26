@@ -9,7 +9,7 @@ graph TD;
 	response(response)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> process_query;
-	process_query --> response;
+	process_query -.-> response;
 	response --> __end__;
 	process_query -. &nbsp;retry&nbsp; .-> process_query;
 	classDef default fill:#f2f0ff,line-height:1.2

@@ -24,3 +24,10 @@ class State(TypedDict):
     response_text: str
     error: str | None
     failed_queries: list[dict] | None
+
+
+class ConfigSchema(TypedDict):
+    model_id: str
+    trace_id: str
+    chat_history: list[BaseMessage]
+    user: str
