@@ -215,25 +215,26 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				if data.Choices != nil && len(data.Choices) > 0 &&
 					data.Choices[0].Delta.Role != nil &&
 					*data.Choices[0].Delta.Role == "assistant" {
-					fmt.Println("Received assistant message chunk:", *data.Choices[0].Delta.Content)
-					assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
-					s := assistantMessageBuilder.String()
-					assistantMessage = models.ChatMessage{
-						ID:        data.ID,
-						CreatedAt: data.CreatedAt,
-						Model:     data.Model,
-						Object:    data.Object,
-						Choices: []models.Choice{
-							{
-								Delta: models.Delta{
-									Role:         data.Choices[0].Delta.Role,
-									FunctionCall: data.Choices[0].Delta.FunctionCall,
-									Refusal:      data.Choices[0].Delta.Refusal,
-									ToolCalls:    data.Choices[0].Delta.ToolCalls,
-									Content:      &s,
+					if data.Choices[0].Delta.Content != nil {
+						assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
+						s := assistantMessageBuilder.String()
+						assistantMessage = models.ChatMessage{
+							ID:        data.ID,
+							CreatedAt: data.CreatedAt,
+							Model:     data.Model,
+							Object:    data.Object,
+							Choices: []models.Choice{
+								{
+									Delta: models.Delta{
+										Role:         data.Choices[0].Delta.Role,
+										FunctionCall: data.Choices[0].Delta.FunctionCall,
+										Refusal:      data.Choices[0].Delta.Refusal,
+										ToolCalls:    data.Choices[0].Delta.ToolCalls,
+										Content:      &s,
+									},
 								},
 							},
-						},
+						}
 					}
 				} else {
 					messages = append(messages, data)
