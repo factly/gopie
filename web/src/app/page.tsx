@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme/toggle";
+// import { UserInfo } from "@/components/dashboard/user-info";
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -261,6 +262,11 @@ export default function HomePage() {
         </div>
 
         <div className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+          {/* User Info Section */}
+          {/* <div className="py-8">
+            <UserInfo />
+          </div> */}
+
           {/* Centered Chat Interface */}
           <div className="flex flex-col items-center justify-center min-h-[45vh] py-20">
             <motion.div
