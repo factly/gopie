@@ -14,9 +14,6 @@ from app.workflow.graph.single_dataset_graph.types import State
 async def response(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", {})
 
-    if not query_result:
-        return {"messages": [AIMessage(content="No query result found")]}
-
     prompt_messages = get_prompt(
         "response",
         query_result=query_result,

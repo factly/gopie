@@ -2,7 +2,7 @@ from app.core.config import settings
 from app.models.provider import ModelCategory
 
 NODE_TO_COMPLEXITY = {
-    "analyze_query": ModelCategory.ADVANCED,
+    "analyze_query": ModelCategory.FAST,
     "route_query_replan": ModelCategory.FAST,
     "generate_subqueries": ModelCategory.ADVANCED,
     "identify_datasets": ModelCategory.BALANCED,
