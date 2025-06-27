@@ -48,7 +48,6 @@ async def store_schema_in_qdrant(
                 "dataset_description": dataset_details.description,
                 "dataset_id": dataset_id,
                 "project_id": project_id,
-                "column_descriptions": column_descriptions,
             },
         )
 

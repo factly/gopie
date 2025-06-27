@@ -63,7 +63,7 @@ This query has been determined to need breaking down into smaller
 subqueries. Generate effective subqueries following these STRICT guidelines:
 
 BREAKDOWN RULES:
-  - Generate 2-3 sub-queries based on actual complexity (never just 1)
+  - Generate exactly 2 sub-queries based on actual complexity
   - Each sub-query must be in natural language only - NEVER generate SQL
   - Each sub-query should address a distinct aspect of the main question
   - Each sub-query should be self-contained and not assume knowledge
@@ -78,7 +78,7 @@ STRICT PROHIBITIONS:
   - NEVER hallucinate additional context or requirements
   - NEVER break down the query into process steps
     (like "first search for X, then analyze Y")
-  - NEVER generate just 1 subquery
+  - NEVER generate just 1 subquery or more than 2 subqueries
   - NEVER generate step-by-step information retrieval subqueries
     without knowing the actual system structure or data organization
   - NEVER create subqueries like "first get information about X"
@@ -93,7 +93,7 @@ STRICT PROHIBITIONS:
 
 RESPONSE FORMAT:
 {
-  "subqueries": ["subquery1", "subquery2", "subquery3"]
+  "subqueries": ["subquery1", "subquery2"]
 }
 
 IMPORTANT: Ensure each subquery is a natural language question

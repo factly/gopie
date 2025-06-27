@@ -64,8 +64,8 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 },
             )
 
-            if len(subqueries) > 3:
-                subqueries = subqueries[:3]
+            if len(subqueries) > 2:
+                subqueries = subqueries[:2]
 
             if not subqueries:
                 subqueries = [user_input]

@@ -14,66 +14,121 @@ from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
+def _get_user_input(state: State, query_index: int) -> str:
+    subqueries = state.get("subqueries", [])
+    if subqueries and 0 <= query_index < len(subqueries):
+        return subqueries[query_index]
+    return "No input"
+
+
+def _should_add_new_subquery(
+    state: State, query_result: QueryResult, query_index: int
+) -> bool:
+    subqueries = state.get("subqueries", [])
+
+    if query_index == -1:
+        return True
+
+    if not query_result.subqueries:
+        return True
+
+    if query_index < len(subqueries):
+        current_query = subqueries[query_index]
+        last_recorded_query = query_result.subqueries[-1].query_text
+        return current_query != last_recorded_query
+
+    return False
+
+
+def _create_error_response(
+    query_result: QueryResult, error_msg: str, node_name: str = "analyze_query"
+) -> dict:
+    query_result.add_error_message(error_msg, node_name)
+    error_data = {"error": error_msg, "is_data_query": False}
+
+    return {
+        "query_result": query_result,
+        "query_type": "conversational",
+        "messages": [ErrorMessage.from_json(error_data)],
+    }
+
+
+def _handle_tool_call_response(
+    response: Any,
+    query_result: QueryResult,
+    query_index: int,
+    tool_call_count: int,
+) -> dict:
+    query_result.subqueries[query_index].query_type = "conversational"
+
+    ai_message = (
+        response
+        if isinstance(response, AIMessage)
+        else AIMessage(content=str(response))
+    )
+
+    return {
+        "query_result": query_result,
+        "subquery_index": query_index,
+        "tool_call_count": tool_call_count + 1,
+        "messages": [ai_message],
+    }
+
+
+def _handle_analysis_response(
+    response: Any,
+    query_result: QueryResult,
+    query_index: int,
+    tool_call_count: int,
+) -> dict:
+    parser = JsonOutputParser()
+    response_content = str(response.content)
+    parsed_content = parser.parse(response_content)
+
+    query_type = parsed_content.get("query_type", "conversational")
+    confidence_score = parsed_content.get("confidence_score", 5)
+    reasoning = parsed_content.get("reasoning", "")
+    clarification_needed = parsed_content.get("clarification_needed", "")
+
+    query_result.subqueries[query_index].query_type = query_type
+    query_result.subqueries[query_index].confidence_score = confidence_score
+    query_result.set_node_message(
+        "analyze_query",
+        {
+            "reasoning": reasoning,
+            "clarification_needed": clarification_needed,
+        },
+    )
+
+    return {
+        "query_result": query_result,
+        "subquery_index": query_index,
+        "tool_call_count": tool_call_count,
+        "messages": [IntermediateStep.from_json(parsed_content)],
+    }
+
+
 @configure_node(
     role="intermediate",
     progress_message="Analyzing query...",
 )
 async def analyze_query(state: State, config: RunnableConfig) -> dict:
-    """
-    Analyze the user query and the identified datasets to determine:
-    1. If this is a data query requiring dataset processing
-    2. If this is a conversational query (may use tools but doesn't need
-       datasets)
-
-    Args:
-        state: The current state object containing messages and tool results
-
-    Returns:
-        Query type and call tools if needed to answer user query or
-        identify datasets if it is a data query
-    """
-    last_message = state["messages"][-1]
     query_result = state.get("query_result")
-    subqueries = state.get("subqueries", [])
     query_index = state.get("subquery_index", -1)
-
     tool_call_count = state.get("tool_call_count", 0)
 
-    # Check if we've reached the maximum allowed tool calls
+    # Check tool call limit
     if tool_call_count >= 5:
-        error_msg = "Maximum tool call limit reached (5 calls)"
-        query_result.add_error_message(error_msg, "analyze_query")
-
-        return {
-            "query_result": query_result,
-            "query_type": "conversational",
-            "messages": [
-                ErrorMessage.from_json(
-                    {"error": error_msg, "is_data_query": False}
-                )
-            ],
-        }
-
-    if isinstance(last_message, ToolMessage):
-        user_input = (
-            state.get("subqueries", ["No input"])[query_index]
-            if state.get("subqueries")
-            else "No input"
+        return _create_error_response(
+            query_result,
+            "Maximum tool call limit reached (5 calls)",
+            "analyze_query",
         )
 
-    add_new_subquery = (
-        query_index == -1
-        or subqueries[query_index] != query_result.subqueries[-1].query_text
-    )
-
-    if add_new_subquery:
+    if _should_add_new_subquery(state, query_result, query_index):
         query_index += 1
-        user_input = (
-            state.get("subqueries", ["No input"])[query_index]
-            if state.get("subqueries")
-            and query_index < len(state.get("subqueries", []))
-            else "No input"
-        )
+        user_input = _get_user_input(state, query_index)
+
         query_result.add_subquery(
             query_text=user_input,
             sql_queries=[],
@@ -86,24 +141,18 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                 "node_messages": {},
             },
         )
+    else:
+        user_input = _get_user_input(state, query_index)
 
     collect_and_store_tool_messages(query_result, query_index, state)
-    tools_results = query_result.subqueries[query_index].tool_used_result
+
+    if not user_input or user_input == "No input":
+        return _create_error_response(
+            query_result, "No user query provided", "analyze_query"
+        )
 
     try:
-        if not user_input:
-            query_result.add_error_message(
-                "No user query provided", "analyze_query"
-            )
-            error_data = {
-                "error": "No user query provided",
-                "is_data_query": False,
-            }
-            return {
-                "query_result": query_result,
-                "query_type": "conversational",
-                "messages": [ErrorMessage.from_json(error_data)],
-            }
+        tools_results = query_result.subqueries[query_index].tool_used_result
 
         prompt = get_prompt(
             "analyze_query",
@@ -113,62 +162,27 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             dataset_ids=state.get("dataset_ids", []),
             project_ids=state.get("project_ids", []),
         )
+
         tools_names = [
             ToolNames.EXECUTE_SQL_QUERY,
             ToolNames.GET_TABLE_SCHEMA,
             ToolNames.LIST_DATASETS,
             ToolNames.PLAN_SQL_QUERY,
         ]
+
         llm = get_model_provider(config).get_llm_with_tools(
             "analyze_query", tools_names
         )
         response: Any = await llm.ainvoke(prompt)
-        parser = JsonOutputParser()
 
         if has_tool_calls(response):
-            query_result.subqueries[query_index].query_type = "conversational"
-            tool_call_count += 1
-
-            return {
-                "query_result": query_result,
-                "subquery_index": query_index,
-                "tool_call_count": tool_call_count,
-                "messages": [
-                    (
-                        response
-                        if isinstance(response, AIMessage)
-                        else AIMessage(content=str(response))
-                    )
-                ],
-            }
-
-        response_content = str(response.content)
-        parsed_content = parser.parse(response_content)
-
-        query_type = parsed_content.get("query_type", "conversational")
-        confidence_score = parsed_content.get("confidence_score", 5)
-        reasoning = parsed_content.get("reasoning", "")
-        clarification_needed = parsed_content.get("clarification_needed", "")
-
-        query_result.subqueries[query_index].query_type = query_type
-        query_result.subqueries[
-            query_index
-        ].confidence_score = confidence_score
-
-        query_result.set_node_message(
-            "analyze_query",
-            {
-                "reasoning": reasoning,
-                "clarification_needed": clarification_needed,
-            },
-        )
-
-        return {
-            "query_result": query_result,
-            "subquery_index": query_index,
-            "tool_call_count": tool_call_count,
-            "messages": [IntermediateStep.from_json(parsed_content)],
-        }
+            return _handle_tool_call_response(
+                response, query_result, query_index, tool_call_count
+            )
+        else:
+            return _handle_analysis_response(
+                response, query_result, query_index, tool_call_count
+            )
 
     except Exception as e:
         error_msg = f"Error analyzing query: {e!s}"
@@ -211,10 +225,11 @@ def route_from_analysis(state: State) -> str:
     confidence_score = query_result.subqueries[query_index].confidence_score
 
     if query_type == "conversational":
-        if confidence_score >= 8:
-            return "basic_conversation"
-        else:
-            return "identify_datasets"
+        return (
+            "basic_conversation"
+            if confidence_score >= 7
+            else "identify_datasets"
+        )
     else:
         return "identify_datasets"
 
@@ -222,9 +237,14 @@ def route_from_analysis(state: State) -> str:
 def collect_and_store_tool_messages(
     query_result: QueryResult, query_index: int, state: State
 ):
+    """Collect tool messages from state and store them in query result."""
+    if query_index < 0 or query_index >= len(query_result.subqueries):
+        return
+
     tool_messages = []
     messages = state.get("messages", [])
 
+    # Collect tool messages from the end of the message list
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             tool_messages.append(
@@ -238,16 +258,9 @@ def collect_and_store_tool_messages(
         else:
             break
 
-    if (
-        tool_messages
-        and query_index >= 0
-        and query_index < len(query_result.subqueries)
-    ):
+    # Store tool messages if any were found
+    if tool_messages:
         current_subquery = query_result.subqueries[query_index]
-
         if current_subquery.tool_used_result is None:
             current_subquery.tool_used_result = []
-
-        query_result.subqueries[query_index].tool_used_result.extend(
-            tool_messages
-        )
+        current_subquery.tool_used_result.extend(tool_messages)
