@@ -36,7 +36,6 @@ companion.env
 requests
 ingestions
 ingest.sh
-*.csv
 *.log
 logs
 
