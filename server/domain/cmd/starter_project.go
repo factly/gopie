@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/factly/gopie/application/repositories"
@@ -31,6 +30,11 @@ func init() {
 var starterProjectCmd = &cobra.Command{
 	Use:   "starter-project",
 	Short: "Create a starter project",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := setupStarterProject(); err != nil {
+			log.Fatal("error setting up starter project: ", err)
+		}
+	},
 }
 
 func setupStarterProject() error {
@@ -91,186 +95,132 @@ func setupStarterProject() error {
 
 	appLogger.Info("Starter project created successfully", zap.String("project_id", project.ID))
 
-	// Process files concurrently
-	type processResult struct {
-		filePath string
-		err      error
-	}
-
-	workerLimit := 3 // Limit concurrent processing
-	if len(uploadedFiles) < workerLimit {
-		workerLimit = len(uploadedFiles)
-	}
-
-	filesChan := make(chan string, len(uploadedFiles))
-	resultsChan := make(chan processResult, len(uploadedFiles))
-
-	// Start worker goroutines
-	var wg sync.WaitGroup
-	for i := 0; i < workerLimit; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for filePath := range filesChan {
-				olapTableName := fmt.Sprintf("gp_%s", pkg.RandomString(13))
-				olapTable, err := olapService.IngestS3File(context.Background(), filePath, olapTableName, nil)
-				if err != nil {
-					appLogger.Error("error ingesting file to OLAP", zap.String("file_path", filePath), zap.Error(err))
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				appLogger.Info("File ingested to OLAP successfully",
-					zap.String("file_path", filePath),
-					zap.String("olap_table", olapTable.TableName))
-
-				count, columns, err := getMetrics(olapTable.TableName, olapService, appLogger)
-				if err != nil {
-					appLogger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", olapTable.TableName))
-					// Clean up the created OLAP table since metrics fetch failed
-					dropErr := olapService.DropTable(olapTable.TableName)
-					if dropErr != nil {
-						appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
-					}
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				// Create a dataset for the ingested file
-				dataset, err := datasetStore.Create(context.Background(), &models.CreateDatasetParams{
-					Name:        fmt.Sprintf("Dataset for %s", olapTable.TableName),
-					Description: fmt.Sprintf("Dataset created for the file %s", filePath),
-					ProjectID:   project.ID,
-					CreatedBy:   "system",
-					UpdatedBy:   "system",
-					Columns:     columns,
-					FilePath:    filePath,
-					Size:        olapTable.Size,
-					RowCount:    count,
-				})
-				if err != nil {
-					appLogger.Error("Error creating dataset record", zap.Error(err))
-					dropErr := olapService.DropTable(olapTable.TableName)
-					if dropErr != nil {
-						appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
-					}
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				appLogger.Info("Dataset created successfully",
-					zap.String("dataset_id", dataset.ID),
-					zap.String("dataset_name", dataset.Name),
-					zap.String("olap_table", olapTable.TableName),
-					zap.Int("row_count", count),
-					zap.Int("column_count", len(columns)))
-
-				datasetSummary, err := olapService.GetDatasetSummary(olapTable.TableName)
-				if err != nil {
-					appLogger.Error("Error fetching dataset summary", zap.Error(err))
-					// Clean up the dataset record and OLAP table since dataset summary fetch failed
-					deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
-					if deleteErr != nil {
-						appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-					}
-					dropErr := olapService.DropTable(olapTable.TableName)
-					if dropErr != nil {
-						appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
-					}
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				if datasetSummary != nil {
-					summaryMap := make(map[string]int)
-					for i := range *datasetSummary {
-						summaryMap[(*datasetSummary)[i].ColumnName] = i
-					}
-				}
-
-				_, err = datasetStore.CreateDatasetSummary(context.Background(), olapTable.TableName, datasetSummary)
-				if err != nil {
-					appLogger.Error("Error creating dataset summary", zap.Error(err), zap.String("table_name", olapTable.TableName))
-					// Clean up the dataset record and OLAP table since summary creation failed
-					deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
-					if deleteErr != nil {
-						appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-					}
-					dropErr := olapService.DropTable(olapTable.TableName)
-					if dropErr != nil {
-						appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
-					}
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				appLogger.Info("Dataset summary created successfully",
-					zap.String("dataset_id", dataset.ID),
-					zap.String("olap_table", olapTable.TableName),
-					zap.Int("row_count", count),
-					zap.Int("column_count", len(columns)))
-
-				err = aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
-					ProjectID: project.ID,
-					DatasetID: dataset.ID,
-				})
-				if err != nil {
-					appLogger.Error("Error uploading schema to AI Agent", zap.Error(err), zap.String("dataset_id", dataset.ID))
-					// Clean up the dataset record and OLAP table since schema upload failed
-					deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
-					if deleteErr != nil {
-						appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-					}
-					dropErr := olapService.DropTable(olapTable.TableName)
-					if dropErr != nil {
-						appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
-					}
-					deleteSErr := datasetStore.DeleteDatasetSummary(context.Background(), olapTable.TableName)
-					if deleteSErr != nil {
-						appLogger.Error("Failed to delete dataset summary during cleanup", zap.Error(deleteSErr), zap.String("table_name", olapTable.TableName))
-					}
-
-					resultsChan <- processResult{filePath, err}
-					continue
-				}
-
-				appLogger.Info("Schema uploaded to AI Agent successfully",
-					zap.String("dataset_id", dataset.ID),
-					zap.String("file_path", filePath),
-				)
-
-				appLogger.Info("Dataset upload complete",
-					zap.String("dataset_id", dataset.ID),
-					zap.String("file_path", filePath),
-				)
-
-				resultsChan <- processResult{filePath, nil}
-			}
-		}()
-	}
-
-	// Send files to workers
+	// Process files sequentially
 	for _, filePath := range uploadedFiles {
-		filesChan <- filePath
-	}
-	close(filesChan)
-
-	// Wait for all workers to complete
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
-
-	// Process results
-	for i := 0; i < len(uploadedFiles); i++ {
-		result := <-resultsChan
-		if result.err != nil {
-			appLogger.Error("Failed to process file",
-				zap.String("file_path", result.filePath),
-				zap.Error(result.err))
-			return result.err
+		olapTableName := fmt.Sprintf("gp_%s", pkg.RandomString(13))
+		olapTable, err := olapService.IngestS3File(context.Background(), filePath, olapTableName, nil)
+		if err != nil {
+			appLogger.Error("error ingesting file to OLAP", zap.String("file_path", filePath), zap.Error(err))
+			return err
 		}
+
+		appLogger.Info("File ingested to OLAP successfully",
+			zap.String("file_path", filePath),
+			zap.String("olap_table", olapTable.TableName))
+
+		count, columns, err := getMetrics(olapTable.TableName, olapService, appLogger)
+		if err != nil {
+			appLogger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", olapTable.TableName))
+			// Clean up the created OLAP table since metrics fetch failed
+			dropErr := olapService.DropTable(olapTable.TableName)
+			if dropErr != nil {
+				appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
+			}
+			return err
+		}
+
+		// Create a dataset for the ingested file
+		dataset, err := datasetStore.Create(context.Background(), &models.CreateDatasetParams{
+			Name:        fmt.Sprintf(olapTable.TableName),
+			Description: fmt.Sprintf("Dataset created for the file %s", filePath),
+			ProjectID:   project.ID,
+			CreatedBy:   "system",
+			UpdatedBy:   "system",
+			Columns:     columns,
+			FilePath:    filePath,
+			Size:        olapTable.Size,
+			RowCount:    count,
+		})
+		if err != nil {
+			appLogger.Error("Error creating dataset record", zap.Error(err))
+			dropErr := olapService.DropTable(olapTable.TableName)
+			if dropErr != nil {
+				appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
+			}
+			return err
+		}
+
+		appLogger.Info("Dataset created successfully",
+			zap.String("dataset_id", dataset.ID),
+			zap.String("dataset_name", dataset.Name),
+			zap.String("olap_table", olapTable.TableName),
+			zap.Int("row_count", count),
+			zap.Int("column_count", len(columns)))
+
+		datasetSummary, err := olapService.GetDatasetSummary(olapTable.TableName)
+		if err != nil {
+			appLogger.Error("Error fetching dataset summary", zap.Error(err))
+			// Clean up the dataset record and OLAP table since dataset summary fetch failed
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			if deleteErr != nil {
+				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
+			}
+			dropErr := olapService.DropTable(olapTable.TableName)
+			if dropErr != nil {
+				appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
+			}
+			return err
+		}
+
+		if datasetSummary != nil {
+			summaryMap := make(map[string]int)
+			for i := range *datasetSummary {
+				summaryMap[(*datasetSummary)[i].ColumnName] = i
+			}
+		}
+
+		_, err = datasetStore.CreateDatasetSummary(context.Background(), olapTable.TableName, datasetSummary)
+		if err != nil {
+			appLogger.Error("Error creating dataset summary", zap.Error(err), zap.String("table_name", olapTable.TableName))
+			// Clean up the dataset record and OLAP table since summary creation failed
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			if deleteErr != nil {
+				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
+			}
+			dropErr := olapService.DropTable(olapTable.TableName)
+			if dropErr != nil {
+				appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
+			}
+			return err
+		}
+
+		appLogger.Info("Dataset summary created successfully",
+			zap.String("dataset_id", dataset.ID),
+			zap.String("olap_table", olapTable.TableName),
+			zap.Int("row_count", count),
+			zap.Int("column_count", len(columns)))
+
+		err = aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
+			ProjectID: project.ID,
+			DatasetID: dataset.ID,
+		})
+		if err != nil {
+			appLogger.Error("Error uploading schema to AI Agent", zap.Error(err), zap.String("dataset_id", dataset.ID))
+			// Clean up the dataset record and OLAP table since schema upload failed
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			if deleteErr != nil {
+				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
+			}
+			dropErr := olapService.DropTable(olapTable.TableName)
+			if dropErr != nil {
+				appLogger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", olapTable.TableName))
+			}
+			deleteSErr := datasetStore.DeleteDatasetSummary(context.Background(), olapTable.TableName)
+			if deleteSErr != nil {
+				appLogger.Error("Failed to delete dataset summary during cleanup", zap.Error(deleteSErr), zap.String("table_name", olapTable.TableName))
+			}
+			return err
+		}
+
+		appLogger.Info("Schema uploaded to AI Agent successfully",
+			zap.String("dataset_id", dataset.ID),
+			zap.String("file_path", filePath),
+		)
+
+		appLogger.Info("Dataset upload complete",
+			zap.String("dataset_id", dataset.ID),
+			zap.String("file_path", filePath),
+		)
 	}
 
 	appLogger.Info("All files processed successfully", zap.Int("file_count", len(uploadedFiles)))
@@ -282,8 +232,8 @@ func uploadDatasetFilesToMinio(logger *logger.Logger, s3Source repositories.Sour
 	bucketName := "gopie"
 	if datasetFilesPath == "" {
 		logger.Warn("DATASET_FILES_PATH environment variable is not set")
-		logger.Info("Using default path: ./data/")
-		datasetFilesPath = "./data/"
+		logger.Info("Using default path: ./starter-project-datasets/")
+		datasetFilesPath = "./starter-project-datasets/"
 	}
 
 	listAllFiles, err := os.ReadDir(datasetFilesPath)
@@ -302,79 +252,41 @@ func uploadDatasetFilesToMinio(logger *logger.Logger, s3Source repositories.Sour
 
 	logger.Info("Starting file upload process", zap.Int("total_files", fileCount))
 
-	// Create channels for coordination
-	type uploadResult struct {
-		path  string
-		err   error
-		index int
-	}
-	jobs := make(chan os.DirEntry, fileCount)
-	results := make(chan uploadResult, fileCount)
 	uploadedFiles := make([]string, 0, fileCount)
 
-	// Number of concurrent uploads
-	workerCount := 5
-	if fileCount < workerCount {
-		workerCount = fileCount
-	}
-
-	// Start worker goroutines
-	for w := 1; w <= workerCount; w++ {
-		go func(workerID int) {
-			for file := range jobs {
-				if file.IsDir() {
-					continue
-				}
-
-				filePath := datasetFilesPath + file.Name()
-				logger.Info("Worker uploading file",
-					zap.Int("worker_id", workerID),
-					zap.String("file_name", file.Name()),
-					zap.String("file_path", filePath))
-
-				start := time.Now()
-				location, err := s3Source.UploadFile(context.Background(), bucketName, filePath)
-				duration := time.Since(start)
-
-				if err != nil {
-					logger.Error("Failed to upload file",
-						zap.String("file_path", filePath),
-						zap.Duration("duration", duration),
-						zap.Error(err),
-						zap.Int("worker_id", workerID))
-					results <- uploadResult{path: "", err: err, index: -1}
-					continue
-				}
-
-				s3Path := fmt.Sprintf("s3://%s/%s", bucketName, file.Name())
-				logger.Info("File uploaded successfully",
-					zap.String("file_path", filePath),
-					zap.String("s3_path", s3Path),
-					zap.String("location", location),
-					zap.Duration("duration", duration),
-					zap.Int("worker_id", workerID))
-				results <- uploadResult{path: s3Path, err: nil, index: 0}
-			}
-		}(w)
-	}
-
-	// Send jobs to workers
-	for _, file := range listAllFiles {
-		if !file.IsDir() {
-			jobs <- file
+	// Process files sequentially
+	for i, file := range listAllFiles {
+		if file.IsDir() {
+			continue
 		}
-	}
-	close(jobs)
 
-	// Collect results
-	for i := 0; i < fileCount; i++ {
-		result := <-results
-		if result.err != nil {
-			logger.Error("Upload process failed", zap.Error(result.err),
-				zap.Int("completed", i), zap.Int("total", fileCount))
-			return nil, result.err
+		filePath := datasetFilesPath + file.Name()
+		logger.Info("Uploading file",
+			zap.String("file_name", file.Name()),
+			zap.String("file_path", filePath),
+			zap.Int("file_number", i+1),
+			zap.Int("total_files", fileCount))
+
+		start := time.Now()
+		location, err := s3Source.UploadFile(context.Background(), bucketName, filePath)
+		duration := time.Since(start)
+
+		if err != nil {
+			logger.Error("Failed to upload file",
+				zap.String("file_path", filePath),
+				zap.Duration("duration", duration),
+				zap.Error(err))
+			return nil, err
 		}
-		uploadedFiles = append(uploadedFiles, result.path)
+
+		s3Path := fmt.Sprintf("s3://%s/%s", bucketName, file.Name())
+		logger.Info("File uploaded successfully",
+			zap.String("file_path", filePath),
+			zap.String("s3_path", s3Path),
+			zap.String("location", location),
+			zap.Duration("duration", duration))
+
+		uploadedFiles = append(uploadedFiles, s3Path)
 	}
 
 	logger.Info("All files uploaded successfully",
@@ -384,57 +296,24 @@ func uploadDatasetFilesToMinio(logger *logger.Logger, s3Source repositories.Sour
 }
 
 func getMetrics(tableName string, olapSvc *services.OlapService, logger *logger.Logger) (int, []map[string]any, error) {
-	countResChan := make(chan struct {
-		count int64
-		err   error
-	})
+	// Get row count
+	countSql := "select count(*) from " + tableName
+	countResult, err := olapSvc.ExecuteQuery(countSql)
+	if err != nil {
+		return 0, nil, err
+	}
 
-	go func() {
-		countSql := "select count(*) from " + tableName
-		countResult, err := olapSvc.ExecuteQuery(countSql)
-		if err != nil {
-			countResChan <- struct {
-				count int64
-				err   error
-			}{0, err}
-			return
-		}
-		count, ok := countResult[0]["count_star()"].(int64)
-		if !ok {
-			logger.Error("Invalid count result type", zap.Any("count_result", countResult[0]["count_star()"]))
-			countResChan <- struct {
-				count int64
-				err   error
-			}{0, fmt.Errorf("Invalid count result type")}
-			return
-		}
-		countResChan <- struct {
-			count int64
-			err   error
-		}{count, nil}
-	}()
+	count, ok := countResult[0]["count_star()"].(int64)
+	if !ok {
+		logger.Error("Invalid count result type", zap.Any("count_result", countResult[0]["count_star()"]))
+		return 0, nil, fmt.Errorf("Invalid count result type")
+	}
 
-	columnsResChan := make(chan struct {
-		columns []map[string]any
-		err     error
-	})
 	// Get column descriptions
-	go func() {
-		columns, err := olapSvc.ExecuteQuery("desc " + tableName)
-		columnsResChan <- struct {
-			columns []map[string]any
-			err     error
-		}{columns, err}
-	}()
-
-	countResult := <-countResChan
-	if countResult.err != nil {
-		return 0, nil, countResult.err
-	}
-	columnsRes := <-columnsResChan
-	if columnsRes.err != nil {
-		return 0, nil, columnsRes.err
+	columns, err := olapSvc.ExecuteQuery("desc " + tableName)
+	if err != nil {
+		return 0, nil, err
 	}
 
-	return int(countResult.count), columnsRes.columns, nil
+	return int(count), columns, nil
 }

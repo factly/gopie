@@ -154,7 +154,7 @@ services:
     entrypoint: >
       /bin/sh -c "
         echo 'Minio is up. Creating the bucket!!' &&
-        /usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin &&
+        /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
         /usr/bin/mc anonymous set public myminio/gopie
       "
