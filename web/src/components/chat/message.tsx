@@ -196,16 +196,21 @@ export function ChatMessage({
   const [displaySqlQuery, setDisplaySqlQuery] = useState<string | null>(null);
   const [displayIntermediateMessages, setDisplayIntermediateMessages] =
     useState<string[]>([]);
+  const [displayVisualizationPaths, setDisplayVisualizationPaths] = useState<
+    string[]
+  >([]);
 
   // Process message parts from AI SDK
   useEffect(() => {
     if (message?.parts) {
       // Extract datasets from datasets_used tool calls
       const newDatasets: string[] = [];
-      // Extract SQL from sql_query tool calls
+      // Extract SQL from sql_queries tool calls
       let newSqlQuery: string | null = null;
       // Extract thought process messages from tool_messages tool calls
       const newIntermediateMessages: string[] = [];
+      // Extract visualization paths from visualization_paths tool calls
+      const newVisualizationPaths: string[] = [];
 
       message.parts.forEach((part) => {
         if (part.type === "tool-invocation") {
@@ -221,22 +226,34 @@ export function ChatMessage({
             });
           }
 
-          if (toolName === "sql_query" && args.query) {
-            // Handle sql_query tool
-            newSqlQuery = args.query;
+          if (toolName === "sql_queries" && args.queries) {
+            // Handle sql_queries tool (now expects an array of queries)
+            if (Array.isArray(args.queries)) {
+              newSqlQuery = args.queries.join(";\n\n");
+            } else if (typeof args.queries === "string") {
+              newSqlQuery = args.queries;
+            }
           }
 
-          if (toolName === "tool_messages" && args.messages) {
-            // Handle tool_messages tool (thought process)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            args.messages.forEach((msg: any) => {
-              if (
-                msg.role === "intermediate" &&
-                typeof msg.content === "string"
-              ) {
-                newIntermediateMessages.push(msg.content);
-              }
-            });
+          if (toolName === "tool_messages" && args.role && args.content) {
+            // Handle tool_messages tool (thought process) - now expects role and content directly
+            if (
+              args.role === "intermediate" &&
+              typeof args.content === "string"
+            ) {
+              newIntermediateMessages.push(args.content);
+            }
+          }
+
+          if (toolName === "visualization_paths" && args.paths) {
+            // Handle visualization_paths tool
+            if (Array.isArray(args.paths)) {
+              args.paths.forEach((path: string) => {
+                if (!newVisualizationPaths.includes(path)) {
+                  newVisualizationPaths.push(path);
+                }
+              });
+            }
           }
         }
       });
@@ -257,6 +274,10 @@ export function ChatMessage({
       if (newIntermediateMessages.length > 0) {
         setDisplayIntermediateMessages(newIntermediateMessages);
         setIsThoughtProcessOpen(true);
+      }
+
+      if (newVisualizationPaths.length > 0) {
+        setDisplayVisualizationPaths(newVisualizationPaths);
       }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
@@ -648,6 +669,25 @@ export function ChatMessage({
                         : undefined
                     }
                   />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Visualization paths section */}
+          {displayVisualizationPaths.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground font-medium mb-1.5">
+                Visualization paths:
+              </p>
+              <div className="space-y-1">
+                {displayVisualizationPaths.map((path, index) => (
+                  <div
+                    key={index}
+                    className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md font-mono"
+                  >
+                    {path}
+                  </div>
                 ))}
               </div>
             </div>
