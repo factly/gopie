@@ -1017,7 +1017,7 @@ function ChatPageClient() {
   }, []); // Empty dependency array means this runs only once on mount
 
   return (
-    <main className="flex flex-col h-screen w-full pt-0 pb-0">
+    <main className="fixed inset-0 flex flex-col w-full">
       <div className="flex w-full relative overflow-hidden max-h-screen">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
