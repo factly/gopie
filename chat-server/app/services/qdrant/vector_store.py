@@ -13,7 +13,7 @@ from app.utils.model_registry.model_provider import ModelProvider
 
 
 async def add_documents_to_vector_store(documents, ids=None):
-    model_provider = ModelProvider()
+    model_provider = ModelProvider({})
 
     vector_store = setup_vector_store(model_provider.get_embeddings_model())
     client = initialize_qdrant_client()
