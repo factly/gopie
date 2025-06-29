@@ -20,13 +20,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
-import { SqlResults } from "@/components/chat/sql-results";
+import { ResultsPanel } from "@/components/chat/results-panel";
 import {
   ResizablePanel,
   ResizablePanelGroup,
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
@@ -521,7 +522,26 @@ function ChatPageClient() {
     setSelectedChatTitle,
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
-  const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
+  const {
+    isOpen: sqlIsOpen,
+    setIsOpen,
+    resetExecutedQueries,
+    results,
+  } = useSqlStore();
+  const {
+    isOpen: isVisualizationOpen,
+    setIsOpen: setVisualizationOpen,
+    paths: visualizationPaths,
+    clearPaths: clearVisualizationPaths,
+  } = useVisualizationStore();
+
+  // Combined panel state - show if either SQL or visualizations are available
+  const isResultsPanelOpen = sqlIsOpen || isVisualizationOpen;
+  const hasResults = !!(
+    results?.data?.length ||
+    results?.error ||
+    visualizationPaths.length > 0
+  );
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
     string | null
@@ -876,7 +896,8 @@ function ChatPageClient() {
 
   useEffect(() => {
     resetExecutedQueries();
-  }, [selectedChatId, resetExecutedQueries]);
+    clearVisualizationPaths();
+  }, [selectedChatId, resetExecutedQueries, clearVisualizationPaths]);
 
   // Handle initial message from URL params
   useEffect(() => {
@@ -954,7 +975,7 @@ function ChatPageClient() {
   );
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isResultsPanelOpen) {
       setSqlPanelWidth(0);
       return;
     }
@@ -973,7 +994,7 @@ function ChatPageClient() {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, [isOpen, sqlPanelRef]);
+  }, [isResultsPanelOpen, sqlPanelRef]);
 
   // Update streaming state based on isLoading
   useEffect(() => {
@@ -985,19 +1006,6 @@ function ChatPageClient() {
     stop();
     setIsStreaming(false);
   }, [stop]);
-
-  // Compute whether to show SQL button
-  const showSqlButton = useMemo(() => {
-    return (
-      selectedChatId &&
-      displayMessages.some(
-        (msg: UIMessage) =>
-          msg.role === "assistant" &&
-          typeof msg.content === "string" &&
-          msg.content.toLowerCase().includes("sql")
-      )
-    );
-  }, [selectedChatId, displayMessages]);
 
   // Close sidebar when chat page opens
   useEffect(() => {
@@ -1058,15 +1066,27 @@ function ChatPageClient() {
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
                   New Chat
                 </Button>
-                {showSqlButton && (
+                {hasResults && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="mr-2"
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => {
+                      if (isResultsPanelOpen) {
+                        setIsOpen(false);
+                        setVisualizationOpen(false);
+                      } else {
+                        if (results?.data?.length || results?.error) {
+                          setIsOpen(true);
+                        }
+                        if (visualizationPaths.length > 0) {
+                          setVisualizationOpen(true);
+                        }
+                      }
+                    }}
                   >
                     <Table2 className="h-4 w-4 mr-1" />
-                    SQL Results
+                    Results
                   </Button>
                 )}
               </div>
@@ -1105,12 +1125,18 @@ function ChatPageClient() {
               </TabsContent>
             </Tabs>
           </ResizablePanel>
-          {isOpen && (
+          {isResultsPanelOpen && (
             <>
               <ResizableHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
                 <div ref={sqlPanelRef} className="h-screen overflow-hidden">
-                  <SqlResults />
+                  <ResultsPanel
+                    isOpen={isResultsPanelOpen}
+                    onClose={() => {
+                      setIsOpen(false);
+                      setVisualizationOpen(false);
+                    }}
+                  />
                 </div>
               </ResizablePanel>
             </>
@@ -1122,7 +1148,7 @@ function ChatPageClient() {
           className="fixed bottom-0 right-0 z-10"
           style={{
             left: isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem",
-            width: isOpen
+            width: isResultsPanelOpen
               ? `calc(100% - ${
                   isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
                 } - ${sqlPanelWidth}px)`

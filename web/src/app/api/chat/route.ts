@@ -131,43 +131,51 @@ export async function POST(req: Request) {
             },
             sql_queries: {
               type: "function",
-              parameters: z.record(z.string(), z.any()),
-              execute: async (params) => {
-                console.log("🔧 SQL query executed with params:", params);
+              parameters: z.object({
+                queries: z.array(z.string()),
+              }),
+              execute: async ({ queries }) => {
+                console.log("🔧 SQL queries executed:", queries);
                 return {
                   type: "tool-call",
                   toolCallId: "sql_queries",
                   toolName: "sql_queries",
                   args: {
-                    ...params,
+                    queries,
                   },
                 };
               },
             },
             visualization_result: {
               type: "function",
-              parameters: z.any(),
-              execute: async (params) => {
+              parameters: z.object({
+                s3_paths: z.array(z.string()),
+              }),
+              execute: async ({ s3_paths }) => {
+                console.log("🔧 Visualization result executed:", s3_paths);
                 return {
                   type: "tool-call",
                   toolCallId: "visualization_result",
                   toolName: "visualization_result",
                   args: {
-                    ...params,
+                    s3_paths,
                   },
                 };
               },
             },
             visualization_paths: {
               type: "function",
-              parameters: z.any(),
-              execute: async (params) => {
+              parameters: z.object({
+                paths: z.array(z.string()),
+              }),
+              execute: async ({ paths }) => {
+                console.log("🔧 Visualization paths executed:", paths);
                 return {
                   type: "tool-call",
                   toolCallId: "visualization_paths",
                   toolName: "visualization_paths",
                   args: {
-                    ...params,
+                    paths,
                   },
                 };
               },

@@ -9,6 +9,7 @@ import {
   Loader2,
   Database,
   ExternalLink,
+  BarChart3,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import {
   Tooltip,
   TooltipContent,
@@ -187,6 +189,7 @@ export function ChatMessage({
     setIsOpen: setSqlPanelOpen,
     markQueryAsExecuted,
   } = useSqlStore();
+  const { setPaths: setVisualizationPaths } = useVisualizationStore();
   const [isExecuting, setIsExecuting] = useState(false);
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(
     role === "intermediate" && typeof content === "string" ? true : false
@@ -199,6 +202,8 @@ export function ChatMessage({
   const [displayVisualizationPaths, setDisplayVisualizationPaths] = useState<
     string[]
   >([]);
+  const [displayVisualizationResults, setDisplayVisualizationResults] =
+    useState<string[]>([]);
 
   // Process message parts from AI SDK
   useEffect(() => {
@@ -211,6 +216,8 @@ export function ChatMessage({
       const newIntermediateMessages: string[] = [];
       // Extract visualization paths from visualization_paths tool calls
       const newVisualizationPaths: string[] = [];
+      // Extract visualization results from visualization_result tool calls
+      const newVisualizationResults: string[] = [];
 
       message.parts.forEach((part) => {
         if (part.type === "tool-invocation") {
@@ -255,6 +262,17 @@ export function ChatMessage({
               });
             }
           }
+
+          if (toolName === "visualization_result" && args.s3_paths) {
+            // Handle visualization_result tool
+            if (Array.isArray(args.s3_paths)) {
+              args.s3_paths.forEach((path: string) => {
+                if (!newVisualizationResults.includes(path)) {
+                  newVisualizationResults.push(path);
+                }
+              });
+            }
+          }
         }
       });
 
@@ -278,6 +296,11 @@ export function ChatMessage({
 
       if (newVisualizationPaths.length > 0) {
         setDisplayVisualizationPaths(newVisualizationPaths);
+      }
+
+      if (newVisualizationResults.length > 0) {
+        setDisplayVisualizationResults(newVisualizationResults);
+        setVisualizationPaths(newVisualizationResults, chatId);
       }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
@@ -687,6 +710,46 @@ export function ChatMessage({
                     className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md font-mono"
                   >
                     {path}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Visualization results section */}
+          {displayVisualizationResults.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground font-medium mb-2 flex items-center">
+                <BarChart3 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/80" />
+                Generated {displayVisualizationResults.length} visualization
+                {displayVisualizationResults.length !== 1 ? "s" : ""}
+              </p>
+              <div className="grid gap-2">
+                {displayVisualizationResults.map((path, index) => (
+                  <div
+                    key={index}
+                    className="group relative flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                          Visualization {index + 1}
+                        </p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate font-mono">
+                          {path.split("/").pop() || path}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => window.open(path, "_blank")}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
                   </div>
                 ))}
               </div>
