@@ -402,7 +402,7 @@ const ChatView = React.memo(
     fetchNextPage,
     isFetchingNextPage = false,
   }: ChatViewProps) => (
-    <div className="flex-1 overflow-hidden relative">
+    <div className="flex-1 overflow-hidden relative min-h-0">
       <div
         className={`z-10 absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background via-background to-transparent pointer-events-none ${
           messages.length > 0 ? "opacity-100" : "opacity-0"
@@ -410,10 +410,10 @@ const ChatView = React.memo(
       />
       <ScrollArea
         ref={scrollRef}
-        className="h-full px-4"
+        className="h-full w-full"
         onScroll={handleScroll}
       >
-        <div className="pb-32 pt-8">
+        <div className="px-4 pb-32 pt-8">
           {/* Load more button for pagination */}
           {hasNextPage && selectedChatId && (
             <div className="flex justify-center mb-4">
@@ -938,17 +938,26 @@ function ChatPageClient() {
   }, []);
 
   useLayoutEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && displayMessages.length > 0) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
       );
       if (viewport) {
         const isNearBottom =
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-          100;
-        if (isNearBottom) {
+          150;
+        // Only auto-scroll if user is near the bottom or if it's a new message being added
+        const lastMessage = displayMessages[displayMessages.length - 1];
+        const shouldAutoScroll =
+          isNearBottom &&
+          (lastMessage?.role === "assistant" || lastMessage?.role === "user");
+
+        if (shouldAutoScroll) {
           requestAnimationFrame(() => {
-            viewport.scrollTop = viewport.scrollHeight;
+            viewport.scrollTo({
+              top: viewport.scrollHeight,
+              behavior: "smooth",
+            });
           });
         }
       }
@@ -1017,8 +1026,8 @@ function ChatPageClient() {
   }, []); // Empty dependency array means this runs only once on mount
 
   return (
-    <main className="flex flex-col w-full">
-      <div className="flex w-full relative overflow-hidden max-h-screen">
+    <main className="flex flex-col w-full h-screen">
+      <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
             <Tabs
@@ -1095,9 +1104,9 @@ function ChatPageClient() {
 
               <TabsContent
                 value="chat"
-                className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none"
+                className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
               >
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-full min-h-0">
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
