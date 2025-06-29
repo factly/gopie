@@ -1030,13 +1030,15 @@ function ChatPageClient() {
                 <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
                   <TabsTrigger
                     value="chat"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
                   >
-                    {isLoadingChatDetails && selectedChatId
-                      ? "Loading..."
-                      : selectedChatTitle
-                      ? selectedChatTitle
-                      : "Chat"}
+                    <span className="truncate">
+                      {isLoadingChatDetails && selectedChatId
+                        ? "Loading..."
+                        : selectedChatTitle
+                        ? selectedChatTitle
+                        : "Chat"}
+                    </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="history"
