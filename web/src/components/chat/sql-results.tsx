@@ -16,7 +16,7 @@ export function SqlResults() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-muted/50">
+    <div className="flex h-full min-h-0 flex-col bg-muted/50">
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
           {results?.error ? (
@@ -41,8 +41,8 @@ export function SqlResults() {
           )}
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
-        <div className="flex h-full min-h-screen items-center justify-center">
+      <ScrollArea className="flex-1 min-h-0 p-4">
+        <div className="flex h-full items-center justify-center">
           {results?.error ? (
             <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{results.error}</p>

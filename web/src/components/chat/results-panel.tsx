@@ -24,7 +24,7 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="flex h-full flex-col bg-muted/50">
+    <div className="flex h-full min-h-0 flex-col bg-muted/50">
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">Results</h3>
@@ -39,7 +39,7 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col">
+      <Tabs defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
         <TabsList className="grid w-full grid-cols-2 rounded-none bg-background border-b">
           <TabsTrigger
             value="sql"
@@ -71,20 +71,16 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
 
         <TabsContent
           value="sql"
-          className="flex-1 m-0 data-[state=inactive]:hidden"
+          className="flex-1 m-0 min-h-0 data-[state=inactive]:hidden"
         >
           <SqlResults />
         </TabsContent>
 
         <TabsContent
           value="visualizations"
-          className="flex-1 m-0 data-[state=inactive]:hidden"
+          className="flex-1 m-0 min-h-0 data-[state=inactive]:hidden"
         >
-          <VisualizationResults
-            paths={visualizationPaths}
-            isOpen={true}
-            onClose={() => {}} // Don't close individual components, use the main close
-          />
+          <VisualizationResults paths={visualizationPaths} isOpen={true} />
         </TabsContent>
       </Tabs>
     </div>

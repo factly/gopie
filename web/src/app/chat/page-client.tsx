@@ -195,7 +195,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       <div className="flex items-center justify-between p-2 mb-4">
         <Button
           variant="ghost"
@@ -338,7 +338,7 @@ const ChatInput = React.memo(
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
-        <div className="flex items-start gap-2 max-w-5xl mx-auto">
+        <div className="flex items-start gap-2 w-full px-2">
           <ContextPicker
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
@@ -1017,7 +1017,7 @@ function ChatPageClient() {
   }, []); // Empty dependency array means this runs only once on mount
 
   return (
-    <main className="fixed inset-0 flex flex-col w-full">
+    <main className="flex flex-col w-full">
       <div className="flex w-full relative overflow-hidden max-h-screen">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
@@ -1147,16 +1147,10 @@ function ChatPageClient() {
       </div>
       {activeTab === "chat" && (
         <div
-          className="fixed bottom-0 right-0 z-10"
+          className="fixed bottom-0 z-10"
           style={{
-            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem",
-            width: isResultsPanelOpen
-              ? `calc(100% - ${
-                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
-                } - ${sqlPanelWidth}px)`
-              : `calc(100% - ${
-                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
-                })`,
+            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "0rem",
+            right: isResultsPanelOpen ? sqlPanelWidth : 0,
           }}
         >
           <ChatInput
