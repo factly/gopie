@@ -1,5 +1,4 @@
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
@@ -7,6 +6,7 @@ from app.core.constants import VISUALIZATION_RESULT
 from app.models.schema import ConfigSchema
 from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
+from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 
 from .types import AgentState, InputState, OutputState
@@ -17,22 +17,6 @@ from .utils import (
     upload_csv_files,
     upload_visualization_result_data,
 )
-
-# fmt: off
-SYSTEM_PROMPT = """\
-You are an expert data visualization engineer. Use altair to create visualizations, and save them to json.
-Do not create the date, read the data from the csv_path where the data is stored.
-Use the run_python_code tool to run python code.
-
-Your task is the following:
-1. Find the best way to visualize the data if the user has not specified any visualization type.
-2. Use altair to create visualizations, and save them to json.
-3. Use the run_python_code tool to run python code.
-4. Return the paths to the json files that contain the visualizations.
-
-First start by reasoning about the best way to visualize the data.
-"""
-# fmt: on
 
 
 async def pre_model_hook(state: AgentState, config: RunnableConfig):
@@ -49,19 +33,14 @@ async def pre_model_hook(state: AgentState, config: RunnableConfig):
         await adispatch_custom_event(
             "gopie-agent", {"content": "Preparing visualization ..."}
         )
-        system_message = SystemMessage(content=SYSTEM_PROMPT)
-        messages.append(system_message)
-        input_data = "This is the user query: " + state["user_query"] + "\n\n"
-        input_data += (
-            "The following are the datasets and their descriptions: \n\n"
+
+        messages = get_prompt(
+            "visualize_data",
+            user_query=state["user_query"],
+            datasets_info=state["datasets"],
+            csv_paths=csv_paths,
         )
-        for idx, (dataset, csv_path) in enumerate(
-            zip(state["datasets"], csv_paths)
-        ):
-            input_data += f"Dataset {idx + 1}: \n\n"
-            input_data += f"Description: {dataset.description}\n\n"
-            input_data += f"CSV Path: {csv_path}\n\n"
-        messages.append(HumanMessage(content=input_data))
+
         output["is_input_prepared"] = True
     output["messages"] = messages
     return output

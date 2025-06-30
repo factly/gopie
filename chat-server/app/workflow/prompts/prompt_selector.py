@@ -21,6 +21,10 @@ from .plan_query_prompt import (
     create_plan_query_prompt,
     format_plan_query_input,
 )
+from .plan_sql_query_tool import (
+    create_sql_planning_prompt,
+    format_sql_planning_input,
+)
 from .process_context_prompt import create_process_context_prompt
 from .process_query_prompt import (
     create_process_query_prompt,
@@ -28,14 +32,11 @@ from .process_query_prompt import (
 )
 from .response_prompt import create_response_prompt, format_response_input
 from .route_query_replan_prompt import create_route_query_replan_prompt
-from .sql_query_planning_prompt import (
-    create_sql_planning_prompt,
-    format_sql_planning_input,
-)
 from .stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
 )
+from .visualize_data_prompt import create_visualize_data_prompt
 
 NodeName = Literal[
     "plan_query",
@@ -51,7 +52,8 @@ NodeName = Literal[
     "check_visualization",
     "route_query_replan",
     "process_context",
-    "sql_query_planning",
+    "plan_sql_query_tool",
+    "visualize_data",
 ]
 
 
@@ -71,7 +73,8 @@ class PromptSelector:
             "check_visualization": create_check_visualization_prompt,
             "route_query_replan": create_route_query_replan_prompt,
             "process_context": create_process_context_prompt,
-            "sql_query_planning": create_sql_planning_prompt,
+            "plan_sql_query_tool": create_sql_planning_prompt,
+            "visualize_data": create_visualize_data_prompt,
         }
 
         self.format_prompt_input_map = {
@@ -80,7 +83,7 @@ class PromptSelector:
             "plan_query": format_plan_query_input,
             "process_query": format_process_query_input,
             "response": format_response_input,
-            "sql_query_planning": format_sql_planning_input,
+            "plan_sql_query_tool": format_sql_planning_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

@@ -43,9 +43,9 @@ async def plan_sql_query(
     """
     try:
         prompt = get_prompt(
-            "sql_query_planning", user_query=user_query, schemas=schemas
+            "plan_sql_query_tool", user_query=user_query, schemas=schemas
         )
-        model_id = get_node_model("plan_sql_query")
+        model_id = get_node_model("plan_sql_query_tool")
         llm = get_model_provider(config).get_llm(model_id=model_id)
         response = await llm.ainvoke(prompt)
         content = (
