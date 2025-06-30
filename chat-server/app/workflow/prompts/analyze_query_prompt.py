@@ -1,13 +1,21 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
 def create_analyze_query_prompt(
-    user_query: str,
-    tool_results: str,
-    tool_call_count: int,
-    dataset_ids: list[str] | None = None,
-    project_ids: list[str] | None = None,
-) -> list:
+    **kwargs,
+) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    user_query = kwargs.get("user_query", "")
+    tool_results = kwargs.get("tool_results", "")
+    tool_call_count = kwargs.get("tool_call_count", 0)
+    dataset_ids = kwargs.get("dataset_ids", [])
+    project_ids = kwargs.get("project_ids", [])
+
     system_content = """
 You are a data query classifier. Analyze the user query and take appropriate action.
 Prevent hallucination - only answer based on available context.
@@ -65,21 +73,37 @@ IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
 
 IF NO TOOL CALL IS REQUIRED:
     FORMAT YOUR RESPONSE AS JSON:
-    {
+    {{
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
         "reasoning": "Brief explanation of classification decision",
         "clarification_needed": "If conversational due to vagueness, specify what you need"
-    }
+    }}
 """
 
-    human_content = f"""
-USER QUERY: "{user_query}"
+    human_template_str = """
+USER QUERY: {user_query}
 PREVIOUS TOOL RESULTS: {tool_results}
 NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}/5 (max 5 allowed)
 DATASET IDS: {dataset_ids}
 PROJECT IDS: {project_ids}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(
+        user_query=user_query,
+        tool_results=tool_results,
+        tool_call_count=tool_call_count,
+        dataset_ids=dataset_ids,
+        project_ids=project_ids,
+    )
 
     return [
         SystemMessage(content=system_content),

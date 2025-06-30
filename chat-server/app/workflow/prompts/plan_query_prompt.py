@@ -1,7 +1,15 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_plan_query_prompt(input: str) -> list:
+def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
     system_content = """
 # QUERY TASK
 Given the following natural language query and detailed information
@@ -72,7 +80,7 @@ You must provide a well-formatted version of the SQL query for UI display with:
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{
+{{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
         {
@@ -83,7 +91,7 @@ Respond in this JSON format:
         }
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
-}
+}}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
@@ -91,9 +99,19 @@ related, include multiple queries in the "sql_queries" array, one for
 each dataset needed.
 """
 
-    human_content = f"""
+    human_template_str = """
 {input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
 
     return [
         SystemMessage(content=system_content),

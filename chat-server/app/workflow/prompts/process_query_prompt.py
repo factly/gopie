@@ -1,11 +1,20 @@
 import json
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_process_query_prompt(input: str) -> list[BaseMessage]:
-    system_message = SystemMessage(
-        content="""
+def create_process_query_prompt(
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
+    system_content = """
 You are a DuckDB and data expert. Analyze the user's
 question and determine if you need to generate SQL queries to get new data or
 if you can answer using available context.
@@ -31,22 +40,32 @@ RULES FOR SQL QUERIES (when needed):
 
 RESPONSE FORMAT:
 Return a JSON object in one of these formats:
-{
+{{
     "sql_queries": ["<SQL query here without semicolon>", ...],
     "explanations": ["<Brief explanation for each query>", ...],
     "response_for_non_sql": "<Brief explanation for non-sql response>"
-}
+}}
 
 Always respond with valid JSON only."""
-    )
 
-    human_content = f"""
+    human_template_str = """
 {input}
 """
 
-    human_message = HumanMessage(content=human_content)
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
 
-    return [system_message, human_message]
+    human_content = human_template_str.format(input=input_content)
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
 
 
 def format_process_query_input(

@@ -4,11 +4,20 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
 def create_process_context_prompt(
-    current_query: str, chat_history: list, **kwargs
-) -> list[BaseMessage]:
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    current_query = kwargs.get("current_query", "")
+    chat_history = kwargs.get("chat_history", [])
+
     system_content = """You are a context analyzer. Your task is to analyze the conversation history and current query to provide enhanced context for better data analysis.
 
 Given the chat history and current query, you should:
@@ -59,11 +68,23 @@ Context summary: ""
     else:
         chat_summary = ["No previous conversation"]
 
-    human_content = f"""Current user query: {current_query}
+    human_template_str = """Current user query: {current_query}
 
 Chat history: {chat_summary}
 
 Please analyze and enhance this query with relevant context."""
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(
+        current_query=current_query, chat_summary=chat_summary
+    )
 
     return [
         SystemMessage(content=system_content),

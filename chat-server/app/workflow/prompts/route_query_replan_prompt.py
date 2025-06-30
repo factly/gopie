@@ -1,11 +1,17 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_route_query_replan_prompt(
-    last_message_content: str | list,
-    subquery_errors: list | None,
-    node_messages: dict,
-) -> list:
+def create_route_query_replan_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    last_message_content = kwargs.get("last_message_content", "")
+    subquery_errors = kwargs.get("subquery_errors", None)
+    node_messages = kwargs.get("node_messages", {})
+
     system_content = """
 You are a query execution error analyzer. Your task is to analyze SQL execution errors and determine the best next action for query processing.
 
@@ -53,16 +59,30 @@ Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
         str(subquery_errors) if subquery_errors else "No previous errors"
     )
 
-    human_content = f"""
+    human_template_str = """
 I encountered an error when executing the SQL query:
-{content_str}
+{last_message_content}
 
 Previous error messages (including current attempt):
-{errors_str}
+{subquery_errors}
 
 Node execution messages and context:
 {node_messages}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(
+        last_message_content=content_str,
+        subquery_errors=errors_str,
+        node_messages=node_messages,
+    )
 
     return [
         SystemMessage(content=system_content),

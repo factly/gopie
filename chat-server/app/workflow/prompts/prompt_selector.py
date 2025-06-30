@@ -1,48 +1,38 @@
 from typing import Literal
 
 from langchain_core.messages import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate
 
-from app.workflow.prompts.analyze_query_prompt import (
-    create_analyze_query_prompt,
-)
-from app.workflow.prompts.check_visualization_prompt import (
-    create_check_visualization_prompt,
-)
-from app.workflow.prompts.generate_result_prompt import (
+from .analyze_query_prompt import create_analyze_query_prompt
+from .check_visualization_prompt import create_check_visualization_prompt
+from .generate_result_prompt import (
     create_generate_result_prompt,
     format_generate_result_input,
 )
-from app.workflow.prompts.generate_subqueries_prompt import (
+from .generate_subqueries_prompt import (
     create_assess_query_complexity_prompt,
     create_generate_subqueries_prompt,
 )
-from app.workflow.prompts.identify_datasets_prompt import (
+from .identify_datasets_prompt import (
     create_identify_datasets_prompt,
     format_identify_datasets_input,
 )
-from app.workflow.prompts.plan_query_prompt import (
+from .plan_query_prompt import (
     create_plan_query_prompt,
     format_plan_query_input,
 )
-from app.workflow.prompts.process_context_prompt import (
-    create_process_context_prompt,
-)
-from app.workflow.prompts.process_query_prompt import (
+from .process_context_prompt import create_process_context_prompt
+from .process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
 )
-from app.workflow.prompts.response_prompt import (
-    create_response_prompt,
-    format_response_input,
-)
-from app.workflow.prompts.route_query_replan_prompt import (
-    create_route_query_replan_prompt,
-)
-from app.workflow.prompts.sql_query_planning_prompt import (
+from .response_prompt import create_response_prompt, format_response_input
+from .route_query_replan_prompt import create_route_query_replan_prompt
+from .sql_query_planning_prompt import (
     create_sql_planning_prompt,
     format_sql_planning_input,
 )
-from app.workflow.prompts.stream_updates_prompt import (
+from .stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
 )
@@ -92,6 +82,12 @@ class PromptSelector:
             "response": format_response_input,
             "sql_query_planning": format_sql_planning_input,
         }
+
+    def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:
+        if node_name not in self.prompt_map:
+            raise ValueError(f"No prompt available for node: {node_name}")
+
+        return self.prompt_map[node_name](prompt_template=True)
 
     def get_prompt(
         self, node_name: NodeName, **kwargs

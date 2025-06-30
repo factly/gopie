@@ -1,11 +1,17 @@
 import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_identify_datasets_prompt(
-    input: str,
-) -> list:
+def create_identify_datasets_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
     system_content = """
 TASK: Identify the most relevant dataset(s) for this user query.
 
@@ -50,7 +56,7 @@ INSTRUCTIONS:
 * Be concise but informative - this will help guide later processing
 
 FORMAT YOUR RESPONSE AS JSON:
-{
+{{
     "selected_dataset": ["dataset_name1", "dataset_name2", ...],
     "reasoning": "1-2 sentences explaining why these datasets were selected",
     "column_assumptions": [
@@ -67,7 +73,7 @@ FORMAT YOUR RESPONSE AS JSON:
     ],
     "node_message": "Brief message about datasets found/not found and why
                      they're relevant to the query"
-}
+}}
 
 IMPORTANT:
 * Be specific and precise
@@ -78,9 +84,19 @@ IMPORTANT:
 * Make your node_message informative providing context on the datasets you selected
 """
 
-    human_content = f"""
+    human_template_str = """
 {input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
 
     return [
         SystemMessage(content=system_content),
