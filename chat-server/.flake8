@@ -14,5 +14,5 @@ exclude =
     __init__.py,
     .mypy_cache,
     .pytest_cache,
-    app/core/system_prompt.py,
-    app/workflow/prompts/*
+    app/workflow/prompts/*,
+    app/tests/*,
