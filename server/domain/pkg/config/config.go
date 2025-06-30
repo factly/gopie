@@ -40,17 +40,17 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server        ServerConfig
-	S3            S3Config
-	Logger        LoggerConfig
-	OlapDB        OlapDBConfig
-	PortKey       PortKeyConfig
-	Meterus       MeterusConfig
-	Postgres      PostgresConfig
-	Zitadel       ZitadelConfig
-	AIAgent       AIAgentConfig
-	ApiServer     ApiServerConfig
-	EncryptionKey string
+	Server         ServerConfig
+	S3             S3Config
+	Logger         LoggerConfig
+	OlapDB         OlapDBConfig
+	PortKey        PortKeyConfig
+	Meterus        MeterusConfig
+	Postgres       PostgresConfig
+	Zitadel        ZitadelConfig
+	AIAgent        AIAgentConfig
+	ApiServer      ApiServerConfig
+	EncryptionKey  string
 	EnabledServers []string
 }
 
@@ -94,13 +94,10 @@ type AIAgentConfig struct {
 }
 
 type ZitadelConfig struct {
-	Protocol            string
-	Domain              string
-	InsecurePort        string
-	ProjectID           string
-	PersonalAccessToken string
-	ServiceUserID       string
-	LoginURL            string
+	Protocol     string
+	Domain       string
+	InsecurePort string
+	ProjectID    string
 }
 
 func initializeViper() error {
@@ -135,12 +132,9 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
 		{config.EncryptionKey, "encryption key"},
-		// {config.Zitadel.Protocol, "zitadel protocol"},
-		// {config.Zitadel.Domain, "zitadel domain"},
-		// {config.Zitadel.ProjectID, "zitadel project id"},
-		// {config.Zitadel.PersonalAccessToken, "zitadel personal access token"},
-		// {config.Zitadel.ServiceUserID, "zitadel service user id"},
-		// {config.Zitadel.LoginURL, "zitadel app login url"},
+		{config.Zitadel.Protocol, "zitadel protocol"},
+		{config.Zitadel.Domain, "zitadel domain"},
+		{config.Zitadel.ProjectID, "zitadel project id"},
 	}
 
 	if config.OlapDB.DB == "" {
@@ -289,13 +283,10 @@ func LoadConfig() (*GopieConfig, error) {
 			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
 		},
 		Zitadel: ZitadelConfig{
-			Protocol:            viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
-			Domain:              viper.GetString("GOPIE_ZITADEL_DOMAIN"),
-			InsecurePort:        viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
-			ProjectID:           viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
-			PersonalAccessToken: viper.GetString("GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN"),
-			ServiceUserID:       viper.GetString("GOPIE_ZITADEL_SERVICE_USER_ID"),
-			LoginURL:            viper.GetString("GOPIE_ZITADEL_APP_LOGIN_URL"),
+			Protocol:     viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
+			Domain:       viper.GetString("GOPIE_ZITADEL_DOMAIN"),
+			InsecurePort: viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
+			ProjectID:    viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
 		},
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
