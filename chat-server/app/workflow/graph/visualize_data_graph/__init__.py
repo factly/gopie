@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
+from app.core.constants import VISUALIZATION_RESULT
 from app.models.schema import ConfigSchema
 from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
@@ -92,14 +93,13 @@ async def respond(state: AgentState):
         "tool_call_id": tool_call["id"],
     }
     await state["sandbox"].kill()
-    data_name = "visualization_result"
-    data_args = {"s3_paths": s3_paths}
+
     await adispatch_custom_event(
         "gopie-agent",
         {
             "content": "Visualization Created",
-            "name": data_name,
-            "values": data_args,
+            "name": VISUALIZATION_RESULT,
+            "values": {"s3_paths": s3_paths},
         },
     )
     return {"messages": [tool_message], "s3_paths": s3_paths}

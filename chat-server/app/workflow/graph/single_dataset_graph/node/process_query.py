@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.constants import SQL_QUERIES_GENERATED
 from app.services.gopie.sql_executor import execute_sql
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -108,14 +109,12 @@ Please analyze the error and generate corrected SQL queries.
         current_failed_queries = []
 
         if sql_queries:
-            data_name = "sql_queries"
-            data_args = {"queries": sql_queries}
             await adispatch_custom_event(
                 "gopie-agent",
                 {
                     "content": "SQL queries generated",
-                    "name": data_name,
-                    "values": data_args,
+                    "name": SQL_QUERIES_GENERATED,
+                    "values": {"queries": sql_queries},
                 },
             )
 

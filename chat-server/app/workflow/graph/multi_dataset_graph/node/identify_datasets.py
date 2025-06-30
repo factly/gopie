@@ -5,6 +5,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.constants import DATASETS_USED
 from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.schema_search import search_schemas
@@ -146,14 +147,12 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "schemas": filtered_dataset_schemas,
             "column_assumptions": column_assumptions,
         }
-        data_name = "datasets_used"
-        data_args = {"datasets": selected_dataset_ids}
         await adispatch_custom_event(
             "gopie-agent",
             {
                 "content": "Datasets identified",
-                "name": data_name,
-                "values": data_args,
+                "name": DATASETS_USED,
+                "values": {"datasets": selected_dataset_ids},
             },
         )
 

@@ -3,6 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from app.core.constants import SQL_QUERIES_GENERATED
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.utils.model_registry.model_selection import get_node_model
@@ -56,14 +57,12 @@ async def plan_sql_query(
 
         sql_queries = parsed.get("sql_queries", [])
 
-        data_name = "sql_queries"
-        data_args = {"queries": sql_queries}
         await adispatch_custom_event(
             "gopie-agent",
             {
                 "content": "SQL query planning tool",
-                "name": data_name,
-                "values": data_args,
+                "name": SQL_QUERIES_GENERATED,
+                "values": {"queries": sql_queries},
             },
         )
 
