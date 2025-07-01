@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 
-class BaseProvider(ABC):
+class BaseLLMProvider(ABC):
     @abstractmethod
     def get_openai_model(
         self, model_name: str, streaming: bool = True
@@ -14,8 +14,4 @@ class BaseProvider(ABC):
     def get_gemini_model(
         self, model_name: str, streaming: bool = True
     ) -> ChatOpenAI:
-        pass
-
-    @abstractmethod
-    def get_embeddings_model(self, model_name: str) -> OpenAIEmbeddings:
         pass

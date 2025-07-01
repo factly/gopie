@@ -68,6 +68,13 @@ class Settings(BaseSettings):
 
     DEFAULT_VENDOR: str = ""
 
+    CUSTOM_EMBEDDING_BASE_URL: str = ""
+    CUSTOM_EMBEDDING_API_KEY: str = ""
+    CUSTOM_EMBEDDING_MODEL: str = ""
+
+    CUSTOM_LLM_BASE_URL: str = ""
+    CUSTOM_LLM_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
         extra = "ignore"
