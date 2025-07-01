@@ -1,12 +1,31 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, createDataStreamResponse } from "ai";
 import { z } from "zod";
+import { getSession } from "@/lib/auth/auth-utils";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+    // Get user session for authentication
+    const session = await getSession();
+
+    if (!session) {
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+          details: "No valid session found",
+        }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     // Parse the request body
     const body = await req.json();
     const { messages, project_ids, dataset_ids, chat_id } = body;
@@ -21,6 +40,7 @@ export async function POST(req: Request) {
       hasProjectIds: !!project_ids,
       hasDatasetIds: !!dataset_ids,
       chatId: chat_id,
+      userId: session.user.id,
     });
 
     // Create OpenAI-compatible client pointed at our API
@@ -30,12 +50,18 @@ export async function POST(req: Request) {
       name: "GoPie",
     });
 
-    // Build headers object
+    // Build headers object with authentication
     const headers: Record<string, string> = {
+      Authorization: `Bearer ${session.accessToken}`,
       "x-project-ids": project_ids?.join(",") || "",
       "x-dataset-ids": dataset_ids?.join(",") || "",
-      "x-user-id": "1",
+      // "x-user-id": session.user.id,
     };
+
+    // Add organization ID header if available
+    if (session.user.organizationId) {
+      headers["x-organization-id"] = session.user.organizationId;
+    }
 
     // Add chat ID header if available
     if (chat_id) {

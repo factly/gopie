@@ -7,6 +7,7 @@ export interface ZitadelUser {
   email: string;
   emailVerified: boolean;
   profilePicture?: string;
+  organizationId?: string;
 }
 
 export interface ZitadelSession {
@@ -197,6 +198,7 @@ export class ZitadelClient {
       email: user.human?.email?.email,
       emailVerified: user.human?.email?.isVerified || false,
       profilePicture: user.human?.profile?.avatarUrl,
+      organizationId: user.details?.resourceOwner,
     };
 
     return mappedUser;

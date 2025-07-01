@@ -8,10 +8,10 @@ interface DeleteChatParams {
 
 export const useDeleteChat = createMutation({
   mutationKey: ["delete-chat"],
-  mutationFn: async ({ chatId, userId }: DeleteChatParams) => {
+  mutationFn: async ({ chatId }: DeleteChatParams) => {
     await apiClient.delete(`v1/api/chat/${chatId}`, {
       headers: {
-        "x-user-id": userId,
+        // "x-user-id": userId,
       },
     });
   },

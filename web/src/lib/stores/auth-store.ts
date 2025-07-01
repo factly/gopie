@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ZitadelUser } from "@/lib/auth/zitadel-client";
+import {
+  setGlobalAccessToken,
+  setGlobalOrganizationId,
+} from "@/lib/api-client";
 
 interface AuthState {
   user: ZitadelUser | null;
@@ -8,6 +12,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   sessionToken: string | null;
+  accessToken: string | null;
+  organizationId: string | null;
 
   // Actions
   login: (loginName: string, password: string) => Promise<boolean>;
@@ -33,6 +39,8 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       sessionToken: null,
+      accessToken: null,
+      organizationId: null,
 
       login: async (loginName: string, password: string): Promise<boolean> => {
         set({ isLoading: true, error: null });
@@ -53,10 +61,15 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: data.user,
             isAuthenticated: true,
-            sessionToken: data.sessionToken,
+            sessionToken: null, // sessionToken is managed via cookies
+            accessToken: data.accessToken,
+            organizationId: data.user.organizationId ?? null,
             isLoading: false,
             error: null,
           });
+
+          setGlobalAccessToken(data.accessToken);
+          setGlobalOrganizationId(data.user.organizationId ?? null);
 
           return true;
         } catch (error) {
@@ -68,7 +81,11 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             user: null,
             sessionToken: null,
+            accessToken: null,
+            organizationId: null,
           });
+          setGlobalAccessToken(null);
+          setGlobalOrganizationId(null);
           return false;
         }
       },
@@ -156,9 +173,13 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             sessionToken: null,
+            accessToken: null,
+            organizationId: null,
             isLoading: false,
             error: null,
           });
+          setGlobalAccessToken(null);
+          setGlobalOrganizationId(null);
         }
       },
 
@@ -171,14 +192,23 @@ export const useAuthStore = create<AuthState>()(
             set({
               user: data.user,
               isAuthenticated: true,
-              sessionToken: data.sessionToken,
+              sessionToken: null, // sessionToken is managed via cookies
+              accessToken: data.accessToken,
+              organizationId: data.user.organizationId ?? null,
             });
+
+            setGlobalAccessToken(data.accessToken);
+            setGlobalOrganizationId(data.user.organizationId ?? null);
           } else {
             set({
               user: null,
               isAuthenticated: false,
               sessionToken: null,
+              accessToken: null,
+              organizationId: null,
             });
+            setGlobalAccessToken(null);
+            setGlobalOrganizationId(null);
           }
         } catch (error) {
           console.error("Session check error:", error);
@@ -186,7 +216,11 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             sessionToken: null,
+            accessToken: null,
+            organizationId: null,
           });
+          setGlobalAccessToken(null);
+          setGlobalOrganizationId(null);
         }
       },
 
@@ -199,6 +233,8 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         sessionToken: state.sessionToken,
+        accessToken: state.accessToken,
+        organizationId: state.organizationId,
       }),
     }
   )

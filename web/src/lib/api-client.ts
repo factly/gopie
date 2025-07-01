@@ -1,6 +1,48 @@
 import ky from "ky";
 import { ColumnInfo } from "@/lib/queries/dataset/get-schema";
 
+// Global access token management
+class TokenManager {
+  private token: string | null = null;
+  private organizationId: string | null = null;
+
+  setToken(token: string | null) {
+    this.token = token;
+  }
+
+  getToken(): string | null {
+    return this.token;
+  }
+
+  setOrganizationId(organizationId: string | null) {
+    this.organizationId = organizationId;
+  }
+
+  getOrganizationId(): string | null {
+    return this.organizationId;
+  }
+}
+
+const tokenManager = new TokenManager();
+
+// Functions to manage global access token
+export function setGlobalAccessToken(token: string | null) {
+  tokenManager.setToken(token);
+}
+
+export function getGlobalAccessToken(): string | null {
+  return tokenManager.getToken();
+}
+
+// Functions to manage global organization id
+export function setGlobalOrganizationId(organizationId: string | null) {
+  tokenManager.setOrganizationId(organizationId);
+}
+
+export function getGlobalOrganizationId(): string | null {
+  return tokenManager.getOrganizationId();
+}
+
 export const apiClient = ky.create({
   prefixUrl: process.env.NEXT_PUBLIC_GOPIE_API_URL,
   headers: {
@@ -9,6 +51,21 @@ export const apiClient = ky.create({
   timeout: false, // Disable timeout
   // Or if you want a very long timeout instead of disabling:
   // timeout: 300000, // 5 minutes in milliseconds
+  hooks: {
+    beforeRequest: [
+      (request) => {
+        const token = getGlobalAccessToken();
+        if (token && !request.headers.get("Authorization")) {
+          request.headers.set("Authorization", `Bearer ${token}`);
+        }
+
+        const orgId = getGlobalOrganizationId();
+        if (orgId && !request.headers.get("x-organization-id")) {
+          request.headers.set("x-organization-id", orgId);
+        }
+      },
+    ],
+  },
 });
 
 // Project Types
@@ -76,78 +133,32 @@ export interface ApiOptions extends RequestInit {
   requireAuth?: boolean;
 }
 
-// Utility hook for making authenticated API requests
-import { useAuth } from "@/hooks/use-auth";
-
+// Legacy hook for backward compatibility - authentication is now automatic via apiClient
+// @deprecated Use apiClient directly instead
 export function useApiClient() {
-  const { accessToken } = useAuth();
-
-  const makeRequest = async (endpoint: string, options: ApiOptions = {}) => {
-    const {
-      requireAuth = false,
-      headers: customHeaders,
-      ...restOptions
-    } = options;
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...(customHeaders as Record<string, string>),
-    };
-
-    // Add authentication header if required and access token is available
-    if (requireAuth && accessToken) {
-      (
-        headers as Record<string, string>
-      ).Authorization = `Bearer ${accessToken}`;
-    } else if (requireAuth && !accessToken) {
-      throw new Error("Access token not available for authenticated request");
-    }
-
-    const response = await fetch(endpoint, {
-      ...restOptions,
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${response.status} - ${errorText}`);
-    }
-
-    // Handle empty responses
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return response.json();
-    }
-
-    return response.text();
-  };
-
   return {
-    get: (endpoint: string, options: ApiOptions = {}) =>
-      makeRequest(endpoint, { ...options, method: "GET" }),
+    get: (endpoint: string, options: Record<string, unknown> = {}) =>
+      apiClient.get(endpoint, options).json(),
 
-    post: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
-      makeRequest(endpoint, {
-        ...options,
-        method: "POST",
-        body: data ? JSON.stringify(data) : undefined,
-      }),
+    post: (
+      endpoint: string,
+      data?: unknown,
+      options: Record<string, unknown> = {}
+    ) => apiClient.post(endpoint, { json: data, ...options }).json(),
 
-    put: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
-      makeRequest(endpoint, {
-        ...options,
-        method: "PUT",
-        body: data ? JSON.stringify(data) : undefined,
-      }),
+    put: (
+      endpoint: string,
+      data?: unknown,
+      options: Record<string, unknown> = {}
+    ) => apiClient.put(endpoint, { json: data, ...options }).json(),
 
-    patch: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
-      makeRequest(endpoint, {
-        ...options,
-        method: "PATCH",
-        body: data ? JSON.stringify(data) : undefined,
-      }),
+    patch: (
+      endpoint: string,
+      data?: unknown,
+      options: Record<string, unknown> = {}
+    ) => apiClient.patch(endpoint, { json: data, ...options }).json(),
 
-    delete: (endpoint: string, options: ApiOptions = {}) =>
-      makeRequest(endpoint, { ...options, method: "DELETE" }),
+    delete: (endpoint: string, options: Record<string, unknown> = {}) =>
+      apiClient.delete(endpoint, options).json(),
   };
 }

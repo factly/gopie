@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
-import { useApiClient } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,7 +15,6 @@ import { useState } from "react";
 
 export function AccessTokenDemo() {
   const { accessToken, isAuthenticated } = useAuth();
-  const apiClient = useApiClient();
   const [response, setResponse] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,9 +25,8 @@ export function AccessTokenDemo() {
     try {
       // Example: Make an authenticated request to your backend API
       // Replace with your actual API endpoint
-      const result = await apiClient.get("/api/protected-route", {
-        requireAuth: true,
-      });
+      // No need to pass requireAuth - authentication is now automatic
+      const result = await apiClient.get("/api/protected-route").json();
       setResponse(JSON.stringify(result, null, 2));
     } catch (error) {
       setResponse(
@@ -57,8 +55,7 @@ export function AccessTokenDemo() {
       <CardHeader>
         <CardTitle>Access Token Demo</CardTitle>
         <CardDescription>
-          Your access token is now available for making authenticated backend
-          requests
+          Your access token is automatically used for all API requests
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -84,10 +81,11 @@ export function AccessTokenDemo() {
           <h4 className="font-medium">Usage Example:</h4>
           <div className="text-sm text-muted-foreground space-y-1">
             <p>• Use the `useAuth()` hook to get the access token</p>
+            <p>• Use the `apiClient` directly - authentication is automatic</p>
             <p>
-              • Use the `useApiClient()` hook for making authenticated requests
+              • All API requests will include the Authorization header
+              automatically
             </p>
-            <p>• Set `requireAuth: true` in your API call options</p>
           </div>
         </div>
 
@@ -112,13 +110,15 @@ export function AccessTokenDemo() {
 
         <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
           <strong>Code Example:</strong>
-          <pre className="mt-2 text-xs">{`const { accessToken } = useAuth();
-const apiClient = useApiClient();
+          <pre className="mt-2 text-xs">{`import { apiClient } from '@/lib/api-client';
 
-// Make authenticated request
-const data = await apiClient.get('/api/data', { 
-  requireAuth: true 
-});`}</pre>
+// Make authenticated request - automatic auth headers
+const data = await apiClient.get('/api/data').json();
+
+// POST request with data
+const result = await apiClient.post('/api/create', { 
+  json: { name: 'example' } 
+}).json();`}</pre>
         </div>
       </CardContent>
     </Card>
