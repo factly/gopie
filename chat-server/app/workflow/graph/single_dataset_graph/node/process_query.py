@@ -14,7 +14,12 @@ from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.single_dataset_graph.types import State
+from app.workflow.graph.single_dataset_graph.types import (
+    FailedQuery,
+    SingleDatasetQueryResult,
+    SQLQueryResult,
+    State,
+)
 
 
 def convert_rows_to_csv(rows: list[dict]) -> str:
@@ -45,7 +50,7 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
 async def process_query(state: State, config: RunnableConfig) -> dict:
     try:
         dataset_id = state.get("dataset_id", None)
-        user_query = state.get("user_query", "")
+        user_query = state.get("user_query", "") or ""
         retry_count = state.get("retry_count", 0)
         error = state.get("error")
         failed_queries = state.get("failed_queries", [])
@@ -106,7 +111,7 @@ Please analyze the error and generate corrected SQL queries.
         sql_queries = parsed_response.get("sql_queries", [])
         explanations = parsed_response.get("explanations", [])
         response_for_non_sql = parsed_response.get("response_for_non_sql", "")
-        current_failed_queries = []
+        current_failed_queries: list[FailedQuery] = []
 
         if sql_queries:
             await adispatch_custom_event(
@@ -118,7 +123,7 @@ Please analyze the error and generate corrected SQL queries.
                 },
             )
 
-            sql_results = []
+            sql_results: list[SQLQueryResult] = []
 
             for q, exp in zip(sql_queries, explanations):
                 try:
@@ -147,13 +152,14 @@ Please analyze the error and generate corrected SQL queries.
                         {"sql_query": q, "error": error_str}
                     )
 
-            query_result = {
-                "user_query": user_query,
-                "user_friendly_dataset_name": user_provided_dataset_name,
-                "dataset_name": dataset_name,
-                "sql_queries": sql_results,
-                "timestamp": datetime.now().isoformat(),
-            }
+            query_result = SingleDatasetQueryResult(
+                user_query=user_query,
+                user_friendly_dataset_name=user_provided_dataset_name,
+                dataset_name=dataset_name,
+                sql_queries=sql_results,
+                response_for_non_sql=None,
+                timestamp=datetime.now().isoformat(),
+            )
 
             return {
                 "messages": [
@@ -167,13 +173,14 @@ Please analyze the error and generate corrected SQL queries.
 
         else:
 
-            query_result = {
-                "user_query": user_query,
-                "user_friendly_dataset_name": user_provided_dataset_name,
-                "dataset_name": dataset_name,
-                "response_for_non_sql": response_for_non_sql,
-                "timestamp": datetime.now().isoformat(),
-            }
+            query_result = SingleDatasetQueryResult(
+                user_query=user_query,
+                user_friendly_dataset_name=user_provided_dataset_name,
+                dataset_name=dataset_name,
+                sql_queries=None,
+                response_for_non_sql=response_for_non_sql,
+                timestamp=datetime.now().isoformat(),
+            )
 
             return {
                 "messages": [

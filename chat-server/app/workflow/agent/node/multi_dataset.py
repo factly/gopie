@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
@@ -12,20 +10,22 @@ from app.workflow.graph.multi_dataset_graph.types import QueryResult
 from ..types import AgentState, Dataset
 
 
-def list_of_dict_to_list_of_lists(list_of_dict: List[dict]) -> List[List]:
+def list_of_dict_to_list_of_lists(list_of_dict: list[dict]) -> list[list]:
     data = [list(d.values()) for d in list_of_dict]
     headers = list(list_of_dict[0].keys())
     return [headers] + data
 
 
-def query_result_to_datasets(query_result: QueryResult) -> List[Dataset]:
+def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
     datasets = []
     dataset_count = 0
     for subquery in query_result.subqueries:
-        for sql_query in subquery.sql_queries:
-            description = f"Query: {sql_query.sql_query}\n\n"
-            description += f"Explanation: {sql_query.explanation}\n\n"
-            data = list_of_dict_to_list_of_lists(sql_query.sql_query_result)
+        for sql_query_info in subquery.sql_queries:
+            description = f"Query: {sql_query_info.sql_query}\n\n"
+            description += f"Explanation: {sql_query_info.explanation}\n\n"
+            data = list_of_dict_to_list_of_lists(
+                sql_query_info.sql_query_result
+            )
             datasets.append(Dataset(data=data, description=description))
             dataset_count += 1
     return datasets
