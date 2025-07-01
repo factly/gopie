@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 alter table projects
-    add column if not exists org_id uuid;
+    add column if not exists org_id text;
 -- +goose StatementEnd
 
 -- +goose Down

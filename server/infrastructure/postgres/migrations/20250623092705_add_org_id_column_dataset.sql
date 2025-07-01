@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 alter table datasets
-    add column if not exists org_id uuid;
+    add column if not exists org_id text;
 -- +goose StatementEnd
 
 -- +goose Down
