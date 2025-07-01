@@ -9,13 +9,11 @@ from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from app.utils.model_registry.model_provider import ModelProvider
+from app.utils.model_registry.embeddings import get_embeddings_model
 
 
 async def add_documents_to_vector_store(documents, ids=None):
-    model_provider = ModelProvider({})
-
-    vector_store = setup_vector_store(model_provider.get_embeddings_model())
+    vector_store = setup_vector_store(get_embeddings_model())
     client = initialize_qdrant_client()
 
     if ids is None:

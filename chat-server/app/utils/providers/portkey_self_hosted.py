@@ -1,7 +1,6 @@
 import json
-from typing import Dict
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
 from app.core.log import logger
@@ -12,7 +11,7 @@ from app.utils.providers.base import BaseProvider
 class PortkeySelfHostedGatewayProvider(BaseProvider):
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.user = metadata.pop("user", "")
         self.trace_id = metadata.pop("trace_id", "")
@@ -64,12 +63,4 @@ class PortkeySelfHostedGatewayProvider(BaseProvider):
             default_headers=gemini_headers,
             model=model_name,
             streaming=streaming,
-        )
-
-    def get_embeddings_model(self, model_name: str) -> OpenAIEmbeddings:
-        return OpenAIEmbeddings(
-            api_key="X",  # type: ignore
-            base_url=settings.PORTKEY_SELF_HOSTED_URL,
-            default_headers=self.headers,
-            model=model_name,
         )

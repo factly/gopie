@@ -1,6 +1,4 @@
-from typing import Dict
-
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
 from app.utils.providers.base import BaseProvider
@@ -9,7 +7,7 @@ from app.utils.providers.base import BaseProvider
 class LiteLLMGatewayProvider(BaseProvider):
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.metadata = metadata
         self.headers = {
@@ -46,12 +44,4 @@ class LiteLLMGatewayProvider(BaseProvider):
                     **self.metadata,
                 },
             },
-        )
-
-    def get_embeddings_model(self, model_name: str) -> OpenAIEmbeddings:
-        return OpenAIEmbeddings(
-            api_key="X",  # type: ignore
-            base_url=settings.LITELLM_BASE_URL,
-            default_headers=self.headers,
-            model=model_name,
         )

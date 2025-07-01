@@ -1,5 +1,3 @@
-from typing import Dict, List, Optional
-
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
@@ -17,7 +15,7 @@ from app.utils.providers.portkey_self_hosted import (
 )
 
 
-def get_gateway_provider(metadata: Dict[str, str]) -> BaseProvider:
+def get_gateway_provider(metadata: dict[str, str]) -> BaseProvider:
     gateway_type = GatewayProvider(settings.GATEWAY_PROVIDER)
     match gateway_type:
         case GatewayProvider.PORTKEY_HOSTED:
@@ -60,7 +58,7 @@ class ModelConfig:
 class ModelProvider:
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.metadata = metadata
         self.gateway_provider = get_gateway_provider(metadata)
@@ -79,29 +77,21 @@ class ModelProvider:
         return model
 
     def _create_llm_with_tools(
-        self, model_id: str, tool_names: List[ToolNames]
+        self, model_id: str, tool_names: list[ToolNames]
     ):
         tools = get_tools(tool_names)
         tool_functions = [tool for tool, _ in tools.values()]
         llm = self._create_llm(model_id)
         return llm.bind_tools(tool_functions)
 
-    def _create_embeddings_model(self):
-        return self.gateway_provider.get_embeddings_model(
-            settings.DEFAULT_EMBEDDING_MODEL
-        )
-
     def get_llm(self, model_id: str):
         return self._create_llm(model_id)
 
-    def get_llm_with_tools(self, model_id: str, tool_names: List[ToolNames]):
+    def get_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
         return self._create_llm_with_tools(model_id, tool_names)
 
-    def get_embeddings_model(self):
-        return self._create_embeddings_model()
-
     def get_llm_for_node(
-        self, node_name: str, tool_names: Optional[List[ToolNames]] = None
+        self, node_name: str, tool_names: list[ToolNames] | None = None
     ):
         model_id = get_node_model(node_name)
         if tool_names:

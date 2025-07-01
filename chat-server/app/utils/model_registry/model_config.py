@@ -1,19 +1,5 @@
-from app.models.provider import ModelCategory, ModelVendor
+from app.models.provider import ModelVendor
 from app.models.router import ModelInfo
-
-MODELS = {
-    ModelVendor.OPENAI: {
-        ModelCategory.ADVANCED: "o4-mini",
-        ModelCategory.BALANCED: "gpt-4o-mini",
-        ModelCategory.FAST: "gpt-4o",
-    },
-    ModelVendor.GOOGLE: {
-        ModelCategory.ADVANCED: "gemini-2.5-pro-preview-05-06",
-        ModelCategory.BALANCED: "gemini-2.5-flash-preview-04-17",
-        ModelCategory.FAST: "gemini-2.0-flash",
-    },
-}
-
 
 AVAILABLE_MODELS: dict[str, ModelInfo] = {
     "gpt-4o": ModelInfo(
