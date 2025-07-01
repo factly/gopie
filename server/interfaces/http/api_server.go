@@ -27,7 +27,7 @@ func serveApiServer(cfg *config.GopieConfig, params *ServerParams) error {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
 		AllowCredentials: true,
 		MaxAge:           86400,
 	}))
