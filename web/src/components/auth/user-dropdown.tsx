@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,15 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 export function UserDropdown() {
-  const { data: session, status } = useAuthSession();
-  const isLoading = status === "loading";
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
   const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/" });
+  const handleSignOut = async () => {
+    await logout();
+    router.push("/auth/login");
   };
 
   const getInitials = (name: string) => {
@@ -56,10 +57,10 @@ export function UserDropdown() {
     );
   }
 
-  if (!session?.user) {
+  if (!isAuthenticated || !user) {
     return (
       <Button variant="outline" size="sm" asChild>
-        <Link href="/api/auth/signin">Sign In</Link>
+        <Link href="/auth/login">Sign In</Link>
       </Button>
     );
   }
@@ -74,11 +75,11 @@ export function UserDropdown() {
         >
           <Avatar className="h-8 w-8">
             <AvatarImage
-              src={session.user.image || ""}
-              alt={session.user.name || "User"}
+              src={user.profilePicture || ""}
+              alt={user.displayName || "User"}
             />
             <AvatarFallback>
-              {getInitials(session.user.name || "")}
+              {getInitials(user.displayName || "")}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -87,10 +88,10 @@ export function UserDropdown() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {session.user.name}
+              {user.displayName}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {session.user.email}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>

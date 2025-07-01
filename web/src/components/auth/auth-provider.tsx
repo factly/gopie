@@ -1,12 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { SessionProvider } from "next-auth/react";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  return <SessionProvider>{children}</SessionProvider>;
+  const { checkSession } = useAuthStore();
+
+  React.useEffect(() => {
+    // Check session on mount
+    checkSession();
+  }, [checkSession]);
+
+  return <>{children}</>;
 }

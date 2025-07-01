@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,17 +14,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 export function SidebarUser() {
-  const { data: session, status } = useAuthSession();
-  const isLoading = status === "loading";
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
   const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
-  const user = session?.user;
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/" });
+  const handleSignOut = async () => {
+    await logout();
+    router.push("/auth/login");
   };
 
   const getInitials = (name: string) => {
@@ -62,14 +62,14 @@ export function SidebarUser() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return (
       <div className={cn("flex items-center", "px-3 py-2")}>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/api/auth/signin">Sign In</Link>
+          <Link href="/auth/login">Sign In</Link>
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-          <Link href="/api/auth/signin">
+          <Link href="/auth/login">
             <Avatar className="h-8 w-8">
               <AvatarFallback>SI</AvatarFallback>
             </Avatar>
@@ -89,15 +89,22 @@ export function SidebarUser() {
             className="relative h-8 w-8 rounded-full mr-0"
           >
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.image || ""} alt={user.name || "User"} />
-              <AvatarFallback>{getInitials(user.name || "")}</AvatarFallback>
+              <AvatarImage
+                src={user.profilePicture || ""}
+                alt={user.displayName || "User"}
+              />
+              <AvatarFallback>
+                {getInitials(user.displayName || "")}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.name}</p>
+              <p className="text-sm font-medium leading-none">
+                {user.displayName}
+              </p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user.email}
               </p>
@@ -111,7 +118,7 @@ export function SidebarUser() {
       </DropdownMenu>
       <div className="ml-2 flex flex-col items-start gap-0.5 overflow-hidden">
         <p className="text-sm font-medium leading-none truncate max-w-[140px]">
-          {user.name}
+          {user.displayName}
         </p>
         <p className="text-xs text-muted-foreground truncate max-w-[140px]">
           {user.email}

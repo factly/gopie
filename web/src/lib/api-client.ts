@@ -71,3 +71,83 @@ export interface PaginatedResponse<T> {
   limit: number;
   total: number;
 }
+
+export interface ApiOptions extends RequestInit {
+  requireAuth?: boolean;
+}
+
+// Utility hook for making authenticated API requests
+import { useAuth } from "@/hooks/use-auth";
+
+export function useApiClient() {
+  const { accessToken } = useAuth();
+
+  const makeRequest = async (endpoint: string, options: ApiOptions = {}) => {
+    const {
+      requireAuth = false,
+      headers: customHeaders,
+      ...restOptions
+    } = options;
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(customHeaders as Record<string, string>),
+    };
+
+    // Add authentication header if required and access token is available
+    if (requireAuth && accessToken) {
+      (
+        headers as Record<string, string>
+      ).Authorization = `Bearer ${accessToken}`;
+    } else if (requireAuth && !accessToken) {
+      throw new Error("Access token not available for authenticated request");
+    }
+
+    const response = await fetch(endpoint, {
+      ...restOptions,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+
+    // Handle empty responses
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return response.json();
+    }
+
+    return response.text();
+  };
+
+  return {
+    get: (endpoint: string, options: ApiOptions = {}) =>
+      makeRequest(endpoint, { ...options, method: "GET" }),
+
+    post: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
+      makeRequest(endpoint, {
+        ...options,
+        method: "POST",
+        body: data ? JSON.stringify(data) : undefined,
+      }),
+
+    put: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
+      makeRequest(endpoint, {
+        ...options,
+        method: "PUT",
+        body: data ? JSON.stringify(data) : undefined,
+      }),
+
+    patch: (endpoint: string, data?: unknown, options: ApiOptions = {}) =>
+      makeRequest(endpoint, {
+        ...options,
+        method: "PATCH",
+        body: data ? JSON.stringify(data) : undefined,
+      }),
+
+    delete: (endpoint: string, options: ApiOptions = {}) =>
+      makeRequest(endpoint, { ...options, method: "DELETE" }),
+  };
+}
