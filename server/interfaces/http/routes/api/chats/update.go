@@ -29,7 +29,7 @@ func (h *httpHandler) updateVisibility(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	chatID := c.Params("chat_id")
+	chatID := c.Params("chatID")
 	userID := c.Locals(middleware.UserCtxKey).(string)
 
 	svcParams := &models.UpdateChatVisibilityParams{

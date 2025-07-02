@@ -184,7 +184,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error fetching dataset summary", zap.Error(err))
 		// Clean up the dataset record and OLAP table since dataset summary fetch failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}
@@ -218,7 +218,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error creating dataset summary", zap.Error(err))
 		// Clean up the dataset record and OLAP table since dataset summary creation failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}
@@ -245,7 +245,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", res.TableName))
 		}
 
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}
