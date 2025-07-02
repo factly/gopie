@@ -29,6 +29,17 @@ definitions:
     required:
     - query
     type: object
+  chats.UpdateChatVisibilityParams:
+    properties:
+      visibility:
+        enum:
+        - public
+        - private
+        - organization
+        type: string
+    required:
+    - visibility
+    type: object
   chats.chatRequestBody:
     description: Request body for creating or continuing a chat conversation
     properties:
@@ -176,9 +187,13 @@ definitions:
         items:
           $ref: '#/definitions/models.ChatMessage'
         type: array
+      organization_id:
+        type: string
       title:
         type: string
       updated_at:
+        type: string
+      visibility:
         type: string
     type: object
   models.Choice:
@@ -190,6 +205,19 @@ definitions:
       index:
         type: integer
       logprobs: {}
+    type: object
+  models.DatabaseSource:
+    properties:
+      connection_string:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      sql_query:
+        type: string
+      updated_at:
+        type: string
     type: object
   models.Dataset:
     description: Dataset model
@@ -292,6 +320,9 @@ definitions:
         description: Name of the project
         example: My Project
         type: string
+      org_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       updated_by:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
@@ -321,9 +352,6 @@ definitions:
   projects.createRequestBody:
     description: Request body for creating a new project
     properties:
-      created_by:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
       description:
         description: Description of the project
         example: This is a detailed description of my new project
@@ -337,7 +365,6 @@ definitions:
         minLength: 3
         type: string
     required:
-    - created_by
     - description
     - name
     type: object
@@ -466,8 +493,124 @@ info:
   contact: {}
   description: GoPie API documentation
   title: GoPie API
-  version: "1.0"
+  version: "1.1"
 paths:
+  /api/chats/{chat_id}/visibility:
+    put:
+      consumes:
+      - application/json
+      description: Update the visibility setting of a specific chat
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: string
+      - description: Update chat visibility request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/chats.UpdateChatVisibilityParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated chat visibility
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update chat visibility
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update chat visibility
+      tags:
+      - chat
+  /source/database:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all database sources with pagination
+      parameters:
+      - default: 20
+        description: Limit number of results
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.DatabaseSource'
+                  type: array
+              type: object
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: List database sources
+      tags:
+      - database
+  /source/database/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a database source by its ID
+      parameters:
+      - description: Database Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted database source
+          schema:
+            $ref: '#/definitions/responses.SuccessResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Database source not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Delete a database source
+      tags:
+      - database
   /source/database/upload:
     post:
       consumes:

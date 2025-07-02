@@ -15,6 +15,137 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/chats/{chat_id}/visibility": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the visibility setting of a specific chat",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Update chat visibility",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat ID",
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update chat visibility request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chats.UpdateChatVisibilityParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated chat visibility",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update chat visibility",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/source/database": {
+            "get": {
+                "description": "Get a list of all database sources with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "List database sources",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit number of results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.DatabaseSource"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/source/database/upload": {
             "post": {
                 "description": "Create a new dataset from a Postgres database query",
@@ -66,6 +197,56 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/source/database/{id}": {
+            "delete": {
+                "description": "Delete a database source by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Delete a database source",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Database Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully deleted database source",
+                        "schema": {
+                            "$ref": "#/definitions/responses.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Database source not found",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }
@@ -1495,6 +1676,22 @@ const docTemplate = `{
                 }
             }
         },
+        "chats.UpdateChatVisibilityParams": {
+            "type": "object",
+            "required": [
+                "visibility"
+            ],
+            "properties": {
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private",
+                        "organization"
+                    ]
+                }
+            }
+        },
         "chats.chatRequestBody": {
             "description": "Request body for creating or continuing a chat conversation",
             "type": "object",
@@ -1698,10 +1895,16 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.ChatMessage"
                     }
                 },
+                "organization_id": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "visibility": {
                     "type": "string"
                 }
             }
@@ -1719,6 +1922,26 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "logprobs": {}
+            }
+        },
+        "models.DatabaseSource": {
+            "type": "object",
+            "properties": {
+                "connection_string": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "sql_query": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
             }
         },
         "models.Dataset": {
@@ -1855,6 +2078,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "My Project"
                 },
+                "org_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "updatedAt": {
                     "description": "Last update timestamp",
                     "type": "string",
@@ -1898,15 +2125,10 @@ const docTemplate = `{
             "description": "Request body for creating a new project",
             "type": "object",
             "required": [
-                "created_by",
                 "description",
                 "name"
             ],
             "properties": {
-                "created_by": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
@@ -2083,7 +2305,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "1.1",
 	Host:             "localhost:8000",
 	BasePath:         "/",
 	Schemes:          []string{},
