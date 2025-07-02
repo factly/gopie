@@ -21,7 +21,7 @@ INSTRUCTIONS:
 * Choose the dataset(s) that best match the user query based on
   usefulness and relevance
 * You can select multiple datasets if needed
-* Always refer to datasets by their "name" field
+* Always refer to datasets by their "Table SQL Name"
 * IMPORTANT: The query type and confidence score were determined
   by a previous LLM step. Do NOT rely solely on the query type
   or confidence score - use your own reasoning to determine if
@@ -60,16 +60,16 @@ FORMAT YOUR RESPONSE AS JSON:
     "selected_dataset": ["dataset_name1", "dataset_name2", ...],
     "reasoning": "1-2 sentences explaining why these datasets were selected",
     "column_assumptions": [
-        {
+        {{
             "dataset": "dataset_name1",
             "columns": [
-                {
+                {{
                     "name": "column_name",
                     "exact_values": ["value1", ...],
                     "fuzzy_values": ["value2", ...]
-                }
+                }}
             ]
-        }
+        }}
     ],
     "node_message": "Brief message about datasets found/not found and why
                      they're relevant to the query"
@@ -79,7 +79,7 @@ IMPORTANT:
 * Be specific and precise
 * Only select truly relevant datasets
 * Only include columns actually needed for the query
-* Always use the dataset "name" field (not ID)
+* Always use the dataset "Table SQL Name" field (not "name" field)
 * Only use exact_values when completely confident the value exists
 * Make your node_message informative providing context on the datasets you selected
 """
@@ -134,6 +134,9 @@ def format_identify_datasets_input(
                 dataset_section = [f"\n--- DATASET {i} ---"]
                 dataset_section.append(
                     f"Name: {schema.get('name', 'Unknown')}"
+                )
+                dataset_section.append(
+                    f"Table Name (for SQL): {schema.get('dataset_name', schema.get('name', 'Unknown'))}"
                 )
 
                 if schema.get("dataset_description"):

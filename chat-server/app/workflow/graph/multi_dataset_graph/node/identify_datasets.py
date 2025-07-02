@@ -130,20 +130,14 @@ async def identify_datasets(state: State, config: RunnableConfig):
         filtered_dataset_schemas = [
             schema
             for schema in semantic_searched_datasets
-            if schema.get("name") in selected_datasets
+            if schema.get("dataset_name") in selected_datasets
         ]
-
-        dataset_name_mapping = {
-            schema.get("name"): schema.get("dataset_name", schema.get("name"))
-            for schema in filtered_dataset_schemas
-        }
 
         selected_dataset_ids = [
             schema.get("dataset_id") for schema in filtered_dataset_schemas
         ]
 
         datasets_info = {
-            "dataset_name_mapping": dataset_name_mapping,
             "schemas": filtered_dataset_schemas,
             "column_assumptions": column_assumptions,
         }

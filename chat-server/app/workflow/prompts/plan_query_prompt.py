@@ -23,13 +23,9 @@ IMPORTANT:
 
 # DATASET NAMING GUIDELINES
 IMPORTANT - DATASET NAMING:
-- Each dataset has a 'name' (user-friendly name) and an 'dataset_name'
-  (the real table name in the database)
-- In your SQL query, you MUST use the dataset_name from the
-  datasets_info
-- Example: If a dataset is shown as "COVID-19 Cases" to the user, its
-  actual table name might be "ASD_ASDRDasdfaW"
-- Reference the provided `dataset_name_mapping` for the correct mapping
+- In your SQL query, you MUST use the dataset_name (table name) provided in the schema
+- This is the actual table name used in the database
+- DO NOT use the user-friendly name in SQL queries
 
 # CASE SENSITIVITY GUIDELINES
 - When comparing column values (not column names), use LOWER() function
@@ -83,12 +79,12 @@ Respond in this JSON format:
 {{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {
+        {{
             "sql_query": "the SQL query to fetch the required data",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }
+        }}
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
 }}
@@ -135,12 +131,6 @@ def format_plan_query_input(
 
     if datasets_info:
         input_parts.append("\n--- DATASETS INFORMATION ---")
-
-        dataset_name_mapping = datasets_info.get("dataset_name_mapping", {})
-        if dataset_name_mapping:
-            input_parts.append("Dataset Name Mapping:")
-            for user_name, db_name in dataset_name_mapping.items():
-                input_parts.append(f"- '{user_name}' → table: {db_name}")
 
         schemas = datasets_info.get("schemas", [])
         if schemas:

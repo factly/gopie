@@ -5,7 +5,6 @@ from app.services.gopie.sql_executor import execute_sql
 
 async def match_column_values(
     column_assumptions: list[dict],
-    dataset_name_mapping: dict,
 ) -> ColumnValueMatching:
     """
     Match column values against exact and fuzzy values and find similar values
@@ -16,8 +15,6 @@ async def match_column_values(
             Each dict has 'dataset' and 'columns' keys, where 'columns' is a
             list of dictionaries with 'name', 'exact_values', and
             'fuzzy_values' keys.
-        dataset_name_mapping: Mapping of user-friendly dataset names to actual
-            table names
 
     Returns:
         ColumnValueMatching object with analyzed datasets, matched column
@@ -25,26 +22,22 @@ async def match_column_values(
     """
     result = ColumnValueMatching()
 
-    if not column_assumptions or not dataset_name_mapping:
-        logger.warning("Empty column assumptions or dataset mapping provided")
+    if not column_assumptions:
+        logger.warning("Empty column assumptions provided")
         return result
 
     for dataset_assumption in column_assumptions:
         dataset_name = dataset_assumption.get("dataset")
         columns = dataset_assumption.get("columns", [])
 
-        if not dataset_name or dataset_name not in dataset_name_mapping:
-            logger.warning(
-                f"Dataset '{dataset_name}' not found in mapping, skipping"
-            )
+        if not dataset_name:
+            logger.warning("Dataset name not found in assumption, skipping")
             continue
 
         dataset_analysis = ColumnValueMatching.DatasetAnalysis(
             dataset_name=dataset_name
         )
         result.datasets[dataset_name] = dataset_analysis
-
-        actual_table = dataset_name_mapping[dataset_name]
 
         for col_idx, column_obj in enumerate(columns):
             column_name = column_obj.get("name")
@@ -68,7 +61,7 @@ async def match_column_values(
                     column_entry,
                     column_name,
                     exact_values,
-                    actual_table,
+                    dataset_name,
                 )
 
             if fuzzy_values:
@@ -76,7 +69,7 @@ async def match_column_values(
                     column_entry,
                     column_name,
                     fuzzy_values,
-                    actual_table,
+                    dataset_name,
                 )
 
     result.datasets = {
@@ -176,52 +169,23 @@ async def find_similar_values(
     value: str, column_name: str, table_name: str
 ) -> list[str]:
     """
-    Find values in the column similar to the expected value.
+    Find values similar to the given value in the column.
     """
-
     similar_values = []
-
     try:
         query = f"""
         SELECT DISTINCT {column_name}
         FROM {table_name}
-        WHERE {column_name} IS NOT NULL
-          AND (
-            LOWER({column_name}) LIKE LOWER('%{value}%')
-            OR
-            LOWER('{value}') LIKE LOWER(CONCAT('%', {column_name}, '%'))
-          )
+        WHERE LOWER({column_name}) LIKE LOWER('%{value}%')
         LIMIT 5
         """
         result = await execute_sql(query)
 
-        if result:
-            for row in result:
-                if column_name in row:
-                    similar_values.append(row[column_name])
+        if isinstance(result, list) and result:
+            similar_values = [
+                str(row.get(column_name)) for row in result if row
+            ]
 
-        # If no results, try word-by-word matching
-        if not similar_values:
-            words = value.split()
-
-            if len(words) > 1:
-                for word in words:
-                    if len(word) < 3:  # Skip short words
-                        continue
-
-                    query = f"""
-                    SELECT DISTINCT {column_name}
-                    FROM {table_name}
-                    WHERE {column_name} IS NOT NULL
-                    AND LOWER({column_name}) LIKE LOWER('%{word}%')
-                    LIMIT 5
-                    """
-                    word_result = await execute_sql(query)
-
-                    if word_result:
-                        for row in word_result:
-                            if column_name in row:
-                                similar_values.append(row[column_name])
     except Exception as e:
         logger.error(
             f"Error finding similar values for '{value}' in "
@@ -229,4 +193,4 @@ async def find_similar_values(
             exc_info=True,
         )
 
-    return list(set(similar_values))
+    return similar_values
