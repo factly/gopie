@@ -1,7 +1,5 @@
-"""Test configuration and common fixtures."""
-
 import sys
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -14,8 +12,16 @@ sys.modules["app.core.session"] = mock_session
 
 
 @pytest.fixture
+def sample_metadata():
+    return {
+        "user": "test_user",
+        "trace_id": "test_trace_123",
+        "chat_id": "test_chat_456",
+    }
+
+
+@pytest.fixture
 def mock_settings():
-    """Mock settings for testing."""
     return Mock(
         QDRANT_COLLECTION="test_collection",
         QDRANT_TOP_K=5,
@@ -35,16 +41,14 @@ def mock_settings():
 
 @pytest.fixture
 def mock_vector_store():
-    """Mock vector store for testing."""
     return Mock(
-        add_documents=AsyncMock(),
+        add_documents=Mock(),
         similarity_search=Mock(return_value=[]),
     )
 
 
 @pytest.fixture
 def mock_qdrant_client():
-    """Mock Qdrant client for testing."""
     return Mock(
         scroll=Mock(return_value=([],)),
         search=Mock(return_value=[]),
@@ -53,7 +57,6 @@ def mock_qdrant_client():
 
 @pytest.fixture
 def mock_embeddings():
-    """Mock embeddings model for testing."""
     return Mock(
         embed_query=Mock(return_value=[0.1, 0.2, 0.3]),
         embed_documents=Mock(return_value=[[0.1, 0.2, 0.3]]),
@@ -62,7 +65,6 @@ def mock_embeddings():
 
 @pytest.fixture
 def sample_dataset_schema():
-    """Sample dataset schema for testing."""
     return {
         "dataset_name": "test_dataset",
         "columns": [
@@ -79,21 +81,9 @@ def sample_dataset_schema():
 
 @pytest.fixture
 def sample_query_request():
-    """Sample query request for testing."""
     return {
         "messages": [{"role": "user", "content": "Show me the sales data"}],
         "model": "gpt-4",
         "user": "test_user",
         "metadata": {"project_id_1": "proj1,proj2", "dataset_id_1": "ds1,ds2"},
-    }
-
-
-@pytest.fixture
-def sample_metadata():
-    """Sample metadata for testing."""
-    return {
-        "user": "test_user",
-        "trace_id": "test_trace_123",
-        "chat_id": "test_chat_456",
-        "project_id": "test_project",
     }

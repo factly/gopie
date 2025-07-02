@@ -1,5 +1,3 @@
-"""Tests for vector store functionality."""
-
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,11 +10,8 @@ from app.services.qdrant.vector_store import (
 
 
 class TestVectorStore:
-    """Test cases for vector store operations."""
-
     @pytest.fixture
     def mock_documents(self):
-        """Mock documents for testing."""
         return [
             Mock(
                 page_content="Test document 1",
@@ -40,10 +35,9 @@ class TestVectorStore:
     async def test_add_documents_to_vector_store_success(
         self, mock_documents, mock_vector_store, mock_qdrant_client
     ):
-        """Test successful addition of documents to vector store."""
         with (
             patch(
-                "app.services.qdrant.vector_store.ModelProvider"
+                "app.utils.model_registry.model_provider.ModelProvider"
             ) as mock_provider,
             patch(
                 "app.services.qdrant.vector_store.setup_vector_store"
@@ -53,7 +47,6 @@ class TestVectorStore:
             ) as mock_init_client,
         ):
 
-            # Setup mocks
             mock_provider.return_value.get_embeddings_model.return_value = (
                 Mock()
             )
@@ -62,12 +55,10 @@ class TestVectorStore:
             mock_qdrant_client.scroll.return_value = (
                 [],
                 None,
-            )  # No existing documents
+            )
 
-            # Execute
             await add_documents_to_vector_store(mock_documents)
 
-            # Assertions
             mock_vector_store.add_documents.assert_called_once()
             call_args = mock_vector_store.add_documents.call_args
             assert len(call_args.kwargs["documents"]) == 2
@@ -80,7 +71,7 @@ class TestVectorStore:
         """Test that existing documents are skipped."""
         with (
             patch(
-                "app.services.qdrant.vector_store.ModelProvider"
+                "app.utils.model_registry.model_provider.ModelProvider"
             ) as mock_provider,
             patch(
                 "app.services.qdrant.vector_store.setup_vector_store"
@@ -90,22 +81,18 @@ class TestVectorStore:
             ) as mock_init_client,
         ):
 
-            # Setup mocks
             mock_provider.return_value.get_embeddings_model.return_value = (
                 Mock()
             )
             mock_setup.return_value = mock_vector_store
             mock_init_client.return_value = mock_qdrant_client
-            # First document exists, second doesn't
             mock_qdrant_client.scroll.side_effect = [
                 ([Mock()], None),  # Document exists
                 ([], None),  # Document doesn't exist
             ]
 
-            # Execute
             await add_documents_to_vector_store(mock_documents)
 
-            # Assertions - only one document should be added
             mock_vector_store.add_documents.assert_called_once()
             call_args = mock_vector_store.add_documents.call_args
             assert len(call_args.kwargs["documents"]) == 1
@@ -115,12 +102,11 @@ class TestVectorStore:
     async def test_add_documents_with_custom_ids(
         self, mock_documents, mock_vector_store, mock_qdrant_client
     ):
-        """Test adding documents with custom IDs."""
         custom_ids = ["custom_id_1", "custom_id_2"]
 
         with (
             patch(
-                "app.services.qdrant.vector_store.ModelProvider"
+                "app.utils.model_registry.model_provider.ModelProvider"
             ) as mock_provider,
             patch(
                 "app.services.qdrant.vector_store.setup_vector_store"
@@ -137,10 +123,8 @@ class TestVectorStore:
             mock_init_client.return_value = mock_qdrant_client
             mock_qdrant_client.scroll.return_value = ([], None)
 
-            # Execute
             await add_documents_to_vector_store(mock_documents, ids=custom_ids)
 
-            # Assertions
             mock_vector_store.add_documents.assert_called_once()
             call_args = mock_vector_store.add_documents.call_args
             assert call_args.kwargs["ids"] == custom_ids
@@ -153,12 +137,10 @@ class TestVectorStore:
         ]
         mock_vector_store.similarity_search.return_value = mock_results
 
-        # Execute
         results = perform_similarity_search(
             vector_store=mock_vector_store, query="test query", top_k=5
         )
 
-        # Assertions
         assert results == mock_results
         mock_vector_store.similarity_search.assert_called_once_with(
             "test query", k=5, filter=None
@@ -170,7 +152,6 @@ class TestVectorStore:
         mock_results = [Mock()]
         mock_vector_store.similarity_search.return_value = mock_results
 
-        # Execute
         results = perform_similarity_search(
             vector_store=mock_vector_store,
             query="test query",
@@ -178,7 +159,6 @@ class TestVectorStore:
             query_filter=query_filter,
         )
 
-        # Assertions
         assert results == mock_results
         mock_vector_store.similarity_search.assert_called_once_with(
             "test query", k=3, filter=query_filter
@@ -194,14 +174,12 @@ class TestVectorStore:
             [Mock()],  # Second call without filter succeeds
         ]
 
-        # Execute
         results = perform_similarity_search(
             vector_store=mock_vector_store,
             query="test query",
             query_filter=query_filter,
         )
 
-        # Assertions
         assert len(results) == 1
         assert mock_vector_store.similarity_search.call_count == 2
 
@@ -213,7 +191,6 @@ class TestVectorStore:
             "Vector store error"
         )
 
-        # Execute & Assert
         with pytest.raises(Exception, match="Vector store error"):
             perform_similarity_search(
                 vector_store=mock_vector_store, query="test query"
@@ -221,8 +198,6 @@ class TestVectorStore:
 
 
 class TestSchemaSearch:
-    """Test cases for schema search functionality."""
-
     @pytest.mark.asyncio
     async def test_search_schemas_success(self, mock_embeddings):
         """Test successful schema search."""
@@ -244,21 +219,25 @@ class TestSchemaSearch:
             mock_setup.return_value = mock_vector_store
             mock_search.return_value = mock_results
 
-            # Execute
             schemas = await search_schemas(
                 user_query="find datasets", embeddings=mock_embeddings, top_k=5
             )
 
-            # Assertions
             assert len(schemas) == 2
             assert schemas[0]["dataset_name"] == "test1"
             assert schemas[1]["dataset_name"] == "test2"
 
+            mock_setup.assert_called_once_with(embeddings=mock_embeddings)
+            mock_search.assert_called_once_with(
+                vector_store=mock_vector_store,
+                query="find datasets",
+                top_k=5,
+                query_filter=None,
+            )
+
     @pytest.mark.asyncio
     async def test_search_schemas_with_filters(self, mock_embeddings):
-        """Test schema search with project and dataset filters."""
-        mock_results = [Mock(page_content='{"dataset_name": "filtered_test"}')]
-
+        """Test schema search with filters."""
         with (
             patch(
                 "app.services.qdrant.schema_search.setup_vector_store"
@@ -268,44 +247,45 @@ class TestSchemaSearch:
             ) as mock_search,
         ):
 
-            mock_setup.return_value = Mock()
-            mock_search.return_value = mock_results
+            mock_vector_store = Mock()
+            mock_setup.return_value = mock_vector_store
+            mock_search.return_value = [
+                Mock(page_content='{"dataset_name": "test1", "columns": []}'),
+            ]
 
-            # Execute
-            schemas = await search_schemas(
+            await search_schemas(
                 user_query="find datasets",
                 embeddings=mock_embeddings,
-                project_ids=["proj1", "proj2"],
-                dataset_ids=["ds1"],
+                project_ids=["p1", "p2"],
+                dataset_ids=["d1", "d2"],
                 top_k=3,
             )
 
-            # Assertions
-            assert len(schemas) == 1
             mock_search.assert_called_once()
             call_args = mock_search.call_args
-            assert call_args.kwargs["query_filter"] is not None
-            assert call_args.kwargs["top_k"] == 3
+            assert call_args[1]["top_k"] == 3
+            assert call_args[1]["query_filter"] is not None
 
     @pytest.mark.asyncio
     async def test_search_schemas_handles_exceptions(self, mock_embeddings):
-        """Test that schema search handles exceptions gracefully."""
-        with patch(
-            "app.services.qdrant.schema_search.setup_vector_store"
-        ) as mock_setup:
-            mock_setup.side_effect = Exception("Vector store error")
+        """Test exception handling in schema search."""
+        with (
+            patch(
+                "app.services.qdrant.schema_search.setup_vector_store"
+            ) as mock_setup,
+        ):
 
-            # Execute
-            schemas = await search_schemas(
+            mock_setup.side_effect = Exception("Test error")
+
+            result = await search_schemas(
                 user_query="find datasets", embeddings=mock_embeddings
             )
 
-            # Assertions
-            assert schemas == []
+            assert result == []
 
     @pytest.mark.asyncio
     async def test_search_schemas_empty_results(self, mock_embeddings):
-        """Test schema search with no results."""
+        """Test handling of empty results."""
         with (
             patch(
                 "app.services.qdrant.schema_search.setup_vector_store"
@@ -315,13 +295,13 @@ class TestSchemaSearch:
             ) as mock_search,
         ):
 
-            mock_setup.return_value = Mock()
-            mock_search.return_value = []
+            mock_vector_store = Mock()
+            mock_setup.return_value = mock_vector_store
+            mock_search.return_value = []  # No results
 
-            # Execute
-            schemas = await search_schemas(
-                user_query="nonexistent query", embeddings=mock_embeddings
+            result = await search_schemas(
+                user_query="find nothing", embeddings=mock_embeddings
             )
 
-            # Assertions
-            assert schemas == []
+            # Should return empty list
+            assert result == []

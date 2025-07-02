@@ -101,7 +101,7 @@ class PromptSelector:
         formatted_input = self.format_prompt_input(node_name, **kwargs)
 
         if formatted_input:
-            return self.prompt_map[node_name](formatted_input["input"])
+            return self.prompt_map[node_name](input=formatted_input["input"])
         else:
             return self.prompt_map[node_name](**kwargs)
 

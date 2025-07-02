@@ -1,5 +1,3 @@
-"""Tests for dataset upload functionality."""
-
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,18 +8,14 @@ from app.models.router import UploadSchemaRequest
 
 
 class TestDatasetUpload:
-    """Test cases for dataset upload functionality."""
-
     @pytest.fixture
     def upload_request(self):
-        """Sample upload request."""
         return UploadSchemaRequest(
             project_id="test_project_123", dataset_id="test_dataset_456"
         )
 
     @pytest.fixture
     def mock_dataset_details(self):
-        """Mock dataset details."""
         return Mock(
             name="test_dataset",
             description="Test dataset description",
@@ -32,7 +26,6 @@ class TestDatasetUpload:
     async def test_upload_schema_success(
         self, upload_request, mock_dataset_details
     ):
-        """Test successful schema upload."""
         with (
             patch(
                 "app.api.v1.routers.dataset_upload.get_dataset_info"
@@ -45,7 +38,6 @@ class TestDatasetUpload:
             ) as mock_store,
         ):
 
-            # Setup mocks
             mock_get_info.return_value = mock_dataset_details
             mock_generate.return_value = (
                 {"schema": "test_schema"},
@@ -53,10 +45,8 @@ class TestDatasetUpload:
             )
             mock_store.return_value = True
 
-            # Execute
             result = await upload_schema(upload_request)
 
-            # Assertions
             assert result["success"] is True
             assert "successfully" in result["message"]
             mock_get_info.assert_called_once_with(
@@ -67,7 +57,6 @@ class TestDatasetUpload:
 
     @pytest.mark.asyncio
     async def test_upload_schema_dataset_info_failure(self, upload_request):
-        """Test upload schema when dataset info retrieval fails."""
         with patch(
             "app.api.v1.routers.dataset_upload.get_dataset_info"
         ) as mock_get_info:
@@ -85,7 +74,6 @@ class TestDatasetUpload:
     async def test_upload_schema_generate_schema_failure(
         self, upload_request, mock_dataset_details
     ):
-        """Test upload schema when schema generation fails."""
         with (
             patch(
                 "app.api.v1.routers.dataset_upload.get_dataset_info"
@@ -107,7 +95,6 @@ class TestDatasetUpload:
     async def test_upload_schema_store_failure(
         self, upload_request, mock_dataset_details
     ):
-        """Test upload schema when vector store storage fails."""
         with (
             patch(
                 "app.api.v1.routers.dataset_upload.get_dataset_info"
@@ -139,7 +126,6 @@ class TestDatasetUpload:
     async def test_upload_schema_http_exception_passthrough(
         self, upload_request
     ):
-        """Test that HTTPExceptions are passed through without wrapping."""
         with patch(
             "app.api.v1.routers.dataset_upload.get_dataset_info"
         ) as mock_get_info:

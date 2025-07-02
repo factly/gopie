@@ -1,27 +1,22 @@
-"""Tests for model registry functionality."""
-
 from unittest.mock import Mock, patch
 
 import pytest
 
-from app.models.provider import ModelVendor
+from app.models.provider import ModelCategory, ModelVendor
 from app.tool_utils.tools import ToolNames
 from app.utils.model_registry.model_provider import (
     ModelConfig,
     ModelProvider,
     get_chat_history,
     get_custom_model,
-    get_gateway_provider,
+    get_llm_provider,
     get_model_provider,
 )
 from app.utils.model_registry.model_selection import get_node_model
 
 
 class TestModelConfig:
-    """Test cases for ModelConfig class."""
-
     def test_model_config_default_initialization(self):
-        """Test default ModelConfig initialization."""
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
@@ -36,14 +31,13 @@ class TestModelConfig:
             assert config.gemini_model == "gemini-pro"
 
     def test_model_config_with_openai_model_id(self):
-        """Test ModelConfig with OpenAI model ID."""
         with (
             patch(
                 "app.utils.model_registry.model_provider.settings"
             ) as mock_settings,
             patch.dict(
                 "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
-                {"gpt-3.5-turbo": Mock(provider=ModelVendor.OPENAI)},
+                {"gpt-3.5-turbo": Mock(provider=ModelVendor.OPENAI.value)},
             ),
         ):
 
@@ -55,14 +49,13 @@ class TestModelConfig:
             assert config.openai_model == "gpt-3.5-turbo"
 
     def test_model_config_with_google_model_id(self):
-        """Test ModelConfig with Google model ID."""
         with (
             patch(
                 "app.utils.model_registry.model_provider.settings"
             ) as mock_settings,
             patch.dict(
                 "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
-                {"gemini-1.5-pro": Mock(provider=ModelVendor.GOOGLE)},
+                {"gemini-1.5-pro": Mock(provider=ModelVendor.GOOGLE.value)},
             ),
         ):
 
@@ -74,7 +67,6 @@ class TestModelConfig:
             assert config.gemini_model == "gemini-1.5-pro"
 
     def test_model_config_with_unknown_model_id(self):
-        """Test ModelConfig with unknown model ID."""
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
@@ -83,183 +75,197 @@ class TestModelConfig:
 
             config = ModelConfig(model_id="unknown-model")
 
-            # Should use default configuration
             assert config.model_provider == ModelVendor.OPENAI
             assert config.openai_model == "gpt-4"
 
 
-class TestGatewayProvider:
-    """Test cases for gateway provider selection."""
-
-    def test_get_gateway_provider_portkey_hosted(self, sample_metadata):
-        """Test getting Portkey hosted gateway provider."""
+class TestLLMProvider:
+    def test_get_llm_provider_portkey_hosted(self, sample_metadata):
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
             mock_settings.GATEWAY_PROVIDER = "portkey_hosted"
 
-            provider = get_gateway_provider(sample_metadata)
+            provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.portkey import PortkeyGatewayProvider
+            from app.utils.llm_providers.portkey import PortkeyLLMProvider
 
-            assert isinstance(provider, PortkeyGatewayProvider)
+            assert isinstance(provider, PortkeyLLMProvider)
 
-    def test_get_gateway_provider_portkey_self_hosted(self, sample_metadata):
-        """Test getting Portkey self-hosted gateway provider."""
+    def test_get_llm_provider_portkey_self_hosted(self, sample_metadata):
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
             mock_settings.GATEWAY_PROVIDER = "portkey_self_hosted"
 
-            provider = get_gateway_provider(sample_metadata)
+            provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.portkey_self_hosted import (
-                PortkeySelfHostedGatewayProvider,
+            from app.utils.llm_providers.portkey_self_hosted import (
+                PortkeySelfHostedLLMProvider,
             )
 
-            assert isinstance(provider, PortkeySelfHostedGatewayProvider)
+            assert isinstance(provider, PortkeySelfHostedLLMProvider)
 
-    def test_get_gateway_provider_litellm(self, sample_metadata):
-        """Test getting LiteLLM gateway provider."""
+    def test_get_llm_provider_litellm(self, sample_metadata):
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
             mock_settings.GATEWAY_PROVIDER = "litellm"
 
-            provider = get_gateway_provider(sample_metadata)
+            provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.litellm import LiteLLMGatewayProvider
+            from app.utils.llm_providers.litellm import LiteLLMProvider
 
-            assert isinstance(provider, LiteLLMGatewayProvider)
+            assert isinstance(provider, LiteLLMProvider)
 
-    def test_get_gateway_provider_cloudflare(self, sample_metadata):
-        """Test getting Cloudflare gateway provider."""
+    def test_get_llm_provider_cloudflare(self, sample_metadata):
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
             mock_settings.GATEWAY_PROVIDER = "cloudflare"
 
-            provider = get_gateway_provider(sample_metadata)
+            provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.cloudflare import (
-                CloudflareGatewayProvider,
+            from app.utils.llm_providers.cloudflare import (
+                CloudflareLLMProvider,
             )
 
-            assert isinstance(provider, CloudflareGatewayProvider)
+            assert isinstance(provider, CloudflareLLMProvider)
 
-    def test_get_gateway_provider_openrouter(self, sample_metadata):
-        """Test getting OpenRouter gateway provider."""
+    def test_get_llm_provider_openrouter(self, sample_metadata):
         with patch(
             "app.utils.model_registry.model_provider.settings"
         ) as mock_settings:
             mock_settings.GATEWAY_PROVIDER = "openrouter"
 
-            provider = get_gateway_provider(sample_metadata)
+            provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.openrouter import (
-                OpenrouterGatewayProvider,
+            from app.utils.llm_providers.openrouter import (
+                OpenRouterLLMProvider,
             )
 
-            assert isinstance(provider, OpenrouterGatewayProvider)
+            assert isinstance(provider, OpenRouterLLMProvider)
+
+    def test_get_llm_provider_custom(self, sample_metadata):
+        with patch(
+            "app.utils.model_registry.model_provider.settings"
+        ) as mock_settings:
+            mock_settings.GATEWAY_PROVIDER = "custom"
+
+            provider = get_llm_provider(sample_metadata)
+
+            from app.utils.llm_providers.custom import CustomLLMProvider
+
+            assert isinstance(provider, CustomLLMProvider)
 
 
 class TestModelProvider:
-    """Test cases for ModelProvider class."""
-
     @pytest.fixture
-    def mock_gateway_provider(self):
-        """Mock gateway provider."""
+    def mock_llm_provider(self):
         return Mock(
             get_openai_model=Mock(return_value=Mock()),
             get_gemini_model=Mock(return_value=Mock()),
+        )
+
+    @pytest.fixture
+    def mock_embedding_provider(self):
+        return Mock(
             get_embeddings_model=Mock(return_value=Mock()),
         )
 
     def test_model_provider_initialization(self, sample_metadata):
-        """Test ModelProvider initialization."""
-        with patch(
-            "app.utils.model_registry.model_provider.get_gateway_provider"
-        ) as mock_get_provider:
-            mock_provider = Mock()
-            mock_get_provider.return_value = mock_provider
+        with (
+            patch(
+                "app.utils.model_registry.model_provider.get_llm_provider"
+            ) as mock_get_llm_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
+        ):
+            mock_llm_provider = Mock()
+            mock_embedding_provider = Mock()
+            mock_get_llm_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = mock_embedding_provider
 
             model_provider = ModelProvider(sample_metadata)
 
             assert model_provider.metadata == sample_metadata
-            assert model_provider.gateway_provider == mock_provider
+            assert model_provider.llm_provider == mock_llm_provider
+            assert model_provider.embedding_provider == mock_embedding_provider
 
-    def test_create_llm_openai_model(
-        self, sample_metadata, mock_gateway_provider
-    ):
-        """Test creating OpenAI LLM."""
+    def test_create_llm_openai_model(self, sample_metadata, mock_llm_provider):
         with (
             patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
+                "app.utils.model_registry.model_provider.get_llm_provider"
             ) as mock_get_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
             patch.dict(
                 "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
-                {"gpt-4": Mock(provider=ModelVendor.OPENAI)},
+                {"gpt-4": Mock(provider=ModelVendor.OPENAI.value)},
             ),
         ):
 
-            mock_get_provider.return_value = mock_gateway_provider
+            mock_get_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = Mock()
 
             model_provider = ModelProvider(sample_metadata)
             result = model_provider._create_llm("gpt-4")
 
-            mock_gateway_provider.get_openai_model.assert_called_once_with(
-                "gpt-4"
-            )
+            mock_llm_provider.get_openai_model.assert_called_once_with("gpt-4")
             assert result is not None
 
-    def test_create_llm_google_model(
-        self, sample_metadata, mock_gateway_provider
-    ):
-        """Test creating Google LLM."""
+    def test_create_llm_google_model(self, sample_metadata, mock_llm_provider):
         with (
             patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
+                "app.utils.model_registry.model_provider.get_llm_provider"
             ) as mock_get_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
             patch.dict(
                 "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
-                {"gemini-pro": Mock(provider=ModelVendor.GOOGLE)},
+                {"gemini-pro": Mock(provider=ModelVendor.GOOGLE.value)},
             ),
         ):
 
-            mock_get_provider.return_value = mock_gateway_provider
+            mock_get_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = Mock()
 
             model_provider = ModelProvider(sample_metadata)
             result = model_provider._create_llm("gemini-pro")
 
-            mock_gateway_provider.get_gemini_model.assert_called_once_with(
+            mock_llm_provider.get_gemini_model.assert_called_once_with(
                 "gemini-pro"
             )
             assert result is not None
 
-    def test_create_llm_with_tools(
-        self, sample_metadata, mock_gateway_provider
-    ):
-        """Test creating LLM with tools."""
+    def test_create_llm_with_tools(self, sample_metadata, mock_llm_provider):
         mock_tools = {"test_tool": (Mock(), {})}
 
         with (
             patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
+                "app.utils.model_registry.model_provider.get_llm_provider"
             ) as mock_get_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
             patch(
                 "app.utils.model_registry.model_provider.get_tools"
             ) as mock_get_tools,
             patch.dict(
                 "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
-                {"gpt-4": Mock(provider=ModelVendor.OPENAI)},
+                {"gpt-4": Mock(provider=ModelVendor.OPENAI.value)},
             ),
         ):
 
-            mock_get_provider.return_value = mock_gateway_provider
+            mock_get_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = Mock()
             mock_get_tools.return_value = mock_tools
             mock_llm = Mock()
             mock_llm.bind_tools.return_value = Mock()
-            mock_gateway_provider.get_openai_model.return_value = mock_llm
+            mock_llm_provider.get_openai_model.return_value = mock_llm
 
             model_provider = ModelProvider(sample_metadata)
             result = model_provider._create_llm_with_tools(
@@ -269,44 +275,27 @@ class TestModelProvider:
             mock_llm.bind_tools.assert_called_once()
             assert result is not None
 
-    def test_create_embeddings_model(
-        self, sample_metadata, mock_gateway_provider
-    ):
-        """Test creating embeddings model."""
-        with (
-            patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
-            ) as mock_get_provider,
-            patch(
-                "app.utils.model_registry.model_provider.settings"
-            ) as mock_settings,
-        ):
-
-            mock_get_provider.return_value = mock_gateway_provider
-            mock_settings.DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
-
-            model_provider = ModelProvider(sample_metadata)
-            result = model_provider._create_embeddings_model()
-
-            mock_gateway_provider.get_embeddings_model.assert_called_once_with(
-                "text-embedding-ada-002"
-            )
-            assert result is not None
-
     def test_get_llm_for_node_without_tools(
-        self, sample_metadata, mock_gateway_provider
+        self, sample_metadata, mock_llm_provider
     ):
-        """Test getting LLM for node without tools."""
         with (
             patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
+                "app.utils.model_registry.model_provider.get_llm_provider"
             ) as mock_get_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
             patch(
                 "app.utils.model_registry.model_provider.get_node_model"
             ) as mock_get_node_model,
+            patch.dict(
+                "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
+                {"gpt-4": Mock(provider=ModelVendor.OPENAI.value)},
+            ),
         ):
 
-            mock_get_provider.return_value = mock_gateway_provider
+            mock_get_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = Mock()
             mock_get_node_model.return_value = "gpt-4"
 
             model_provider = ModelProvider(sample_metadata)
@@ -316,27 +305,34 @@ class TestModelProvider:
             assert result is not None
 
     def test_get_llm_for_node_with_tools(
-        self, sample_metadata, mock_gateway_provider
+        self, sample_metadata, mock_llm_provider
     ):
-        """Test getting LLM for node with tools."""
         with (
             patch(
-                "app.utils.model_registry.model_provider.get_gateway_provider"
+                "app.utils.model_registry.model_provider.get_llm_provider"
             ) as mock_get_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
             patch(
                 "app.utils.model_registry.model_provider.get_node_model"
             ) as mock_get_node_model,
             patch(
                 "app.utils.model_registry.model_provider.get_tools"
             ) as mock_get_tools,
+            patch.dict(
+                "app.utils.model_registry.model_provider.AVAILABLE_MODELS",
+                {"gpt-4": Mock(provider=ModelVendor.OPENAI.value)},
+            ),
         ):
 
-            mock_get_provider.return_value = mock_gateway_provider
+            mock_get_provider.return_value = mock_llm_provider
+            mock_get_embedding_provider.return_value = Mock()
             mock_get_node_model.return_value = "gpt-4"
             mock_get_tools.return_value = {"tool": (Mock(), {})}
             mock_llm = Mock()
             mock_llm.bind_tools.return_value = Mock()
-            mock_gateway_provider.get_openai_model.return_value = mock_llm
+            mock_llm_provider.get_openai_model.return_value = mock_llm
 
             model_provider = ModelProvider(sample_metadata)
             result = model_provider.get_llm_for_node(
@@ -346,13 +342,35 @@ class TestModelProvider:
             mock_llm.bind_tools.assert_called_once()
             assert result is not None
 
+    def test_create_embeddings_model(
+        self, sample_metadata, mock_embedding_provider
+    ):
+        with (
+            patch(
+                "app.utils.model_registry.model_provider.get_llm_provider"
+            ) as mock_get_llm_provider,
+            patch(
+                "app.utils.model_registry.model_provider.get_embedding_provider"
+            ) as mock_get_embedding_provider,
+            patch(
+                "app.utils.model_registry.model_provider.settings"
+            ) as mock_settings,
+        ):
+            mock_get_llm_provider.return_value = Mock()
+            mock_get_embedding_provider.return_value = mock_embedding_provider
+            mock_settings.DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
+
+            model_provider = ModelProvider(sample_metadata)
+            result = model_provider._create_embeddings_model()
+
+            mock_embedding_provider.get_embeddings_model.assert_called_once_with(
+                "text-embedding-ada-002"
+            )
+            assert result is not None
+
 
 class TestModelProviderUtilities:
-    """Test cases for model provider utility functions."""
-
     def test_get_model_provider(self):
-        """Test get_model_provider function."""
-        # Use proper type annotation to avoid linter warnings
         config = {"configurable": {"metadata": {"user": "test_user"}}}
 
         with patch(
@@ -369,7 +387,6 @@ class TestModelProviderUtilities:
             assert result == mock_provider_instance
 
     def test_get_custom_model(self):
-        """Test get_custom_model function."""
         with patch(
             "app.utils.model_registry.model_provider.ModelProvider"
         ) as mock_provider_class:
@@ -385,7 +402,6 @@ class TestModelProviderUtilities:
             assert result == mock_llm
 
     def test_get_chat_history(self):
-        """Test get_chat_history function."""
         config = {"configurable": {"chat_history": ["message1", "message2"]}}
 
         result = get_chat_history(config)  # type: ignore
@@ -393,7 +409,6 @@ class TestModelProviderUtilities:
         assert result == ["message1", "message2"]
 
     def test_get_chat_history_default(self):
-        """Test get_chat_history with default value."""
         config = {"configurable": {}}
 
         result = get_chat_history(config)  # type: ignore
@@ -402,19 +417,26 @@ class TestModelProviderUtilities:
 
 
 class TestModelSelection:
-    """Test cases for model selection functionality."""
-
     def test_get_node_model(self):
-        """Test get_node_model function."""
-        with patch(
-            "app.utils.model_registry.model_selection.settings"
-        ) as mock_settings:
+        with (
+            patch(
+                "app.utils.model_registry.model_selection.settings"
+            ) as mock_settings,
+            patch.dict(
+                "app.utils.model_registry.model_selection.COMPLEXITY_TO_MODEL",
+                {
+                    ModelCategory.BALANCED: "",
+                    ModelCategory.FAST: "",
+                    ModelCategory.ADVANCED: "",
+                },
+            ),
+            patch.dict(
+                "app.utils.model_registry.model_selection.NODE_TO_COMPLEXITY",
+                {"test_node": ModelCategory.BALANCED},
+            ),
+        ):
             mock_settings.DEFAULT_OPENAI_MODEL = "gpt-4"
-            mock_settings.BALANCED_MODEL = ""  # Empty to fallback to default
-            mock_settings.FAST_MODEL = ""
-            mock_settings.ADVANCED_MODEL = ""
 
-            # Test that it returns the default model for any node
             result = get_node_model("test_node")
 
             assert result == "gpt-4"
