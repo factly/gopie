@@ -115,6 +115,7 @@ export interface Chat {
   created_at: string;
   updated_at: string;
   created_by: string;
+  visibility?: "public" | "private" | "organization";
 }
 
 export interface ChatWithMessages extends Chat {

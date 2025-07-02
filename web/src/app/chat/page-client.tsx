@@ -10,7 +10,7 @@ import {
   useMemo,
 } from "react";
 import { useChat } from "@ai-sdk/react";
-import { useDeleteChat } from "@/lib/mutations/chat";
+import { useDeleteChat, ChatVisibility } from "@/lib/mutations/chat";
 import { useChats } from "@/lib/queries/chat/list-chats";
 import { useChatMessages } from "@/lib/queries/chat/get-messages";
 import { useChatDetails } from "@/lib/queries/chat/get-chat";
@@ -33,6 +33,8 @@ import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
+import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
+import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -259,6 +261,9 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       {chat.title || "New Chat"}
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <ChatVisibilityIndicator
+                        visibility={chat.visibility as ChatVisibility}
+                      />
                       <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
                         {dateString}
                       </span>
@@ -1058,6 +1063,14 @@ function ChatPageClient() {
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
                   New Chat
                 </Button>
+                {selectedChatId && (
+                  <ShareChatDialog
+                    chatId={selectedChatId}
+                    currentVisibility={
+                      (chatDetails?.visibility as ChatVisibility) || "private"
+                    }
+                  />
+                )}
                 {showSqlButton && (
                   <Button
                     variant="ghost"
