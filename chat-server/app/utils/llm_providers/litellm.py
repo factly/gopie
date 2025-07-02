@@ -1,13 +1,15 @@
+from typing import Dict
+
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class LiteLLMGatewayProvider(BaseProvider):
+class LiteLLMProvider(BaseLLMProvider):
     def __init__(
         self,
-        metadata: dict[str, str],
+        metadata: Dict[str, str],
     ):
         self.metadata = metadata
         self.headers = {

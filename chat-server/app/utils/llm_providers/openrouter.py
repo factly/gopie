@@ -1,11 +1,13 @@
+from typing import Dict
+
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class OpenrouterGatewayProvider(BaseProvider):
-    def __init__(self, metadata: dict[str, str]):
+class OpenRouterLLMProvider(BaseLLMProvider):
+    def __init__(self, metadata: Dict[str, str]):
         self.metadata = metadata
 
     def get_openai_model(self, model_name: str):

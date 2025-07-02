@@ -3,10 +3,10 @@ import json
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class CloudflareGatewayProvider(BaseProvider):
+class CloudflareLLMProvider(BaseLLMProvider):
     def __init__(
         self,
         metadata: dict[str, str],

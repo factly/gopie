@@ -1,33 +1,59 @@
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
-from app.models.provider import GatewayProvider, ModelVendor
+from app.models.provider import EmbeddingProvider, LLMProvider, ModelVendor
 from app.tool_utils.tools import ToolNames, get_tools
+from app.utils.embedding_providers import (
+    BaseEmbeddingProvider,
+    CustomEmbeddingProvider,
+    LiteLLMEmbeddingProvider,
+    OpenAIEmbeddingProvider,
+    PortkeyEmbeddingProvider,
+    PortkeySelfHostedEmbeddingProvider,
+)
+from app.utils.llm_providers import (
+    BaseLLMProvider,
+    CloudflareLLMProvider,
+    CustomLLMProvider,
+    LiteLLMProvider,
+    OpenRouterLLMProvider,
+    PortkeyLLMProvider,
+    PortkeySelfHostedLLMProvider,
+)
 from app.utils.model_registry.model_config import AVAILABLE_MODELS
 from app.utils.model_registry.model_selection import get_node_model
-from app.utils.providers.base import BaseProvider
-from app.utils.providers.cloudflare import CloudflareGatewayProvider
-from app.utils.providers.litellm import LiteLLMGatewayProvider
-from app.utils.providers.openrouter import OpenrouterGatewayProvider
-from app.utils.providers.portkey import PortkeyGatewayProvider
-from app.utils.providers.portkey_self_hosted import (
-    PortkeySelfHostedGatewayProvider,
-)
 
 
-def get_gateway_provider(metadata: dict[str, str]) -> BaseProvider:
-    gateway_type = GatewayProvider(settings.GATEWAY_PROVIDER)
+def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
+    gateway_type = LLMProvider(settings.GATEWAY_PROVIDER)
     match gateway_type:
-        case GatewayProvider.PORTKEY_HOSTED:
-            return PortkeyGatewayProvider(metadata)
-        case GatewayProvider.PORTKEY_SELF_HOSTED:
-            return PortkeySelfHostedGatewayProvider(metadata)
-        case GatewayProvider.LITELLM:
-            return LiteLLMGatewayProvider(metadata)
-        case GatewayProvider.CLOUDFLARE:
-            return CloudflareGatewayProvider(metadata)
-        case GatewayProvider.OPENROUTER:
-            return OpenrouterGatewayProvider(metadata)
+        case LLMProvider.PORTKEY_HOSTED:
+            return PortkeyLLMProvider(metadata)
+        case LLMProvider.PORTKEY_SELF_HOSTED:
+            return PortkeySelfHostedLLMProvider(metadata)
+        case LLMProvider.LITELLM:
+            return LiteLLMProvider(metadata)
+        case LLMProvider.CLOUDFLARE:
+            return CloudflareLLMProvider(metadata)
+        case LLMProvider.OPENROUTER:
+            return OpenRouterLLMProvider(metadata)
+        case LLMProvider.CUSTOM:
+            return CustomLLMProvider(metadata)
+
+
+def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
+    gateway_type = EmbeddingProvider(settings.GATEWAY_PROVIDER)
+    match gateway_type:
+        case EmbeddingProvider.PORTKEY_HOSTED:
+            return PortkeyEmbeddingProvider(metadata)
+        case EmbeddingProvider.PORTKEY_SELF_HOSTED:
+            return PortkeySelfHostedEmbeddingProvider(metadata)
+        case EmbeddingProvider.LITELLM:
+            return LiteLLMEmbeddingProvider(metadata)
+        case EmbeddingProvider.OPENAI:
+            return OpenAIEmbeddingProvider(metadata)
+        case EmbeddingProvider.CUSTOM:
+            return CustomEmbeddingProvider(metadata)
 
 
 class ModelConfig:
@@ -61,16 +87,17 @@ class ModelProvider:
         metadata: dict[str, str],
     ):
         self.metadata = metadata
-        self.gateway_provider = get_gateway_provider(metadata)
+        self.llm_provider = get_llm_provider(metadata)
+        self.embedding_provider = get_embedding_provider(metadata)
 
     def _create_llm(self, model_id: str):
         model_config = ModelConfig(model_id=model_id)
         if model_config.model_provider == ModelVendor.GOOGLE:
-            model = self.gateway_provider.get_gemini_model(
+            model = self.llm_provider.get_gemini_model(
                 model_config.gemini_model
             )
         else:
-            model = self.gateway_provider.get_openai_model(
+            model = self.llm_provider.get_openai_model(
                 model_config.openai_model
             )
 
@@ -84,8 +111,16 @@ class ModelProvider:
         llm = self._create_llm(model_id)
         return llm.bind_tools(tool_functions)
 
+    def _create_embeddings_model(self):
+        return self.embedding_provider.get_embeddings_model(
+            settings.DEFAULT_EMBEDDING_MODEL
+        )
+
     def get_llm(self, model_id: str):
         return self._create_llm(model_id)
+
+    def get_embeddings_model(self):
+        return self._create_embeddings_model()
 
     def get_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
         return self._create_llm_with_tools(model_id, tool_names)

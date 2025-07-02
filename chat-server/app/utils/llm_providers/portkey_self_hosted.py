@@ -5,10 +5,10 @@ from langchain_openai import ChatOpenAI
 from app.core.config import settings
 from app.core.log import logger
 from app.services.google.google_access_token import get_google_access_token
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class PortkeySelfHostedGatewayProvider(BaseProvider):
+class PortkeySelfHostedLLMProvider(BaseLLMProvider):
     def __init__(
         self,
         metadata: dict[str, str],
