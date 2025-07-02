@@ -1,7 +1,7 @@
 services:
   #########################################################################
   #####                        DATABASE                                 #####
-  #########################################################################
+  # #########################################################################
   postgres:
     image: postgres:17-alpine
     ports:
@@ -133,8 +133,8 @@ services:
       - ./volumes/minio/data:/export
       - ./volumes/minio/config:/root/.minio
     environment:
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
     networks:
       - gopie
     command: server -console-address :9002 /export
@@ -154,9 +154,9 @@ services:
     entrypoint: >
       /bin/sh -c "
         echo 'Minio is up. Creating the bucket!!' &&
-        /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
-        /usr/bin/mc mb -p myminio/${MINIO_BUCKET} &&
-        /usr/bin/mc anonymous set public myminio/${MINIO_BUCKET}
+        /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+        /usr/bin/mc mb -p myminio/gopie &&
+        /usr/bin/mc anonymous set public myminio/gopie
       "
 
   #########################################################################
@@ -185,75 +185,51 @@ services:
   #########################################################################
   #####                        LIVEKIT SERVICES                        #####
   #########################################################################
-  livekit-server:
-    image: livekit/livekit-server:latest
-    ports:
-      - "7880:7880" # WebRTC traffic
-      - "7881:7881" # RTMP traffic
-      - "7882:7882" # WHIP/WHEP
-    environment:
-      - "LIVEKIT_KEYS=devkey: secret"
-      - LIVEKIT_REDIS_HOST=livekit-redis
-      - LIVEKIT_TURN_HTTPS=false
-    networks:
-      - gopie
-    depends_on:
-      - livekit-redis
+  # livekit-server:
+  #   image: livekit/livekit-server:latest
+  #   ports:
+  #     - "7880:7880" # WebRTC traffic
+  #     - "7881:7881" # RTMP traffic
+  #     - "7882:7882" # WHIP/WHEP
+  #   environment:
+  #     - "LIVEKIT_KEYS=devkey: secret"
+  #     - LIVEKIT_REDIS_HOST=livekit-redis
+  #     - LIVEKIT_TURN_HTTPS=false
+  #   networks:
+  #     - gopie
+  #   depends_on:
+  #     - livekit-redis
 
-  livekit-redis:
-    image: redis:alpine
-    command: redis-server --save 60 1 --loglevel warning
-    volumes:
-      - ./volumes/livekit/redis:/data
-    networks:
-      - gopie
+  # livekit-redis:
+  #   image: redis:alpine
+  #   command: redis-server --save 60 1 --loglevel warning
+  #   volumes:
+  #     - ./volumes/livekit/redis:/data
+  #   networks:
+  #     - gopie
 
-  livekit-py:
-    build:
-      context: ./livekit-py
-      dockerfile: Dockerfile
-    volumes:
-      - ./livekit-py:/app
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=secret
-      - LIVEKIT_URL=ws://livekit-server:7880
-    depends_on:
-      - livekit-server
-    networks:
-      - gopie
+  # livekit-py:
+  #   build:
+  #     context: ./livekit-py
+  #     dockerfile: Dockerfile
+  #   volumes:
+  #     - ./livekit-py:/app
+  #   environment:
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - LIVEKIT_API_KEY=devkey
+  #     - LIVEKIT_API_SECRET=secret
+  #     - LIVEKIT_URL=ws://livekit-server:7880
+  #   depends_on:
+  #     - livekit-server
+  #   networks:
+  #     - gopie
 
-  chat-server:
-    build:
-      context: ./chat-server
-      dockerfile: Dockerfile
-    ports:
-      - "8001:8001"
-    volumes:
-      - ./chat-server/app:/code/app
-    env_file:
-      - ./chat-server/.env
-    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload"
-    depends_on:
-      - qdrant
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - gopie
+  #########################################################################
+  #####                        CHAT SERVER SERVICES                   #####
+  #########################################################################
 
-  qdrant:
-    image: qdrant/qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - ./volumes/qdrant:/qdrant/storage
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - gopie
+include:
+  - ./chat-server/docker-compose.yaml
 
 networks:
   gopie:

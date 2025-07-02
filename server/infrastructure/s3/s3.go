@@ -203,3 +203,60 @@ func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string
 
 	return fileName, written, nil
 }
+
+func (c *s3Source) UploadFile(ctx context.Context, bucket, filePath string) (string, error) {
+	if bucket == "" || filePath == "" {
+		return "", fmt.Errorf("bucket and file path are required")
+	}
+
+	c.logger.Info("starting file upload to S3",
+		zap.String("bucket", bucket),
+		zap.String("file", filePath))
+
+	buckObj, err := c.openBucket(ctx, bucket)
+	if err != nil {
+		c.logger.Error("failed to open bucket",
+			zap.String("bucket", bucket),
+			zap.Error(err))
+		return "", fmt.Errorf("failed to open bucket: %w", err)
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		c.logger.Error("failed to open file",
+			zap.String("file", filePath),
+			zap.Error(err))
+		return "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	// Read the file content
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		c.logger.Error("failed to read file content",
+			zap.String("file", filePath),
+			zap.Error(err))
+		return "", fmt.Errorf("failed to read file content: %w", err)
+	}
+
+	// Get the filename from the path for S3
+	filePathParts := strings.Split(filePath, "/")
+	fileName := filePathParts[len(filePathParts)-1]
+
+	// Upload the file content as bytes
+	err = buckObj.WriteAll(ctx, fileName, fileContent, nil)
+	if err != nil {
+		c.logger.Error("failed to upload file",
+			zap.String("bucket", bucket),
+			zap.String("file", fileName),
+			zap.Error(err))
+		return "", fmt.Errorf("failed to upload file: %w", err)
+	}
+
+	c.logger.Info("file uploaded successfully",
+		zap.String("bucket", bucket),
+		zap.String("file", fileName),
+		zap.Int("bytes_uploaded", len(fileContent)))
+
+	return fileName, nil
+}

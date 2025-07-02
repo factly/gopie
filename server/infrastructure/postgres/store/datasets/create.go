@@ -67,6 +67,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Alias:       d.Alias.String,
 		CreatedBy:   d.CreatedBy.String,
 		UpdatedBy:   d.UpdatedBy.String,
+		OrgID:       d.OrgID.String,
 	}, nil
 }
 

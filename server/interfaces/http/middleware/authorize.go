@@ -10,7 +10,6 @@ import (
 
 // Zitadel returns a fiber.Handler that uses the Zitadel interceptor to authorize requests.
 func ZitadelAuthorizer(logger *logger.Logger) fiber.Handler {
-	logger.Info("Setting up Zitadel authorizer middleware")
 	return adaptor.HTTPMiddleware(zitadel.ZitadelInterceptor.RequireAuthorization())
 }
 
@@ -25,10 +24,11 @@ func SetupZitadelAuthCtx(logger *logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract auth context set by Zitadel interceptor
 		authCtx := zitadel.ZitadelInterceptor.Context(c.Context())
-		logger.Error("Auth context cannot be nil", zap.Any("authCtx", authCtx))
 		if authCtx == nil {
+			logger.Error("Auth context cannot be nil", zap.Any("authCtx", authCtx))
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "unauthorized",
+				"error":   "unauthorized",
+				"message": "authentication context is missing",
 			})
 		}
 

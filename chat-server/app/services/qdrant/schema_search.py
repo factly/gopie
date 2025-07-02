@@ -1,11 +1,11 @@
+import json
+
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
 
 from app.core.config import settings
 from app.core.log import logger
 from app.models.schema import DatasetSchema
-from app.services.gopie.dataset_info import format_schema
-from app.services.gopie.generate_schema import generate_schema
 from app.services.qdrant.vector_store import (
     perform_similarity_search,
     setup_vector_store,
@@ -59,27 +59,7 @@ async def search_schemas(
 
         schemas = []
         for doc in results:
-            fetched_schema, sample_data = await generate_schema(
-                doc.metadata["dataset_name"]
-            )
-
-            formatted_schema = format_schema(
-                fetched_schema,
-                sample_data,
-                doc.metadata["project_id"],
-                doc.metadata["dataset_id"],
-            )
-            formatted_schema["name"] = doc.metadata["name"]
-            formatted_schema["dataset_name"] = doc.metadata["dataset_name"]
-            formatted_schema["dataset_description"] = doc.metadata[
-                "dataset_description"
-            ]
-
-            for column in formatted_schema["columns"]:
-                column["column_description"] = doc.metadata[
-                    "column_descriptions"
-                ][column["column_name"]]
-
+            formatted_schema = json.loads(doc.page_content)
             schemas.append(formatted_schema)
 
         logger.debug(

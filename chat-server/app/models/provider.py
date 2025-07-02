@@ -12,5 +12,9 @@ class ModelVendor(str, Enum):
     GOOGLE = "google"
 
 
-DEFAULT_VENDOR = ModelVendor.OPENAI
-DEFAULT_CATEGORY = ModelCategory.ADVANCED
+class GatewayProvider(str, Enum):
+    PORTKEY_HOSTED = "portkey_hosted"
+    PORTKEY_SELF_HOSTED = "portkey_self_hosted"
+    LITELLM = "litellm"
+    CLOUDFLARE = "cloudflare"
+    OPENROUTER = "openrouter"

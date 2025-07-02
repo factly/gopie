@@ -9,6 +9,7 @@ import {
   Loader2,
   Database,
   ExternalLink,
+  BarChart3,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import {
   Tooltip,
   TooltipContent,
@@ -187,25 +189,57 @@ export function ChatMessage({
     setIsOpen: setSqlPanelOpen,
     markQueryAsExecuted,
   } = useSqlStore();
+  const { setPaths: setVisualizationPaths, setIsOpen: setVisualizationOpen } =
+    useVisualizationStore();
   const [isExecuting, setIsExecuting] = useState(false);
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(
     role === "intermediate" && typeof content === "string" ? true : false
   );
   const [isThoughtProcessOpen, setIsThoughtProcessOpen] = useState(false);
   const [displayDatasets, setDisplayDatasets] = useState<string[]>([]);
-  const [displaySqlQuery, setDisplaySqlQuery] = useState<string | null>(null);
+  const [displaySqlQueries, setDisplaySqlQueries] = useState<string[]>([]);
   const [displayIntermediateMessages, setDisplayIntermediateMessages] =
     useState<string[]>([]);
+  const [displayVisualizationPaths, setDisplayVisualizationPaths] = useState<
+    string[]
+  >([]);
+  const [displayVisualizationResults, setDisplayVisualizationResults] =
+    useState<string[]>([]);
+  const [expandedQueries, setExpandedQueries] = useState<Set<number>>(
+    new Set()
+  );
+
+  const toggleQueryExpansion = (index: number) => {
+    setExpandedQueries((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const getQueryPreview = (query: string) => {
+    const words = query.trim().split(/\s+/);
+    const preview = words.slice(0, 4).join(" ");
+    return preview.length < query.length ? `${preview}...` : preview;
+  };
 
   // Process message parts from AI SDK
   useEffect(() => {
     if (message?.parts) {
       // Extract datasets from datasets_used tool calls
       const newDatasets: string[] = [];
-      // Extract SQL from sql_query tool calls
-      let newSqlQuery: string | null = null;
+      // Extract SQL from sql_queries tool calls
+      const newSqlQueries: string[] = [];
       // Extract thought process messages from tool_messages tool calls
       const newIntermediateMessages: string[] = [];
+      // Extract visualization paths from visualization_paths tool calls
+      const newVisualizationPaths: string[] = [];
+      // Extract visualization results from visualization_result tool calls
+      const newVisualizationResults: string[] = [];
 
       message.parts.forEach((part) => {
         if (part.type === "tool-invocation") {
@@ -221,22 +255,45 @@ export function ChatMessage({
             });
           }
 
-          if (toolName === "sql_query" && args.query) {
-            // Handle sql_query tool
-            newSqlQuery = args.query;
+          if (toolName === "sql_queries" && args.queries) {
+            // Handle sql_queries tool (now expects an array of queries)
+            if (Array.isArray(args.queries)) {
+              newSqlQueries.push(...args.queries);
+            } else if (typeof args.queries === "string") {
+              newSqlQueries.push(args.queries);
+            }
           }
 
-          if (toolName === "tool_messages" && args.messages) {
-            // Handle tool_messages tool (thought process)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            args.messages.forEach((msg: any) => {
-              if (
-                msg.role === "intermediate" &&
-                typeof msg.content === "string"
-              ) {
-                newIntermediateMessages.push(msg.content);
-              }
-            });
+          if (toolName === "tool_messages" && args.role && args.content) {
+            // Handle tool_messages tool (thought process) - now expects role and content directly
+            if (
+              args.role === "intermediate" &&
+              typeof args.content === "string"
+            ) {
+              newIntermediateMessages.push(args.content);
+            }
+          }
+
+          if (toolName === "visualization_paths" && args.paths) {
+            // Handle visualization_paths tool
+            if (Array.isArray(args.paths)) {
+              args.paths.forEach((path: string) => {
+                if (!newVisualizationPaths.includes(path)) {
+                  newVisualizationPaths.push(path);
+                }
+              });
+            }
+          }
+
+          if (toolName === "visualization_result" && args.s3_paths) {
+            // Handle visualization_result tool
+            if (Array.isArray(args.s3_paths)) {
+              args.s3_paths.forEach((path: string) => {
+                if (!newVisualizationResults.includes(path)) {
+                  newVisualizationResults.push(path);
+                }
+              });
+            }
           }
         }
       });
@@ -248,20 +305,29 @@ export function ChatMessage({
         setDisplayDatasets(finalizedDatasets);
       }
 
-      if (newSqlQuery) {
-        setDisplaySqlQuery(newSqlQuery);
+      if (newSqlQueries.length > 0) {
+        setDisplaySqlQueries(newSqlQueries);
       } else if (finalizedSqlQuery) {
-        setDisplaySqlQuery(finalizedSqlQuery);
+        setDisplaySqlQueries([finalizedSqlQuery]);
       }
 
       if (newIntermediateMessages.length > 0) {
         setDisplayIntermediateMessages(newIntermediateMessages);
         setIsThoughtProcessOpen(true);
       }
+
+      if (newVisualizationPaths.length > 0) {
+        setDisplayVisualizationPaths(newVisualizationPaths);
+      }
+
+      if (newVisualizationResults.length > 0) {
+        setDisplayVisualizationResults(newVisualizationResults);
+        setVisualizationPaths(newVisualizationResults, chatId);
+      }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
       const allStreamDatasets = new Set<string>();
-      let latestStreamSql: string | null = null;
+      const streamSqlQueries: string[] = [];
       const intermediateMessages: string[] = [];
 
       content.forEach((event: StreamEvent) => {
@@ -271,7 +337,7 @@ export function ChatMessage({
           );
         }
         if (event.generated_sql_query) {
-          latestStreamSql = event.generated_sql_query;
+          streamSqlQueries.push(event.generated_sql_query);
         }
         if (event.role === "intermediate") {
           intermediateMessages.push(event.content);
@@ -279,11 +345,11 @@ export function ChatMessage({
       });
 
       setDisplayDatasets(Array.from(allStreamDatasets));
-      setDisplaySqlQuery(latestStreamSql);
+      setDisplaySqlQueries(streamSqlQueries);
       setDisplayIntermediateMessages(intermediateMessages);
     } else {
       setDisplayDatasets(finalizedDatasets || []);
-      setDisplaySqlQuery(finalizedSqlQuery || null);
+      setDisplaySqlQueries(finalizedSqlQuery ? [finalizedSqlQuery] : []);
     }
   }, [message, content, finalizedDatasets, finalizedSqlQuery]);
 
@@ -320,8 +386,9 @@ export function ChatMessage({
     if (!isLoading && (role === "assistant" || role === "ai") && isLatest) {
       let sqlToExecute: string | null = null;
 
-      if (displaySqlQuery) {
-        sqlToExecute = displaySqlQuery;
+      if (displaySqlQueries.length > 0) {
+        // Execute the last query by default
+        sqlToExecute = displaySqlQueries[displaySqlQueries.length - 1];
       } else if (typeof content === "string") {
         const parsed = parseMessageContent(content);
         if (parsed.type === "sql") {
@@ -350,7 +417,7 @@ export function ChatMessage({
     handleRunQuery,
     id,
     markQueryAsExecuted,
-    displaySqlQuery,
+    displaySqlQueries,
   ]);
 
   const styleRole =
@@ -542,77 +609,115 @@ export function ChatMessage({
               )
             )}
 
-            {/* SQL Query display */}
-            {displaySqlQuery && (
-              <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Suggested SQL Query:
+            {/* SQL Queries display */}
+            {displaySqlQueries.length > 0 && (
+              <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-3">
+                <p className="text-xs text-muted-foreground font-medium mb-2">
+                  Suggested SQL{" "}
+                  {displaySqlQueries.length > 1 ? "Queries" : "Query"}:
                 </p>
-                <SqlEditor
-                  value={displaySqlQuery}
-                  onChange={() => {
-                    /* no-op for display only */
-                  }}
-                  datasetId={""}
-                />
-                {!isLoading && (
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRunQuery(displaySqlQuery)}
-                      disabled={isExecuting}
-                      className="mt-2"
-                    >
-                      {isExecuting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Play className="mr-2 h-4 w-4" />
+                {displaySqlQueries.map((query, index) => (
+                  <Collapsible
+                    key={index}
+                    open={expandedQueries.has(index)}
+                    onOpenChange={() => toggleQueryExpansion(index)}
+                    className="rounded-lg border border-border bg-card shadow-sm"
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors rounded-lg data-[state=open]:rounded-b-none">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {expandedQueries.has(index) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Database className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                            <span className="text-foreground font-mono text-xs truncate">
+                              {getQueryPreview(query)}
+                            </span>
+                          </div>
+                          {displaySqlQueries.length > 1 && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              Query {index + 1} of {displaySqlQueries.length}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {!isLoading && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRunQuery(query);
+                          }}
+                          disabled={isExecuting}
+                          className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {isExecuting ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <Play className="mr-1 h-3 w-3" />
+                          )}
+                          Run
+                        </Button>
                       )}
-                      Run Suggested Query
-                    </Button>
-                  </div>
-                )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="border-t border-border">
+                      <div className="p-3 pt-2">
+                        <SqlEditor
+                          value={query}
+                          onChange={() => {
+                            /* no-op for display only */
+                          }}
+                          datasetId={""}
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
               </div>
             )}
 
             {/* SQL content fallback when no specific SQL query is identified */}
-            {!displaySqlQuery && parsedTextContent.type === "sql" && (
-              <div className="min-w-[400px] w-full max-w-[800px] text-base">
-                <div className="relative">
-                  <SqlPreview value={parsedTextContent.content} />
-                  {!isLoading && (
-                    <div className="absolute top-2 right-2 flex items-center gap-2">
-                      {isExecuting && (
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">
-                          <span className="h-2 w-2 rounded-full bg-primary/50 animate-pulse" />
-                          Running...
-                        </div>
-                      )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() =>
-                              handleRunQuery(parsedTextContent.content)
-                            }
-                            disabled={isExecuting}
-                          >
-                            <Play className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Run query</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
+            {displaySqlQueries.length === 0 &&
+              parsedTextContent.type === "sql" && (
+                <div className="min-w-[400px] w-full max-w-[800px] text-base">
+                  <div className="relative">
+                    <SqlPreview value={parsedTextContent.content} />
+                    {!isLoading && (
+                      <div className="absolute top-2 right-2 flex items-center gap-2">
+                        {isExecuting && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">
+                            <span className="h-2 w-2 rounded-full bg-primary/50 animate-pulse" />
+                            Running...
+                          </div>
+                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() =>
+                                handleRunQuery(parsedTextContent.content)
+                              }
+                              disabled={isExecuting}
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Run query</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Loading indicator */}
-            {isLoading && !textContent && !displaySqlQuery && (
+            {isLoading && !textContent && displaySqlQueries.length === 0 && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 AI response is generating...
@@ -623,12 +728,69 @@ export function ChatMessage({
             {!isLoading &&
               streamAborted &&
               !textContent &&
-              !displaySqlQuery && (
+              displaySqlQueries.length === 0 && (
                 <div className="text-sm text-muted-foreground italic">
                   Stream stopped by user. No content was generated.
                 </div>
               )}
           </div>
+
+          {/* Visualization results section */}
+          {displayVisualizationResults.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground font-medium mb-2 flex items-center">
+                <BarChart3 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/80" />
+                Generated {displayVisualizationResults.length} visualization
+                {displayVisualizationResults.length !== 1 ? "s" : ""}
+              </p>
+              <div className="grid gap-2">
+                {displayVisualizationResults.map((path, index) => (
+                  <div
+                    key={index}
+                    className="group relative flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                          Visualization {index + 1}
+                        </p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate font-mono">
+                          {path.split("/").pop() || path}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                        onClick={() => {
+                          setVisualizationPaths(
+                            displayVisualizationResults,
+                            chatId
+                          );
+                          setVisualizationOpen(true);
+                        }}
+                      >
+                        <BarChart3 className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                        onClick={() => window.open(path, "_blank")}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Code
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Datasets used section */}
           {displayDatasets.length > 0 && (
@@ -648,6 +810,25 @@ export function ChatMessage({
                         : undefined
                     }
                   />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Visualization paths section */}
+          {displayVisualizationPaths.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground font-medium mb-1.5">
+                Visualization paths:
+              </p>
+              <div className="space-y-1">
+                {displayVisualizationPaths.map((path, index) => (
+                  <div
+                    key={index}
+                    className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md font-mono"
+                  >
+                    {path}
+                  </div>
                 ))}
               </div>
             </div>

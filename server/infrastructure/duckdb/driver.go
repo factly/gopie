@@ -256,7 +256,13 @@ func (m *OlapDBDriver) generateHttpFsCommands(s3Cfg *config.S3Config) []string {
 		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_secret_access_key='%s';", s3Cfg.SecretKey))
 	}
 	if s3Cfg.Endpoint != "" {
-		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_endpoint='%s';", s3Cfg.Endpoint))
+		// remove protocol if present
+		endpoint := s3Cfg.Endpoint
+		if strings.HasPrefix(s3Cfg.Endpoint, "http://") || strings.HasPrefix(s3Cfg.Endpoint, "https://") {
+			endpoint = strings.TrimPrefix(endpoint, "http://")
+			endpoint = strings.TrimPrefix(endpoint, "https://")
+		}
+		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_endpoint='%s';", endpoint))
 	}
 	if s3Cfg.Region != "" {
 		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_region='%s';", s3Cfg.Region))

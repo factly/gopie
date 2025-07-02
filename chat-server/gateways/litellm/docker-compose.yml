@@ -1,0 +1,72 @@
+services:
+  litellm:
+    build:
+      context: ../../..
+      args:
+        target: runtime
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - GOOGLE_LOCATION=${GOOGLE_LOCATION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - DATABASE_URL=postgresql://llmproxy:dbpassword9090@litellm-db:5432/litellm
+      - UI_USERNAME=admin
+      - UI_PASSWORD=admin@123
+      - TZ=${TZ:-UTC}
+    restart: unless-stopped
+    networks:
+      - gopie
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+      - ${GOOGLE_SERVICE_ACCOUNT_JSON:-../../google/service-account.json}:/app/service-account.json:ro
+    command:
+      ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "8"]
+    profiles:
+      - litellm
+
+  litellm-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: llmproxy
+      POSTGRES_PASSWORD: dbpassword9090
+      TZ: ${TZ:-UTC}
+    ports:
+      - "5433:5432"
+    volumes:
+      - litellm_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - gopie
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d litellm -U llmproxy"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    profiles:
+      - litellm
+
+volumes:
+  litellm_postgres_data:
+    name: litellm_postgres_data

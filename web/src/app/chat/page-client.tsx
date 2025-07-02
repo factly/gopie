@@ -20,13 +20,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
-import { SqlResults } from "@/components/chat/sql-results";
+import { ResultsPanel } from "@/components/chat/results-panel";
 import {
   ResizablePanel,
   ResizablePanelGroup,
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
@@ -196,7 +197,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       <div className="flex items-center justify-between p-2 mb-4">
         <Button
           variant="ghost"
@@ -342,7 +343,7 @@ const ChatInput = React.memo(
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
-        <div className="flex items-start gap-2 max-w-5xl mx-auto">
+        <div className="flex items-start gap-2 w-full px-2">
           <ContextPicker
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
@@ -406,7 +407,7 @@ const ChatView = React.memo(
     fetchNextPage,
     isFetchingNextPage = false,
   }: ChatViewProps) => (
-    <div className="flex-1 overflow-hidden relative">
+    <div className="flex-1 overflow-hidden relative min-h-0">
       <div
         className={`z-10 absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background via-background to-transparent pointer-events-none ${
           messages.length > 0 ? "opacity-100" : "opacity-0"
@@ -414,10 +415,10 @@ const ChatView = React.memo(
       />
       <ScrollArea
         ref={scrollRef}
-        className="h-full px-4"
+        className="h-full w-full"
         onScroll={handleScroll}
       >
-        <div className="pb-32 pt-8">
+        <div className="px-4 pb-32 pt-8">
           {/* Load more button for pagination */}
           {hasNextPage && selectedChatId && (
             <div className="flex justify-center mb-4">
@@ -526,7 +527,26 @@ function ChatPageClient() {
     setSelectedChatTitle,
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
-  const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
+  const {
+    isOpen: sqlIsOpen,
+    setIsOpen,
+    resetExecutedQueries,
+    results,
+  } = useSqlStore();
+  const {
+    isOpen: isVisualizationOpen,
+    setIsOpen: setVisualizationOpen,
+    paths: visualizationPaths,
+    clearPaths: clearVisualizationPaths,
+  } = useVisualizationStore();
+
+  // Combined panel state - show if either SQL or visualizations are available
+  const isResultsPanelOpen = sqlIsOpen || isVisualizationOpen;
+  const hasResults = !!(
+    results?.data?.length ||
+    results?.error ||
+    visualizationPaths.length > 0
+  );
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
     string | null
@@ -881,7 +901,8 @@ function ChatPageClient() {
 
   useEffect(() => {
     resetExecutedQueries();
-  }, [selectedChatId, resetExecutedQueries]);
+    clearVisualizationPaths();
+  }, [selectedChatId, resetExecutedQueries, clearVisualizationPaths]);
 
   // Handle initial message from URL params
   useEffect(() => {
@@ -922,17 +943,26 @@ function ChatPageClient() {
   }, []);
 
   useLayoutEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && displayMessages.length > 0) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
       );
       if (viewport) {
         const isNearBottom =
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-          100;
-        if (isNearBottom) {
+          150;
+        // Only auto-scroll if user is near the bottom or if it's a new message being added
+        const lastMessage = displayMessages[displayMessages.length - 1];
+        const shouldAutoScroll =
+          isNearBottom &&
+          (lastMessage?.role === "assistant" || lastMessage?.role === "user");
+
+        if (shouldAutoScroll) {
           requestAnimationFrame(() => {
-            viewport.scrollTop = viewport.scrollHeight;
+            viewport.scrollTo({
+              top: viewport.scrollHeight,
+              behavior: "smooth",
+            });
           });
         }
       }
@@ -959,7 +989,7 @@ function ChatPageClient() {
   );
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isResultsPanelOpen) {
       setSqlPanelWidth(0);
       return;
     }
@@ -978,7 +1008,7 @@ function ChatPageClient() {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, [isOpen, sqlPanelRef]);
+  }, [isResultsPanelOpen, sqlPanelRef]);
 
   // Update streaming state based on isLoading
   useEffect(() => {
@@ -991,19 +1021,6 @@ function ChatPageClient() {
     setIsStreaming(false);
   }, [stop]);
 
-  // Compute whether to show SQL button
-  const showSqlButton = useMemo(() => {
-    return (
-      selectedChatId &&
-      displayMessages.some(
-        (msg: UIMessage) =>
-          msg.role === "assistant" &&
-          typeof msg.content === "string" &&
-          msg.content.toLowerCase().includes("sql")
-      )
-    );
-  }, [selectedChatId, displayMessages]);
-
   // Close sidebar when chat page opens
   useEffect(() => {
     if (isMobile) {
@@ -1014,8 +1031,8 @@ function ChatPageClient() {
   }, []); // Empty dependency array means this runs only once on mount
 
   return (
-    <main className="flex flex-col h-screen w-full pt-0 pb-0">
-      <div className="flex w-full relative overflow-hidden max-h-screen">
+    <main className="flex flex-col w-full h-screen">
+      <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
             <Tabs
@@ -1027,13 +1044,15 @@ function ChatPageClient() {
                 <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
                   <TabsTrigger
                     value="chat"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
                   >
-                    {isLoadingChatDetails && selectedChatId
-                      ? "Loading..."
-                      : selectedChatTitle
-                      ? selectedChatTitle
-                      : "Chat"}
+                    <span className="truncate">
+                      {isLoadingChatDetails && selectedChatId
+                        ? "Loading..."
+                        : selectedChatTitle
+                        ? selectedChatTitle
+                        : "Chat"}
+                    </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="history"
@@ -1071,24 +1090,36 @@ function ChatPageClient() {
                     }
                   />
                 )}
-                {showSqlButton && (
+                {hasResults && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="mr-2"
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => {
+                      if (isResultsPanelOpen) {
+                        setIsOpen(false);
+                        setVisualizationOpen(false);
+                      } else {
+                        if (results?.data?.length || results?.error) {
+                          setIsOpen(true);
+                        }
+                        if (visualizationPaths.length > 0) {
+                          setVisualizationOpen(true);
+                        }
+                      }
+                    }}
                   >
                     <Table2 className="h-4 w-4 mr-1" />
-                    SQL Results
+                    Results
                   </Button>
                 )}
               </div>
 
               <TabsContent
                 value="chat"
-                className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none"
+                className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
               >
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-full min-h-0">
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
@@ -1118,12 +1149,18 @@ function ChatPageClient() {
               </TabsContent>
             </Tabs>
           </ResizablePanel>
-          {isOpen && (
+          {isResultsPanelOpen && (
             <>
               <ResizableHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
                 <div ref={sqlPanelRef} className="h-screen overflow-hidden">
-                  <SqlResults />
+                  <ResultsPanel
+                    isOpen={isResultsPanelOpen}
+                    onClose={() => {
+                      setIsOpen(false);
+                      setVisualizationOpen(false);
+                    }}
+                  />
                 </div>
               </ResizablePanel>
             </>
@@ -1132,16 +1169,10 @@ function ChatPageClient() {
       </div>
       {activeTab === "chat" && (
         <div
-          className="fixed bottom-0 right-0 z-10"
+          className="fixed bottom-0 z-10"
           style={{
-            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem",
-            width: isOpen
-              ? `calc(100% - ${
-                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
-                } - ${sqlPanelWidth}px)`
-              : `calc(100% - ${
-                  isMobile ? 0 : isSidebarOpen ? "16rem" : "3rem"
-                })`,
+            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "0rem",
+            right: isResultsPanelOpen ? sqlPanelWidth : 0,
           }}
         >
           <ChatInput

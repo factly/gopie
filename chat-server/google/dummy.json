@@ -1,0 +1,10 @@
+{
+    "type": "service_account",
+    "project_id": "your-project-id",
+    "private_key_id": "key-id",
+    "private_key": "-----BEGIN PRIVATE KEY-----\n...",
+    "client_email": "your-service@project.iam.gserviceaccount.com",
+    "client_id": "123456789",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token"
+}

@@ -1,30 +1,16 @@
-import json
-from typing import Any, List
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 def create_analyze_query_prompt(
-    user_query: str, tool_results: List[Any]
-) -> str:
-    """
-    Create a prompt for analyzing a user query to determine its type.
-
-    Args:
-        user_query: The natural language query from the user
-        tool_results: Results from any tools that were previously called
-
-    Returns:
-        A formatted prompt string
-    """
-
-    tool_call_count = len(tool_results) if tool_results else 0
-
-    return f"""
-You are a data query classifier. Categorize the user query into ONE of
-two types. Prevent hallucination - only answer based on available context.
-
-USER QUERY: "{user_query}"
-PREVIOUS TOOL RESULTS: {json.dumps(tool_results, indent=2)}
-NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}
+    user_query: str,
+    tool_results: str,
+    tool_call_count: int,
+    dataset_ids: list[str] | None = None,
+    project_ids: list[str] | None = None,
+) -> list:
+    system_content = """
+You are a data query classifier. Analyze the user query and take appropriate action.
+Prevent hallucination - only answer based on available context.
 
 QUERY TYPES - Select exactly ONE:
 
@@ -48,11 +34,12 @@ QUERY TYPES - Select exactly ONE:
 TOOL USAGE GUIDELINES:
 * You can use tools within conversational queries
 * Evaluate if previous tool calls successfully answered the query
+* Please refer to the `Situation where it can be used`
+  section of the tool documentation to understand when to use the tool.
 * If a tool call failed or gave incomplete information:
   - Consider classifying as "data_query" to use database search
 * If previous tool calls successfully answered the query:
   - Maintain conversational classification
-* Current tool call count: {tool_call_count}/5 (max 5 allowed)
 
 CORE RULES:
 - Unknown facts/events without tools → "data_query"
@@ -73,12 +60,28 @@ CONFIDENCE SCORE:
 - 4-7: Medium confidence, could benefit from dataset verification
 - 8-10: High confidence in classification decision
 
-FORMAT YOUR RESPONSE AS JSON:
-{{
-    "query_type": "data_query" OR "conversational",
-    "confidence_score": <integer from 1 to 10>,
-    "reasoning": "Brief explanation of classification decision",
-    "clarification_needed": "If conversational due to vagueness,
-                             specify what you need"
-}}
+IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
+    Call the appropriate tool directly in your response and do not output any JSON.
+
+IF NO TOOL CALL IS REQUIRED:
+    FORMAT YOUR RESPONSE AS JSON:
+    {
+        "query_type": "data_query" OR "conversational",
+        "confidence_score": <integer from 1 to 10>,
+        "reasoning": "Brief explanation of classification decision",
+        "clarification_needed": "If conversational due to vagueness, specify what you need"
+    }
 """
+
+    human_content = f"""
+USER QUERY: "{user_query}"
+PREVIOUS TOOL RESULTS: {tool_results}
+NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}/5 (max 5 allowed)
+DATASET IDS: {dataset_ids}
+PROJECT IDS: {project_ids}
+"""
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

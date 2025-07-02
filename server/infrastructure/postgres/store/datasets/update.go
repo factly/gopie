@@ -40,5 +40,6 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		Size:        int(d.Size.Int64),
 		FilePath:    d.FilePath,
 		Columns:     columns,
+		OrgID:       d.OrgID.String,
 	}, nil
 }

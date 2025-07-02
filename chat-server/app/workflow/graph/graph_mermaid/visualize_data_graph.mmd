@@ -1,0 +1,21 @@
+---
+config:
+  flowchart:
+    curve: basis
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	agent(agent)
+	pre_model_hook(pre_model_hook)
+	respond(respond)
+	tools(tools)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> pre_model_hook;
+	agent -.-> respond;
+	agent -. &nbsp;continue&nbsp; .-> tools;
+	pre_model_hook --> agent;
+	tools --> pre_model_hook;
+	respond --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

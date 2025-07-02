@@ -47,6 +47,7 @@ func (s *PgDatasetStore) Details(ctx context.Context, datasetID string, orgID st
 		UpdatedAt:   time.Time(d.UpdatedAt.Time),
 		UpdatedBy:   d.UpdatedBy.String,
 		Columns:     columns,
+		OrgID:       d.OrgID.String,
 	}, nil
 }
 
@@ -81,6 +82,7 @@ func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string, o
 		CreatedAt:   time.Time(d.CreatedAt.Time),
 		UpdatedAt:   time.Time(d.UpdatedAt.Time),
 		Columns:     columns,
+		OrgID:       d.OrgID.String,
 	}, nil
 }
 

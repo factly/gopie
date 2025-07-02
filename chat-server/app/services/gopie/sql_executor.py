@@ -27,7 +27,7 @@ async def execute_sql(
         if response.status != HTTPStatus.OK:
             error_data = await response.json()
             logger.error(error_data.get("error", "Unknown error"))
-            raise Exception(error_data.get("message", "Unknown error"))
+            raise Exception(error_data.get("error", "Unknown error"))
 
         result_data = await response.json()
 
