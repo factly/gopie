@@ -1,156 +1,135 @@
-import json
-from enum import Enum
+from typing import Any
 
 from langchain_core.runnables.schema import StreamEvent
 
-from app.models.chat import AgentNode, ChunkType, EventChunkData, Role
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Enum):
-            return obj.value
-        try:
-            return obj.__dict__
-        except AttributeError:
-            if hasattr(obj, "model_dump"):
-                return obj.model_dump()
-            return str(obj)
+from app.models.chat import EventChunkData, ExtraData, Role
 
 
 class EventStreamHandler:
     def __init__(self):
-        self._tool_start = False
-        self._stream_content = True
         self._intermediate_stream_sent = False
 
     def handle_events_stream(
         self,
-        event: StreamEvent,
+        event: Any,
     ) -> EventChunkData:
-
         event_type = event["event"]
-        graph_node = event.get("metadata", {}).get("langgraph_node", "unknown")
 
-        role = None
+        event_metadata = event.get("metadata", {})
+        role_value = event_metadata.get("role", None)
+        progress_message = event_metadata.get("progress_message", "")
+
         content = None
-        type = ChunkType.BODY
         category = None
-        datasets_used = None
-        generated_sql_query = None
+        extra_data = None
 
-        if event_type == "on_custom_event":
-            event_data = event.get("data", {})
-            content = event_data.get("content", "")
-
-            if content == "do not stream":
-                self._stream_content = False
-            elif content == "continue streaming":
-                self._stream_content = True
-                return EventChunkData(
-                    role=role,
-                    graph_node=AgentNode.UNKNOWN,
-                    content=content,
-                    type=type,
-                    category=category,
-                )
-
-        if (
-            graph_node not in [node.value for node in AgentNode]
-            or not self._stream_content
-        ):
-            return EventChunkData(
-                role=role,
-                graph_node=AgentNode.UNKNOWN,
-                content=content,
-                type=type,
-                category=category,
-            )
-
-        tool_text = event.get("metadata", {}).get("tool_text", "Using Tool")
-        category = event.get("metadata", {}).get("tool_category", "")
+        role = Role(role_value) if role_value else None
 
         if event_type.startswith("on_tool"):
-            role = Role.SYSTEM
-            category = category
-            content = ""
+            role = Role.INTERMEDIATE
+            content, category, should_display_tool = self._handle_tool_events(
+                event
+            )
+            if not should_display_tool:
+                return self._create_empty_event_data()
 
-        if event_type == "on_tool_start":
-            self._tool_start = True
-            type = ChunkType.START
-        elif event_type == "on_tool_end":
-            self._tool_start = False
-            type = ChunkType.END
-        elif self._tool_start:
-            content = tool_text
-            type = ChunkType.STREAM
-        else:
-            self._tool_start = False
+        elif self._is_custom_event(event_type):
+            (
+                content,
+                extra_data,
+            ) = self._handle_custom_events(event, progress_message)
+            role = Role.INTERMEDIATE
+
+        elif not (role and self._is_chat_model_event(event_type)):
+            return self._create_empty_event_data()
+
+        elif self._is_chat_model_event(event_type):
+            content = self._handle_chat_model_events(
+                event_type, event, role, progress_message
+            )
+            if content is None:
+                return self._create_empty_event_data()
+
+        if not content and content != "":
+            content = progress_message
+
+        return EventChunkData(
+            role=role,
+            content=content,
+            category=category,
+            extra_data=extra_data,
+        )
+
+    def _is_chat_model_event(self, event_type: str) -> bool:
+        return event_type in [
+            "on_chat_model_start",
+            "on_chat_model_stream",
+            "on_chat_model_end",
+        ]
+
+    def _is_custom_event(self, event_type: str) -> bool:
+        return event_type == "on_custom_event"
+
+    def _create_empty_event_data(self) -> EventChunkData:
+        return EventChunkData(
+            role=None,
+            content="",
+            category=None,
+            extra_data=None,
+        )
+
+    def _handle_chat_model_events(
+        self,
+        event_type: str,
+        event: StreamEvent,
+        role: Role,
+        progress_message: str,
+    ) -> str | None:
+        content = None
 
         if event_type == "on_chat_model_start":
-            role = self.get_chat_role(graph_node)
             content = ""
-            type = ChunkType.START
 
             if role == Role.INTERMEDIATE:
                 self._intermediate_stream_sent = False
 
         elif event_type == "on_chat_model_stream":
             chunk = event.get("data", {}).get("chunk", None)
-            role = self.get_chat_role(graph_node)
 
             if role == Role.INTERMEDIATE:
                 if self._intermediate_stream_sent:
-                    return EventChunkData(
-                        role=None,
-                        graph_node=AgentNode.UNKNOWN,
-                        content=None,
-                        type=ChunkType.BODY,
-                        category=None,
-                    )
+                    return None
                 else:
                     self._intermediate_stream_sent = True
+                    content = progress_message
 
-            if (
-                chunk
-                and chunk.content
-                and (
-                    graph_node == AgentNode.STREAM_UPDATES.value
-                    or graph_node == AgentNode.GENERATE_RESULT.value
-                )
-            ):
+            elif role == Role.AI and chunk and chunk.content:
                 content = chunk.content
 
-            type = ChunkType.STREAM
-
         elif event_type == "on_chat_model_end":
-            role = self.get_chat_role(graph_node)
             content = ""
-            type = ChunkType.END
 
-        if event_type == "on_custom_event":
-            role = Role.INTERMEDIATE
-            type = ChunkType.BODY
+        return content
 
-            event_data = event.get("data", {})
-            content = event_data.get("content", "")
-            datasets_used = event_data.get("identified_datasets", [])
-            generated_sql_query = event_data.get("queries", [None])[0]
+    def _handle_custom_events(
+        self, event: StreamEvent, progress_message: str
+    ) -> tuple[str, ExtraData | None]:
+        extra_data = None
+        event_data = event.get("data", {})
+        content = event_data.get("content", "")
+        data_name = event_data.get("name", "")
+        if data_name:
+            data_args = event_data.get("values", {})
+            extra_data = ExtraData(name=data_name, args=data_args)
+        if not content:
+            content = progress_message
+        return content, extra_data
 
-        return EventChunkData(
-            role=role,
-            graph_node=AgentNode(graph_node),
-            content=content,
-            type=type,
-            category=category,
-            datasets_used=datasets_used,
-            generated_sql_query=generated_sql_query,
+    def _handle_tool_events(self, event: StreamEvent) -> tuple[str, str, bool]:
+        content = event.get("metadata", {}).get("tool_text", "Using Tool")
+        category = event.get("metadata", {}).get("tool_category", "")
+        should_display_tool = event.get("metadata", {}).get(
+            "should_display_tool", False
         )
 
-    def get_chat_role(self, node: str) -> Role:
-        if node in [
-            AgentNode.GENERATE_RESULT.value,
-            AgentNode.STREAM_UPDATES.value,
-        ]:
-            return Role.AI
-        return Role.INTERMEDIATE
+        return content, category, should_display_tool

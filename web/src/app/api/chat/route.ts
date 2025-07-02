@@ -123,16 +123,17 @@ export async function POST(req: Request) {
             tool_messages: {
               type: "function",
               parameters: z.object({
-                messages: z.any(),
+                role: z.string(),
+                content: z.string(),
               }),
-              execute: async ({ messages }) => {
-                console.log("🔧 Tool message executed:", messages);
+              execute: async ({ role, content }) => {
                 return {
                   type: "tool-call",
                   toolCallId: "tool_messages",
                   toolName: "tool_messages",
                   args: {
-                    messages,
+                    role,
+                    content,
                   },
                 };
               },
@@ -154,19 +155,53 @@ export async function POST(req: Request) {
                 };
               },
             },
-            sql_query: {
+            sql_queries: {
               type: "function",
               parameters: z.object({
-                query: z.string(),
+                queries: z.array(z.string()),
               }),
-              execute: async ({ query }) => {
-                console.log("🔧 SQL query executed:", query);
+              execute: async ({ queries }) => {
+                console.log("🔧 SQL queries executed:", queries);
                 return {
                   type: "tool-call",
-                  toolCallId: "sql_query",
-                  toolName: "sql_query",
+                  toolCallId: "sql_queries",
+                  toolName: "sql_queries",
                   args: {
-                    query,
+                    queries,
+                  },
+                };
+              },
+            },
+            visualization_result: {
+              type: "function",
+              parameters: z.object({
+                s3_paths: z.array(z.string()),
+              }),
+              execute: async ({ s3_paths }) => {
+                console.log("🔧 Visualization result executed:", s3_paths);
+                return {
+                  type: "tool-call",
+                  toolCallId: "visualization_result",
+                  toolName: "visualization_result",
+                  args: {
+                    s3_paths,
+                  },
+                };
+              },
+            },
+            visualization_paths: {
+              type: "function",
+              parameters: z.object({
+                paths: z.array(z.string()),
+              }),
+              execute: async ({ paths }) => {
+                console.log("🔧 Visualization paths executed:", paths);
+                return {
+                  type: "tool-call",
+                  toolCallId: "visualization_paths",
+                  toolName: "visualization_paths",
+                  args: {
+                    paths,
                   },
                 };
               },

@@ -24,6 +24,10 @@ type updateRequestBody struct {
 	UpdatedBy string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Column names to be altered (optional)
 	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
+	// Column descriptions
+	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
+	// Project ID of the dataset
+	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Update dataset from S3
@@ -126,11 +130,64 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
+	// Get dataset summary if column descriptions were provided
+	var summary *models.DatasetSummaryWithName
+	if body.ColumnDescriptions != nil && len(body.ColumnDescriptions) > 0 {
+		datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
+		if err != nil {
+			h.logger.Error("Error fetching dataset summary", zap.Error(err))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error fetching dataset summary",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+
+		if datasetSummary != nil {
+			summaryMap := make(map[string]int)
+			for i := range *datasetSummary {
+				summaryMap[(*datasetSummary)[i].ColumnName] = i
+			}
+
+			for colName, desc := range body.ColumnDescriptions {
+				if desc != "" {
+					if idx, exists := summaryMap[colName]; exists {
+						(*datasetSummary)[idx].Description = desc
+					}
+				}
+			}
+
+			// Update dataset summary
+			summary, err = h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
+			if err != nil {
+				h.logger.Error("Error creating dataset summary", zap.Error(err))
+				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error":   err.Error(),
+					"message": "Error creating dataset summary",
+					"code":    fiber.StatusInternalServerError,
+				})
+			}
+		}
+	}
+
+	// Update schema in AI agent if needed
+	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+		DatasetID: dataset.ID,
+		ProjectID: body.ProjectID,
+	})
+	if err != nil {
+		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
+		// Log error but continue since this is not critical for the update operation
+	}
+
 	h.logger.Info("File upload completed successfully",
 		zap.String("dataset_id", dataset.ID))
 
 	// Return success response
-	return ctx.Status(fiber.StatusCreated).JSON(map[string]any{
-		"data": dataset,
+	return ctx.Status(fiber.StatusOK).JSON(map[string]any{
+		"data": map[string]any{
+			"dataset": dataset,
+			"summary": summary,
+		},
 	})
 }

@@ -3,9 +3,9 @@ from app.models.router import ModelInfo
 
 MODELS = {
     ModelVendor.OPENAI: {
-        ModelCategory.ADVANCED: "gpt-4o",
+        ModelCategory.ADVANCED: "o4-mini",
         ModelCategory.BALANCED: "gpt-4o-mini",
-        ModelCategory.FAST: "o4-mini",
+        ModelCategory.FAST: "gpt-4o",
     },
     ModelVendor.GOOGLE: {
         ModelCategory.ADVANCED: "gemini-2.5-pro-preview-05-06",

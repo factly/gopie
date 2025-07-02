@@ -10,6 +10,9 @@ ENV PATH="/code/venv/bin:$PATH"
 COPY --from=requirements-stage /tmp/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
+# TEMPORARY: Install kaleido for plotly
+RUN pip install kaleido
+
 FROM python:3.12
 WORKDIR /code
 COPY --from=build-stage /code/venv /code/venv

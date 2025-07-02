@@ -123,7 +123,7 @@ export function AppHeader() {
   const breadcrumbs = generateBreadcrumbs(pathname, projectData, datasetData);
 
   // Hide header on home page
-  if (pathname === "/") {
+  if (pathname === "/" || pathname.startsWith("/chat")) {
     return null;
   }
 

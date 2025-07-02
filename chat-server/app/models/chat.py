@@ -1,6 +1,18 @@
 from enum import Enum
+from typing import Any, Dict
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+
+
+class Role(str, Enum):
+    AI = "ai"
+    SYSTEM = "system"
+    INTERMEDIATE = "intermediate"
+
+
+class NodeConfig(BaseModel):
+    role: Role = Role.INTERMEDIATE
+    progress_message: str = "Processing..."
 
 
 # This nodes are used to streaming purposes
@@ -14,52 +26,17 @@ class AgentNode(Enum):
     TOOLS = "tools"
     UNKNOWN = "unknown"
 
-
-class ChunkType(Enum):
-    START = "start"
-    END = "end"
-    BODY = "body"
-    STREAM = "stream"
+    PROCESS_QUERY = "process_query"
+    RESPONSE = "response"
 
 
-class Error(BaseModel):
-    type: str
-    message: str
-
-
-class Role(str, Enum):
-    AI = "ai"
-    SYSTEM = "system"
-    INTERMEDIATE = "intermediate"
-
-
-class ChatTextChunk(BaseModel):
-    role: Role
-    content: str
-    type: ChunkType
-
-
-class ToolMessage(ChatTextChunk):
-    category: str
+class ExtraData(BaseModel):
+    name: str
+    args: Dict[str, Any]
 
 
 class EventChunkData(BaseModel):
     role: Role | None
-    graph_node: AgentNode
-    content: str | None
-    type: ChunkType
+    content: str
     category: str | None
-    datasets_used: list[str] | None = None
-    generated_sql_query: str | None = None
-
-
-class StructuredChatStreamChunk(BaseModel):
-    chat_id: str | None = None
-    trace_id: str | None = None
-    message: ChatTextChunk | ToolMessage | None = None
-    datasets_used: list[str] | None = None
-    generated_sql_query: str | None = None
-    error: Error | None = None
-    finish_reason: str | None = None
-
-    model_config = ConfigDict(coerce_numbers_to_str=True, extra="forbid")
+    extra_data: ExtraData | None = None

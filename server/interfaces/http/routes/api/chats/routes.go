@@ -27,7 +27,6 @@ func Routes(router fiber.Router, params RouterParams) {
 		olapSvc:    params.OlapService,
 		datasetSvc: params.DatasetService,
 	}
-	router.Post("/", httpHandler.chat)
 	router.Get("/", httpHandler.listUserChats)
 	router.Post("/completions", httpHandler.chatWithAgent)
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)

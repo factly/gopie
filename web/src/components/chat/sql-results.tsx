@@ -1,11 +1,11 @@
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Database, Download } from "lucide-react";
+import { Database, Download } from "lucide-react";
 import { cn, downloadCsv } from "@/lib/utils";
 
 export function SqlResults() {
-  const { results, isOpen, setIsOpen } = useSqlStore();
+  const { results } = useSqlStore();
 
   const handleDownload = () => {
     if (!results?.data?.length) return;
@@ -15,13 +15,10 @@ export function SqlResults() {
     );
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="flex h-full flex-col bg-muted/50">
+    <div className="flex h-full min-h-0 flex-col bg-muted/50">
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium">SQL Results</h3>
           {results?.error ? (
             <span className="text-xs text-destructive">Error</span>
           ) : (
@@ -42,18 +39,10 @@ export function SqlResults() {
               <Download className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setIsOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
-        <div className="flex h-full min-h-screen items-center justify-center">
+      <ScrollArea className="flex-1 min-h-0 p-4">
+        <div className="flex h-full items-center justify-center">
           {results?.error ? (
             <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{results.error}</p>
