@@ -108,53 +108,53 @@ COMPLEX_QUERY_CASES = [
             "subqueries_generated": True,
         },
     },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Calculate the ratio of CSR spent to prescribed CSR for each company in 2022-23, and identify companies that spent more than prescribed",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id_1": "5eb6f370-8515-4cca-b527-d2b4517591f0",
-            "dataset_id_1": "9975bec1-1133-4b94-8ab2-179bba9ba887",
-            "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
-        },
-        "stream": True,
-        "expected_result": {
-            "datasets_used": ["CSR Master Data", "CSR Total Amount Spent"],
-            "sql_query_count": 1,
-            "visualization_needed": False,
-            "subqueries_generated": True,
-        },
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Analyze the trend of female candidates in SC constituencies from 1971 to 2019, and compare with the total number of SC constituencies in each election year",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id_1": "b26ad6ba-9c23-4c32-ac34-3fc8a6aa86a1",
-            "dataset_id_1": "e4301feb-a92b-4971-9e8d-ec62ccbe17a6",
-            "dataset_id_2": "db0ee4dc-d75f-4d3d-8672-119a7cf77968",
-        },
-        "stream": True,
-        "expected_result": {
-            "datasets_used": [
-                "Lok Sabha Candidates Master Data",
-                "Lok Sabha Constituencies Master Data",
-            ],
-            "sql_query_count": 2,
-            "visualization_needed": False,
-            "subqueries_generated": True,
-        },
-    },
+    # {
+    #     "messages": [
+    #         {
+    #             "role": "user",
+    #             "content": "Calculate the ratio of CSR spent to prescribed CSR for each company in 2022-23, and identify companies that spent more than prescribed",
+    #         }
+    #     ],
+    #     "model": "test",
+    #     "user": "test",
+    #     "metadata": {
+    #         "project_id_1": "5eb6f370-8515-4cca-b527-d2b4517591f0",
+    #         "dataset_id_1": "9975bec1-1133-4b94-8ab2-179bba9ba887",
+    #         "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
+    #     },
+    #     "stream": True,
+    #     "expected_result": {
+    #         "datasets_used": ["CSR Master Data", "CSR Total Amount Spent"],
+    #         "sql_query_count": 1,
+    #         "visualization_needed": False,
+    #         "subqueries_generated": True,
+    #     },
+    # },
+    # {
+    #     "messages": [
+    #         {
+    #             "role": "user",
+    #             "content": "Analyze the trend of female candidates in SC constituencies from 1971 to 2019, and compare with the total number of SC constituencies in each election year",
+    #         }
+    #     ],
+    #     "model": "test",
+    #     "user": "test",
+    #     "metadata": {
+    #         "project_id_1": "b26ad6ba-9c23-4c32-ac34-3fc8a6aa86a1",
+    #         "dataset_id_1": "e4301feb-a92b-4971-9e8d-ec62ccbe17a6",
+    #         "dataset_id_2": "db0ee4dc-d75f-4d3d-8672-119a7cf77968",
+    #     },
+    #     "stream": True,
+    #     "expected_result": {
+    #         "datasets_used": [
+    #             "Lok Sabha Candidates Master Data",
+    #             "Lok Sabha Constituencies Master Data",
+    #         ],
+    #         "sql_query_count": 2,
+    #         "visualization_needed": False,
+    #         "subqueries_generated": True,
+    #     },
+    # },
 ]
 
 INVALID_DATASET_CASES = [

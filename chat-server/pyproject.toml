@@ -46,3 +46,20 @@ exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 79
+
+[tool.pytest.ini_options]
+testpaths = ["tests/e2e", "tests/unit"]
+addopts = """
+    --tb=short
+    --strict-markers
+    --durations=5
+    -v
+"""
+pythonpath = ["."]
+python_files = ["test_*.py"]
+markers = [
+  "e2e: marks tests as end-to-end (deselect with '-m \"not e2e\"')",
+  "unit: marks tests as unit tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+cache_dir = "tests/.pytest_cache"

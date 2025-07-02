@@ -15,4 +15,4 @@ exclude =
     .mypy_cache,
     .pytest_cache,
     app/workflow/prompts/*,
-    app/tests/*,
+    tests/*,
