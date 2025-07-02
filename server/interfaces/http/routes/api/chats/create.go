@@ -14,7 +14,6 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
-	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -75,7 +74,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 	for _, id := range strings.Split(datasetIDs, ",") {
 		if strings.HasPrefix(id, "gp_") {
-			dataset, err := h.datasetSvc.GetByTableName(id)
+			dataset, err := h.datasetSvc.GetByTableName(id, orgID)
 			if err != nil {
 				h.logger.Error("Error fetching dataset by table name", zap.Error(err), zap.String("table_name", id))
 				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

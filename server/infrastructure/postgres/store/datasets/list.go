@@ -39,6 +39,7 @@ func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination 
 			Size:        int(d.Size.Int64),
 			FilePath:    d.FilePath,
 			Format:      d.Format,
+			OrgID:       d.OrgID.String,
 		})
 	}
 

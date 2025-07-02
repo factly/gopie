@@ -151,7 +151,7 @@ func setupStarterProject() error {
 		if err != nil {
 			appLogger.Error("Error fetching dataset summary", zap.Error(err))
 			// Clean up the dataset record and OLAP table since dataset summary fetch failed
-			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID, dataset.OrgID)
 			if deleteErr != nil {
 				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 			}
@@ -173,7 +173,7 @@ func setupStarterProject() error {
 		if err != nil {
 			appLogger.Error("Error creating dataset summary", zap.Error(err), zap.String("table_name", olapTable.TableName))
 			// Clean up the dataset record and OLAP table since summary creation failed
-			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID, dataset.OrgID)
 			if deleteErr != nil {
 				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 			}
@@ -197,7 +197,7 @@ func setupStarterProject() error {
 		if err != nil {
 			appLogger.Error("Error uploading schema to AI Agent", zap.Error(err), zap.String("dataset_id", dataset.ID))
 			// Clean up the dataset record and OLAP table since schema upload failed
-			deleteErr := datasetStore.Delete(context.Background(), dataset.ID)
+			deleteErr := datasetStore.Delete(context.Background(), dataset.ID, dataset.OrgID)
 			if deleteErr != nil {
 				appLogger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 			}
