@@ -49,6 +49,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             "need_semantic_search", True
         )
         required_dataset_ids = parsed_response.get("required_dataset_ids", [])
+        visualization_data = parsed_response.get("visualization_data", [])
 
         if context_summary and context_summary.strip():
             final_query = f"""
@@ -68,6 +69,7 @@ Context Summary: {context_summary}
             "user_query": final_query,
             "need_semantic_search": need_semantic_search,
             "required_dataset_ids": required_dataset_ids,
+            "visualization_data": visualization_data,
         }
 
     except Exception as e:

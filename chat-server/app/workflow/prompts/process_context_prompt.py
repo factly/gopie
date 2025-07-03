@@ -26,66 +26,49 @@ Given the chat history and current query, you should:
 3. IMPORTANT: If the previous query involved SQL or dataset information, ALWAYS include details about the specific dataset(s) used in your context summary
 4. CRITICAL FOR MULTIDATASET QUERIES: If the user is asking to modify a previous SQL query, reuse the EXACT SAME dataset(s) that were used in the previous query. Don't select different datasets for related follow-up questions.
 5. Determine if the current query is a follow-up question to the previous query.
+6. VISUALIZATION DATA: If (and only if) the current query is BOTH a follow-up question AND explicitly requests to VISUALIZE ("plot", "chart", "graph", "visualize", etc.) the RESULT of the previous query, you must also return the data needed for that visualization in the new \"visualization_data\" field. Otherwise this field should be an empty list.
 
-For the "required_dataset_ids" field:
-- Include ALL dataset IDs that the current query depends on
-- Include previous dataset IDs that are still relevant to the current query
-- For new topics that might need semantic search, leave this empty or include only the previous datasets that are still relevant
-- DO NOT make up dataset IDs - only include those explicitly mentioned in the conversation or clearly needed
+FIELD DEFINITIONS (populate **all** fields exactly as specified):
+- is_follow_up (boolean):
+  • true  - the current query logically refers to, builds on, or wants to modify the immediately preceding query/answer.
+  • false - the current query is standalone or unrelated.
 
-For the "context_summary" field:
-- ALWAYS include any dataset IDs mentioned in previous queries and responses
-- Include ALL relevant SQL queries that were used previously (It should be represented as same as the SQL query in the chat history)
-- Mention which dataset each SQL query was run against
-- If specific tables, columns, or filters were used in previous queries, include those details
-- Make sure to show the relationship between previous queries and the current query
+- need_semantic_search (boolean):
+  • true  - additional datasets must be searched for to answer the query (e.g. new topic, unspecified dataset).
+  • false - all necessary datasets are already known from context or provided IDs.
 
-IMPORTANT: When referencing SQL queries in context_summary, use the actual table names (like 'sales_data', 'covid_statistics') NOT dataset IDs (lik`e 'a7f392e1c8d4b5.sales'). Dataset IDs are for tracking which dataset was used, but SQL queries should use proper table names.
+- required_dataset_ids (string[]):
+  • Include every dataset ID that the answer depends on (both previous and new).
+  • Keep previously-used IDs if still relevant.
+  • Leave empty ([]) only if no dataset is yet known or there is need for semantic search.
+  • NEVER invent IDs.
+
+- enhanced_query (string):
+  • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history.
+  • Keep the user's intent and wording where possible.
+
+- context_summary (string):
+  • Briefly explain the relationship between the current query and prior messages.
+  • MUST list dataset IDs used previously, any SQL queries run, and explanatory details (tables, columns, filters, etc.).
+  • Keep it concise—one or two sentences is ideal.
+
+- visualization_data (object[]): *Only for visualization follow-ups*
+  • Each element must have keys: data (list[list[Any]]), description (string), csv_path (null or string).
+  • Provide tabular data extracted from the prior assistant result that the user wants visualized.
+  • If no visualization is requested or the user want's visualization but also wants to do some other thing that just don't rely on visualization from the available data from chat history, return an empty list [].
+
+IMPORTANT: When referencing SQL queries in context_summary, use the actual table names (e.g., 'sales_data'), NOT dataset-ID-prefixed names (e.g., 'a7f392e1c8d4b5.sales'). Dataset IDs are only for tracking in required_dataset_ids.
 
 Be concise but thorough. Focus on information that would help a data analyst understand what the user is really asking for.
 
-Examples of different scenarios:
-
-1) Follow-up question using the same dataset:
-   Chat history: ["Show me sales data for 2023", "The total was $1.2M across all regions. SQL used: SELECT SUM(amount) FROM sales_data WHERE year=2023"]
-   Current query: "What about the trends?"
-
-   Fields:
-   - is_follow_up: true
-   - need_semantic_search: false
-   - required_dataset_ids: ["a7f392e1c8d4b5"]
-   - enhanced_query: "What are the sales trends for 2023 data that showed $1.2M total across all regions?"
-   - context_summary: "User previously queried dataset a7f392e1c8d4b5 with SQL 'SELECT SUM(amount) FROM sales_data WHERE year=2023' showing total $1.2M across regions. User now wants trend analysis on the same dataset."
-
-2) Follow-up question needing previous dataset plus additional datasets:
-   Chat history: ["Show me covid cases by state using e28c7b6d9a3f5", "Here's the SQL query: SELECT state, SUM(cases) FROM covid_statistics GROUP BY state"]
-   Current query: "Now compare with vaccination rates by state"
-
-   Fields:
-   - is_follow_up: true
-   - need_semantic_search: true
-   - required_dataset_ids: ["e28c7b6d9a3f5", "7d9f3e8b1a6c2"]
-   - enhanced_query: "Compare covid cases by state from e28c7b6d9a3f5 with vaccination rates by state"
-   - context_summary: "Previous query used SQL 'SELECT state, SUM(cases) FROM covid_statistics GROUP BY state' on dataset e28c7b6d9a3f5 for state-level covid cases. Now need to compare with vaccination data (likely dataset 7d9f3e8b1a6c2) by state."
-
-3) New question with no relevant previous context:
-   Chat history: ["What's the weather like?", "It's sunny today."]
-   Current query: "Show me sales data for Q1"
-
-   Fields:
-   - is_follow_up: false
-   - need_semantic_search: true
-   - required_dataset_ids: []
-   - enhanced_query: "Show me sales data for Q1"
-   - context_summary: ""
-
 RESPOND ONLY IN THIS JSON FORMAT:
 {{
-  "is_follow_up": boolean,  // whether this is a follow-up question to the previous query
-  "need_semantic_search": boolean,  // true if new datasets should be searched for
-  "required_dataset_ids": string[],  // all dataset IDs needed for current query (both previous and new)
-  "enhanced_query": string,  // refined version of current query with better context
-  "context_summary": string  // summary of relevant context from chat history
+  "is_follow_up": boolean,
+  "need_semantic_search": boolean,
+  "required_dataset_ids": string[],
+  "enhanced_query": string,
+  "context_summary": string,
+  "visualization_data": object[]
 }}
 """
 
