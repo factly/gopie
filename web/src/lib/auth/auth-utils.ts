@@ -27,7 +27,7 @@ export async function getSession(): Promise<UserSession | null> {
     const user = await zitadelClient.getUserInfo(sessionId);
 
     // Get fresh access token
-    const tokenResponse = await zitadelClient.getAccessToken();
+    const tokenResponse = await zitadelClient.getAccessToken(user.id);
 
     return {
       user,
@@ -51,7 +51,7 @@ export async function createSession(
   const user = await zitadelClient.getUserInfo(sessionId);
 
   // Get access token for client-side use
-  const tokenResponse = await zitadelClient.getAccessToken();
+  const tokenResponse = await zitadelClient.getAccessToken(user.id);
 
   const cookieStore = await cookies();
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours

@@ -156,16 +156,42 @@ export class ZitadelClient {
     };
   }
 
-  async getAccessToken(): Promise<AccessTokenResponse> {
-    // Since we already have a working PAT and the session authentication is working,
-    // we'll use the PAT as the access token for client-side API calls
-    // This is simpler and avoids the client credentials configuration issues
-    return {
-      access_token: this.pat,
-      token_type: "Bearer",
-      expires_in: 86400, // 24 hours
+  async getAccessToken(userId: string): Promise<AccessTokenResponse> {
+    // Exchange the PAT (actor_token) together with the target userId to
+    // obtain a user-scoped opaque access_token via the Token Exchange grant.
+
+    const body = new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+      // The subject we want a token for is the user identified by their ID.
+      subject_token: userId,
+      subject_token_type: "urn:zitadel:params:oauth:token-type:user_id",
+      // Our service-user PAT acts as the actor_token performing the impersonation.
+      actor_token: this.pat,
+      actor_token_type: "urn:ietf:params:oauth:token-type:access_token",
       scope: "openid profile email",
-    };
+    });
+
+    const basicAuth = Buffer.from(
+      `${this.clientId}:${this.clientSecret}`
+    ).toString("base64");
+
+    const response = await fetch(`${this.authority}/oauth/v2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${basicAuth}`,
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to exchange access token: ${response.status} – ${errorText}`
+      );
+    }
+
+    return (await response.json()) as AccessTokenResponse;
   }
 
   async getUserInfo(sessionId: string): Promise<ZitadelUser> {
