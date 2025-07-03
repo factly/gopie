@@ -78,8 +78,7 @@ where id = $1 and created_by = $2;
 -- name: UpdateChatVisibility :one
 update chats
 set
-  visibility = $2,
-  organization_id = $3
-where id = $1 and created_by = $4
+  visibility = $2
+where id = $1 and created_by = $3
 returning *;
 

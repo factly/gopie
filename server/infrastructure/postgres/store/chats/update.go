@@ -39,13 +39,8 @@ func (s *PostgresChatStore) UpdateChatVisibility(ctx context.Context, chatID, us
 	}
 
 	c, err := s.q.UpdateChatVisibility(ctx, gen.UpdateChatVisibilityParams{
-		ID:       chatID,
-		CreatedBy: pgtype.Text{String: userID, Valid: userID != ""},
-		Visibility:     visibility,
-		OrganizationID: pgtype.Text{
-			String: params.OrganizationID,
-			Valid:  params.OrganizationID != "",
-		},
+		ID:         chatID,
+		Visibility: visibility,
 	})
 	if err != nil {
 		return nil, err

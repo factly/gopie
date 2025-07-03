@@ -352,26 +352,19 @@ func (q *Queries) UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams
 const updateChatVisibility = `-- name: UpdateChatVisibility :one
 update chats
 set
-  visibility = $2,
-  organization_id = $3
-where id = $1 and created_by = $4
+  visibility = $2
+where id = $1 and created_by = $3
 returning id, title, visibility, organization_id, created_at, updated_at, created_by
 `
 
 type UpdateChatVisibilityParams struct {
-	ID             string
-	Visibility     NullChatVisibility
-	OrganizationID pgtype.Text
-	CreatedBy      pgtype.Text
+	ID         string
+	Visibility NullChatVisibility
+	CreatedBy  pgtype.Text
 }
 
 func (q *Queries) UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, updateChatVisibility,
-		arg.ID,
-		arg.Visibility,
-		arg.OrganizationID,
-		arg.CreatedBy,
-	)
+	row := q.db.QueryRow(ctx, updateChatVisibility, arg.ID, arg.Visibility, arg.CreatedBy)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
