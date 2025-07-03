@@ -8,6 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.constants import DATASETS_USED
 from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
+from app.services.qdrant.get_schema import get_schema_by_dataset_ids
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
@@ -28,6 +29,13 @@ async def identify_datasets(state: State, config: RunnableConfig):
     - If no datasets found for a data_query → convert to conversational
     - If high relevance datasets found for low confidence query →
         confirm as data_query
+
+    Three scenarios are handled:
+    1. Use only required_dataset_ids (automatically selected, need column
+       assumptions)
+    2. Use required_dataset_ids + semantic search (required are auto-selected,
+       LLM can choose additional from semantic search)
+    3. Use semantic search only (LLM chooses from semantic search results)
     """
 
     parser = JsonOutputParser()
@@ -41,6 +49,9 @@ async def identify_datasets(state: State, config: RunnableConfig):
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
 
+    need_semantic_search = state.get("need_semantic_search", True)
+    required_dataset_ids = state.get("required_dataset_ids", [])
+
     query_type = query_result.subqueries[query_index].query_type
     confidence_score = query_result.subqueries[query_index].confidence_score
 
@@ -48,29 +59,32 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
+        required_dataset_schemas = _get_required_datasets(required_dataset_ids)
+
         semantic_searched_datasets = []
-        try:
-            dataset_schemas = await search_schemas(
-                user_query,
-                embeddings_model,
-                dataset_ids=dataset_ids,
-                project_ids=project_ids,
-            )
-            semantic_searched_datasets = dataset_schemas
+        if need_semantic_search or not required_dataset_schemas:
+            try:
+                dataset_schemas = await search_schemas(
+                    user_query,
+                    embeddings_model,
+                    dataset_ids=dataset_ids,
+                    project_ids=project_ids,
+                )
+                semantic_searched_datasets = dataset_schemas
+            except Exception as e:
+                logger.warning(
+                    f"Vector search error: {e!s}. Unable to retrieve dataset "
+                    "information."
+                )
 
-        except Exception as e:
-            logger.warning(
-                f"Vector search error: {e!s}. Unable to retrieve dataset "
-                "information."
-            )
-
-        if not semantic_searched_datasets:
+        if not required_dataset_schemas and not semantic_searched_datasets:
             query_result.set_node_message(
                 "identify_datasets",
                 {
-                    "No relevant datasets found by doing semantic "
-                    "search. This query is not relavant to any "
-                    "datasets. Converting to conversational query."
+                    "No relevant datasets found by doing semantic search or "
+                    "required datasets from previous messages. This query is "
+                    "not relavant to any datasets. Treating as conversational "
+                    "query."
                 },
             )
 
@@ -103,7 +117,10 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm_prompt = get_prompt(
             "identify_datasets",
             user_query=user_query,
-            available_datasets_schemas=json.dumps(
+            required_dataset_schemas=json.dumps(
+                required_dataset_schemas, indent=2
+            ),
+            semantic_searched_datasets=json.dumps(
                 semantic_searched_datasets, indent=2
             ),
             confidence_score=confidence_score,
@@ -116,7 +133,11 @@ async def identify_datasets(state: State, config: RunnableConfig):
         parsed_content = parser.parse(response_content)
 
         selected_datasets = parsed_content.get("selected_dataset", [])
+        selected_datasets.extend(
+            [schema.get("dataset_name") for schema in required_dataset_schemas]
+        )
         query_result.subqueries[query_index].tables_used = selected_datasets
+
         column_assumptions = parsed_content.get("column_assumptions", [])
         node_message = parsed_content.get("node_message")
 
@@ -127,9 +148,13 @@ async def identify_datasets(state: State, config: RunnableConfig):
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
 
+        all_available_schemas = (
+            required_dataset_schemas + semantic_searched_datasets
+        )
+
         filtered_dataset_schemas = [
             schema
-            for schema in semantic_searched_datasets
+            for schema in all_available_schemas
             if schema.get("dataset_name") in selected_datasets
         ]
 
@@ -141,6 +166,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "schemas": filtered_dataset_schemas,
             "column_assumptions": column_assumptions,
         }
+
         await adispatch_custom_event(
             "gopie-agent",
             {
@@ -197,3 +223,16 @@ def route_from_datasets(state: State) -> str:
         return "no_datasets_found"
     else:
         return "analyze_dataset"
+
+
+def _get_required_datasets(
+    required_dataset_ids: list[str] | None,
+) -> list[dict]:
+    if not required_dataset_ids:
+        return []
+
+    try:
+        return get_schema_by_dataset_ids(required_dataset_ids)
+    except Exception as e:
+        logger.warning(f"Error retrieving required dataset schemas: {e!s}")
+        return []

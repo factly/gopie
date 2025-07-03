@@ -2,6 +2,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
@@ -43,11 +44,18 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
 
         enhanced_query = parsed_response.get("enhanced_query", user_input)
         context_summary = parsed_response.get("context_summary", "")
+        is_follow_up = parsed_response.get("is_follow_up", False)
+        need_semantic_search = parsed_response.get(
+            "need_semantic_search", True
+        )
+        required_dataset_ids = parsed_response.get("required_dataset_ids", [])
 
         if context_summary and context_summary.strip():
             final_query = f"""
 The original user query and the previous conversation history were processed
 and the following context summary was added to the query:
+
+{is_follow_up and "This is a follow-up question to a previous query." or ""}
 
 User Query: {enhanced_query}
 
@@ -56,7 +64,12 @@ Context Summary: {context_summary}
         else:
             final_query = enhanced_query
 
-        return {"user_query": final_query}
+        return {
+            "user_query": final_query,
+            "need_semantic_search": need_semantic_search,
+            "required_dataset_ids": required_dataset_ids,
+        }
 
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error processing context: {e!s}")
         return {"user_query": user_input}

@@ -52,6 +52,8 @@ async def call_multi_dataset_agent(
         "dataset_ids": state["dataset_ids"],
         "project_ids": state["project_ids"],
         "user_query": state["user_query"],
+        "need_semantic_search": state.get("need_semantic_search", True),
+        "required_dataset_ids": state.get("required_dataset_ids", []),
     }
 
     output_state = await multi_dataset_graph.ainvoke(

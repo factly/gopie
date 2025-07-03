@@ -16,5 +16,7 @@ class AgentState(TypedDict):
     dataset_ids: list[str] | None
     project_ids: list[str] | None
     user_query: str | None
+    need_semantic_search: bool | None
+    required_dataset_ids: list[str] | None
     needs_visualization: bool | None
     datasets: list[Dataset] | None
