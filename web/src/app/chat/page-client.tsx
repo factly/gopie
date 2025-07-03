@@ -1071,9 +1071,9 @@ function ChatPageClient() {
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      {chatDetails?.Visibility && (
+                      {chatDetails?.visibility && (
                         <ChatVisibilityIndicator
-                          visibility={chatDetails.Visibility}
+                          visibility={chatDetails.visibility}
                         />
                       )}
                       <span className="truncate">
@@ -1116,7 +1116,7 @@ function ChatPageClient() {
                 {selectedChatId && (
                   <ShareChatDialog
                     chatId={selectedChatId}
-                    currentVisibility={chatDetails?.Visibility || "private"}
+                    currentVisibility={chatDetails?.visibility || "private"}
                   />
                 )}
                 {hasResults && (
@@ -1226,7 +1226,7 @@ function ChatPageClient() {
           ) : selectedChatId ? (
             <ReadOnlyMessage
               chatOwner={chatDetails?.created_by}
-              chatVisibility={chatDetails?.Visibility}
+              chatVisibility={chatDetails?.visibility}
               chatTitle={chatDetails?.title}
             />
           ) : null}

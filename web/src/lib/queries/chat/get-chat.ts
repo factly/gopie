@@ -12,7 +12,7 @@ interface ChatDetails {
   created_at: string;
   updated_at: string;
   created_by: string;
-  Visibility?: "public" | "private" | "organization";
+  visibility?: "public" | "private" | "organization";
   [key: string]: unknown; // For additional properties
 }
 
