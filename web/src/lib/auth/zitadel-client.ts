@@ -342,6 +342,42 @@ export class ZitadelClient {
     }
   }
 
+  async getPublicUserInfo(userId: string): Promise<{
+    id: string;
+    displayName: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+  } | null> {
+    try {
+      // Get user information from Zitadel
+      const userResponse = await this.makeRequest(`/v2/users/${userId}`);
+      const user = userResponse.user;
+
+      if (!user) {
+        return null;
+      }
+
+      // Return only public information
+      return {
+        id: user.id || userId,
+        displayName:
+          user.human?.profile?.displayName ||
+          user.username ||
+          `${user.human?.profile?.givenName || ""} ${
+            user.human?.profile?.familyName || ""
+          }`.trim() ||
+          "User",
+        firstName: user.human?.profile?.givenName,
+        lastName: user.human?.profile?.familyName,
+        profilePicture: user.human?.profile?.avatarUrl,
+      };
+    } catch (error) {
+      console.error("Error fetching public user info:", error);
+      return null;
+    }
+  }
+
   async resetPassword(
     userId: string,
     code: string,
