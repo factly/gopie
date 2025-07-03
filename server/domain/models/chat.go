@@ -59,7 +59,7 @@ type Chat struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	CreatedBy      string    `json:"created_by"`
-	Visibility     string    `json:"Visibility"`
+	Visibility     string    `json:"visibility"`
 	OrganizationID string    `json:"organization_id"`
 }
 
