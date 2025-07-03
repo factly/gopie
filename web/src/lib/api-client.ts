@@ -54,6 +54,20 @@ export const apiClient = ky.create({
   hooks: {
     beforeRequest: [
       (request) => {
+        const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
+
+        // If auth is disabled, force admin headers and skip token logic
+        if (!isAuthEnabled) {
+          if (!request.headers.get("x-user-id")) {
+            request.headers.set("x-user-id", "system");
+          }
+          if (!request.headers.get("x-organization-id")) {
+            request.headers.set("x-organization-id", "system");
+          }
+          return;
+        }
+
+        // Auth enabled: attach token and organization headers if present
         const token = getGlobalAccessToken();
         if (token && !request.headers.get("Authorization")) {
           request.headers.set("Authorization", `Bearer ${token}`);

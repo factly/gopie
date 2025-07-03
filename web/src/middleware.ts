@@ -44,8 +44,11 @@ async function validateSession(sessionId: string): Promise<boolean> {
 
 // This middleware protects all routes
 export async function middleware(request: NextRequest) {
-  // Skip authentication if disable auth is enabled
-  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true") {
+  // Skip authentication if enable auth is set to false
+  const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
+
+  // If auth is not enabled, skip all authentication checks
+  if (!isAuthEnabled) {
     console.log("Auth is disabled, skipping middleware");
     return NextResponse.next();
   }

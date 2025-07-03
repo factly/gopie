@@ -8,10 +8,12 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    // Get user session for authentication
-    const session = await getSession();
+    const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
 
-    if (!session) {
+    // Retrieve session only when auth is enabled
+    const session = isAuthEnabled ? await getSession() : null;
+
+    if (isAuthEnabled && !session) {
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -40,7 +42,8 @@ export async function POST(req: Request) {
       hasProjectIds: !!project_ids,
       hasDatasetIds: !!dataset_ids,
       chatId: chat_id,
-      userId: session.user.id,
+      authEnabled: isAuthEnabled,
+      userId: isAuthEnabled ? session?.user.id : "system",
     });
 
     // Create OpenAI-compatible client pointed at our API
@@ -52,15 +55,20 @@ export async function POST(req: Request) {
 
     // Build headers object with authentication
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${session.accessToken}`,
       "x-project-ids": project_ids?.join(",") || "",
       "x-dataset-ids": dataset_ids?.join(",") || "",
-      // "x-user-id": session.user.id,
     };
 
-    // Add organization ID header if available
-    if (session.user.organizationId) {
-      headers["x-organization-id"] = session.user.organizationId;
+    if (isAuthEnabled && session) {
+      headers["Authorization"] = `Bearer ${session.accessToken}`;
+
+      if (session.user.organizationId) {
+        headers["x-organization-id"] = session.user.organizationId;
+      }
+    } else {
+      // Auth disabled: use admin headers
+      headers["x-user-id"] = "system";
+      headers["x-organization-id"] = "system";
     }
 
     // Add chat ID header if available
