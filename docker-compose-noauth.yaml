@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/postgres_api:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gopie
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gopie
+
+  # gopie-web:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile.prod
+  #   env_file:
+  #       - ./config-noauth.env
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
+  #   networks:
+  #     - gopie
+
+  gopie-starter-project:
+    build:
+      context: ./server
+      dockerfile: Dockerfile-sp
+    env_file:
+        - ./config-noauth.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gopie-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./volumes/duckdb:/dataful
+    networks:
+      - gopie
+    command: >
+      sh -c "cd /home/gopie && gopie starter-project"
+
+  gopie-migrate:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.migrate
+    environment:
+      - GOOSE_DBSTRING=postgres://postgres:postgres@postgres:5432/gopie?sslmode=disable
+      - GOOSE_DRIVER=postgres
+      - GOOSE_MIGRATION_DIR=migrations 
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gopie
+
+  gopie-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+        - ./config-noauth.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gopie-starter-project:
+        condition: service_completed_successfully
+    volumes:
+      - ./volumes/duckdb:/dataful
+    networks:
+      - gopie
+    command: >
+      sh -c "cd /home/gopie && gopie serve"
+
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9002:9002"
+    volumes:
+      - ./volumes/minio/data:/export
+      - ./volumes/minio/config:/root/.minio
+    environment:
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+    networks:
+      - gopie
+    command: server -console-address :9002 /export
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+include:
+  - ./chat-server/docker-compose.yaml
+
+networks:
+  gopie:
+    name: gopie-noauth
+    driver: bridge

@@ -132,9 +132,27 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
 		{config.EncryptionKey, "encryption key"},
-		{config.Zitadel.Protocol, "zitadel protocol"},
-		{config.Zitadel.Domain, "zitadel domain"},
-		{config.Zitadel.ProjectID, "zitadel project id"},
+		// {config.Zitadel.Protocol, "zitadel protocol"},
+		// {config.Zitadel.Domain, "zitadel domain"},
+		// {config.Zitadel.ProjectID, "zitadel project id"},
+	}
+
+	containsWebapp := false
+	for _, server := range config.EnabledServers {
+		if server == "webapp" {
+			containsWebapp = true
+			break
+		}
+	}
+
+	if containsWebapp {
+		validations = append(validations,
+			validation{config.Zitadel.Protocol, "zitadel protocol"},
+			validation{config.Zitadel.Domain, "zitadel domain"},
+			validation{config.Zitadel.ProjectID, "zitadel project id"},
+		)
+	} else {
+		log.Println("Webapp server is not enabled, skipping webapp server configuration")
 	}
 
 	if config.OlapDB.DB == "" {

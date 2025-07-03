@@ -228,10 +228,10 @@ func setupStarterProject() error {
 }
 
 func uploadDatasetFilesToMinio(logger *logger.Logger, s3Source repositories.SourceRepository) ([]string, error) {
-	datasetFilesPath := os.Getenv("DATASET_FILES_PATH")
+	datasetFilesPath := os.Getenv("GOPIE_DATASET_FILES_PATH")
 	bucketName := "gopie"
 	if datasetFilesPath == "" {
-		logger.Warn("DATASET_FILES_PATH environment variable is not set")
+		logger.Warn("GOPIE_DATASET_FILES_PATH environment variable is not set")
 		logger.Info("Using default path: ./starter-project-datasets/")
 		datasetFilesPath = "./starter-project-datasets/"
 	}
