@@ -123,8 +123,8 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	return chat, err
 }
 
-func (service *ChatService) GetChatByID(chatID, userID string) (*models.Chat, error) {
-	chat, err := service.store.GetChatByID(context.Background(), chatID, userID)
+func (service *ChatService) GetChatByID(chatID string) (*models.Chat, error) {
+	chat, err := service.store.GetChatByID(context.Background(), chatID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting chat by ID: %w", err)
 	}

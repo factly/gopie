@@ -5,13 +5,11 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error) {
+func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID string) (*models.Chat, error) {
 	c, err := s.q.GetChatById(ctx, gen.GetChatByIdParams{
-		ID:        chatID,
-		CreatedBy: pgtype.Text{String: userID, Valid: true},
+		ID: chatID,
 	})
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ type ChatStoreRepository interface {
 	DeleteChat(ctx context.Context, id, createdBy, orgID string) error
 	ListUserChats(ctx context.Context, userID, orgID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error)
 	UpdateChat(ctx context.Context, chatID string, params *models.UpdateChatParams) (*models.Chat, error)
-	GetChatByID(ctx context.Context, chatID, userID string) (*models.Chat, error)
+	GetChatByID(ctx context.Context, chatID string) (*models.Chat, error)
 	UpdateChatVisibility(ctx context.Context, chatID, userID string, params *models.UpdateChatVisibilityParams) (*models.Chat, error)
 
 	GetChatMessages(ctx context.Context, chatID string) ([]*models.ChatMessage, error)

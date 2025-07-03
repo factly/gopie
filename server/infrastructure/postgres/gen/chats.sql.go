@@ -126,16 +126,11 @@ func (q *Queries) DeleteChat(ctx context.Context, arg DeleteChatParams) error {
 
 const getChatById = `-- name: GetChatById :one
 select id, title, visibility, organization_id, created_at, updated_at, created_by from chats
-where id = $1 and created_by = $2
+where id = $1
 `
 
-type GetChatByIdParams struct {
-	ID        string
-	CreatedBy pgtype.Text
-}
-
-func (q *Queries) GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat, error) {
-	row := q.db.QueryRow(ctx, getChatById, arg.ID, arg.CreatedBy)
+func (q *Queries) GetChatById(ctx context.Context, id string) (Chat, error) {
+	row := q.db.QueryRow(ctx, getChatById, id)
 	var i Chat
 	err := row.Scan(
 		&i.ID,

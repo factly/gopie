@@ -73,7 +73,7 @@ order by m.created_at asc;
 
 -- name: GetChatById :one
 select * from chats
-where id = $1 and created_by = $2;
+where id = $1;
 
 -- name: UpdateChatVisibility :one
 update chats
