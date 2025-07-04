@@ -5,7 +5,14 @@ const SESSION_COOKIE_NAME = "zitadel-session";
 const SESSION_TOKEN_COOKIE_NAME = "zitadel-session-token";
 
 // Protected routes that require authentication
-const protectedRoutes = ["/", "/chat", "/projects", "/datasets", "/schemas"];
+const protectedRoutes = [
+  "/",
+  "/chat",
+  "/projects",
+  "/datasets",
+  "/schemas",
+  "/settings",
+];
 
 // Public routes that don't require authentication
 const publicRoutes = [
