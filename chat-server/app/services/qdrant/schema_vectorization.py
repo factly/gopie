@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from app.core.log import logger
 from app.models.data import DatasetDetails
 from app.services.gopie.dataset_info import format_schema
-from app.services.qdrant.vector_store import add_documents_to_vector_store
+from app.services.qdrant.vector_store import add_document_to_vector_store
 from app.utils.graph_utils.col_description_generator import (
     generate_column_descriptions,
 )
@@ -52,7 +52,7 @@ async def store_schema_in_qdrant(
         )
 
         task = asyncio.create_task(
-            add_documents_to_vector_store(documents=[document])
+            add_document_to_vector_store(document=document)
         )
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
