@@ -19,5 +19,4 @@ class AgentState(TypedDict):
     need_semantic_search: bool | None
     required_dataset_ids: list[str] | None
     needs_visualization: bool | None
-    visualization_data: list[dict] | None
     datasets: list[Dataset] | None

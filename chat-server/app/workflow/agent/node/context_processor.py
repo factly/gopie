@@ -10,7 +10,7 @@ from app.utils.model_registry.model_provider import (
 )
 from app.workflow.events.event_utils import configure_node
 
-from ..types import AgentState
+from ..types import AgentState, Dataset
 
 
 @configure_node(
@@ -65,11 +65,26 @@ Context Summary: {context_summary}
         else:
             final_query = enhanced_query
 
+        datasets = []
+        if visualization_data:
+            for viz_data in visualization_data:
+                if (
+                    isinstance(viz_data, dict)
+                    and "data" in viz_data
+                    and "description" in viz_data
+                ):
+                    dataset = Dataset(
+                        data=viz_data["data"],
+                        description=viz_data["description"],
+                        csv_path=viz_data.get("csv_path"),
+                    )
+                    datasets.append(dataset)
+
         return {
             "user_query": final_query,
             "need_semantic_search": need_semantic_search,
             "required_dataset_ids": required_dataset_ids,
-            "visualization_data": visualization_data,
+            "datasets": datasets,
         }
 
     except Exception as e:

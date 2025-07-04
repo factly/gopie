@@ -37,18 +37,9 @@ async def check_visualization(
 async def call_visualization_agent(
     state: AgentState, config: RunnableConfig
 ) -> AgentState | None:
-    visualization_data = state.get("visualization_data", None)
-
-    viz_data = []
-
-    if visualization_data:
-        viz_data = visualization_data
-    else:
-        viz_data = state.get("datasets", [])
-
     input_state = {
         "user_query": state.get("user_query", ""),
-        "datasets": viz_data,
+        "datasets": state.get("datasets", []),
     }
 
     _ = await visualize_data_graph.ainvoke(input_state, config=config)

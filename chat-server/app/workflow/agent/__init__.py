@@ -18,8 +18,8 @@ async def should_visualize(state: AgentState):
 
 
 def route_visualization_follow_ups(state: AgentState):
-    visualization_data = state.get("visualization_data", [])
-    if visualization_data:
+    datasets = state.get("datasets", [])
+    if datasets:
         return "visualization_agent"
     else:
         return "supervisor"
