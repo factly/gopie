@@ -4,13 +4,10 @@ import (
 	"context"
 
 	"github.com/factly/gopie/domain/models"
-	"github.com/factly/gopie/infrastructure/postgres/gen"
 )
 
 func (s *PostgresChatStore) GetChatByID(ctx context.Context, chatID string) (*models.Chat, error) {
-	c, err := s.q.GetChatById(ctx, gen.GetChatByIdParams{
-		ID: chatID,
-	})
+	c, err := s.q.GetChatById(ctx, chatID)
 	if err != nil {
 		return nil, err
 	}
