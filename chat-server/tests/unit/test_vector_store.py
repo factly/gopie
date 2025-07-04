@@ -4,12 +4,23 @@ import pytest
 
 from app.services.qdrant.schema_search import search_schemas
 from app.services.qdrant.vector_store import (
-    add_documents_to_vector_store,
+    add_document_to_vector_store,
     perform_similarity_search,
 )
 
 
 class TestVectorStore:
+    @pytest.fixture
+    def mock_document(self):
+        return Mock(
+            page_content="Test document 1",
+            metadata={
+                "project_id": "proj1",
+                "dataset_id": "ds1",
+                "dataset_name": "test_dataset_1",
+            },
+        )
+
     @pytest.fixture
     def mock_documents(self):
         return [
@@ -32,8 +43,8 @@ class TestVectorStore:
         ]
 
     @pytest.mark.asyncio
-    async def test_add_documents_to_vector_store_success(
-        self, mock_documents, mock_vector_store, mock_qdrant_client
+    async def test_add_document_to_vector_store_new_document(
+        self, mock_document, mock_vector_store, mock_qdrant_client
     ):
         with (
             patch(
@@ -53,22 +64,63 @@ class TestVectorStore:
             mock_setup.return_value = mock_vector_store
             mock_init_client.return_value = mock_qdrant_client
             mock_qdrant_client.scroll.return_value = (
-                [],
+                [],  # No existing documents
                 None,
             )
 
-            await add_documents_to_vector_store(mock_documents)
+            await add_document_to_vector_store(mock_document)
 
             mock_vector_store.add_documents.assert_called_once()
             call_args = mock_vector_store.add_documents.call_args
-            assert len(call_args.kwargs["documents"]) == 2
-            assert len(call_args.kwargs["ids"]) == 2
+            assert len(call_args.kwargs["documents"]) == 1
+            assert call_args.kwargs["documents"][0] == mock_document
+            assert len(call_args.kwargs["ids"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_add_document_to_vector_store_update_existing(
+        self, mock_document, mock_vector_store, mock_qdrant_client
+    ):
+        existing_point = Mock()
+        existing_point.id = "existing_id_123"
+
+        with (
+            patch(
+                "app.utils.model_registry.model_provider.ModelProvider"
+            ) as mock_provider,
+            patch(
+                "app.services.qdrant.vector_store.setup_vector_store"
+            ) as mock_setup,
+            patch(
+                "app.services.qdrant.vector_store.initialize_qdrant_client"
+            ) as mock_init_client,
+        ):
+
+            mock_provider.return_value.get_embeddings_model.return_value = (
+                Mock()
+            )
+            mock_setup.return_value = mock_vector_store
+            mock_init_client.return_value = mock_qdrant_client
+            mock_qdrant_client.scroll.return_value = (
+                [existing_point],  # Document exists
+                None,
+            )
+
+            await add_document_to_vector_store(mock_document)
+
+            mock_vector_store.add_documents.assert_called_once()
+            call_args = mock_vector_store.add_documents.call_args
+            assert len(call_args.kwargs["documents"]) == 1
+            assert call_args.kwargs["documents"][0] == mock_document
+            assert call_args.kwargs["ids"][0] == "existing_id_123"
 
     @pytest.mark.asyncio
     async def test_add_documents_skip_existing(
         self, mock_documents, mock_vector_store, mock_qdrant_client
     ):
-        """Test that existing documents are skipped."""
+        """Test that existing documents are updated (not skipped)."""
+        existing_point = Mock()
+        existing_point.id = "existing_id_456"
+
         with (
             patch(
                 "app.utils.model_registry.model_provider.ModelProvider"
@@ -86,48 +138,18 @@ class TestVectorStore:
             )
             mock_setup.return_value = mock_vector_store
             mock_init_client.return_value = mock_qdrant_client
-            mock_qdrant_client.scroll.side_effect = [
-                ([Mock()], None),  # Document exists
-                ([], None),  # Document doesn't exist
-            ]
+            mock_qdrant_client.scroll.return_value = (
+                [existing_point],  # Document exists
+                None,
+            )
 
-            await add_documents_to_vector_store(mock_documents)
+            await add_document_to_vector_store(mock_documents[0])
 
             mock_vector_store.add_documents.assert_called_once()
             call_args = mock_vector_store.add_documents.call_args
             assert len(call_args.kwargs["documents"]) == 1
-            assert call_args.kwargs["documents"][0] == mock_documents[1]
-
-    @pytest.mark.asyncio
-    async def test_add_documents_with_custom_ids(
-        self, mock_documents, mock_vector_store, mock_qdrant_client
-    ):
-        custom_ids = ["custom_id_1", "custom_id_2"]
-
-        with (
-            patch(
-                "app.utils.model_registry.model_provider.ModelProvider"
-            ) as mock_provider,
-            patch(
-                "app.services.qdrant.vector_store.setup_vector_store"
-            ) as mock_setup,
-            patch(
-                "app.services.qdrant.vector_store.initialize_qdrant_client"
-            ) as mock_init_client,
-        ):
-
-            mock_provider.return_value.get_embeddings_model.return_value = (
-                Mock()
-            )
-            mock_setup.return_value = mock_vector_store
-            mock_init_client.return_value = mock_qdrant_client
-            mock_qdrant_client.scroll.return_value = ([], None)
-
-            await add_documents_to_vector_store(mock_documents, ids=custom_ids)
-
-            mock_vector_store.add_documents.assert_called_once()
-            call_args = mock_vector_store.add_documents.call_args
-            assert call_args.kwargs["ids"] == custom_ids
+            assert call_args.kwargs["documents"][0] == mock_documents[0]
+            assert call_args.kwargs["ids"][0] == "existing_id_456"
 
     def test_perform_similarity_search_success(self, mock_vector_store):
         """Test successful similarity search."""
