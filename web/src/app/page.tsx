@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { updateProject } from "@/lib/mutations/project/update-project";
 import { deleteProject } from "@/lib/mutations/project/delete-project";
 import { useToast } from "@/hooks/use-toast";
-import { FolderIcon } from "lucide-react";
+import { FolderIcon, SettingsIcon } from "lucide-react";
 import { ProtectedPage } from "@/components/auth/protected-page";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { MentionInput } from "@/components/chat/mention-input";
@@ -255,6 +255,13 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                href="/settings"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                <span className="sr-only">Settings</span>
+              </Link>
               <ThemeToggle />
               <AuthStatus size="md" />
             </div>

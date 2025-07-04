@@ -125,6 +125,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navSecondary = [
     {
+      title: "Settings",
+      url: "/settings",
+      icon: SettingsIcon,
+    },
+    {
       title: "Support",
       url: "#",
       icon: LifeBuoy,
