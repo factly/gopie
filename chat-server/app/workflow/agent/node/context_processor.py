@@ -3,6 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
+from app.services.gopie.sql_executor import execute_sql
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
@@ -50,6 +51,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         )
         required_dataset_ids = parsed_response.get("required_dataset_ids", [])
         visualization_data = parsed_response.get("visualization_data", [])
+        previous_sql_queries = parsed_response.get("previous_sql_queries", [])
 
         if context_summary and context_summary.strip():
             final_query = f"""
@@ -80,11 +82,37 @@ Context Summary: {context_summary}
                     )
                     datasets.append(dataset)
 
+        elif previous_sql_queries:
+            try:
+                for sql_query in previous_sql_queries:
+                    query_snippet = sql_query[:100]
+                    logger.debug(
+                        f"Executing SQL query for context: {query_snippet}..."
+                    )
+                    sql_result = await execute_sql(sql_query)
+
+                    if sql_result:
+                        data = [list(d.values()) for d in sql_result]
+                        headers = list(sql_result[0].keys())
+                        data = [headers] + data
+
+                        dataset = Dataset(
+                            data=data,
+                            description=f"Query: {sql_query}",
+                        )
+                        datasets.append(dataset)
+                    else:
+                        logger.error(f"SQL execution failed: {sql_result}")
+
+            except Exception as sql_error:
+                logger.error(f"Error executing SQL queries: {sql_error!s}")
+
         return {
             "user_query": final_query,
             "need_semantic_search": need_semantic_search,
             "required_dataset_ids": required_dataset_ids,
             "datasets": datasets,
+            "previous_sql_queries": previous_sql_queries,
         }
 
     except Exception as e:

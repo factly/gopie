@@ -27,6 +27,7 @@ Given the chat history and current query, you should:
 4. CRITICAL FOR MULTIDATASET QUERIES: If the user is asking to modify a previous SQL query, reuse the EXACT SAME dataset(s) that were used in the previous query. Don't select different datasets for related follow-up questions.
 5. Determine if the current query is a follow-up question to the previous query.
 6. VISUALIZATION DATA: If (and only if) the current query is BOTH a follow-up question AND explicitly requests to VISUALIZE ("plot", "chart", "graph", "visualize", etc.) the RESULT of the previous query, you must also return the data needed for that visualization in the new \"visualization_data\" field. Otherwise this field should be an empty list.
+7. SQL EXECUTION FOR VISUALIZATION: Only populate previous_sql_queries when the current query is a visualization follow-up but the previous response doesn't contain sufficient data for the requested visualization.
 
 FIELD DEFINITIONS (populate **all** fields exactly as specified):
 - is_follow_up (boolean):
@@ -57,7 +58,21 @@ FIELD DEFINITIONS (populate **all** fields exactly as specified):
   • Provide tabular data extracted from the prior assistant result that the user wants visualized.
   • If no visualization is requested or the user want's visualization but also wants to do some other thing that just don't rely on visualization from the available data from chat history, return an empty list [].
 
+- previous_sql_queries (string[]): *SQL execution indicator for visualization*
+  • ONLY populate this if ALL THREE conditions are met:
+    1. The previous query contained SQL statements
+    2. The current query is a visualization follow-up request
+    3. The previous response data is insufficient for the requested visualization
+  • Extract the actual SQL statements from previous assistant responses in the chat history.
+  • Return empty array [] in all other cases.
+  • NOTE: Non-empty array indicates SQL execution is needed, empty array means use existing data or no execution needed.
+
 IMPORTANT: When referencing SQL queries in context_summary, use the actual table names (e.g., 'sales_data'), NOT dataset-ID-prefixed names (e.g., 'a7f392e1c8d4b5.sales'). Dataset IDs are only for tracking in required_dataset_ids.
+
+DECISION LOGIC FOR VISUALIZATION:
+- If current query is visualization follow-up AND previous response has sufficient data → use visualization_data, set previous_sql_queries=[]
+- If current query is visualization follow-up AND previous response lacks data AND previous query had SQL → populate previous_sql_queries with the SQL statements
+- If not a visualization follow-up → set previous_sql_queries=[]
 
 Be concise but thorough. Focus on information that would help a data analyst understand what the user is really asking for.
 
@@ -68,7 +83,8 @@ RESPOND ONLY IN THIS JSON FORMAT:
   "required_dataset_ids": string[],
   "enhanced_query": string,
   "context_summary": string,
-  "visualization_data": object[]
+  "visualization_data": object[],
+  "previous_sql_queries": string[]
 }}
 """
 
