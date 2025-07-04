@@ -18,14 +18,17 @@ async def plan_sql_query(
     """
     Plan a SQL query given a user natural language query and dataset schemas.
 
-    Situation to use this tool:
+    ONLY use this tool when:
         - You already have the schemas of the datasets or related sufficient
           information from previous messages or the user already provided that
           for which the user is asking the query. Than you can directly plan
           the query by using this tool.
 
-    IMPORTANT:
-        - Don't use this tool if the above situation is not true.
+    DO NOT use this tool when:
+        - If the above condition is not true.
+        - If you want information about the dataset.
+          Because further steps already have full workflow to get the
+          information and then process it.
 
     Args:
         user_query: The natural language query from the user.

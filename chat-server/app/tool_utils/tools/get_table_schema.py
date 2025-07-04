@@ -15,14 +15,16 @@ async def get_datasets_schemas(
     """
     Get the schema of a specific tables from Qdrant database.
 
-    Situation where it can be used:
-        - User wants to know the schema of a specific dataset.
-        - Want summary of datasets or info that doesn't requires forming
-          SQL queries.
+    ONLY use this tool when:
+        - If user wants want information about the dataset.
+        - If user wants to summarize the dataset.
+        - If user wants to know the structure/schema of this dataset.
 
-    IMPORTANT:
-        - Don't use this tool to plan sql queries after getting the schema
-          information from this tool.
+    DO NOT use this tool when:
+        - If you want information about the dataset.
+          Because further steps already have full workflow to get the
+          information and then process it.
+
 
     Args:
         dataset_ids: The ids of the datasets to retrieve schema for.
