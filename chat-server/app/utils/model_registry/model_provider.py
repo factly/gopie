@@ -122,7 +122,8 @@ class ModelProvider:
     def get_embeddings_model(self):
         return self._create_embeddings_model()
 
-    def get_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
+    def get_llm_with_tools(self, node_name: str, tool_names: list[ToolNames]):
+        model_id = get_node_model(node_name)
         return self._create_llm_with_tools(model_id, tool_names)
 
     def get_llm_for_node(
