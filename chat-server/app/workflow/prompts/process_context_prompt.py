@@ -55,6 +55,11 @@ FIELD DEFINITIONS (populate **all** fields exactly as specified):
 
 - visualization_data (object[]): *Only for visualization follow-ups*
   • Each element must have keys: data (list[list[Any]]), description (string), csv_path (null or string).
+  • The description should be a short description of the data and the column description for each column.
+  • The data follows the following format:
+    - Each list in the data list is a row
+    - The first row is the header row (column names)
+    - All the remaining rows are the data rows
   • Provide tabular data extracted from the prior assistant result that the user wants visualized.
   • If no visualization is requested or the user want's visualization but also wants to do some other thing that just don't rely on visualization from the available data from chat history, return an empty list [].
 
@@ -77,7 +82,7 @@ DECISION LOGIC FOR VISUALIZATION:
 Be concise but thorough. Focus on information that would help a data analyst understand what the user is really asking for.
 
 RESPOND ONLY IN THIS JSON FORMAT:
-{{
+{
   "is_follow_up": boolean,
   "need_semantic_search": boolean,
   "required_dataset_ids": string[],
@@ -85,7 +90,7 @@ RESPOND ONLY IN THIS JSON FORMAT:
   "context_summary": string,
   "visualization_data": object[],
   "previous_sql_queries": string[]
-}}
+}
 """
 
     if chat_history and len(chat_history) > 0:

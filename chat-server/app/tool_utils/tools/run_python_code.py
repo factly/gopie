@@ -12,12 +12,17 @@ async def run_python_code(
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
     config: RunnableConfig,
 ):
-    """Run python code in a jupyter notebook sandbox.
-    Already has basic data visualization libraries installed.
+    """Run python code in a sandbox.
+    Pandas and Altair are already installed.
+    The dataset csv are saved in the `csv_path` locations.
     Always use altair to create visualizations and save them to json.
+    To get any output in the logs, use the print function.
+
+    Return the logs and error if any.
     """
     execution = await sandbox.run_code(code)
-    return execution.logs
+
+    return {"logs": execution.logs, "error": execution.error}
 
 
 def get_dynamic_tool_text(args: dict) -> str:
