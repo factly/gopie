@@ -18,8 +18,6 @@ dependencies = [
   "langgraph-cli[inmem]>=0.3.3",
   "langsmith>=0.3.42",
   "logging>=0.4.9.6",
-  "pandas>=2.2.3",
-  "plotly>=6.1.2",
   "portkey-ai>=1.11.1",
   "pre-commit>=4.2.0",
   "pydantic>=2.10.6",
@@ -48,3 +46,20 @@ exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 79
+
+[tool.pytest.ini_options]
+testpaths = ["tests/e2e", "tests/unit"]
+addopts = """
+    --tb=short
+    --strict-markers
+    --durations=5
+    -v
+"""
+pythonpath = ["."]
+python_files = ["test_*.py"]
+markers = [
+  "e2e: marks tests as end-to-end (deselect with '-m \"not e2e\"')",
+  "unit: marks tests as unit tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+cache_dir = "tests/.pytest_cache"

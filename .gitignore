@@ -253,10 +253,11 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/macos
 goose.env
 
-tests
 data
 /*/tmp
 .windsurf
 
 TODO.md
 img
+agent_test.ipynb
+test_cases.py

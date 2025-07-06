@@ -9,60 +9,55 @@ from app.services.qdrant.qdrant_setup import (
     initialize_qdrant_client,
     setup_vector_store,
 )
-from app.utils.model_registry.model_provider import ModelProvider
+from app.utils.model_registry.model_provider import get_model_provider
 
 
-async def add_documents_to_vector_store(documents, ids=None):
-    model_provider = ModelProvider({})
-
-    vector_store = setup_vector_store(model_provider.get_embeddings_model())
+async def add_document_to_vector_store(document):
+    vector_store = setup_vector_store(
+        get_model_provider().get_embeddings_model()
+    )
     client = initialize_qdrant_client()
 
-    if ids is None:
-        ids = [str(uuid4()) for _ in range(len(documents))]
+    project_id = document.metadata["project_id"]
+    dataset_id = document.metadata["dataset_id"]
 
-    filtered_docs = []
-    filtered_ids = []
+    search_result = client.scroll(
+        collection_name=settings.QDRANT_COLLECTION,
+        scroll_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="metadata.project_id",
+                    match=MatchValue(value=project_id),
+                ),
+                FieldCondition(
+                    key="metadata.dataset_id",
+                    match=MatchValue(value=dataset_id),
+                ),
+            ]
+        ),
+        limit=1,
+    )
 
-    for doc, doc_id in zip(documents, ids, strict=False):
-        project_id = doc.metadata["project_id"]
-        dataset_id = doc.metadata["dataset_id"]
-
-        search_result = client.scroll(
-            collection_name=settings.QDRANT_COLLECTION,
-            scroll_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="metadata.project_id",
-                        match=MatchValue(value=project_id),
-                    ),
-                    FieldCondition(
-                        key="metadata.dataset_id",
-                        match=MatchValue(value=dataset_id),
-                    ),
-                ]
-            ),
-            limit=1,
+    if search_result[0]:
+        existing_point = search_result[0][0]
+        document_id = existing_point.id
+        logger.info(
+            f"Updating existing document with project_id={project_id}, "
+            f"dataset_id={dataset_id}"
+        )
+    else:
+        document_id = str(uuid4())
+        logger.info(
+            f"Adding new document with project_id={project_id}, "
+            f"dataset_id={dataset_id}"
         )
 
-        if search_result[0]:
-            logger.debug(
-                f"Document with project_id={project_id}, "
-                f"dataset_id={dataset_id} already exists in vector store. "
-                "Skipping."
-            )
-            continue
-
-        filtered_docs.append(doc)
-        filtered_ids.append(doc_id)
-
-    if filtered_docs:
-        await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: vector_store.add_documents(
-                documents=filtered_docs, ids=filtered_ids
-            ),
-        )
+    await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: vector_store.add_documents(
+            documents=[document], ids=[document_id]
+        ),
+    )
 
 
 def perform_similarity_search(

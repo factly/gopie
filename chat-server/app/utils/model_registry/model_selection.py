@@ -13,15 +13,11 @@ NODE_TO_COMPLEXITY = {
     "process_query": ModelCategory.ADVANCED,
     "check_visualization": ModelCategory.FAST,
     "response": ModelCategory.BALANCED,
-    "choose_visualization": ModelCategory.BALANCED,
-    "format_data_for_visualization": ModelCategory.FAST,
-    "visualization_response": ModelCategory.BALANCED,
     "visualize_data": ModelCategory.FAST,
     "process_context": ModelCategory.BALANCED,
-    "plan_sql_query": ModelCategory.ADVANCED,
+    "plan_sql_query_tool": ModelCategory.ADVANCED,
     "generate_col_descriptions": ModelCategory.FAST,
 }
-
 
 COMPLEXITY_TO_MODEL = {
     ModelCategory.FAST: settings.FAST_MODEL,

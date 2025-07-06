@@ -1,11 +1,20 @@
 import json
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_sql_planning_prompt(input: str, **kwargs) -> list[BaseMessage]:
-    system_message = SystemMessage(
-        content="""You are an expert SQL analyst. Given a user's natural language
+def create_sql_planning_prompt(
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
+    system_content = """You are an expert SQL analyst. Given a user's natural language
 query and dataset schemas, plan the appropriate SQL queries to answer their
 question.
 
@@ -33,9 +42,23 @@ SQL queries, never use display names or titles. Look for fields like
 
 Ensure your SQL is syntactically correct and follows best practices. If
 multiple queries are needed, explain the sequence and purpose of each."""
-    )
-    human_message = HumanMessage(content=input)
-    return [system_message, human_message]
+
+    human_template_str = "{input}"
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
 
 
 def format_sql_planning_input(user_query: str, schemas: list[dict]) -> dict:

@@ -45,7 +45,6 @@ async def create(
                     chat_id=chat_id,
                     dataset_ids=request.dataset_ids,
                     project_ids=request.project_ids,
-                    model_id=request.model_id,
                 )
             ),
             media_type="text/event-stream",
@@ -58,6 +57,5 @@ async def create(
             chat_id=chat_id,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
-            model_id=request.model_id,
         )
     )

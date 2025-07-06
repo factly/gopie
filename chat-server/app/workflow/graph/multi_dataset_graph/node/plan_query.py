@@ -2,6 +2,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.constants import SQL_QUERIES_GENERATED
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -118,14 +119,12 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                     "limitations": limitations,
                 },
             )
-            data_name = "sql_queries"
-            data_args = {"queries": formatted_sql_queries}
             await adispatch_custom_event(
                 "gopie-agent",
                 {
                     "content": "Generated SQL query",
-                    "name": data_name,
-                    "values": data_args,
+                    "name": SQL_QUERIES_GENERATED,
+                    "values": {"queries": formatted_sql_queries},
                 },
             )
 

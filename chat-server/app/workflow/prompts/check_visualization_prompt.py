@@ -1,11 +1,18 @@
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
 def create_check_visualization_prompt(
-    user_query: str, **kwargs
-) -> list[BaseMessage]:
-    system_message = SystemMessage(
-        content="""
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    user_query = kwargs.get("user_query", "")
+
+    system_content = """
 You are a strict routing supervisor for a data analysis
 system. Your job is to determine if the user EXPLICITLY and CLEARLY requested
 data visualization.
@@ -48,12 +55,24 @@ Examples that should return FALSE:
 
 RESPONSE FORMAT:
 Respond with JSON:
-{
+{{
     "wants_visualization": true/false,
     "reasoning": "clear explanation of why you chose true/false"
-}"""
-    )
+}}"""
 
-    human_message = HumanMessage(content=f"User question: {user_query}")
+    human_template_str = "User question: {user_query}"
 
-    return [system_message, human_message]
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(user_query=user_query)
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]

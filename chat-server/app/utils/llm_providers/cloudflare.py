@@ -1,16 +1,15 @@
 import json
-from typing import Dict
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class CloudflareGatewayProvider(BaseProvider):
+class CloudflareLLMProvider(BaseLLMProvider):
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.metadata = metadata
 
@@ -70,11 +69,4 @@ class CloudflareGatewayProvider(BaseProvider):
             default_headers=headers,
             model=formatted_model,
             streaming=streaming,
-        )
-
-    def get_embeddings_model(self, model_name: str) -> OpenAIEmbeddings:
-        return OpenAIEmbeddings(
-            api_key="X",  # type: ignore
-            base_url=self.base_url,
-            model=model_name,
         )

@@ -28,10 +28,7 @@ async def analyze_dataset(state: State) -> dict:
                 "No column assumptions found in the datasets_info."
             )
 
-        dataset_name_mapping = datasets_info.get("dataset_name_mapping", {})
-        column_mappings = await match_column_values(
-            column_assumptions, dataset_name_mapping
-        )
+        column_mappings = await match_column_values(column_assumptions)
 
         datasets_info[
             "correct_column_requirements"
@@ -44,14 +41,13 @@ async def analyze_dataset(state: State) -> dict:
                 IntermediateStep.from_json(column_mappings.model_dump())
             ],
         }
-    except Exception as e:
-        error_msg = f"Dataset analysis failed: {str(e)}"
 
+    except Exception as e:
+        error_message = f"Error analyzing dataset: {e!s}"
         query_result = state.get("query_result", {})
-        if hasattr(query_result, "add_error_message"):
-            query_result.add_error_message(str(e), "Dataset analysis failed")
+        query_result.add_error_message(str(e), "Error analyzing dataset")
 
         return {
             "query_result": query_result,
-            "messages": [ErrorMessage.from_json({"error": error_msg})],
+            "messages": [ErrorMessage.from_json({"error": error_message})],
         }

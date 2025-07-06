@@ -15,7 +15,7 @@ async def list_datasets(
     """
     List all datasets for a specific project.
 
-    Situation where it can be used:
+    ONLY use this tool when:
         - User wants to know the list of datasets for a specific project.
 
     Args:

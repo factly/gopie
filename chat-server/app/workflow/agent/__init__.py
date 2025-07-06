@@ -10,15 +10,19 @@ from .node.visualisation import call_visualization_agent, check_visualization
 from .types import AgentState
 
 
-async def empty_node(state, config):
-    return state
-
-
-async def should_visualize(state, config):
+async def should_visualize(state: AgentState):
     if state.get("needs_visualization", False) and state.get("datasets", []):
         return "visualization_agent"
     else:
         return END
+
+
+def route_visualization_follow_ups(state: AgentState):
+    datasets = state.get("datasets", [])
+    if datasets:
+        return "visualization_agent"
+    else:
+        return "supervisor"
 
 
 graph_builder = StateGraph(AgentState, config_schema=ConfigSchema)
@@ -33,16 +37,20 @@ graph_builder.add_node("multi_dataset_agent", call_multi_dataset_agent)
 graph_builder.add_node("single_dataset_agent", call_single_dataset_agent)
 graph_builder.add_node("visualization_agent", call_visualization_agent)
 graph_builder.add_node("check_visualization", check_visualization)
-graph_builder.add_node("empty_node", empty_node)
 
 graph_builder.add_edge(START, "process_context")
-graph_builder.add_edge(START, "check_visualization")
-graph_builder.add_edge("process_context", "supervisor")
-graph_builder.add_edge("multi_dataset_agent", "empty_node")
-graph_builder.add_edge("check_visualization", "empty_node")
-graph_builder.add_edge("single_dataset_agent", "empty_node")
 graph_builder.add_conditional_edges(
-    "empty_node",
+    "process_context",
+    route_visualization_follow_ups,
+    {
+        "visualization_agent": "visualization_agent",
+        "supervisor": "supervisor",
+    },
+)
+graph_builder.add_edge("multi_dataset_agent", "check_visualization")
+graph_builder.add_edge("single_dataset_agent", "check_visualization")
+graph_builder.add_conditional_edges(
+    "check_visualization",
     should_visualize,
     {
         "visualization_agent": "visualization_agent",

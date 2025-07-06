@@ -12,9 +12,18 @@ class ModelVendor(str, Enum):
     GOOGLE = "google"
 
 
-class GatewayProvider(str, Enum):
+class LLMProvider(str, Enum):
     PORTKEY_HOSTED = "portkey_hosted"
     PORTKEY_SELF_HOSTED = "portkey_self_hosted"
     LITELLM = "litellm"
     CLOUDFLARE = "cloudflare"
     OPENROUTER = "openrouter"
+    CUSTOM = "custom"
+
+
+class EmbeddingProvider(str, Enum):
+    PORTKEY_HOSTED = "portkey_hosted"
+    PORTKEY_SELF_HOSTED = "portkey_self_hosted"
+    LITELLM = "litellm"
+    OPENAI = "openai"
+    CUSTOM = "custom"

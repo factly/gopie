@@ -1,12 +1,12 @@
 from typing import Dict
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class OpenrouterGatewayProvider(BaseProvider):
+class OpenRouterLLMProvider(BaseLLMProvider):
     def __init__(self, metadata: Dict[str, str]):
         self.metadata = metadata
 
@@ -28,11 +28,4 @@ class OpenrouterGatewayProvider(BaseProvider):
             metadata={
                 **self.metadata,
             },
-        )
-
-    def get_embeddings_model(self, model_name: str):
-        return OpenAIEmbeddings(
-            api_key=settings.OPENROUTER_API_KEY,  # type: ignore
-            base_url=settings.OPENROUTER_BASE_URL,
-            model=f"openai/{model_name}",
         )
