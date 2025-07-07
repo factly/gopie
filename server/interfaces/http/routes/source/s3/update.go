@@ -62,7 +62,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
-	// Check if d exists
+	// Check if dataset exists
 	d, err := h.datasetSvc.GetByTableName(body.Dataset, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -81,7 +81,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("dataset_id", d.ID))
+	h.logger.Info("Starting file update", zap.String("file_path", body.FilePath), zap.String("dataset_id", d.ID))
 
 	// if filepath is not provided, use the existing filepath
 	filePath := body.FilePath
@@ -89,21 +89,44 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		filePath = d.FilePath
 	}
 
+	// Store original state in case we need to rollback
+	originalDataset := d
+
 	// Upload file to OLAP service
 	res, err := h.olapSvc.IngestS3File(ctx.Context(), filePath, d.Name, body.AlterColumnNames)
 	if err != nil {
-		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
+		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", filePath))
+
+		// Create failed upload record
+		f, e := h.datasetSvc.CreateFailedUpload(d.ID, err.Error())
+		if e != nil {
+			h.logger.Error("Error creating failed upload record", zap.Error(e))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   e.Error(),
+				"message": "Error creating failed upload record",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
 
 		// For S3 upload failures, return a more specific error
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Failed to upload file from S3. Please check if the file exists and you have proper access.",
 			"code":    fiber.StatusBadRequest,
+			"data":    f,
 		})
 	}
 
 	count, columns, err := h.getMetrics(res.TableName)
 	if err != nil {
+		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
+
+		// Try to revert back to original data if possible
+		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil)
+		if revertErr != nil {
+			h.logger.Error("Failed to revert table to original state", zap.Error(revertErr))
+		}
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error fetching metrics",
@@ -123,6 +146,13 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		h.logger.Error("Error updating dataset record", zap.Error(err))
+
+		// Try to revert back to original data
+		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil)
+		if revertErr != nil {
+			h.logger.Error("Failed to revert table to original state", zap.Error(revertErr))
+		}
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error updating dataset record",
@@ -136,6 +166,10 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
 		if err != nil {
 			h.logger.Error("Error fetching dataset summary", zap.Error(err))
+
+			// Don't roll back at this point since the data update was successful
+			// Just continue without summary update
+
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   err.Error(),
 				"message": "Error fetching dataset summary",
@@ -161,6 +195,9 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			summary, err = h.datasetSvc.CreateDatasetSummary(res.TableName, datasetSummary)
 			if err != nil {
 				h.logger.Error("Error creating dataset summary", zap.Error(err))
+
+				// Continue without summary since data update was successful
+
 				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"error":   err.Error(),
 					"message": "Error creating dataset summary",
@@ -177,10 +214,11 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
-		// Log error but continue since this is not critical for the update operation
+		// We don't fail the entire update if schema upload fails
+		// Just log the error and continue
 	}
 
-	h.logger.Info("File upload completed successfully",
+	h.logger.Info("File update completed successfully",
 		zap.String("dataset_id", dataset.ID))
 
 	// Return success response

@@ -32,7 +32,7 @@ type Querier interface {
 	GetChatById(ctx context.Context, id string) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
-	GetDatabaseSource(ctx context.Context, id pgtype.UUID) (DatabaseSource, error)
+	GetDatabaseSource(ctx context.Context, arg GetDatabaseSourceParams) (DatabaseSource, error)
 	GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset, error)
 	GetDatasetByName(ctx context.Context, arg GetDatasetByNameParams) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)

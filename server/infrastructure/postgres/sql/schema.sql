@@ -51,6 +51,7 @@ create table if not exists database_sources (
     connection_string text not null,
     sql_query text not null,
     driver text not null,
+    org_id text default null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now()
 );

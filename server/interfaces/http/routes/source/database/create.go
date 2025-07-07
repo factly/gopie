@@ -307,7 +307,6 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		"data": map[string]any{
 			"dataset": dataset,
 			"summary": summary,
-			"source":  source,
 		},
 	})
 }

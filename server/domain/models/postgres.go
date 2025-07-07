@@ -4,6 +4,7 @@ package models
 type DatabaseSource struct {
 	ID               string `json:"id"`
 	ConnectionString string `json:"connection_string"`
+	OrganizationID   string `json:"organization_id"`
 	SQLQuery         string `json:"sql_query"`
 	CreatedAt        string `json:"created_at"`
 	UpdatedAt        string `json:"updated_at"`

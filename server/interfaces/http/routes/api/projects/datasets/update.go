@@ -13,6 +13,7 @@ type updateDatasetParams struct {
 	Description string `json:"description,omitempty"`
 	Alias       string `json:"alias,omitempty"`
 	UpdatedBy   string `json:"updated_by" validate:"required"`
+	ProjectID   string `json:"project_id" validate:"required,uuid"`
 }
 
 // @Summary Update dataset
@@ -84,6 +85,11 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
+
+	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+		DatasetID: dataset.ID,
+		ProjectID: body.ProjectID,
+	})
 
 	return ctx.JSON(map[string]*models.Dataset{
 		"data": dataset,

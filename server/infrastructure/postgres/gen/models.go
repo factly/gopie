@@ -78,6 +78,7 @@ type DatabaseSource struct {
 	ConnectionString string
 	SqlQuery         string
 	Driver           string
+	OrgID            pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 }
