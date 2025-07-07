@@ -137,6 +137,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		SQLQuery:         body.SQLQuery,
 		Alias:            body.Alias,
 		Description:      body.Description,
+		OrganizationID:   orgID,
 		ProjectID:        project.ID,
 		CreatedBy:        body.CreatedBy,
 		Driver:           body.Driver,
