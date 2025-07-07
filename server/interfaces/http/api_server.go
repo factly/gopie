@@ -75,6 +75,7 @@ func serveApiServer(cfg *config.GopieConfig, params *ServerParams) error {
 		ProjectService: params.ProjectService,
 		DatasetService: params.DatasetService,
 		OlapService:    params.OlapService,
+		AiAgentService: params.AIAgentService,
 	})
 	chatApi.Routes(app.Group("/v1/api/chat"), chatApi.RouterParams{
 		Logger:         params.Logger,

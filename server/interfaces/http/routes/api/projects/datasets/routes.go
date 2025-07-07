@@ -11,6 +11,7 @@ type httpHandler struct {
 	logger      *logger.Logger
 	datasetsSvc *services.DatasetService
 	olapSvc     *services.OlapService
+	aiAgentSvc  *services.AIService
 }
 
 type RouterParams struct {
@@ -18,11 +19,12 @@ type RouterParams struct {
 	DatasetSvc  *services.DatasetService
 	ProjectSvc  *services.ProjectService
 	OlapService *services.OlapService
+	AiAgentSvc  *services.AIService
 }
 
 // Routes - Route configuration for datasets
 func Routes(router fiber.Router, params RouterParams) {
-	httpHandler := httpHandler{logger: params.Logger, datasetsSvc: params.DatasetSvc, olapSvc: params.OlapService}
+	httpHandler := httpHandler{logger: params.Logger, datasetsSvc: params.DatasetSvc, olapSvc: params.OlapService, aiAgentSvc: params.AiAgentSvc}
 
 	// Add project validation middleware to all dataset routes
 	router.Use(middleware.ValidateProjectMiddleware(params.ProjectSvc))

@@ -112,6 +112,7 @@ func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Cont
 		ProjectService: params.ProjectService,
 		DatasetService: params.DatasetService,
 		OlapService:    params.OlapService,
+		AiAgentService: params.AIAgentService,
 	})
 
 	// Chat routes
