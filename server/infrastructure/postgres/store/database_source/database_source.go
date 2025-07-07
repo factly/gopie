@@ -46,6 +46,7 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 		ConnectionString: encryptedConnectionString,
 		SqlQuery:         params.SQLQuery,
 		Driver:           params.Driver,
+		OrgID:            pgtype.Text{String: params.OrgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating database source", zap.Error(err))
