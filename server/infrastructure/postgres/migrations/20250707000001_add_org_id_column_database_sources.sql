@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE database_sources ADD COLUMN org_id UUID;
+ALTER TABLE database_sources ADD COLUMN org_id text;
 -- +goose StatementEnd
 
 -- +goose Down
