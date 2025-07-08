@@ -19,6 +19,7 @@ type ProjectStoreRepository interface {
 	Details(ctx context.Context, id string, orgID string) (*models.Project, error)
 	Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error)
 	SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error)
+	GetProjectByID(ctx context.Context, datasetID string) (*models.Project, error)
 }
 
 type DatasetStoreRepository interface {
@@ -28,6 +29,7 @@ type DatasetStoreRepository interface {
 	List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
 	Update(ctx context.Context, datasetID string, params *models.UpdateDatasetParams) (*models.Dataset, error)
 	GetByTableName(ctx context.Context, tableName string, orgID string) (*models.Dataset, error)
+	GetDatasetByID(ctx context.Context, datasetID string) (*models.Dataset, error)
 
 	CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error)
 	DeleteFailedUploadsByDatasetID(ctx context.Context, datasetID string) error

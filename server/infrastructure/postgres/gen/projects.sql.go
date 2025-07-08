@@ -113,6 +113,26 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProj
 	return i, err
 }
 
+const getProjectByID = `-- name: GetProjectByID :one
+select id, name, org_id, description, created_at, updated_at, created_by, updated_by from projects where id = $1
+`
+
+func (q *Queries) GetProjectByID(ctx context.Context, id string) (Project, error) {
+	row := q.db.QueryRow(ctx, getProjectByID, id)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OrgID,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getProjectsCount = `-- name: GetProjectsCount :one
 select count(*) from projects where org_id = $1
 `

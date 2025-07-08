@@ -38,3 +38,18 @@ func Routes(router fiber.Router, params RouterParams) {
 		AiAgentSvc:  params.AiAgentService,
 	})
 }
+
+func InternalRoutes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{
+		logger: params.Logger,
+		svc:    params.ProjectService,
+	}
+	router.Get("/:projectID", httpHandler.getByID)
+	datasets.InternalRoutes(router.Group("/:projectID/datasets"), datasets.RouterParams{
+		Logger:      params.Logger,
+		DatasetSvc:  params.DatasetService,
+		OlapService: params.OlapService,
+		ProjectSvc:  params.ProjectService,
+		AiAgentSvc:  params.AiAgentService,
+	})
+}

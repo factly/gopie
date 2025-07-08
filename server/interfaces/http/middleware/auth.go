@@ -20,7 +20,7 @@ const (
 
 // setup auth-ctx from zitadel interceptor as x-user-id and x-organization-id
 // This middleware must be used after ZitadelAuthorizer to access the auth context
-func SetupZitadelAuthCtx(logger *logger.Logger) fiber.Handler {
+func ZitadelAuth(logger *logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract auth context set by Zitadel interceptor
 		authCtx := zitadel.ZitadelInterceptor.Context(c.Context())
@@ -48,7 +48,7 @@ func SetupZitadelAuthCtx(logger *logger.Logger) fiber.Handler {
 	}
 }
 
-func SetupApiServerAuthCtx(logger *logger.Logger) fiber.Handler {
+func AuthorizeHeaders(logger *logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract user ID from the request context
 		userID := c.Get(UserCtxKey)
