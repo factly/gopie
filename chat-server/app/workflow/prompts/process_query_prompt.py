@@ -7,7 +7,9 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 
-from app.workflow.prompts.response_prompt import format_response_input
+from app.workflow.prompts.formatters.single_query_result import (
+    format_single_query_result,
+)
 
 
 def create_process_query_prompt(
@@ -145,9 +147,9 @@ def format_process_query_input(
 
     # Add previous query result if available
     if prev_query_result:
-        formatted_prev_result = format_response_input(prev_query_result)
+        formatted_prev_result = format_single_query_result(prev_query_result)
         sections.extend(
-            ["", "🔄 PREVIOUS QUERY CONTEXT:", formatted_prev_result["input"]]
+            ["", "🔄 PREVIOUS QUERY CONTEXT:", formatted_prev_result]
         )
 
     # Add validation result if available
