@@ -7,6 +7,8 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 
+from app.workflow.prompts.response_prompt import format_response_input
+
 
 def create_process_query_prompt(
     **kwargs,
@@ -73,16 +75,16 @@ def format_process_query_input(
     dataset_name: str,
     schema_json: str,
     rows_csv: str,
-    error_context: str = "",
+    prev_query_result: dict | None = None,
+    validation_result: dict | None = None,
     **kwargs,
 ) -> dict:
+    # Format schema try catch block
     try:
         schema_info = json.loads(schema_json)
 
         if "error" in schema_info:
-            formatted_schema = (
-                f"Error retrieving schema: {schema_info['error']}"
-            )
+            formatted_schema = f"❌ Schema Error: {schema_info['error']}"
         else:
             dataset_name_from_schema = schema_info.get(
                 "dataset_name", "Unknown"
@@ -93,67 +95,108 @@ def format_process_query_input(
             user_friendly_name = schema_info.get(
                 "name", dataset_name_from_schema
             )
-
             columns = schema_info.get("columns", [])
 
-            formatted_schema = f"""DATASET INFORMATION:
-- Name: {user_friendly_name}
-- Table Name (for SQL): {dataset_name_from_schema}
-- Description: {dataset_description}
-
-COLUMNS ({len(columns)} total):"""
-
+            column_details = []
             for i, column in enumerate(columns, 1):
-                column_name = column.get("column_name", "unknown")
-                column_type = column.get("column_type", "unknown")
-                column_description = column.get(
+                name = column.get("column_name", "unknown")
+                col_type = column.get("column_type", "unknown")
+                description = column.get(
                     "column_description", "No description"
                 )
 
-                sample_values = column.get("sample_values", [])
+                samples = column.get("sample_values", [])
                 sample_str = ""
-                if sample_values:
-                    formatted_samples = [str(val) for val in sample_values[:5]]
-                    sample_str = (
-                        f" | Sample values: {', '.join(formatted_samples)}"
-                    )
-                    if len(sample_values) > 5:
-                        sample_str += "..."
+                if samples:
+                    sample_list = [str(val) for val in samples[:5]]
+                    sample_str = f" (e.g., {', '.join(sample_list)}{'...' if len(samples) > 5 else ''})"
 
-                stats_info = ""
+                stats_str = ""
                 if (
                     column.get("min") is not None
-                    or column.get("max") is not None
+                    and column.get("max") is not None
                 ):
-                    min_val = column.get("min")
-                    max_val = column.get("max")
-                    if min_val is not None and max_val is not None:
-                        stats_info = f" | Range: {min_val} to {max_val}"
+                    stats_str = f" [{column['min']}-{column['max']}]"
+                elif column.get("approx_unique"):
+                    stats_str = f" [~{column['approx_unique']} unique]"
 
-                unique_count = column.get("approx_unique")
-                if unique_count is not None:
-                    stats_info += f" | ~{unique_count} unique values"
+                column_details.append(
+                    f"{i}. {name} ({col_type}): {description}{sample_str}{stats_str}"
+                )
 
-                formatted_schema += f"""
-{i}. {column_name} ({column_type})
-   Description: {column_description}{sample_str}{stats_info}"""
+            formatted_schema = f"""📊 DATASET: {user_friendly_name}
+🏷️  Table Name: {dataset_name_from_schema}
+📝  Description: {dataset_description}
+
+📋 COLUMNS ({len(columns)} total):
+{chr(10).join(column_details)}"""
 
     except (json.JSONDecodeError, Exception):
-        formatted_schema = f"TABLE SCHEMA IN JSON:\n{schema_json}"
+        formatted_schema = f"⚠️  Raw Schema: {schema_json}"
 
-    formatted_input = f"""
-USER QUESTION: {user_query}
+    sections = [
+        f"❓ USER QUERY: {user_query}",
+        "",
+        formatted_schema,
+        "",
+        f"📄 SAMPLE DATA ({dataset_name}):",
+        rows_csv,
+    ]
 
-DATASET INFORMATION:
-{formatted_schema}
+    # Add previous query result if available
+    if prev_query_result:
+        formatted_prev_result = format_response_input(prev_query_result)
+        sections.extend(
+            ["", "🔄 PREVIOUS QUERY CONTEXT:", formatted_prev_result["input"]]
+        )
 
-DATASET NAME: {dataset_name}
+    # Add validation result if available
+    if validation_result:
+        confidence = validation_result["confidence"]
+        if confidence >= 0.9:
+            confidence_desc = "Very high confidence"
+            confidence_meaning = "excellent results"
+        elif confidence >= 0.7:
+            confidence_desc = "High confidence"
+            confidence_meaning = "good results, minor improvements possible"
+        elif confidence >= 0.4:
+            confidence_desc = "Medium confidence"
+            confidence_meaning = "some issues, improvements recommended"
+        else:  # 0.0-0.3
+            confidence_desc = "Low confidence"
+            confidence_meaning = (
+                "major issues, significant improvements needed"
+            )
 
-SAMPLE DATA (50 ROWS) IN CSV:
----------------------
-{rows_csv}
----------------------
+        validation_status = (
+            "✅ Valid"
+            if validation_result["is_valid"]
+            else "❌ Needs Improvement"
+        )
 
-{error_context}"""
+        context_note = (
+            "📋 ANALYSIS: After reviewing the previous query result above"
+            if prev_query_result
+            else "📋 ANALYSIS: Initial validation"
+        )
+
+        validation_info = [
+            "",
+            context_note,
+            f"🔍 VALIDATION: {validation_status}",
+            f"📊 Confidence: {confidence:.2f}/1.0 ({confidence_desc} - {confidence_meaning})",
+            f"💭 Reasoning: {validation_result['reasoning']}",
+            "⚠️  The previous query result requires improvements before providing a final response.",
+        ]
+
+        missing_elements = validation_result.get("missing_elements")
+        if missing_elements:
+            validation_info.append(
+                f"❓ Still Missing: {', '.join(missing_elements)}"
+            )
+
+        sections.extend(validation_info)
+
+    formatted_input = "\n".join(sections)
 
     return {"input": formatted_input}

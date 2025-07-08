@@ -13,18 +13,14 @@ class SQLQueryResult(TypedDict):
     error: str | None
 
 
-class FailedQuery(TypedDict):
-    sql_query: str
-    error: str
-
-
 class SingleDatasetQueryResult(TypedDict, total=False):
     user_query: str
     user_friendly_dataset_name: str | None
     dataset_name: str | None
-    sql_queries: list[SQLQueryResult] | None
+    sql_results: list[SQLQueryResult] | None
     response_for_non_sql: str | None
     timestamp: str
+    error: str | None
 
 
 class InputState(TypedDict):
@@ -40,14 +36,12 @@ class OutputState(TypedDict):
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    validation_retry_count: int
-    validation_result_str: str | None
+    retry_count: int
+    validation_result: dict | None
     dataset_id: str | None
     user_query: str | None
     query_result: SingleDatasetQueryResult | None
     response_text: str
-    error: str | None
-    failed_queries: list[FailedQuery] | None
 
 
 class ConfigSchema(TypedDict):
