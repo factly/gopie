@@ -121,6 +121,32 @@ func (q *Queries) GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset
 	return i, err
 }
 
+const getDatasetByID = `-- name: GetDatasetByID :one
+select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1
+`
+
+func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error) {
+	row := q.db.QueryRow(ctx, getDatasetByID, id)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Format,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+		&i.OrgID,
+	)
+	return i, err
+}
+
 const getDatasetByName = `-- name: GetDatasetByName :one
 select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where name = $1 and org_id = $2
 `

@@ -53,3 +53,6 @@ LIMIT $3 OFFSET $4;
 
 -- name: GetProjectsCount :one
 select count(*) from projects where org_id = $1;
+
+-- name: GetProjectByID :one
+select * from projects where id = $1;

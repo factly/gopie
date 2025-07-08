@@ -27,6 +27,10 @@ func (service *ProjectService) Details(id, orgID string) (*models.Project, error
 	return service.projectRepo.Details(context.Background(), id, orgID)
 }
 
+func (service *ProjectService) GetProjectByID(id string) (*models.Project, error) {
+	return service.projectRepo.GetProjectByID(context.Background(), id)
+}
+
 // Update - Update project
 func (service *ProjectService) Update(projectID string, params *models.UpdateProjectParams) (*models.Project, error) {
 	return service.projectRepo.Update(context.Background(), projectID, params)
@@ -106,4 +110,8 @@ func (services *DatasetService) DeleteDatasetSummary(datasetName string) error {
 
 func (services *DatasetService) GetDatasetSummary(datasetName string) (*models.DatasetSummaryWithName, error) {
 	return services.datasetRepo.GetDatasetSummary(context.Background(), datasetName)
+}
+
+func (services *DatasetService) GetDatasetByID(datasetID string) (*models.Dataset, error) {
+	return services.datasetRepo.GetDatasetByID(context.Background(), datasetID)
 }

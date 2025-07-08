@@ -78,10 +78,7 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 			continue
 		}
 
-		select {
-		case params.DataChan <- respData:
-			// Data sent successfully
-		}
+		params.DataChan <- respData
 	}
 }
 

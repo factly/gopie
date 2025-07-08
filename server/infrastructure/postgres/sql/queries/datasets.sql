@@ -53,3 +53,6 @@ limit $3 offset $4;
 
 -- name: GetDatasetByName :one
 select * from datasets where name = $1 and org_id = $2;
+
+-- name: GetDatasetByID :one
+select * from datasets where id = $1;

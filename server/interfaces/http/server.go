@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 
@@ -53,6 +52,10 @@ func ServeHttp() error {
 			"log_file":  cfg.Logger.LogFile,
 		},
 	)
+	if err != nil {
+		log.Fatal("error initializing logger: ", err)
+		return err
+	}
 	appLogger.Info("logger initialized")
 
 	// Initialize repositories and services
@@ -101,47 +104,32 @@ func ServeHttp() error {
 		DbSourceService: dbSourceService,
 	}
 
-	// Create a wait group to wait for both servers to shut down
 	var wg sync.WaitGroup
+
+	// Create a wait group to wait for both servers to shut down
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	wg.Add(2)
 
-	// Determine which servers to start based on config
-	runWebAppServer := contains(cfg.EnabledServers, "webapp")
-	runApiServer := contains(cfg.EnabledServers, "api")
-
-	if !runWebAppServer && !runApiServer {
-		errMsg := "No servers enabled to start. Check GOPIE_ENABLED_SERVERS. Valid options: 'api', 'webapp'."
-		appLogger.Error(errMsg)
-		return fmt.Errorf("%s", errMsg)
-	}
-
-	if runWebAppServer {
+	go func() {
+		defer wg.Done()
 		appLogger.Info("Web Application server is enabled via config. Starting in a goroutine...")
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := serveWebApp(cfg, params, ctx); err != nil {
-				appLogger.Error("Web Application server failed to start", zap.Error(err))
-				cancel()
-			}
-		}()
-	} else {
-		appLogger.Info("Web Application server is disabled via config.")
-	}
-
-	if runApiServer {
-		appLogger.Info("API server is enabled via config. Starting...")
-		if err := serveApiServer(cfg, params); err != nil {
-			appLogger.Error("API server failed to start", zap.Error(err))
+		if err := serve(cfg, params, ctx); err != nil {
+			appLogger.Error("Web Application server failed to start", zap.Error(err))
 			cancel()
-			return err
 		}
-	} else {
-		appLogger.Info("API server is disabled via config. Main goroutine will wait for other active servers if any.")
-	}
+	}()
 
-	// Wait for both servers to shut down
+	go func() {
+		defer wg.Done()
+		appLogger.Info("Internal server is enabled via config. Starting in a goroutine...")
+		if err := serveInternal(cfg, params, ctx); err != nil {
+			appLogger.Error("Web Application server failed to start", zap.Error(err))
+			cancel()
+		}
+	}()
+
 	wg.Wait()
+	appLogger.Info("All servers have shut down gracefully.")
 	return nil
 }
