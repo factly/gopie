@@ -27,7 +27,7 @@ async def validate_result(
 
     # Process large SQL outputs
     if query_result:
-        for sql_query_info in query_result.get("sql_queries", []) or []:
+        for sql_query_info in query_result.get("sql_results", []) or []:
             if not sql_query_info.get("result"):
                 continue
 
