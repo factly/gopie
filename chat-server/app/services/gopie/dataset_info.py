@@ -1,10 +1,11 @@
-from typing import Any
+from typing import List
 
 from app.core.config import settings
 from app.core.log import logger
 from app.core.session import SingletonAiohttp
 from app.models.data import DatasetDetails
-from app.models.schema import ColumnSchema, DatasetSchema
+from app.models.schema import ColumnSchema, DatasetSchema, DatasetSummary
+from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
 
 
 async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
@@ -25,29 +26,30 @@ async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
         raise e
 
 
-def format_schema(
-    schema: Any,
-    sample_data: list[dict[str, Any]],
+def create_dataset_schema(
+    dataset_summary: DatasetSummary,
+    sample_data: SQL_RESPONSE_TYPE,
     project_id: str,
     dataset_id: str,
+    dataset_details: DatasetDetails,
 ) -> DatasetSchema:
     """
-    Format the schema data into a standardized structure.
+    Create a dataset schema from the given schema data.
 
     Args:
         schema: The schema data containing the 'summary' field with column info
         sample_data: Sample data for the dataset as a list of dictionaries
         project_id: The project ID
         dataset_id: The dataset ID
+        dataset_details: The dataset details
 
     Returns:
-        A formatted DatasetSchema object
+        A DatasetSchema object
     """
-    columns: list[ColumnSchema] = []
-    columns_data = schema.get("summary", [])
+    columns: List[ColumnSchema] = []
 
-    for column_data in columns_data:
-        column_name = column_data.get("column_name")
+    for column_data in dataset_summary.summary:
+        column_name = column_data.column_name
 
         samples = []
         if sample_data and isinstance(sample_data, list):
@@ -57,32 +59,46 @@ def format_schema(
                 if column_name in item
             ]
 
-        column_schema: ColumnSchema = {
-            "column_name": column_name,
-            "column_description": "",
-            "column_type": column_data.get("column_type", ""),
-            "min": column_data.get("min"),
-            "max": column_data.get("max"),
-            "approx_unique": column_data.get("approx_unique"),
-            "avg": column_data.get("avg"),
-            "std": column_data.get("std"),
-            "q25": column_data.get("q25"),
-            "q50": column_data.get("q50"),
-            "q75": column_data.get("q75"),
-            "count": column_data.get("count"),
-            "sample_values": samples,
-            "null_percentage": column_data.get("null_percentage", {}),
-        }
+        column_schema = ColumnSchema(
+            **column_data.model_dump(),
+            sample_values=samples,
+        )
 
         columns.append(column_schema)
 
-    formatted_schema: DatasetSchema = {
-        "name": "will add it later",
-        "dataset_name": "will add it later",
-        "dataset_description": "will add it later",
-        "project_id": project_id,
-        "dataset_id": dataset_id,
-        "columns": columns,
-    }
+    dataset_schema = DatasetSchema(
+        name=dataset_details.alias,
+        dataset_name=dataset_details.name,
+        dataset_description=dataset_details.description,
+        project_custom_prompt=dataset_details.project_custom_prompt,
+        dataset_custom_prompt=dataset_details.dataset_custom_prompt,
+        project_id=project_id,
+        dataset_id=dataset_id,
+        columns=columns,
+    )
 
-    return formatted_schema
+    return dataset_schema
+
+
+def format_schema_for_embedding(
+    schema: DatasetSchema,
+) -> str:
+    """
+    Format the schema data into a string for embedding.
+
+    Args:
+        schema: The schema data containing the 'summary' field with column info
+
+    Returns:
+        A string representation of the schema data
+    """
+    page_content = f"Dataset Name: {schema.name}\n"
+    page_content += f"Dataset Description: {schema.dataset_description}\n"
+
+    for column in schema.columns:
+        page_content += f"Column Name: {column.column_name}\n"
+        page_content += f"Column Type: {column.column_type}\n"
+        page_content += f"Column Description: {column.column_description}\n"
+        page_content += f"Sample Values: {column.sample_values}\n"
+
+    return page_content

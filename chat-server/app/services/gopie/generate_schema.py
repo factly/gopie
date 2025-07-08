@@ -1,13 +1,14 @@
-from typing import Any
+from typing import Tuple
 
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
-from app.services.gopie.sql_executor import execute_sql
+from app.models.schema import DatasetSummary
+from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE, execute_sql
 
 
-async def generate_schema(
+async def generate_summary(
     dataset_name: str, limit: int = 5
-) -> tuple[Any, Any]:
+) -> Tuple[DatasetSummary, SQL_RESPONSE_TYPE]:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
     url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/summary/{dataset_name}"
@@ -21,4 +22,4 @@ async def generate_schema(
     async with http_session.get(url, headers=headers) as response:
         data = await response.json()
 
-    return data, sample_data
+    return DatasetSummary(**data), sample_data

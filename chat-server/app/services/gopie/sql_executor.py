@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Dict, List, Union
 
 from app.core.config import settings
 from app.core.log import logger
@@ -6,10 +7,12 @@ from app.core.session import SingletonAiohttp
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
+SQL_RESPONSE_TYPE = List[Dict[str, Union[str, int, float, None]]]
+
 
 async def execute_sql(
     query: str,
-) -> list:
+) -> SQL_RESPONSE_TYPE:
     """
     Execute a SQL query against the SQL API
 

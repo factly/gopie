@@ -10,7 +10,7 @@ class CustomLLMProvider(BaseLLMProvider):
     def __init__(self, metadata: Dict[str, str]):
         self.metadata = metadata
 
-    def get_openai_model(self, model_name: str):
+    def get_llm_model(self, model_name: str, streaming: bool = True):
         return ChatOpenAI(
             api_key=settings.CUSTOM_LLM_API_KEY,  # type: ignore
             base_url=settings.CUSTOM_LLM_BASE_URL,
@@ -18,14 +18,5 @@ class CustomLLMProvider(BaseLLMProvider):
             metadata={
                 **self.metadata,
             },
-        )
-
-    def get_gemini_model(self, model_name: str):
-        return ChatOpenAI(
-            api_key=settings.CUSTOM_LLM_API_KEY,  # type: ignore
-            base_url=settings.CUSTOM_LLM_BASE_URL,
-            model=model_name,
-            metadata={
-                **self.metadata,
-            },
+            streaming=streaming,
         )

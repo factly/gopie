@@ -7,6 +7,8 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 
+from app.models.schema import ColumnSchema, DatasetSchema
+
 
 def create_identify_datasets_prompt(**kwargs) -> list | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
@@ -103,161 +105,38 @@ IMPORTANT:
 
 def format_identify_datasets_input(
     user_query: str,
-    required_dataset_schemas: str = "[]",
-    semantic_searched_datasets: str = "[]",
+    required_dataset_schemas: list[DatasetSchema] = [],
+    semantic_searched_datasets: list[DatasetSchema] = [],
     confidence_score: float | None = None,
     query_type: str | None = None,
 ) -> dict:
-    input_parts = [
-        f"USER QUERY: {user_query}",
-    ]
+    input_str = ""
+    input_str += f"USER QUERY: {user_query}\n\n"
 
     if query_type:
-        input_parts.append(f"QUERY TYPE: {query_type}")
+        input_str += f"QUERY TYPE: {query_type}\n\n"
 
     if confidence_score is not None:
-        input_parts.append(f"CONFIDENCE SCORE: {confidence_score}/10")
+        input_str += f"CONFIDENCE SCORE: {confidence_score}/10\n\n"
 
-    try:
-        required_schemas = (
-            json.loads(required_dataset_schemas)
-            if isinstance(required_dataset_schemas, str)
-            else required_dataset_schemas or []
-        )
+    if required_dataset_schemas:
+        input_str += f"\n=== REQUIRED DATASETS (Auto-Selected): {len(required_dataset_schemas)} ===\n"
+        input_str += "These datasets are ALREADY SELECTED and will be used automatically.\n"
+        input_str += "Provide column assumptions for these datasets.\n"
+        for i, schema in enumerate(required_dataset_schemas, 1):
+            input_str += f"--- REQUIRED DATASET {i} ---\n"
+            input_str += schema.format_for_prompt()
+    else:
+        input_str += "=== REQUIRED DATASETS: None ===\n"
 
-        semantic_schemas = (
-            json.loads(semantic_searched_datasets)
-            if isinstance(semantic_searched_datasets, str)
-            else semantic_searched_datasets or []
-        )
-
-        if required_schemas:
-            input_parts.append(
-                f"\n=== REQUIRED DATASETS (Auto-Selected): {len(required_schemas)} ==="
-            )
-            input_parts.append(
-                "These datasets are ALREADY SELECTED and will be used automatically."
-            )
-            input_parts.append(
-                "Provide column assumptions for these datasets."
-            )
-
-            for i, schema in enumerate(required_schemas, 1):
-                dataset_section = [f"\n--- REQUIRED DATASET {i} ---"]
-                dataset_section.append(
-                    f"Name: {schema.get('name', 'Unknown')}"
-                )
-                dataset_section.append(
-                    f"Table Name (for SQL): {schema.get('dataset_name', schema.get('name', 'Unknown'))}"
-                )
-
-                if schema.get("dataset_description"):
-                    dataset_section.append(
-                        f"Description: {schema.get('dataset_description')}"
-                    )
-
-                columns = schema.get("columns", [])
-                if columns:
-                    dataset_section.append(f"Columns ({len(columns)}):")
-                    dataset_section.extend(_format_columns(columns))
-
-                input_parts.extend(dataset_section)
-        else:
-            input_parts.append("\n=== REQUIRED DATASETS: None ===")
-
-        if semantic_schemas:
-            input_parts.append(
-                f"\n=== SEMANTIC SEARCHED DATASETS (Choose from these): {len(semantic_schemas)} ==="
-            )
-            input_parts.append(
-                "SELECT the most relevant datasets from these options:"
-            )
-
-            for i, schema in enumerate(semantic_schemas, 1):
-                dataset_section = [f"\n--- AVAILABLE DATASET {i} ---"]
-                dataset_section.append(
-                    f"Name: {schema.get('name', 'Unknown')}"
-                )
-                dataset_section.append(
-                    f"Table Name (for SQL): {schema.get('dataset_name', schema.get('name', 'Unknown'))}"
-                )
-
-                if schema.get("dataset_description"):
-                    dataset_section.append(
-                        f"Description: {schema.get('dataset_description')}"
-                    )
-
-                columns = schema.get("columns", [])
-                if columns:
-                    dataset_section.append(f"Columns ({len(columns)}):")
-                    dataset_section.extend(_format_columns(columns))
-
-                input_parts.extend(dataset_section)
-        else:
-            input_parts.append(
-                "\n=== SEMANTIC SEARCHED DATASETS: None available ==="
-            )
-
-        if not required_schemas and not semantic_schemas:
-            input_parts.append("\nNo datasets available for analysis")
-
-    except (json.JSONDecodeError, TypeError) as e:
-        input_parts.append(f"\nError parsing dataset schemas: {str(e)}")
-        input_parts.append(f"Required schemas: {required_dataset_schemas}")
-        input_parts.append(f"Semantic schemas: {semantic_searched_datasets}")
-
-    formatted_input = "\n".join(input_parts)
-
-    return {
-        "input": formatted_input,
-    }
-
-
-def _format_columns(columns: list) -> list:
-    """Helper function to format column information consistently."""
-    formatted_columns = []
-
-    for column in columns:
-        col_info = []
-        col_name = column.get("column_name", "unknown")
-        col_type = column.get("column_type", "unknown")
-        col_info.append(f"- {col_name} ({col_type})")
-
-        if column.get("column_description"):
-            col_info.append(
-                f"  Description: {column.get('column_description')}"
-            )
-
-        if col_type in [
-            "BIGINT",
-            "INTEGER",
-            "DOUBLE",
-            "FLOAT",
-            "DECIMAL",
-            "NUMERIC",
-        ]:
-            stats = []
-            if column.get("min") is not None:
-                stats.append(f"Range: {column.get('min')}-{column.get('max')}")
-            if column.get("avg") is not None:
-                stats.append(f"Avg: {column.get('avg')}")
-            if column.get("count"):
-                stats.append(f"Count: {column.get('count')}")
-            if stats:
-                col_info.append(f"  Stats: {', '.join(stats)}")
-
-        sample_values = column.get("sample_values", [])
-        if sample_values:
-            unique_samples = list(dict.fromkeys(sample_values))[:5]
-            samples_str = ", ".join(
-                str(s) for s in unique_samples if s is not None
-            )
-            if samples_str:
-                col_info.append(f"  Samples: {samples_str}")
-
-        if column.get("approx_unique") is not None:
-            col_info.append(f"  Unique values: ~{column.get('approx_unique')}")
-
-        formatted_columns.extend(col_info)
-
-    return formatted_columns
+    if semantic_searched_datasets:
+        input_str += f"\n=== SEMANTIC SEARCHED DATASETS (Choose from these): {len(semantic_searched_datasets)} ===\n"
+        input_str += "SELECT the most relevant datasets from these options:\n"
+        for i, schema in enumerate(semantic_searched_datasets, 1):
+            input_str += f"\n--- AVAILABLE DATASET {i} ---\n"
+            input_str += schema.format_for_prompt()
+    else:
+        input_str += "=== SEMANTIC SEARCHED DATASETS: None available ===\n"
+    if not required_dataset_schemas and not semantic_searched_datasets:
+        input_str += "\nNo datasets available for analysis\n"
+    return {"input": input_str}

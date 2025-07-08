@@ -11,7 +11,7 @@ def create_visualize_data_prompt(
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     user_query = kwargs.get("user_query", "")
-    datasets_info = kwargs.get("datasets_info", [])
+    datasets = kwargs.get("datasets", [])
     csv_paths = kwargs.get("csv_paths", [])
 
     system_content = """\
@@ -44,7 +44,7 @@ The following are the datasets and their descriptions:
         )
 
     datasets_csv_info = ""
-    for idx, (dataset, csv_path) in enumerate(zip(datasets_info, csv_paths)):
+    for idx, (dataset, csv_path) in enumerate(zip(datasets, csv_paths)):
         datasets_csv_info += f"Dataset {idx + 1}: \n\n"
         datasets_csv_info += f"Description: {dataset.description}\n\n"
         datasets_csv_info += f"CSV Path: {csv_path}\n\n"

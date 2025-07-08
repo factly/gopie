@@ -1,4 +1,4 @@
-import json
+from typing import List
 
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
@@ -6,19 +6,17 @@ from qdrant_client import models
 from app.core.config import settings
 from app.core.log import logger
 from app.models.schema import DatasetSchema
-from app.services.qdrant.vector_store import (
-    perform_similarity_search,
-    setup_vector_store,
-)
+from app.services.qdrant.qdrant_setup import QdrantSetup
+from app.services.qdrant.vector_store import perform_similarity_search
 
 
 async def search_schemas(
     user_query: str,
     embeddings: OpenAIEmbeddings,
-    project_ids: list[str] | None = None,
-    dataset_ids: list[str] | None = None,
+    project_ids: List[str] | None = None,
+    dataset_ids: List[str] | None = None,
     top_k: int = settings.QDRANT_TOP_K,
-) -> list[DatasetSchema]:
+) -> List[DatasetSchema]:
     """
     Search for schemas using a vector search.
 
@@ -26,7 +24,7 @@ async def search_schemas(
         List of matching dataset schemas
     """
     try:
-        vector_store = setup_vector_store(embeddings=embeddings)
+        vector_store = QdrantSetup.get_vector_store(embeddings=embeddings)
         query_filter = None
 
         filter_conditions = []
@@ -50,7 +48,7 @@ async def search_schemas(
         if filter_conditions:
             query_filter = models.Filter(should=filter_conditions)
 
-        results = perform_similarity_search(
+        results = await perform_similarity_search(
             vector_store=vector_store,
             query=user_query,
             top_k=top_k,
@@ -59,8 +57,7 @@ async def search_schemas(
 
         schemas = []
         for doc in results:
-            formatted_schema = json.loads(doc.page_content)
-            schemas.append(formatted_schema)
+            schemas.append(DatasetSchema(**doc.metadata))
 
         logger.debug(
             f"Found {len(schemas)} schemas matching query: {user_query}"

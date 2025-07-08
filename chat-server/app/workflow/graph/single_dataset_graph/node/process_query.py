@@ -56,24 +56,23 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         if not dataset_id:
             raise Exception("No dataset ID provided")
 
-        schema_info = await get_schema_from_qdrant(dataset_id)
-        if "error" in schema_info:
-            raise Exception(f"Schema fetch error: {schema_info['error']}")
+        dataset_schema = await get_schema_from_qdrant(dataset_id)
+        if dataset_schema is None:
+            raise Exception("Schema fetch error: Dataset not found")
 
-        dataset_name = schema_info.get("dataset_name", "")
-        user_provided_dataset_name = schema_info.get("name", "")
+        dataset_name = dataset_schema.dataset_name
+        user_provided_dataset_name = dataset_schema.name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
         sample_data = await execute_sql(sample_data_query)
 
-        schema_json = json.dumps(schema_info, indent=2)
         rows_csv = convert_rows_to_csv(sample_data)
 
         prompt_messages = get_prompt(
             "process_query",
             user_query=user_query,
             dataset_name=dataset_name,
-            schema_json=schema_json,
+            dataset_schema=dataset_schema,
             rows_csv=rows_csv,
             prev_query_result=prev_query_result,
             validation_result=validation_result,
