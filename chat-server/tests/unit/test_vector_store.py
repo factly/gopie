@@ -327,3 +327,95 @@ class TestSchemaSearch:
 
             # Should return empty list
             assert result == []
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_from_qdrant_success(self):
+        """Test successful schema deletion from Qdrant."""
+        mock_point = Mock()
+        mock_point.id = "test_point_id"
+
+        with (
+            patch(
+                "app.services.qdrant.schema_vectorization.initialize_qdrant_client"
+            ) as mock_init_client,
+            patch(
+                "app.services.qdrant.schema_vectorization.settings"
+            ) as mock_settings,
+        ):
+            mock_client = Mock()
+            mock_init_client.return_value = mock_client
+            mock_settings.QDRANT_COLLECTION = "test_collection"
+            mock_client.scroll.return_value = (
+                [mock_point],
+                None,
+            )  # Document found
+            mock_client.delete.return_value = None  # Successful deletion
+
+            from app.services.qdrant.schema_vectorization import (
+                delete_schema_from_qdrant,
+            )
+
+            result = await delete_schema_from_qdrant(
+                "test_dataset", "test_project"
+            )
+
+            assert result is True
+            mock_client.scroll.assert_called_once()
+            mock_client.delete.assert_called_once_with(
+                collection_name="test_collection",
+                points_selector=["test_point_id"],
+            )
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_from_qdrant_not_found(self):
+        """Test deletion when schema is not found."""
+        with (
+            patch(
+                "app.services.qdrant.schema_vectorization.initialize_qdrant_client"
+            ) as mock_init_client,
+            patch(
+                "app.services.qdrant.schema_vectorization.settings"
+            ) as mock_settings,
+        ):
+            mock_client = Mock()
+            mock_init_client.return_value = mock_client
+            mock_settings.QDRANT_COLLECTION = "test_collection"
+            mock_client.scroll.return_value = ([], None)  # No document found
+
+            from app.services.qdrant.schema_vectorization import (
+                delete_schema_from_qdrant,
+            )
+
+            result = await delete_schema_from_qdrant(
+                "test_dataset", "test_project"
+            )
+
+            assert result is False
+            mock_client.scroll.assert_called_once()
+            mock_client.delete.assert_not_called()  # Should not attempt deletion
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_from_qdrant_exception(self):
+        """Test deletion when an exception occurs."""
+        with (
+            patch(
+                "app.services.qdrant.schema_vectorization.initialize_qdrant_client"
+            ) as mock_init_client,
+            patch(
+                "app.services.qdrant.schema_vectorization.settings"
+            ) as mock_settings,
+        ):
+            mock_client = Mock()
+            mock_init_client.return_value = mock_client
+            mock_settings.QDRANT_COLLECTION = "test_collection"
+            mock_client.scroll.side_effect = Exception("Connection error")
+
+            from app.services.qdrant.schema_vectorization import (
+                delete_schema_from_qdrant,
+            )
+
+            result = await delete_schema_from_qdrant(
+                "test_dataset", "test_project"
+            )
+
+            assert result is False

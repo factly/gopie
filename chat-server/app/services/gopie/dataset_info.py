@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.core.config import settings
+from app.core.log import logger
 from app.core.session import SingletonAiohttp
 from app.models.data import DatasetDetails
 from app.models.schema import ColumnSchema, DatasetSchema
@@ -15,9 +16,13 @@ async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
     )
     headers = {"accept": "application/json"}
 
-    async with http_session.get(url, headers=headers) as response:
-        data = await response.json()
-        return DatasetDetails(**data)
+    try:
+        async with http_session.get(url, headers=headers) as response:
+            data = await response.json()
+            return DatasetDetails(**data)
+    except Exception as e:
+        logger.error(f"Error getting dataset info: {e!s}")
+        raise e
 
 
 def format_schema(

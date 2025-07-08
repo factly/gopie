@@ -3,13 +3,19 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi import HTTPException
 
-from app.api.v1.routers.dataset_upload import upload_schema
+from app.api.v1.routers.dataset_upload import delete_schema, upload_schema
 from app.models.router import UploadSchemaRequest
 
 
 class TestDatasetUpload:
     @pytest.fixture
     def upload_request(self):
+        return UploadSchemaRequest(
+            project_id="test_project_123", dataset_id="test_dataset_456"
+        )
+
+    @pytest.fixture
+    def delete_request(self):
         return UploadSchemaRequest(
             project_id="test_project_123", dataset_id="test_dataset_456"
         )
@@ -139,3 +145,47 @@ class TestDatasetUpload:
 
             assert exc_info.value.status_code == 404
             assert exc_info.value.detail == "Dataset not found"
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_success(self, delete_request):
+        """Test successful schema deletion."""
+        with patch(
+            "app.api.v1.routers.dataset_upload.delete_schema_from_qdrant"
+        ) as mock_delete:
+            mock_delete.return_value = True
+
+            result = await delete_schema(delete_request)
+
+            assert result["success"] is True
+            assert "successfully" in result["message"]
+            mock_delete.assert_called_once_with(
+                "test_dataset_456", "test_project_123"
+            )
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_not_found(self, delete_request):
+        """Test deletion when schema is not found."""
+        with patch(
+            "app.api.v1.routers.dataset_upload.delete_schema_from_qdrant"
+        ) as mock_delete:
+            mock_delete.return_value = False
+
+            with pytest.raises(HTTPException) as exc_info:
+                await delete_schema(delete_request)
+
+            assert exc_info.value.status_code == 404
+            assert "not found" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_service_exception(self, delete_request):
+        """Test deletion when service raises an exception."""
+        with patch(
+            "app.api.v1.routers.dataset_upload.delete_schema_from_qdrant"
+        ) as mock_delete:
+            mock_delete.side_effect = Exception("Service error")
+
+            with pytest.raises(HTTPException) as exc_info:
+                await delete_schema(delete_request)
+
+            assert exc_info.value.status_code == 500
+            assert "Failed to delete schema" in str(exc_info.value.detail)
