@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     LOG_DIR: str = "./server/logs"
     MAX_RETRY_COUNT: int = 3
+    MAX_VALIDATION_RETRY_COUNT: int = 2
 
     CORS_ORIGINS: list[str] = ["*"]
     CORS_METHODS: list[str] = ["*"]

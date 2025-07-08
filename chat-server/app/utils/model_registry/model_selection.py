@@ -17,6 +17,7 @@ NODE_TO_COMPLEXITY = {
     "process_context": ModelCategory.BALANCED,
     "plan_sql_query_tool": ModelCategory.ADVANCED,
     "generate_col_descriptions": ModelCategory.FAST,
+    "validate_result": ModelCategory.BALANCED,
 }
 
 COMPLEXITY_TO_MODEL = {

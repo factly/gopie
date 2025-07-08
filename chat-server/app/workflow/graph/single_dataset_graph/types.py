@@ -9,6 +9,7 @@ class SQLQueryResult(TypedDict):
     explanation: str
     result: list[dict[str, Any]] | None
     success: bool
+    large_result: str | None
     error: str | None
 
 
@@ -39,7 +40,8 @@ class OutputState(TypedDict):
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    retry_count: int
+    validation_retry_count: int
+    validation_result_str: str | None
     dataset_id: str | None
     user_query: str | None
     query_result: SingleDatasetQueryResult | None
