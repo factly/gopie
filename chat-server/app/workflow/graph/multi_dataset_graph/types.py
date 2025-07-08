@@ -11,6 +11,8 @@ class InputState(TypedDict):
     project_ids: list[str] | None
     messages: list[BaseMessage]
     user_query: str
+    need_semantic_search: bool | None
+    required_dataset_ids: list[str] | None
 
 
 class OutputState(TypedDict):
@@ -30,6 +32,8 @@ class State(TypedDict):
     query_result: QueryResult
     response_text: str
     tool_call_count: int
+    need_semantic_search: bool | None
+    required_dataset_ids: list[str] | None
 
 
 class ConfigSchema(TypedDict):

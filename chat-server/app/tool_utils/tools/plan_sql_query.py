@@ -3,6 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from app.core.constants import SQL_QUERIES_GENERATED
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.utils.model_registry.model_selection import get_node_model
@@ -17,14 +18,17 @@ async def plan_sql_query(
     """
     Plan a SQL query given a user natural language query and dataset schemas.
 
-    Situation to use this tool:
+    ONLY use this tool when:
         - You already have the schemas of the datasets or related sufficient
           information from previous messages or the user already provided that
           for which the user is asking the query. Than you can directly plan
           the query by using this tool.
 
-    IMPORTANT:
-        - Don't use this tool if the above situation is not true.
+    DO NOT use this tool when:
+        - If the above condition is not true.
+        - If you want information about the dataset.
+          Because further steps already have full workflow to get the
+          information and then process it.
 
     Args:
         user_query: The natural language query from the user.
@@ -42,9 +46,9 @@ async def plan_sql_query(
     """
     try:
         prompt = get_prompt(
-            "sql_query_planning", user_query=user_query, schemas=schemas
+            "plan_sql_query_tool", user_query=user_query, schemas=schemas
         )
-        model_id = get_node_model("plan_sql_query")
+        model_id = get_node_model("plan_sql_query_tool")
         llm = get_model_provider(config).get_llm(model_id=model_id)
         response = await llm.ainvoke(prompt)
         content = (
@@ -56,14 +60,12 @@ async def plan_sql_query(
 
         sql_queries = parsed.get("sql_queries", [])
 
-        data_name = "sql_queries"
-        data_args = {"queries": sql_queries}
         await adispatch_custom_event(
             "gopie-agent",
             {
                 "content": "SQL query planning tool",
-                "name": data_name,
-                "values": data_args,
+                "name": SQL_QUERIES_GENERATED,
+                "values": {"queries": sql_queries},
             },
         )
 

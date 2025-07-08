@@ -13,6 +13,7 @@ from openai.types.chat.chat_completion_message_tool_call import (
     Function,
 )
 
+from app.core.constants import INTERMEDIATE_MESSAGES
 from app.models.chat import EventChunkData, Role
 
 
@@ -52,31 +53,23 @@ class OpenAIOutputAdapter:
     ) -> ResponseChunk:
         tool_call_params = None
         if event_chunk.extra_data:
-            tool_call_params = {
-                "name": event_chunk.extra_data.name,
-                "arguments": json.dumps(event_chunk.extra_data.args),
-            }
-        elif event_chunk.category:
-            tool_message = {
-                "role": event_chunk.role,
-                "category": event_chunk.category,
-                "content": event_chunk.content,
-            }
-            tool_call_params = {
-                "name": "tool_messages",
-                "arguments": json.dumps(tool_message),
-            }
-        elif event_chunk.role == Role.INTERMEDIATE:
+            name = event_chunk.extra_data.name
+            arguments = json.dumps(event_chunk.extra_data.args)
+        elif (event_chunk.category) or (event_chunk.role == Role.INTERMEDIATE):
             if not event_chunk.content:
                 return None
-            tool_message = {
+            intermediate_message = {
                 "role": event_chunk.role,
                 "content": event_chunk.content,
             }
-            tool_call_params = {
-                "name": "tool_messages",
-                "arguments": json.dumps(tool_message),
-            }
+            if event_chunk.category:
+                intermediate_message["category"] = event_chunk.category
+            name = INTERMEDIATE_MESSAGES
+            arguments = json.dumps(intermediate_message)
+        tool_call_params = {
+            "name": name,
+            "arguments": arguments,
+        }
         if tool_call_params:
             tool_call = {
                 "id": f"call_{self.tool_calls_count}",

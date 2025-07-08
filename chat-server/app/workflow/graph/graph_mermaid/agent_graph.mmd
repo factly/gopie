@@ -11,16 +11,14 @@ graph TD;
 	single_dataset_agent(single_dataset_agent)
 	visualization_agent(visualization_agent)
 	check_visualization(check_visualization)
-	empty_node(empty_node)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> check_visualization;
 	__start__ --> process_context;
-	check_visualization --> empty_node;
-	empty_node -.-> __end__;
-	empty_node -.-> visualization_agent;
-	multi_dataset_agent --> empty_node;
-	process_context --> supervisor;
-	single_dataset_agent --> empty_node;
+	check_visualization -.-> __end__;
+	check_visualization -.-> visualization_agent;
+	multi_dataset_agent --> check_visualization;
+	process_context -.-> supervisor;
+	process_context -.-> visualization_agent;
+	single_dataset_agent --> check_visualization;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
 	visualization_agent --> __end__;

@@ -17,7 +17,6 @@ async def stream_graph_updates(
     chat_id: str,
     dataset_ids: list[str] | None = None,
     project_ids: list[str] | None = None,
-    model_id: str | None = None,
 ):
     """
     Stream graph updates for user input with event tracking.
@@ -28,10 +27,7 @@ async def stream_graph_updates(
         project_ids: Specific project IDs to use for the query
         chat_id: Unique identifier for the chat session
         trace_id: Optional trace ID for tracking
-        model_id: Optional model ID for selecting the reasoning model
         user: User identifier
-        use_multi_agent: Whether to use multi-agent architecture (None = auto)
-        query_complexity: Estimated query complexity for routing decisions
 
     Yields:
         str: JSON-formatted event data for streaming in SSE format

@@ -1,7 +1,15 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_plan_query_prompt(input: str) -> list:
+def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
     system_content = """
 # QUERY TASK
 Given the following natural language query and detailed information
@@ -15,13 +23,9 @@ IMPORTANT:
 
 # DATASET NAMING GUIDELINES
 IMPORTANT - DATASET NAMING:
-- Each dataset has a 'name' (user-friendly name) and an 'dataset_name'
-  (the real table name in the database)
-- In your SQL query, you MUST use the dataset_name from the
-  datasets_info
-- Example: If a dataset is shown as "COVID-19 Cases" to the user, its
-  actual table name might be "ASD_ASDRDasdfaW"
-- Reference the provided `dataset_name_mapping` for the correct mapping
+- In your SQL query, you MUST use the dataset_name (table name) provided in the schema
+- This is the actual table name used in the database
+- DO NOT use the user-friendly name in SQL queries
 
 # CASE SENSITIVITY GUIDELINES
 - When comparing column values (not column names), use LOWER() function
@@ -72,18 +76,18 @@ You must provide a well-formatted version of the SQL query for UI display with:
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{
+{{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {
+        {{
             "sql_query": "the SQL query to fetch the required data",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }
+        }}
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
-}
+}}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
@@ -91,9 +95,19 @@ related, include multiple queries in the "sql_queries" array, one for
 each dataset needed.
 """
 
-    human_content = f"""
+    human_template_str = """
 {input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
 
     return [
         SystemMessage(content=system_content),
@@ -117,12 +131,6 @@ def format_plan_query_input(
 
     if datasets_info:
         input_parts.append("\n--- DATASETS INFORMATION ---")
-
-        dataset_name_mapping = datasets_info.get("dataset_name_mapping", {})
-        if dataset_name_mapping:
-            input_parts.append("Dataset Name Mapping:")
-            for user_name, db_name in dataset_name_mapping.items():
-                input_parts.append(f"- '{user_name}' → table: {db_name}")
 
         schemas = datasets_info.get("schemas", [])
         if schemas:

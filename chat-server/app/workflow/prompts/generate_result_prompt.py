@@ -1,9 +1,17 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 from app.models.query import QueryResult
 
 
-def create_generate_result_prompt(input: str) -> list:
+def create_generate_result_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    input_content = kwargs.get("input", "")
+
     system_content = """
 You are generating the final response to a user query based on the query execution results.
 This is the LAST step in the workflow.
@@ -86,9 +94,19 @@ RESPONSE INSTRUCTIONS:
    - Empathetic when no results are found
 """
 
-    human_content = f"""
+    human_template_str = """
     {input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
 
     return [
         SystemMessage(content=system_content),

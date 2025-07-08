@@ -1,7 +1,17 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
-def create_assess_query_complexity_prompt(user_input: str) -> list:
+def create_assess_query_complexity_prompt(
+    **kwargs,
+) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    user_input = kwargs.get("user_input", "")
+
     system_content = """
 Analyze the user query and determine if it needs to be broken down into
 sub-queries or simply improved.
@@ -38,18 +48,28 @@ Follow these STRICT guidelines:
    - Keep it simple and client-friendly
 
 RESPONSE FORMAT:
-{
+{{
   "needs_breakdown": true/false,
   "explanation": "Brief explanation of decision"
-}
+}}
 
 IMPORTANT: The default position is to NOT break down queries.
            Only do so when absolutely necessary.
 """
 
-    human_content = f"""
+    human_template_str = """
 User Query: {user_input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(user_input=user_input)
 
     return [
         SystemMessage(content=system_content),
@@ -57,7 +77,10 @@ User Query: {user_input}
     ]
 
 
-def create_generate_subqueries_prompt(user_input: str) -> list:
+def create_generate_subqueries_prompt(**kwargs) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    user_input = kwargs.get("user_input", "")
+
     system_content = """
 This query has been determined to need breaking down into smaller
 subqueries. Generate effective subqueries following these STRICT guidelines:
@@ -92,17 +115,27 @@ STRICT PROHIBITIONS:
     procedural steps for information gathering
 
 RESPONSE FORMAT:
-{
+{{
   "subqueries": ["subquery1", "subquery2"]
-}
+}}
 
 IMPORTANT: Ensure each subquery is a natural language question
            that a human would ask.
 """
 
-    human_content = f"""
+    human_template_str = """
 User Query: {user_input}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(user_input=user_input)
 
     return [
         SystemMessage(content=system_content),

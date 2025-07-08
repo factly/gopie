@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -68,10 +68,16 @@ class Settings(BaseSettings):
 
     DEFAULT_VENDOR: str = ""
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
-        case_sensitive = True
+    CUSTOM_EMBEDDING_BASE_URL: str = ""
+    CUSTOM_EMBEDDING_API_KEY: str = ""
+    CUSTOM_EMBEDDING_MODEL: str = ""
+
+    CUSTOM_LLM_BASE_URL: str = ""
+    CUSTOM_LLM_API_KEY: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=".env", extra="ignore", case_sensitive=True
+    )
 
 
 settings = Settings()

@@ -1,13 +1,13 @@
 from typing import Dict
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.config import settings
-from app.utils.providers.base import BaseProvider
+from app.utils.llm_providers.base import BaseLLMProvider
 
 
-class PortkeyGatewayProvider(BaseProvider):
+class PortkeyLLMProvider(BaseLLMProvider):
     def __init__(
         self,
         metadata: Dict[str, str],
@@ -53,14 +53,4 @@ class PortkeyGatewayProvider(BaseProvider):
             default_headers=headers,
             model=model_name,
             streaming=streaming,
-        )
-
-    def get_embeddings_model(self, model_name: str) -> OpenAIEmbeddings:
-        headers = self.get_headers(settings.OPENAI_VIRTUAL_KEY)
-
-        return OpenAIEmbeddings(
-            api_key="X",  # type: ignore
-            base_url=PORTKEY_GATEWAY_URL,
-            default_headers=headers,
-            model=model_name,
         )

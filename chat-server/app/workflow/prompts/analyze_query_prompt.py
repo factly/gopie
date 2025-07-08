@@ -1,13 +1,21 @@
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 
 
 def create_analyze_query_prompt(
-    user_query: str,
-    tool_results: str,
-    tool_call_count: int,
-    dataset_ids: list[str] | None = None,
-    project_ids: list[str] | None = None,
-) -> list:
+    **kwargs,
+) -> list | ChatPromptTemplate:
+    prompt_template = kwargs.get("prompt_template", False)
+    user_query = kwargs.get("user_query", "")
+    tool_results = kwargs.get("tool_results", "")
+    tool_call_count = kwargs.get("tool_call_count", 0)
+    dataset_ids = kwargs.get("dataset_ids", [])
+    project_ids = kwargs.get("project_ids", [])
+
     system_content = """
 You are a data query classifier. Analyze the user query and take appropriate action.
 Prevent hallucination - only answer based on available context.
@@ -34,25 +42,41 @@ QUERY TYPES - Select exactly ONE:
 TOOL USAGE GUIDELINES:
 * You can use tools within conversational queries
 * Evaluate if previous tool calls successfully answered the query
-* Please refer to the `Situation where it can be used`
-  section of the tool documentation to understand when to use the tool.
+* ALWAYS refer to each tool's documentation for specific usage conditions:
+  - Check the "ONLY use this tool when:" section for appropriate scenarios
+  - Check the "DO NOT use this tool when:" section for inappropriate scenarios
+  - Follow the tool's specific guidelines about when it should and shouldn't be used
+* If a tool's documentation indicates it's NOT appropriate for the current query:
+  - Consider classifying as "data_query" to use the full workflow instead
 * If a tool call failed or gave incomplete information:
   - Consider classifying as "data_query" to use database search
 * If previous tool calls successfully answered the query:
   - Maintain conversational classification
 
+GENERAL TOOL DECISION PROCESS:
+1. Read the user query carefully
+2. Check available tools and their usage documentation
+3. If a tool explicitly states it handles this type of query → Use the tool
+4. If a tool explicitly states it should NOT be used for this query → Don't use it
+5. If the tool documentation mentions there's already a full workflow for such queries → Use "data_query" instead
+6. When in doubt about tool appropriateness → Default to "data_query"
+
 CORE RULES:
-- Unknown facts/events without tools → "data_query"
+- Tool documentation takes precedence over general assumptions
+- Respect tool usage boundaries as defined in their descriptions
+- When tools indicate there's already a workflow → Use "data_query"
+- Unknown facts/events without appropriate tools → "data_query"
 - When unsure → "data_query"
 - Clarification only for extremely vague queries
 - Let data retrieval handle specific filtering
 - Failed tool calls → "data_query"
 
 DECISION PRIORITY:
-1. Tools can completely answer → "conversational"
-2. Needs data/unsure → "data_query"
-3. Available context → "conversational"
-4. Extremely vague → "conversational" with clarification
+1. Tool documentation explicitly covers the query → Use the tool (conversational)
+2. Tools can completely answer → "conversational"
+3. Needs data/unsure → "data_query"
+4. Available context → "conversational"
+5. Extremely vague → "conversational" with clarification
 
 CONFIDENCE SCORE:
 - Provide a confidence score (1-10) for your classification
@@ -65,21 +89,37 @@ IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
 
 IF NO TOOL CALL IS REQUIRED:
     FORMAT YOUR RESPONSE AS JSON:
-    {
+    {{
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
         "reasoning": "Brief explanation of classification decision",
         "clarification_needed": "If conversational due to vagueness, specify what you need"
-    }
+    }}
 """
 
-    human_content = f"""
-USER QUERY: "{user_query}"
+    human_template_str = """
+USER QUERY: {user_query}
 PREVIOUS TOOL RESULTS: {tool_results}
 NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}/5 (max 5 allowed)
 DATASET IDS: {dataset_ids}
 PROJECT IDS: {project_ids}
 """
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(
+        user_query=user_query,
+        tool_results=tool_results,
+        tool_call_count=tool_call_count,
+        dataset_ids=dataset_ids,
+        project_ids=project_ids,
+    )
 
     return [
         SystemMessage(content=system_content),
