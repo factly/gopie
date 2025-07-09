@@ -81,10 +81,10 @@ Make a decision based on:
 4. Whether the remaining subqueries can still provide value
 
 Return a JSON object with:
-{{
+{
     "continue_execution": true/false,
     "reasoning": "brief explanation"
-}}
+}
 """
 
     human_template_str = """

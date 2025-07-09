@@ -77,18 +77,18 @@ You must provide a well-formatted version of the SQL query for UI display with:
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{{
+{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {{
+        {
             "sql_query": "the SQL query to fetch the required data",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }}
+        }
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
-}}
+}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
