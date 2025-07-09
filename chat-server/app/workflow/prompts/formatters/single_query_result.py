@@ -1,4 +1,11 @@
-def format_single_query_result(query_result: dict | None, **kwargs) -> str:
+from app.workflow.graph.single_dataset_graph.types import (
+    SingleDatasetQueryResult,
+)
+
+
+def format_single_query_result(
+    query_result: SingleDatasetQueryResult, **kwargs
+) -> str:
     if not query_result:
         return "No query result found"
 

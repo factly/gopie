@@ -77,18 +77,18 @@ You must provide a well-formatted version of the SQL query for UI display with:
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{
+{{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {
+        {{
             "sql_query": "the SQL query to fetch the required data",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }
+        }}
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
-}
+}}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
@@ -140,43 +140,39 @@ def format_plan_query_input(
                 schema_section += schema.format_for_prompt()
                 input_str += schema_section + "\n"
 
-        column_requirements = datasets_info.get(
-            "correct_column_requirements", {}
-        )
+        column_requirements = datasets_info["correct_column_requirements"]
         if column_requirements:
             input_str += "\n--- COLUMN VALUE ANALYSIS ---\n"
             input_str += "Verified column values from database analysis:"
 
-            datasets_analysis = column_requirements.get("datasets", {})
+            datasets_analysis = column_requirements.datasets
             for dataset_name, analysis in datasets_analysis.items():
                 input_str += f"\nDataset: {dataset_name}\n"
-                columns_analyzed = analysis.get("columns_analyzed", [])
+                columns_analyzed = analysis.columns_analyzed
 
                 for col_analysis in columns_analyzed:
-                    col_name = col_analysis.get("column_name", "unknown")
+                    col_name = col_analysis.column_name
                     input_str += f"- Column: {col_name}\n"
 
-                    verified_values = col_analysis.get("verified_values", [])
+                    verified_values = col_analysis.verified_values
                     if verified_values:
                         exact_vals = [
-                            v.get("value")
+                            v.value
                             for v in verified_values
-                            if v.get("found_in_database")
+                            if v.found_in_database
                         ]
                         if exact_vals:
                             input_str += f"  ✓ Exact matches found: {', '.join(exact_vals)}"
 
-                    suggested_alternatives = col_analysis.get(
-                        "suggested_alternatives", []
+                    suggested_alternatives = (
+                        col_analysis.suggested_alternatives
                     )
                     if suggested_alternatives:
                         for alt in suggested_alternatives:
-                            if alt.get("found_similar_values"):
-                                similar_vals = alt.get("similar_values", [])[
-                                    :3
-                                ]  # Limit to 3
+                            if alt.found_similar_values:
+                                similar_vals = alt.similar_values[:5]
                                 if similar_vals:
-                                    input_str += f"  ⚠ Similar values for '{alt.get('requested_value')}': {', '.join(similar_vals)}"
+                                    input_str += f"  ⚠ Similar values for '{alt.requested_value}': {', '.join(similar_vals)}"
 
     if error_messages and retry_count > 0:
         input_str += "\n--- PREVIOUS ERRORS ---\n"

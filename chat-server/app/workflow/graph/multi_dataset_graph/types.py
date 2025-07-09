@@ -1,4 +1,4 @@
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -21,8 +21,8 @@ class ColumnAssumptions(TypedDict):
 
 class DatasetsInfo(TypedDict):
     schemas: list[DatasetSchema]
-    column_assumptions: Optional[list[ColumnAssumptions]]
-    correct_column_requirements: Optional[list[ColumnValueMatching]]
+    column_assumptions: list[ColumnAssumptions] | None
+    correct_column_requirements: ColumnValueMatching | None
 
 
 class InputState(TypedDict):

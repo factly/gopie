@@ -4,6 +4,9 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.graph.single_dataset_graph.types import (
+    SingleDatasetQueryResult,
+)
 from app.workflow.prompts.formatters.single_query_result import (
     format_single_query_result,
 )
@@ -48,13 +51,13 @@ CONFIDENCE SCORING (be precise):
 - 0.0-0.3: Low confidence - major issues, significant improvements needed
 
 RESPONSE FORMAT (JSON only):
-{
+{{
     "is_valid": true/false,
     "reasoning": "Clear analysis explaining your decision - what works, what doesn't, and why",
     "confidence": 0.0-1.0,
     "missing_elements": ["specific items missing if invalid"],
     "recommendation": "respond_to_user" or "rerun_query"
-}
+}}
 
 KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection."""
 
@@ -77,7 +80,7 @@ KEY PRINCIPLE: Focus on whether the user can get meaningful value from these res
 
 
 def format_validate_result_input(
-    prev_query_result: dict | None = None,
+    prev_query_result: SingleDatasetQueryResult | None = None,
     **kwargs,
 ) -> dict:
     if not prev_query_result:

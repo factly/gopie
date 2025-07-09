@@ -37,7 +37,7 @@ The following are the datasets and their descriptions:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

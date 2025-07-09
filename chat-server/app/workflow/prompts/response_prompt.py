@@ -4,6 +4,9 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.graph.single_dataset_graph.types import (
+    SingleDatasetQueryResult,
+)
 from app.workflow.prompts.formatters.single_query_result import (
     format_single_query_result,
 )
@@ -43,6 +46,8 @@ GUIDELINES:
     ]
 
 
-def format_response_input(query_result: dict | None, **kwargs) -> dict:
+def format_response_input(
+    query_result: SingleDatasetQueryResult, **kwargs
+) -> dict:
     formatted_input = format_single_query_result(query_result)
     return {"input": formatted_input}

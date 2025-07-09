@@ -4,7 +4,13 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
-from app.models.schema import ColumnSchema, DatasetSchema
+from app.models.schema import DatasetSchema
+from app.workflow.graph.single_dataset_graph.types import (
+    SingleDatasetQueryResult,
+)
+from app.workflow.prompts.formatters.single_query_result import (
+    format_single_query_result,
+)
 
 
 def create_process_query_prompt(
@@ -39,11 +45,11 @@ RULES FOR SQL QUERIES (when needed):
 
 RESPONSE FORMAT:
 Return a JSON object in one of these formats:
-{
+{{
     "sql_queries": ["<SQL query here without semicolon>", ...],
     "explanations": ["<Brief explanation for each query>", ...],
     "response_for_non_sql": "<Brief explanation for non-sql response>"
-}
+}}
 
 Always respond with valid JSON only."""
 
@@ -72,17 +78,73 @@ def format_process_query_input(
     dataset_name: str,
     dataset_schema: DatasetSchema,
     rows_csv: str,
-    prev_query_result: dict | None = None,
+    prev_query_result: SingleDatasetQueryResult | None = None,
     validation_result: dict | None = None,
     **kwargs,
 ) -> dict:
-    formatted_input = f"USER QUESTION: {user_query}\n\n"
-    formatted_schema = dataset_schema.format_for_prompt(
-        columns_fields_to_exclude=["avg", "count", "std"]
-    )
-    formatted_input += f"DATASET INFORMATION:\n{formatted_schema}\n\n"
-    formatted_input += f"DATASET NAME: {dataset_name}\n\n"
-    formatted_input += f"SAMPLE DATA (50 ROWS) IN CSV:\n"
-    formatted_input += "-" * 20 + f"\n{rows_csv}\n" + "-" * 20 + "\n"
-    formatted_input += f"{error_context}"
+    formatted_schema = dataset_schema.format_for_prompt()
+
+    sections = [
+        f"❓ USER QUERY: {user_query}",
+        "",
+        f"📊 DATASET INFORMATION:\n{formatted_schema}",
+        "",
+        f"📄 SAMPLE DATA ({dataset_name}):",
+        rows_csv,
+    ]
+
+    if prev_query_result:
+        formatted_prev_result = format_single_query_result(prev_query_result)
+        sections.extend(
+            ["", "🔄 PREVIOUS QUERY CONTEXT:", formatted_prev_result]
+        )
+
+    if validation_result:
+        confidence = validation_result["confidence"]
+        if confidence >= 0.9:
+            confidence_desc = "Very high confidence"
+            confidence_meaning = "excellent results"
+        elif confidence >= 0.7:
+            confidence_desc = "High confidence"
+            confidence_meaning = "good results, minor improvements possible"
+        elif confidence >= 0.4:
+            confidence_desc = "Medium confidence"
+            confidence_meaning = "some issues, improvements recommended"
+        else:  # 0.0-0.3
+            confidence_desc = "Low confidence"
+            confidence_meaning = (
+                "major issues, significant improvements needed"
+            )
+
+        validation_status = (
+            "✅ Valid"
+            if validation_result["is_valid"]
+            else "❌ Needs Improvement"
+        )
+
+        context_note = (
+            "📋 ANALYSIS: After reviewing the previous query result above"
+            if prev_query_result
+            else "📋 ANALYSIS: Initial validation"
+        )
+
+        validation_info = [
+            "",
+            context_note,
+            f"🔍 VALIDATION: {validation_status}",
+            f"📊 Confidence: {confidence:.2f}/1.0 ({confidence_desc} - {confidence_meaning})",
+            f"💭 Reasoning: {validation_result['reasoning']}",
+            "⚠️  The previous query result requires improvements before providing a final response.",
+        ]
+
+        missing_elements = validation_result.get("missing_elements")
+        if missing_elements:
+            validation_info.append(
+                f"❓ Still Missing: {', '.join(missing_elements)}"
+            )
+
+        sections.extend(validation_info)
+
+    formatted_input = "\n".join(sections)
+
     return {"input": formatted_input}

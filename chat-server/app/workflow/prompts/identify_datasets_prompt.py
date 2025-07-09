@@ -1,14 +1,15 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 from app.models.schema import DatasetSchema
 
 
-def create_identify_datasets_prompt(**kwargs) -> list | ChatPromptTemplate:
+def create_identify_datasets_prompt(
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -88,7 +89,7 @@ IMPORTANT:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
