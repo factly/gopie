@@ -18,15 +18,15 @@ logging.basicConfig(
 
 # --- Read Configuration from Environment Variables ---
 # Best practice to avoid hardcoding credentials and endpoints
-GOPIE_API_BASE_URL = os.getenv("GOPIE_API_BASE_URL")
+GOPIE_API_BASE_URL = "http://localhost:8000"
 # The user ID and organization ID are required for API requests
 GOPIE_USER_ID = "system"
 GOPIE_ORG_ID = "system"
 
-S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
-S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
-S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "gopie")
+S3_ENDPOINT_URL = "http://localhost:9000"
+S3_ACCESS_KEY_ID = "minioadmin"
+S3_SECRET_ACCESS_KEY = "minioadmin"
+S3_BUCKET_NAME = "gopie"
 
 # Local folder containing the datasets to upload
 LOCAL_DATASET_FOLDER = os.getenv("LOCAL_DATASET_FOLDER", "./datasets/")
