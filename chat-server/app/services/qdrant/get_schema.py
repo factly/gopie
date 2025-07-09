@@ -55,7 +55,7 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
 
 
 async def get_schema_by_dataset_ids(
-    dataset_ids: list[str],
+    dataset_ids: list[str] | None = None,
 ) -> list[DatasetSchema]:
     """
     Get the schema of a list of datasets from Qdrant database.

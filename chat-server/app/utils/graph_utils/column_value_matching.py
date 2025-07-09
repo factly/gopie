@@ -1,10 +1,11 @@
 from app.core.log import logger
 from app.models.data import ColumnValueMatching
 from app.services.gopie.sql_executor import execute_sql
+from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
 
 
 async def match_column_values(
-    column_assumptions: list[dict],
+    column_assumptions: list[ColumnAssumptions],
 ) -> ColumnValueMatching:
     """
     Match column values against exact and fuzzy values and find similar values

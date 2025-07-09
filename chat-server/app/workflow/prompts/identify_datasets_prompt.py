@@ -1,9 +1,8 @@
-import json
-
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
 )
 
 from app.models.schema import DatasetSchema
@@ -56,23 +55,23 @@ NODE MESSAGE:
 * Be concise but informative - this will help guide later processing
 
 FORMAT YOUR RESPONSE AS JSON:
-{
+{{
     "selected_dataset": ["dataset_name1", "dataset_name2", ...],  // Only from SEMANTIC SEARCHED datasets
     "reasoning": "1-2 sentences explaining why these datasets were selected from semantic search",
     "column_assumptions": [
-        {
+        {{
             "dataset": "dataset_name1",  // Can be from REQUIRED or SELECTED datasets
             "columns": [
-                {
+                {{
                     "name": "column_name",
                     "exact_values": ["value1", ...],
                     "fuzzy_values": ["value2", ...]
-                }
+                }}
             ]
-        }
+        }}
     ],
     "node_message": "Brief message about all datasets (required + selected) and their relevance to the query"
-}
+}}
 
 IMPORTANT:
 * selected_dataset should ONLY contain datasets chosen from semantic searched datasets
@@ -89,7 +88,7 @@ IMPORTANT:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessagePromptTemplate.from_template(system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

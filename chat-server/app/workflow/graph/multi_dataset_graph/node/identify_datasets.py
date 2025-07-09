@@ -10,7 +10,7 @@ from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.multi_dataset_graph.types import State
+from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo, State
 
 
 @configure_node(
@@ -155,10 +155,11 @@ async def identify_datasets(state: State, config: RunnableConfig):
             schema.dataset_id for schema in filtered_dataset_schemas
         ]
 
-        datasets_info = {
-            "schemas": filtered_dataset_schemas,
-            "column_assumptions": column_assumptions,
-        }
+        datasets_info = DatasetsInfo(
+            schemas=filtered_dataset_schemas,
+            column_assumptions=column_assumptions,
+            correct_column_requirements=None,
+        )
 
         await adispatch_custom_event(
             "gopie-agent",

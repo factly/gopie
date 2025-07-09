@@ -3,15 +3,26 @@ from typing import Annotated, Optional, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
+from app.models.data import ColumnValueMatching
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
 
 
-# TODO: Type these fields correctly.
+class FuzzyValue(TypedDict):
+    name: str
+    exact_values: list[str]
+    fuzzy_values: list[str]
+
+
+class ColumnAssumptions(TypedDict):
+    dataset: str
+    columns: list[FuzzyValue]
+
+
 class DatasetsInfo(TypedDict):
     schemas: list[DatasetSchema]
-    column_assumptions: Optional[list]
-    correct_column_requirements: Optional[list]
+    column_assumptions: Optional[list[ColumnAssumptions]]
+    correct_column_requirements: Optional[list[ColumnValueMatching]]
 
 
 class InputState(TypedDict):
