@@ -17,17 +17,17 @@ services:
     networks:
       - gopie
 
-  # gopie-web:
-  #   build:
-  #     context: ./web
-  #     dockerfile: Dockerfile.prod
-  #   env_file:
-  #       - ./config-noauth.env
-  #   ports:
-  #     - "3000:3000"
-  #   restart: unless-stopped
-  #   networks:
-  #     - gopie
+  gopie-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    env_file:
+      - ./config-noauth.env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - gopie
 
   gopie-starter:
     build:
@@ -42,9 +42,9 @@ services:
       S3_BUCKET_NAME: "gopie"
     depends_on:
       - gopie-server
-    restart: 'no'
+    restart: "no"
     networks:
-        - gopie
+      - gopie
 
   gopie-migrate:
     build:
@@ -53,7 +53,7 @@ services:
     environment:
       - GOOSE_DBSTRING=postgres://postgres:postgres@postgres:5432/gopie?sslmode=disable
       - GOOSE_DRIVER=postgres
-      - GOOSE_MIGRATION_DIR=migrations 
+      - GOOSE_MIGRATION_DIR=migrations
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,7 +65,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     env_file:
-        - ./config-noauth.env
+      - ./config-noauth.env
     ports:
       - "8000:8000"
     depends_on:
@@ -77,7 +77,6 @@ services:
       - gopie
     command: >
       sh -c "cd /home/gopie && gopie serve"
-
 
   minio:
     image: minio/minio
