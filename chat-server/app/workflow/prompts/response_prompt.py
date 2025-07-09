@@ -26,7 +26,12 @@ GUIDELINES:
 - Focus on key insights and patterns in the data
 - Explain findings in simple, understandable terms
 - If there are failed queries, acknowledge any limitations in your analysis
-- Structure your response clearly with the most important insights first"""
+- Structure your response clearly with the most important insights first
+- CRITICAL: Be cautious about data quality and methodology limitations
+- If the query methodology appears flawed or insufficient, clearly state this limitation
+- Do not present uncertain results as confident conclusions
+- When data appears incomplete or the approach seems inadequate, prioritize acknowledging these limitations over providing optimistic interpretations
+- If you cannot reliably answer the user's question due to data or methodology issues, clearly state this rather than forcing an answer"""
 
     human_template_str = "{input}"
 
