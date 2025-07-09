@@ -29,23 +29,22 @@ services:
   #   networks:
   #     - gopie
 
-  gopie-starter-project:
+  gopie-starter:
     build:
-      context: ./server
-      dockerfile: Dockerfile-sp
-    env_file:
-        - ./config-noauth.env
+      context: ./scripts/starter-project
+      dockerfile: Dockerfile
+    container_name: gopie-starter-script
+    environment:
+      GOPIE_API_BASE_URL: "http://gopie-server:8000"
+      S3_ENDPOINT_URL: "http://minio:9000"
+      S3_ACCESS_KEY_ID: "minioadmin"
+      S3_SECRET_ACCESS_KEY: "minioadmin"
+      S3_BUCKET_NAME: "gopie"
     depends_on:
-      postgres:
-        condition: service_healthy
-      gopie-migrate:
-        condition: service_completed_successfully
-    volumes:
-      - ./volumes/duckdb:/dataful
+      - gopie-server
+    restart: 'no'
     networks:
-      - gopie
-    command: >
-      sh -c "cd /home/gopie && gopie starter-project"
+        - gopie
 
   gopie-migrate:
     build:
@@ -72,8 +71,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      gopie-starter-project:
-        condition: service_completed_successfully
     volumes:
       - ./volumes/duckdb:/dataful
     networks:
