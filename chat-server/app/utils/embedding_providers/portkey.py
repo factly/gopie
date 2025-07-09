@@ -16,7 +16,7 @@ class PortkeyEmbeddingProvider(BaseEmbeddingProvider):
         self.metadata = metadata
         self.provider_api_key = settings.PORTKEY_EMBEDDING_PROVIDER_API_KEY
         self.provider_name = settings.PORTKEY_EMBEDDING_PROVIDER_NAME
-        self.base_url = settings.PORTKEY_EMBEDDING_URL
+        self.base_url = settings.PORTKEY_URL
         if not self.base_url:
             self.base_url = PORTKEY_GATEWAY_URL
             self.self_hosted = False

@@ -94,8 +94,11 @@ def format_schema_for_embedding(
     """
     page_content = f"Dataset Name: {schema.name}\n"
     page_content += f"Dataset Description: {schema.dataset_description}\n"
-
     for column in schema.columns:
+        if not column.column_description:
+            raise ValueError(
+                f"Column description not found for column:{column.column_name}"
+            )
         page_content += f"Column Name: {column.column_name}\n"
         page_content += f"Column Type: {column.column_type}\n"
         page_content += f"Column Description: {column.column_description}\n"

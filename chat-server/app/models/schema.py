@@ -54,8 +54,8 @@ class ColumnSummary(BaseModel):
 
 
 class ColumnSchema(ColumnSummary):
-    column_description: str
-    sample_values: list[str]
+    column_description: Optional[str] = None
+    sample_values: list[PossibleNumberType] = Field(default_factory=list)
 
     def format_for_prompt(self, fields_to_exclude: ColumnFieldsToExclude = []):
         sample_str = ""

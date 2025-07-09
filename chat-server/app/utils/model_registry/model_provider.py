@@ -22,9 +22,9 @@ from app.utils.model_registry.model_selection import get_node_model
 
 
 def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
-    gateway_type = LLMProvider(settings.GATEWAY_PROVIDER)
+    gateway_type = LLMProvider(settings.LLM_GATEWAY_PROVIDER)
     match gateway_type:
-        case LLMProvider.PORTKEY_HOSTED:
+        case LLMProvider.PORTKEY:
             return PortkeyLLMProvider(metadata)
         case LLMProvider.LITELLM:
             return LiteLLMProvider(metadata)
@@ -37,9 +37,9 @@ def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
 
 
 def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
-    gateway_type = EmbeddingProvider(settings.GATEWAY_PROVIDER)
+    gateway_type = EmbeddingProvider(settings.EMBEDDING_GATEWAY_PROVIDER)
     match gateway_type:
-        case EmbeddingProvider.PORTKEY_HOSTED:
+        case EmbeddingProvider.PORTKEY:
             return PortkeyEmbeddingProvider(metadata)
         case EmbeddingProvider.LITELLM:
             return LiteLLMEmbeddingProvider(metadata)
@@ -81,7 +81,8 @@ class ModelProvider:
     def get_embeddings_model(self):
         return self._create_embeddings_model()
 
-    def get_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
+    def get_llm_with_tools(self, node_name: str, tool_names: list[ToolNames]):
+        model_id = get_node_model(node_name)
         return self._create_llm_with_tools(model_id, tool_names)
 
     def get_llm_for_node(

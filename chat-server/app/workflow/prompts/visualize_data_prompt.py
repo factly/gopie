@@ -2,7 +2,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -38,7 +37,7 @@ The following are the datasets and their descriptions:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

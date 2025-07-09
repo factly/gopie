@@ -1,10 +1,10 @@
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.workflow.graph.multi_dataset_graph import (
+from app.workflow.graph.multi_dataset_graph.graph import multi_dataset_graph
+from app.workflow.graph.multi_dataset_graph.types import (
     OutputState as MultiDatasetOutputState,
 )
-from app.workflow.graph.multi_dataset_graph import multi_dataset_graph
 from app.workflow.graph.multi_dataset_graph.types import QueryResult
 
 from ..types import AgentState, Dataset

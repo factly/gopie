@@ -36,7 +36,7 @@ def get_node_model(node_name: str) -> str:
     model_id = COMPLEXITY_TO_MODEL[complexity]
 
     if not model_id:
-        model_id = settings.DEFAULT_OPENAI_MODEL
+        model_id = settings.DEFAULT_LLM_MODEL
         if not model_id:
             raise ValueError(
                 f"No model configured for {complexity.value} complexity "

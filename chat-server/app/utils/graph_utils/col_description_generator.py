@@ -60,11 +60,15 @@ async def generate_column_descriptions(
     try:
         response = await chain.ainvoke(
             {
-                "dataset_schema": schema.model_dump(exclude_default=True),
+                "dataset_schema": schema.model_dump(exclude_defaults=True),
                 "example_format": example_format,
             }
         )
         return response
     except Exception as e:
-        logger.error(f"Error generating column descriptions: {e}")
+        logger.exception(
+            f"Error generating column descriptions: {e!s}",
+            stack_info=True,
+            exc_info=True,
+        )
         return {}

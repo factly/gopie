@@ -2,7 +2,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 from app.models.schema import ColumnSchema, DatasetSchema
@@ -40,11 +39,11 @@ RULES FOR SQL QUERIES (when needed):
 
 RESPONSE FORMAT:
 Return a JSON object in one of these formats:
-{{
+{
     "sql_queries": ["<SQL query here without semicolon>", ...],
     "explanations": ["<Brief explanation for each query>", ...],
     "response_for_non_sql": "<Brief explanation for non-sql response>"
-}}
+}
 
 Always respond with valid JSON only."""
 
@@ -55,7 +54,7 @@ Always respond with valid JSON only."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

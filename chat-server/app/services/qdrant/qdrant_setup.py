@@ -1,16 +1,19 @@
+from uuid import UUID, uuid5
+
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import AsyncQdrantClient, QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
-from uuid import UUID, uuid5
+
 from app.core.config import settings
 
 UUID_NAMESPACE = UUID("3896d314-1e95-4a3a-b45a-945f9f0b541d")
 
+
 class QdrantSetup:
     async_client: AsyncQdrantClient | None = None
     sync_client: QdrantClient | None = None
-    
+
     @classmethod
     def get_document_id(cls, project_id: str, dataset_id: str) -> str:
         return str(uuid5(UUID_NAMESPACE, f"{project_id}_{dataset_id}"))
@@ -23,7 +26,7 @@ class QdrantSetup:
                 check_compatibility=False,
             )
 
-            if not await cls._collection_exists():
+            if not await cls._async_collection_exists(cls.async_client):
                 await cls.async_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
                     vectors_config=VectorParams(
@@ -39,7 +42,7 @@ class QdrantSetup:
                 url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
                 check_compatibility=False,
             )
-            if not cls._collection_exists():
+            if not cls._collection_exists(cls.sync_client):
                 cls.sync_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
                     vectors_config=VectorParams(
@@ -60,13 +63,14 @@ class QdrantSetup:
         )
 
     @classmethod
-    async def _collection_exists(
-        cls, client: QdrantClient | AsyncQdrantClient
-    ) -> bool:
-        if isinstance(client, QdrantClient):
-            collections = client.get_collections().collections
-        else:
-            collections = (await client.get_collections()).collections
+    def _collection_exists(cls, client: QdrantClient) -> bool:
+        collections = client.get_collections().collections
+        collection_names = [collection.name for collection in collections]
+        return settings.QDRANT_COLLECTION in collection_names
+
+    @classmethod
+    async def _async_collection_exists(cls, client: AsyncQdrantClient) -> bool:
+        collections = (await client.get_collections()).collections
         collection_names = [collection.name for collection in collections]
         return settings.QDRANT_COLLECTION in collection_names
 

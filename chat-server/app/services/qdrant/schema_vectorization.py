@@ -1,5 +1,4 @@
 from langchain_core.documents import Document
-from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
 from app.core.log import logger
@@ -10,11 +9,12 @@ from app.services.gopie.dataset_info import (
     format_schema_for_embedding,
 )
 from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
+from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.services.qdrant.vector_store import add_document_to_vector_store
 from app.utils.graph_utils.col_description_generator import (
     generate_column_descriptions,
 )
-from app.services.qdrant.qdrant_setup import QdrantSetup
+
 
 async def store_schema_in_qdrant(
     dataset_summary: DatasetSummary,
@@ -42,7 +42,7 @@ async def store_schema_in_qdrant(
         document = Document(
             page_content=format_schema_for_embedding(dataset_schema),
             metadata={
-                **dataset_schema.model_dump(exclude_default=True),
+                **dataset_schema.model_dump(exclude_defaults=True),
             },
         )
 
@@ -52,7 +52,11 @@ async def store_schema_in_qdrant(
         return True
 
     except Exception as e:
-        logger.error(f"Error storing schema in Qdrant: {e!s}")
+        logger.exception(
+            f"Error storing schema in Qdrant: {e!s}",
+            exc_info=True,
+            stack_info=True,
+        )
         return False
 
 

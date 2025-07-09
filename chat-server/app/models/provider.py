@@ -8,7 +8,7 @@ class ModelCategory(str, Enum):
 
 
 class LLMProvider(str, Enum):
-    PORTKEY_HOSTED = "portkey_hosted"
+    PORTKEY = "portkey"
     LITELLM = "litellm"
     CLOUDFLARE = "cloudflare"
     OPENROUTER = "openrouter"
@@ -16,7 +16,7 @@ class LLMProvider(str, Enum):
 
 
 class EmbeddingProvider(str, Enum):
-    PORTKEY_HOSTED = "portkey_hosted"
+    PORTKEY = "portkey"
     LITELLM = "litellm"
     OPENAI = "openai"
     CUSTOM = "custom"

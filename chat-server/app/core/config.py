@@ -6,7 +6,6 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    LOG_DIR: str = "./server/logs"
     MAX_RETRY_COUNT: int = 3
     MAX_VALIDATION_RETRY_COUNT: int = 2
 
@@ -14,19 +13,16 @@ class Settings(BaseSettings):
     CORS_METHODS: list[str] = ["*"]
     CORS_HEADERS: list[str] = ["*"]
 
-    GATEWAY_PROVIDER: str = ""
+    LLM_GATEWAY_PROVIDER: str = ""
+    EMBEDDING_GATEWAY_PROVIDER: str = ""
 
     PORTKEY_API_KEY: str = ""
-    GEMINI_VIRTUAL_KEY: str = ""
-    OPENAI_VIRTUAL_KEY: str = ""
-    PORTKEY_SELF_HOSTED_URL: str = ""
     PORTKEY_URL: str = ""
     PORTKEY_PROVIDER_API_KEY: str = ""
     PORTKEY_PROVIDER_NAME: str = ""
     PORTKEY_CONFIG_ID: str = ""
     PORTKEY_EMBEDDING_PROVIDER_API_KEY: str = ""
     PORTKEY_EMBEDDING_PROVIDER_NAME: str = ""
-    PORTKEY_EMBEDDING_URL: str = ""
 
     LITELLM_BASE_URL: str = ""
     LITELLM_MASTER_KEY: str = ""
@@ -65,9 +61,8 @@ class Settings(BaseSettings):
     BALANCED_MODEL: str = ""
     FAST_MODEL: str = ""
 
-    DEFAULT_OPENAI_MODEL: str = ""
+    DEFAULT_LLM_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
-    DEFAULT_GEMINI_MODEL: str = ""
 
     E2B_API_KEY: str = ""
     E2B_TIMEOUT: int = 120
@@ -77,8 +72,6 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = ""
     S3_REGION: str = ""
-
-    DEFAULT_VENDOR: str = ""
 
     CUSTOM_EMBEDDING_BASE_URL: str = ""
     CUSTOM_EMBEDDING_API_KEY: str = ""

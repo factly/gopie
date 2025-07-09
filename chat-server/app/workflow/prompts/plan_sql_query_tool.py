@@ -4,7 +4,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -28,13 +27,13 @@ INSTRUCTIONS:
 6. Provide clear reasoning for your approach
 
 OUTPUT FORMAT (JSON):
-{{
+{
     "reasoning": "Step-by-step explanation of your thought process",
     "sql_queries": ["list of executable SQL queries"],
     "tables_used": ["list of table names used"],
     "expected_result": "description of what the query results contain",
     "limitations": "any assumptions, limitations, or considerations"
-}}
+}
 
 CRITICAL: Always use the actual dataset name field from the schema in your
 SQL queries, never use display names or titles. Look for fields like
@@ -48,7 +47,7 @@ multiple queries are needed, explain the sequence and purpose of each."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
