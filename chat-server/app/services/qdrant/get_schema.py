@@ -1,6 +1,7 @@
 import json
 from typing import Optional
 
+from langsmith import traceable
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
@@ -9,6 +10,7 @@ from app.models.schema import DatasetSchema
 from app.services.qdrant.qdrant_setup import QdrantSetup
 
 
+@traceable(run_type="tool", name="get_schema_from_qdrant")
 async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
     """
     Get the schema of a specific table from Qdrant database.
@@ -54,6 +56,7 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
         return None
 
 
+@traceable(run_type="tool", name="get_schema_by_dataset_ids")
 async def get_schema_by_dataset_ids(
     dataset_ids: list[str] | None = None,
 ) -> list[DatasetSchema]:

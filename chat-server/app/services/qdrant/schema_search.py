@@ -1,4 +1,5 @@
 from langchain_openai import OpenAIEmbeddings
+from langsmith import traceable
 from qdrant_client import models
 
 from app.core.config import settings
@@ -8,6 +9,7 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.services.qdrant.vector_store import perform_similarity_search
 
 
+@traceable(run_type="tool", name="search_schemas")
 async def search_schemas(
     user_query: str,
     embeddings: OpenAIEmbeddings,

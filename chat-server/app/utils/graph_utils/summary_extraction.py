@@ -1,7 +1,10 @@
 import statistics
 from typing import Any
 
+from langsmith import traceable
 
+
+@traceable(run_type="tool", name="create_result_summary")
 def create_result_summary(result: Any):
     summary = {"type": "sql_query_summary"}
 
@@ -21,6 +24,7 @@ def create_result_summary(result: Any):
     return summary
 
 
+@traceable(run_type="tool", name="summarize_list_result")
 def summarize_list_result(result: list):
     summary: Any = {
         "result_type": "list",
@@ -50,6 +54,7 @@ def summarize_list_result(result: list):
     return summary
 
 
+@traceable(run_type="tool", name="summarize_dict_result")
 def summarize_dict_result(result: dict):
     keys = list(result.keys())
     summary: Any = {
@@ -77,6 +82,7 @@ def summarize_dict_result(result: dict):
     return summary
 
 
+@traceable(run_type="tool", name="get_sample_data")
 def get_sample_data(result: list) -> list[dict[str, str] | str]:
     samples = []
 
@@ -96,6 +102,7 @@ def get_sample_data(result: list) -> list[dict[str, str] | str]:
     return samples
 
 
+@traceable(run_type="tool", name="get_numeric_statistics")
 def get_numeric_statistics(
     data: list[dict], columns: list[str]
 ) -> dict[str, dict[str, str]]:
@@ -127,6 +134,7 @@ def get_numeric_statistics(
     return insights
 
 
+@traceable(run_type="tool", name="get_categorical_statistics")
 def get_categorical_statistics(
     data: list[dict], columns: list[str]
 ) -> dict[str, list[dict[str, str]]]:
