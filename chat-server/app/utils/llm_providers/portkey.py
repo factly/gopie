@@ -56,7 +56,7 @@ class PortkeyLLMProvider(BaseLLMProvider):
         else:
             provider_api_key = "X"
         return ChatOpenAI(
-            api_key=provider_api_key,
+            api_key=provider_api_key,  # type: ignore
             base_url=self.base_url,
             default_headers=headers,
             model=model_name,

@@ -148,11 +148,7 @@ async def check_exact_match(
         """
         result = await execute_sql(query)
 
-        if (
-            isinstance(result, list)
-            and result
-            and result[0].get("count", 0) > 0
-        ):
+        if isinstance(result, list) and result:
             logger.debug(f"Exact match found for '{value}' in '{column_name}'")
             return True
     except Exception as e:

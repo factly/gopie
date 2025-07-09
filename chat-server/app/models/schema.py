@@ -12,12 +12,6 @@ class ConfigSchema(TypedDict):
     user: str
 
 
-class AnalysisInfo(TypedDict):
-    title: str
-    date_start: str
-    date_end: str
-
-
 PossibleNumberType = Optional[Union[float, int, str]]
 
 
@@ -57,7 +51,9 @@ class ColumnSchema(ColumnSummary):
     column_description: Optional[str] = None
     sample_values: list[PossibleNumberType] = Field(default_factory=list)
 
-    def format_for_prompt(self, fields_to_exclude: ColumnFieldsToExclude = []):
+    def format_for_prompt(
+        self, fields_to_exclude: list[ColumnFieldsToExclude] = []
+    ):
         sample_str = ""
         stats_info = ""
         unique_count = ""
@@ -112,10 +108,10 @@ class DatasetSchema(BaseModel):
 
     def format_for_prompt(
         self,
-        fields_to_exclude: Literal[
-            "dataset_custom_prompt", "project_custom_prompt"
+        fields_to_exclude: list[
+            Literal["dataset_custom_prompt", "project_custom_prompt"]
         ] = [],
-        columns_fields_to_exclude: ColumnFieldsToExclude = [],
+        columns_fields_to_exclude: list[ColumnFieldsToExclude] = [],
     ):
         columns = self.columns or []
         text = f"- Name: {self.name}\n"

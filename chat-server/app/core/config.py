@@ -37,12 +37,6 @@ class Settings(BaseSettings):
     CLOUDFLARE_PROVIDER_API_KEY: str = ""
 
     OPENAI_API_KEY: str = ""
-    GOOGLE_API_KEY: str = ""
-
-    GOOGLE_PROJECT_ID: str = ""
-    GOOGLE_LOCATION: str = ""
-    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = ""

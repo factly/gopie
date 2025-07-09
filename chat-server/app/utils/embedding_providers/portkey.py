@@ -51,7 +51,7 @@ class PortkeyEmbeddingProvider(BaseEmbeddingProvider):
         else:
             provider_api_key = "X"
         return OpenAIEmbeddings(
-            api_key=provider_api_key,
+            api_key=provider_api_key,  # type: ignore
             base_url=self.base_url,
             default_headers=headers,
             model=model_name,
