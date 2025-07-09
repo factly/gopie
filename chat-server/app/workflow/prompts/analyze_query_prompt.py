@@ -2,7 +2,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -89,12 +88,12 @@ IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
 
 IF NO TOOL CALL IS REQUIRED:
     FORMAT YOUR RESPONSE AS JSON:
-    {{
+    {
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
         "reasoning": "Brief explanation of classification decision",
         "clarification_needed": "If conversational due to vagueness, specify what you need"
-    }}
+    }
 """
 
     human_template_str = """
@@ -108,7 +107,7 @@ PROJECT IDS: {project_ids}
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

@@ -1,4 +1,15 @@
+from typing import Any, Optional
+
 from pydantic import BaseModel
+
+
+class ColumnDetails(BaseModel):
+    column_name: str
+    column_type: str
+    default: Optional[Any] = None
+    extra: Optional[Any] = None
+    key: Optional[Any] = None
+    null: str
 
 
 class DatasetDetails(BaseModel):
@@ -8,12 +19,15 @@ class DatasetDetails(BaseModel):
     description: str
     format: str
     row_count: int
+    columns: list[ColumnDetails]
     size: int
-    columns: list
+    file_path: str
     created_at: str
     updated_at: str
     created_by: str
     updated_by: str
+    dataset_custom_prompt: Optional[str] = None
+    project_custom_prompt: Optional[str] = None
 
 
 class ColumnValueMatching(BaseModel):

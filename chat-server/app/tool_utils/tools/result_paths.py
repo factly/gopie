@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_core.tools import tool
 from pydantic import BaseModel
 
@@ -7,11 +5,11 @@ from pydantic import BaseModel
 class ResultPathsSchema(BaseModel):
     """Use this to return the paths to the json files created by the agent, after visualization"""  # noqa: E501
 
-    visualization_result_paths: List[str]
+    visualization_result_paths: list[str]
 
 
 @tool
-def result_paths(visualization_result_paths: List[str]):
+def result_paths(visualization_result_paths: list[str]):
     """Use this to return the paths to the json files created by the agent, after visualization.
 
     Args:

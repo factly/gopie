@@ -12,23 +12,22 @@ class CloudflareLLMProvider(BaseLLMProvider):
         metadata: dict[str, str],
     ):
         self.metadata = metadata
+        base_url = settings.CLOUDFLARE_GATEWAY_URL
+        provider = settings.CLOUDFLARE_PROVIDER
+        account_id = settings.CLOUDFLARE_ACCOUNT_ID
+        gateway_id = settings.CLOUDFLARE_GATEWAY_ID
 
-        url = f"{settings.CLOUDFLARE_GATEWAY_URL}"
-        url = url.replace(
-            "{account_id}/{gateway_id}",
-            f"{settings.CLOUDFLARE_ACCOUNT_ID}/"
-            f"{settings.CLOUDFLARE_GATEWAY_ID}",
+        self.openai_compat_url = (
+            f"{base_url}/{provider}/{account_id}/{gateway_id}/compat"
         )
 
-        self.base_url = url
-
-    def get_openai_model(
+    def get_llm_model(
         self, model_name: str, streaming: bool = True
     ) -> ChatOpenAI:
-        base_url = f"{self.base_url}/openai"
+        base_url = self.openai_compat_url
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Authorization": f"Bearer {settings.CLOUDFLARE_PROVIDER_API_KEY}",
             "cf-aig-authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
             "cf-aig-metadata": json.dumps(
                 {
@@ -42,31 +41,5 @@ class CloudflareLLMProvider(BaseLLMProvider):
             base_url=base_url,
             default_headers=headers,
             model=model_name,
-            streaming=streaming,
-        )
-
-    def get_gemini_model(
-        self, model_name: str, streaming: bool = True
-    ) -> ChatOpenAI:
-        base_url = f"{self.base_url}/compat"
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.GOOGLE_API_KEY}",
-            "cf-aig-authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
-            "cf-aig-metadata": json.dumps(
-                {
-                    **self.metadata,
-                }
-            ),
-        }
-
-        formatted_model = f"google-ai-studio/{model_name}"
-
-        return ChatOpenAI(
-            api_key="X",  # type: ignore
-            base_url=base_url,
-            default_headers=headers,
-            model=formatted_model,
             streaming=streaming,
         )

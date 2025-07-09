@@ -37,7 +37,7 @@ async def pre_model_hook(state: AgentState, config: RunnableConfig):
         messages = get_prompt(
             "visualize_data",
             user_query=state["user_query"],
-            datasets_info=state["datasets"],
+            datasets=state["datasets"],
             csv_paths=csv_paths,
         )
 

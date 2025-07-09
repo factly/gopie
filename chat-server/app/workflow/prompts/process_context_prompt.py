@@ -7,7 +7,6 @@ from langchain_core.messages import (
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -77,7 +76,7 @@ DECISION LOGIC FOR VISUALIZATION:
 Be concise but thorough. Focus on information that would help a data analyst understand what the user is really asking for.
 
 RESPOND ONLY IN THIS JSON FORMAT:
-{{
+{
   "is_follow_up": boolean,
   "need_semantic_search": boolean,
   "required_dataset_ids": string[],
@@ -85,7 +84,7 @@ RESPOND ONLY IN THIS JSON FORMAT:
   "context_summary": string,
   "visualization_data": object[],
   "previous_sql_queries": string[]
-}}
+}
 """
 
     if chat_history and len(chat_history) > 0:
@@ -114,7 +113,7 @@ Analyze the above and return ONLY a single JSON response with the specified fiel
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

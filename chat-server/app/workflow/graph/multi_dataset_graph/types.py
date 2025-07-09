@@ -3,7 +3,26 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
+from app.models.data import ColumnValueMatching
 from app.models.query import QueryResult
+from app.models.schema import DatasetSchema
+
+
+class FuzzyValue(TypedDict):
+    name: str
+    exact_values: list[str]
+    fuzzy_values: list[str]
+
+
+class ColumnAssumptions(TypedDict):
+    dataset: str
+    columns: list[FuzzyValue]
+
+
+class DatasetsInfo(TypedDict):
+    schemas: list[DatasetSchema]
+    column_assumptions: list[ColumnAssumptions] | None
+    correct_column_requirements: ColumnValueMatching | None
 
 
 class InputState(TypedDict):
@@ -26,9 +45,9 @@ class State(TypedDict):
     identified_datasets: list[str]
     subqueries: list[str]
     subquery_index: int
-    datasets_info: dict
+    datasets_info: DatasetsInfo
     user_query: str
-    messages: Annotated[list, add_messages]
+    messages: Annotated[list[BaseMessage], add_messages]
     query_result: QueryResult
     response_text: str
     tool_call_count: int

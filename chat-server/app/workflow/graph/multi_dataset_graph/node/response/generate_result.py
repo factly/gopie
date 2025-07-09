@@ -43,11 +43,8 @@ async def generate_result(state: State, config: RunnableConfig) -> dict:
                 ]
             }
 
-        user_query = query_result.original_user_query
-
         prompt = get_prompt(
             node_name="generate_result",
-            user_query=user_query,
             query_result=query_result,
         )
 

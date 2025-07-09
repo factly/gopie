@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Literal
 
 from langchain_core.messages import ToolCall, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -13,7 +13,7 @@ from .tools import get_tools
 class ModifiedToolNode(ToolNode):
     def __init__(
         self,
-        tool_names: List[ToolNames],
+        tool_names: list[ToolNames],
         *args,
         **kwargs,
     ) -> None:

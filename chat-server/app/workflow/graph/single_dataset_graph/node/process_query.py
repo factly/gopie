@@ -15,7 +15,6 @@ from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import (
-    FailedQuery,
     SingleDatasetQueryResult,
     SQLQueryResult,
     State,
@@ -48,56 +47,35 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
     progress_message="Processing query...",
 )
 async def process_query(state: State, config: RunnableConfig) -> dict:
-    try:
-        dataset_id = state.get("dataset_id", None)
-        user_query = state.get("user_query", "") or ""
-        retry_count = state.get("retry_count", 0)
-        error = state.get("error")
-        failed_queries = state.get("failed_queries", [])
+    user_query = state.get("user_query", "") or ""
+    dataset_id = state.get("dataset_id", None)
+    validation_result = state.get("validation_result", None)
+    prev_query_result = state.get("query_result", None)
 
+    try:
         if not dataset_id:
             raise Exception("No dataset ID provided")
 
-        schema_info = await get_schema_from_qdrant(dataset_id)
-        if "error" in schema_info:
-            raise Exception(f"Schema fetch error: {schema_info['error']}")
+        dataset_schema = await get_schema_from_qdrant(dataset_id)
+        if dataset_schema is None:
+            raise Exception("Schema fetch error: Dataset not found")
 
-        dataset_name = schema_info.get("dataset_name", "")
-        user_provided_dataset_name = schema_info.get("name", "")
+        dataset_name = dataset_schema.dataset_name
+        user_provided_dataset_name = dataset_schema.name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
         sample_data = await execute_sql(sample_data_query)
 
-        schema_json = json.dumps(schema_info, indent=2)
         rows_csv = convert_rows_to_csv(sample_data)
-
-        error_context = ""
-        if retry_count > 0 and error and failed_queries:
-            failed_queries_str = "\n".join(
-                [
-                    f"- Query: {fq['sql_query']}\n  Error: {fq['error']}"
-                    for fq in failed_queries
-                ]
-            )
-            error_context = f"""
-PREVIOUS ATTEMPT FAILED:
-Retry attempt: {retry_count}/3
-Error: {error}
-Failed queries:
-{failed_queries_str}
-
-Please analyze the error and generate corrected SQL queries.
-- If the error is in the SQL execution error than try to generate sql queries
-  that works on every sql engine.
-"""
 
         prompt_messages = get_prompt(
             "process_query",
             user_query=user_query,
             dataset_name=dataset_name,
-            schema_json=schema_json,
+            dataset_schema=dataset_schema,
             rows_csv=rows_csv,
-            error_context=error_context,
+            prev_query_result=prev_query_result,
+            validation_result=validation_result,
         )
 
         llm = get_model_provider(config).get_llm_for_node("process_query")
@@ -111,7 +89,16 @@ Please analyze the error and generate corrected SQL queries.
         sql_queries = parsed_response.get("sql_queries", [])
         explanations = parsed_response.get("explanations", [])
         response_for_non_sql = parsed_response.get("response_for_non_sql", "")
-        current_failed_queries: list[FailedQuery] = []
+
+        query_result = SingleDatasetQueryResult(
+            user_query=user_query,
+            user_friendly_dataset_name=user_provided_dataset_name,
+            dataset_name=dataset_name,
+            sql_results=None,
+            response_for_non_sql=None,
+            timestamp=datetime.now().isoformat(),
+            error=None,
+        )
 
         if sql_queries:
             await adispatch_custom_event(
@@ -134,6 +121,7 @@ Please analyze the error and generate corrected SQL queries.
                             "explanation": exp,
                             "result": result_data,
                             "success": True,
+                            "large_result": None,
                             "error": None,
                         }
                     )
@@ -145,56 +133,42 @@ Please analyze the error and generate corrected SQL queries.
                             "explanation": exp,
                             "result": None,
                             "success": False,
+                            "large_result": None,
                             "error": error_str,
                         }
                     )
-                    current_failed_queries.append(
-                        {"sql_query": q, "error": error_str}
-                    )
 
-            query_result = SingleDatasetQueryResult(
-                user_query=user_query,
-                user_friendly_dataset_name=user_provided_dataset_name,
-                dataset_name=dataset_name,
-                sql_queries=sql_results,
-                response_for_non_sql=None,
-                timestamp=datetime.now().isoformat(),
-            )
+            query_result["sql_results"] = sql_results
 
             return {
                 "messages": [
                     AIMessage(content=json.dumps(query_result, indent=2))
                 ],
                 "query_result": query_result,
-                "retry_count": 0,
-                "error": None,
-                "failed_queries": current_failed_queries,
             }
 
         else:
-
-            query_result = SingleDatasetQueryResult(
-                user_query=user_query,
-                user_friendly_dataset_name=user_provided_dataset_name,
-                dataset_name=dataset_name,
-                sql_queries=None,
-                response_for_non_sql=response_for_non_sql,
-                timestamp=datetime.now().isoformat(),
-            )
+            query_result["response_for_non_sql"] = response_for_non_sql
 
             return {
                 "messages": [
                     AIMessage(content=json.dumps(query_result, indent=2))
                 ],
                 "query_result": query_result,
-                "retry_count": 0,
-                "error": None,
-                "failed_queries": [],
             }
 
     except Exception as e:
         error_message = f"Error processing query: {str(e)}"
-        retry_count = state.get("retry_count", 0)
+
+        query_result = SingleDatasetQueryResult(
+            user_query=user_query,
+            user_friendly_dataset_name=None,
+            dataset_name=None,
+            sql_results=None,
+            response_for_non_sql=None,
+            timestamp=datetime.now().isoformat(),
+            error=error_message,
+        )
 
         return {
             "messages": [
@@ -205,19 +179,5 @@ Please analyze the error and generate corrected SQL queries.
                     )
                 )
             ],
-            "query_result": None,
-            "retry_count": retry_count + 1,
-            "error": error_message,
-            "failed_queries": [],
+            "query_result": query_result,
         }
-
-
-def should_retry(state: State) -> str:
-    retry_count = state.get("retry_count", 0)
-    error = state.get("error", None)
-    failed_queries = state.get("failed_queries", [])
-
-    if (error or failed_queries) and retry_count < 3:
-        return "retry"
-    else:
-        return "response"

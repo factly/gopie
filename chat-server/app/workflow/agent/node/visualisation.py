@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.visualize_data_graph import (
+from app.workflow.graph.visualize_data_graph.graph import (
     graph as visualize_data_graph,
 )
 

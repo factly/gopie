@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
-from app.models.provider import EmbeddingProvider, LLMProvider, ModelVendor
+from app.models.provider import EmbeddingProvider, LLMProvider
 from app.tool_utils.tools import ToolNames, get_tools
 from app.utils.embedding_providers import (
     BaseEmbeddingProvider,
@@ -9,7 +9,6 @@ from app.utils.embedding_providers import (
     LiteLLMEmbeddingProvider,
     OpenAIEmbeddingProvider,
     PortkeyEmbeddingProvider,
-    PortkeySelfHostedEmbeddingProvider,
 )
 from app.utils.llm_providers import (
     BaseLLMProvider,
@@ -18,19 +17,15 @@ from app.utils.llm_providers import (
     LiteLLMProvider,
     OpenRouterLLMProvider,
     PortkeyLLMProvider,
-    PortkeySelfHostedLLMProvider,
 )
-from app.utils.model_registry.model_config import AVAILABLE_MODELS
 from app.utils.model_registry.model_selection import get_node_model
 
 
 def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
-    gateway_type = LLMProvider(settings.GATEWAY_PROVIDER)
+    gateway_type = LLMProvider(settings.LLM_GATEWAY_PROVIDER)
     match gateway_type:
-        case LLMProvider.PORTKEY_HOSTED:
+        case LLMProvider.PORTKEY:
             return PortkeyLLMProvider(metadata)
-        case LLMProvider.PORTKEY_SELF_HOSTED:
-            return PortkeySelfHostedLLMProvider(metadata)
         case LLMProvider.LITELLM:
             return LiteLLMProvider(metadata)
         case LLMProvider.CLOUDFLARE:
@@ -42,43 +37,16 @@ def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
 
 
 def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
-    gateway_type = EmbeddingProvider(settings.GATEWAY_PROVIDER)
+    gateway_type = EmbeddingProvider(settings.EMBEDDING_GATEWAY_PROVIDER)
     match gateway_type:
-        case EmbeddingProvider.PORTKEY_HOSTED:
+        case EmbeddingProvider.PORTKEY:
             return PortkeyEmbeddingProvider(metadata)
-        case EmbeddingProvider.PORTKEY_SELF_HOSTED:
-            return PortkeySelfHostedEmbeddingProvider(metadata)
         case EmbeddingProvider.LITELLM:
             return LiteLLMEmbeddingProvider(metadata)
         case EmbeddingProvider.OPENAI:
             return OpenAIEmbeddingProvider(metadata)
         case EmbeddingProvider.CUSTOM:
             return CustomEmbeddingProvider(metadata)
-
-
-class ModelConfig:
-    def __init__(
-        self,
-        model_id: str | None = None,
-    ):
-        self.model_provider = ModelVendor(settings.DEFAULT_VENDOR)
-
-        self.openai_model = settings.DEFAULT_OPENAI_MODEL
-        self.gemini_model = settings.DEFAULT_GEMINI_MODEL
-
-        if model_id and model_id in AVAILABLE_MODELS:
-            self._set_model_from_id(model_id)
-
-    def _set_model_from_id(self, model_id: str) -> None:
-        model_info = AVAILABLE_MODELS[model_id]
-        provider = model_info.provider
-
-        if provider == ModelVendor.OPENAI:
-            self.openai_model = model_id
-            self.model_provider = ModelVendor.OPENAI
-        elif provider == ModelVendor.GOOGLE:
-            self.gemini_model = model_id
-            self.model_provider = ModelVendor.GOOGLE
 
 
 class ModelProvider:
@@ -91,16 +59,7 @@ class ModelProvider:
         self.embedding_provider = get_embedding_provider(metadata)
 
     def _create_llm(self, model_id: str):
-        model_config = ModelConfig(model_id=model_id)
-        if model_config.model_provider == ModelVendor.GOOGLE:
-            model = self.llm_provider.get_gemini_model(
-                model_config.gemini_model
-            )
-        else:
-            model = self.llm_provider.get_openai_model(
-                model_config.openai_model
-            )
-
+        model = self.llm_provider.get_llm_model(model_id)
         return model
 
     def _create_llm_with_tools(
@@ -122,7 +81,8 @@ class ModelProvider:
     def get_embeddings_model(self):
         return self._create_embeddings_model()
 
-    def get_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
+    def get_llm_with_tools(self, node_name: str, tool_names: list[ToolNames]):
+        model_id = get_node_model(node_name)
         return self._create_llm_with_tools(model_id, tool_names)
 
     def get_llm_for_node(

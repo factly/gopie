@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
 from app.services.gopie.dataset_info import get_dataset_info
-from app.services.gopie.generate_schema import generate_schema
+from app.services.gopie.generate_schema import generate_summary
 from app.services.qdrant.schema_vectorization import (
     delete_schema_from_qdrant,
     store_schema_in_qdrant,
@@ -27,16 +27,16 @@ async def upload_schema(payload: UploadSchemaRequest):
         dataset_id = payload.dataset_id
 
         dataset_details = await get_dataset_info(dataset_id, project_id)
-        dataset_schema, sample_data = await generate_schema(
+        dataset_summary, sample_data = await generate_summary(
             dataset_details.name
         )
 
         success = await store_schema_in_qdrant(
-            dataset_schema,
-            sample_data,
-            dataset_details,
-            dataset_id,
-            project_id,
+            dataset_summary=dataset_summary,
+            sample_data=sample_data,
+            dataset_details=dataset_details,
+            dataset_id=dataset_id,
+            project_id=project_id,
         )
         if not success:
             raise HTTPException(

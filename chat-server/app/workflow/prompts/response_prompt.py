@@ -2,7 +2,13 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
+)
+
+from app.workflow.graph.single_dataset_graph.types import (
+    SingleDatasetQueryResult,
+)
+from app.workflow.prompts.formatters.single_query_result import (
+    format_single_query_result,
 )
 
 
@@ -20,14 +26,19 @@ GUIDELINES:
 - Focus on key insights and patterns in the data
 - Explain findings in simple, understandable terms
 - If there are failed queries, acknowledge any limitations in your analysis
-- Structure your response clearly with the most important insights first"""
+- Structure your response clearly with the most important insights first
+- CRITICAL: Be cautious about data quality and methodology limitations
+- If the query methodology appears flawed or insufficient, clearly state this limitation
+- Do not present uncertain results as confident conclusions
+- When data appears incomplete or the approach seems inadequate, prioritize acknowledging these limitations over providing optimistic interpretations
+- If you cannot reliably answer the user's question due to data or methodology issues, clearly state this rather than forcing an answer"""
 
     human_template_str = "{input}"
 
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
@@ -40,61 +51,8 @@ GUIDELINES:
     ]
 
 
-def format_response_input(query_result: dict | None, **kwargs) -> dict:
-    if not query_result:
-        return {"input": "No query result found"}
-
-    user_query = query_result.get("user_query", "")
-    dataset_name = query_result.get("dataset_name", "Error occurred")
-    user_friendly_dataset_name = query_result.get(
-        "user_friendly_dataset_name", dataset_name
-    )
-    sql_queries = query_result.get("sql_queries")
-    response_for_non_sql = query_result.get("response_for_non_sql", "")
-
-    input_parts = [
-        f"USER QUERY: {user_query}",
-        f"DATASET: {user_friendly_dataset_name} (table: {dataset_name})",
-    ]
-
-    if response_for_non_sql:
-        input_parts.append(f"\nNON-SQL RESPONSE:\n{response_for_non_sql}")
-        formatted_input = "\n".join(input_parts)
-        return {"input": formatted_input}
-
-    if sql_queries is not None:
-        successful_results = [r for r in sql_queries if r.get("success", True)]
-        failed_results = [r for r in sql_queries if not r.get("success", True)]
-
-        if successful_results:
-            input_parts.append("\n--- QUERY RESULTS ---")
-            for i, result in enumerate(successful_results, 1):
-                if result.get("result"):
-                    explanation = result.get("explanation", "")
-                    sql_query = result.get("sql_query", "")
-                    data_preview = result["result"]
-
-                    input_parts.append(f"\nQuery {i}:")
-                    if explanation:
-                        input_parts.append(f"Purpose: {explanation}")
-                    if sql_query:
-                        input_parts.append(f"SQL: {sql_query}")
-                    input_parts.append(f"Data: {data_preview}")
-
-        if failed_results:
-            input_parts.append("\n--- FAILED QUERIES ---")
-            input_parts.append("Some SQL queries were not successful:")
-            for i, result in enumerate(failed_results, 1):
-                sql_query = result.get("sql_query", "")
-                error = result.get("error", "Unknown error")
-                explanation = result.get("explanation", "")
-
-                input_parts.append(f"\nFailed Query {i}:")
-                if explanation:
-                    input_parts.append(f"Purpose: {explanation}")
-                if sql_query:
-                    input_parts.append(f"SQL: {sql_query}")
-                input_parts.append(f"Error: {error}")
-
-    formatted_input = "\n".join(input_parts)
+def format_response_input(
+    query_result: SingleDatasetQueryResult, **kwargs
+) -> dict:
+    formatted_input = format_single_query_result(query_result)
     return {"input": formatted_input}

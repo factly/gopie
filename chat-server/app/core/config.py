@@ -6,35 +6,37 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    LOG_DIR: str = "./server/logs"
     MAX_RETRY_COUNT: int = 3
+    MAX_VALIDATION_RETRY_COUNT: int = 2
 
     CORS_ORIGINS: list[str] = ["*"]
     CORS_METHODS: list[str] = ["*"]
     CORS_HEADERS: list[str] = ["*"]
 
-    GATEWAY_PROVIDER: str = ""
+    LLM_GATEWAY_PROVIDER: str = ""
+    EMBEDDING_GATEWAY_PROVIDER: str = ""
 
     PORTKEY_API_KEY: str = ""
-    GEMINI_VIRTUAL_KEY: str = ""
-    OPENAI_VIRTUAL_KEY: str = ""
-    PORTKEY_SELF_HOSTED_URL: str = ""
+    PORTKEY_URL: str = ""
+    PORTKEY_PROVIDER_API_KEY: str = ""
+    PORTKEY_PROVIDER_NAME: str = ""
+    PORTKEY_CONFIG_ID: str = ""
+    PORTKEY_EMBEDDING_PROVIDER_API_KEY: str = ""
+    PORTKEY_EMBEDDING_PROVIDER_NAME: str = ""
 
     LITELLM_BASE_URL: str = ""
     LITELLM_MASTER_KEY: str = ""
+    LITELLM_KEY_HEADER_NAME: str = ""
+    LITELLM_VIRTUAL_KEY: str = ""
 
     CLOUDFLARE_GATEWAY_URL: str = ""
     CLOUDFLARE_API_TOKEN: str = ""
     CLOUDFLARE_ACCOUNT_ID: str = ""
     CLOUDFLARE_GATEWAY_ID: str = ""
+    CLOUDFLARE_PROVIDER: str = ""
+    CLOUDFLARE_PROVIDER_API_KEY: str = ""
 
     OPENAI_API_KEY: str = ""
-    GOOGLE_API_KEY: str = ""
-
-    GOOGLE_PROJECT_ID: str = ""
-    GOOGLE_LOCATION: str = ""
-    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = ""
@@ -53,9 +55,8 @@ class Settings(BaseSettings):
     BALANCED_MODEL: str = ""
     FAST_MODEL: str = ""
 
-    DEFAULT_OPENAI_MODEL: str = ""
+    DEFAULT_LLM_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
-    DEFAULT_GEMINI_MODEL: str = ""
 
     E2B_API_KEY: str = ""
     E2B_TIMEOUT: int = 120
@@ -65,8 +66,6 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = ""
     S3_REGION: str = ""
-
-    DEFAULT_VENDOR: str = ""
 
     CUSTOM_EMBEDDING_BASE_URL: str = ""
     CUSTOM_EMBEDDING_API_KEY: str = ""

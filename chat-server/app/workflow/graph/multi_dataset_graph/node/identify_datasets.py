@@ -1,6 +1,3 @@
-import json
-from typing import Any
-
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
@@ -13,7 +10,7 @@ from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.multi_dataset_graph.types import State
+from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo, State
 
 
 @configure_node(
@@ -37,8 +34,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
        LLM can choose additional from semantic search)
     3. Use semantic search only (LLM chooses from semantic search results)
     """
-
-    parser = JsonOutputParser()
     query_index = state.get("subquery_index", 0)
     user_query = (
         state.get("subqueries")[query_index]
@@ -59,18 +54,19 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
-        required_dataset_schemas = _get_required_datasets(required_dataset_ids)
+        required_dataset_schemas = await get_schema_by_dataset_ids(
+            required_dataset_ids
+        )
 
         semantic_searched_datasets = []
         if need_semantic_search or not required_dataset_schemas:
             try:
-                dataset_schemas = await search_schemas(
+                semantic_searched_datasets = await search_schemas(
                     user_query,
                     embeddings_model,
                     dataset_ids=dataset_ids,
                     project_ids=project_ids,
                 )
-                semantic_searched_datasets = dataset_schemas
             except Exception as e:
                 logger.warning(
                     f"Vector search error: {e!s}. Unable to retrieve dataset "
@@ -117,24 +113,21 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm_prompt = get_prompt(
             "identify_datasets",
             user_query=user_query,
-            required_dataset_schemas=json.dumps(
-                required_dataset_schemas, indent=2
-            ),
-            semantic_searched_datasets=json.dumps(
-                semantic_searched_datasets, indent=2
-            ),
+            required_dataset_schemas=required_dataset_schemas,
+            semantic_searched_datasets=semantic_searched_datasets,
             confidence_score=confidence_score,
             query_type=query_type,
         )
 
-        response: Any = await llm.ainvoke(llm_prompt)
+        response = await llm.ainvoke(llm_prompt)
 
         response_content = str(response.content)
+        parser = JsonOutputParser()
         parsed_content = parser.parse(response_content)
 
         selected_datasets = parsed_content.get("selected_dataset", [])
         selected_datasets.extend(
-            [schema.get("dataset_name") for schema in required_dataset_schemas]
+            [schema.dataset_name for schema in required_dataset_schemas]
         )
         query_result.subqueries[query_index].tables_used = selected_datasets
 
@@ -155,17 +148,18 @@ async def identify_datasets(state: State, config: RunnableConfig):
         filtered_dataset_schemas = [
             schema
             for schema in all_available_schemas
-            if schema.get("dataset_name") in selected_datasets
+            if schema.dataset_name in selected_datasets
         ]
 
         selected_dataset_ids = [
-            schema.get("dataset_id") for schema in filtered_dataset_schemas
+            schema.dataset_id for schema in filtered_dataset_schemas
         ]
 
-        datasets_info = {
-            "schemas": filtered_dataset_schemas,
-            "column_assumptions": column_assumptions,
-        }
+        datasets_info = DatasetsInfo(
+            schemas=filtered_dataset_schemas,
+            column_assumptions=column_assumptions,
+            correct_column_requirements=None,
+        )
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -223,16 +217,3 @@ def route_from_datasets(state: State) -> str:
         return "no_datasets_found"
     else:
         return "analyze_dataset"
-
-
-def _get_required_datasets(
-    required_dataset_ids: list[str] | None,
-) -> list[dict]:
-    if not required_dataset_ids:
-        return []
-
-    try:
-        return get_schema_by_dataset_ids(required_dataset_ids)
-    except Exception as e:
-        logger.warning(f"Error retrieving required dataset schemas: {e!s}")
-        return []
