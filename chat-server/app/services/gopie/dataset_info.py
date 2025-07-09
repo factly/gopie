@@ -1,5 +1,3 @@
-from typing import List
-
 from app.core.config import settings
 from app.core.log import logger
 from app.core.session import SingletonAiohttp
@@ -46,7 +44,7 @@ def create_dataset_schema(
     Returns:
         A DatasetSchema object
     """
-    columns: List[ColumnSchema] = []
+    columns: list[ColumnSchema] = []
 
     for column_data in dataset_summary.summary:
         column_name = column_data.column_name

@@ -1,5 +1,3 @@
-from typing import Dict
-
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
@@ -7,7 +5,7 @@ from app.utils.llm_providers.base import BaseLLMProvider
 
 
 class OpenRouterLLMProvider(BaseLLMProvider):
-    def __init__(self, metadata: Dict[str, str]):
+    def __init__(self, metadata: dict[str, str]):
         self.metadata = metadata
 
     def get_llm_model(self, model_name: str, streaming: bool = True):

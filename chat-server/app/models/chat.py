@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ class NodeConfig(BaseModel):
 
 class ExtraData(BaseModel):
     name: str
-    args: Dict[str, Any]
+    args: dict[str, Any]
 
 
 class EventChunkData(BaseModel):

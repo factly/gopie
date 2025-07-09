@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ class DatasetDetails(BaseModel):
     description: str
     format: str
     row_count: int
-    columns: List[ColumnDetails]
+    columns: list[ColumnDetails]
     size: int
     file_path: str
     created_at: str
@@ -40,18 +40,18 @@ class ColumnValueMatching(BaseModel):
         requested_value: str
         match_type: str = "fuzzy"
         found_similar_values: bool
-        similar_values: List[str] = []
+        similar_values: list[str] = []
 
     class ColumnAnalysis(BaseModel):
         column_name: str
-        verified_values: List["ColumnValueMatching.VerifiedValue"] = []
-        suggested_alternatives: List[
+        verified_values: list["ColumnValueMatching.VerifiedValue"] = []
+        suggested_alternatives: list[
             "ColumnValueMatching.SuggestedAlternative"
         ] = []
 
     class DatasetAnalysis(BaseModel):
         dataset_name: str
-        columns_analyzed: List["ColumnValueMatching.ColumnAnalysis"] = []
+        columns_analyzed: list["ColumnValueMatching.ColumnAnalysis"] = []
 
     analysis_type: str = "column_value_verification"
     description: str = "Results of verifying column values across datasets"

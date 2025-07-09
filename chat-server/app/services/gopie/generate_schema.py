@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
 from app.models.schema import DatasetSummary
@@ -8,7 +6,7 @@ from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE, execute_sql
 
 async def generate_summary(
     dataset_name: str, limit: int = 5
-) -> Tuple[DatasetSummary, SQL_RESPONSE_TYPE]:
+) -> tuple[DatasetSummary, SQL_RESPONSE_TYPE]:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
     url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/summary/{dataset_name}"

@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import Optional
 
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
@@ -55,8 +55,8 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
 
 
 async def get_schema_by_dataset_ids(
-    dataset_ids: List[str],
-) -> List[DatasetSchema]:
+    dataset_ids: list[str],
+) -> list[DatasetSchema]:
     """
     Get the schema of a list of datasets from Qdrant database.
 

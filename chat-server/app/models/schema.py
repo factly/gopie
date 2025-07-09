@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Optional, TypedDict, Union
+from typing import Literal, Optional, TypedDict, Union
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, field_validator
@@ -42,7 +42,7 @@ class ColumnSummary(BaseModel):
     q50: PossibleNumberType = get_possible_number_field()
     q75: PossibleNumberType = get_possible_number_field()
     count: int
-    null_percentage: Dict[str, int]
+    null_percentage: dict[str, int]
 
     @field_validator(
         "min", "max", "avg", "std", "q25", "q50", "q75", mode="before"

@@ -1,5 +1,3 @@
-from typing import Dict
-
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
@@ -9,7 +7,7 @@ from app.utils.llm_providers.base import BaseLLMProvider
 class LiteLLMProvider(BaseLLMProvider):
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.metadata = metadata
 

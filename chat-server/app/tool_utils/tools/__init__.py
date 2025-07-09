@@ -8,7 +8,7 @@ Finally, add the tool to the `ToolNames` enum.
 
 import importlib
 from enum import Enum
-from typing import Any, List, Tuple
+from typing import Any
 
 from langchain_core.tools import StructuredTool
 
@@ -24,7 +24,7 @@ class ToolNames(Enum):
 
 def get_tool(
     tool_name: ToolNames,
-) -> Tuple[str, StructuredTool, dict[str, Any]] | Tuple[None, None, None]:
+) -> tuple[str, StructuredTool, dict[str, Any]] | tuple[None, None, None]:
     module_name = tool_name.value
     module = importlib.import_module(f"{__package__}.{module_name}")
     if hasattr(module, "__tool__"):
@@ -47,8 +47,8 @@ def get_tool(
 
 
 def get_tools(
-    tool_names: List[ToolNames],
-) -> dict[str, Tuple[StructuredTool, dict[str, Any]]]:
+    tool_names: list[ToolNames],
+) -> dict[str, tuple[StructuredTool, dict[str, Any]]]:
     tools = {}
     for tool_name in tool_names:
         tool_func_name, tool, metadata = get_tool(tool_name)

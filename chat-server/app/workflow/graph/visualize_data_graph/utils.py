@@ -3,7 +3,7 @@ import csv
 import uuid
 from datetime import datetime
 from io import StringIO
-from typing import Annotated, List
+from typing import Annotated
 
 import aioboto3
 from e2b_code_interpreter import AsyncSandbox
@@ -23,7 +23,7 @@ def list_to_csv(list_dict: list[list]) -> str:
     return output.getvalue()
 
 
-def datasets_to_csv(datasets: List[Dataset]):
+def datasets_to_csv(datasets: list[Dataset]):
     results = []
     for dataset_index, dataset in enumerate(datasets):
         if dataset.data:
@@ -50,8 +50,8 @@ async def update_sandbox_timeout(sandbox: AsyncSandbox):
 
 @traceable(run_type="chain", name="upload_csv_files")
 async def upload_csv_files(
-    sandbox: AsyncSandbox, datasets: List[Dataset]
-) -> List[str]:
+    sandbox: AsyncSandbox, datasets: list[Dataset]
+) -> list[str]:
     csv_files = datasets_to_csv(datasets)
     tasks = []
     for file_name, csv_data in csv_files:
@@ -76,8 +76,8 @@ async def run_python_code(
 
 @traceable(run_type="chain", name="get_visualization_result_data")
 async def get_visualization_result_data(
-    sandbox: AsyncSandbox, file_names: List[str]
-) -> List[str]:
+    sandbox: AsyncSandbox, file_names: list[str]
+) -> list[str]:
     tasks = []
     for file_name in file_names:
         tasks.append(sandbox.files.read(file_name))
@@ -85,7 +85,7 @@ async def get_visualization_result_data(
 
 
 @traceable(run_type="chain", name="upload_visualization_result_data")
-async def upload_visualization_result_data(data: List[str]) -> List[str]:
+async def upload_visualization_result_data(data: list[str]) -> list[str]:
     """Upload visualization data to S3 and return the S3 paths.
 
     Args:

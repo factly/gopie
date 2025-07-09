@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import models
 
@@ -13,10 +11,10 @@ from app.services.qdrant.vector_store import perform_similarity_search
 async def search_schemas(
     user_query: str,
     embeddings: OpenAIEmbeddings,
-    project_ids: List[str] | None = None,
-    dataset_ids: List[str] | None = None,
+    project_ids: list[str] | None = None,
+    dataset_ids: list[str] | None = None,
     top_k: int = settings.QDRANT_TOP_K,
-) -> List[DatasetSchema]:
+) -> list[DatasetSchema]:
     """
     Search for schemas using a vector search.
 

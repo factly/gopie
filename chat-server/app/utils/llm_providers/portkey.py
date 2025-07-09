@@ -1,5 +1,3 @@
-from typing import Dict
-
 from langchain_openai import ChatOpenAI
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
@@ -10,7 +8,7 @@ from app.utils.llm_providers.base import BaseLLMProvider
 class PortkeyLLMProvider(BaseLLMProvider):
     def __init__(
         self,
-        metadata: Dict[str, str],
+        metadata: dict[str, str],
     ):
         self.user = metadata.pop("user", "")
         self.trace_id = metadata.pop("trace_id", "")
