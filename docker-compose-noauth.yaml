@@ -72,11 +72,14 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./volumes/duckdb:/dataful
+      - ./volumes/duckdb:/home/gopie/dataful
     networks:
       - gopie
+    user: "0:0"
     command: >
-      sh -c "cd /home/gopie && gopie serve"
+      sh -c "chown -R 1001:1001 /home/gopie/dataful && 
+             chmod -R 755 /home/gopie/dataful && 
+             su -s /bin/sh gopie -c 'cd /home/gopie && gopie serve'"
 
   minio:
     image: minio/minio

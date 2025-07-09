@@ -97,6 +97,40 @@ def create_gopie_project() -> str:
         sys.exit(1)
 
 
+def create_s3_bucket_if_not_exists():
+    """
+    Creates the S3 bucket if it doesn't already exist.
+    """
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=S3_ENDPOINT_URL,
+        aws_access_key_id=S3_ACCESS_KEY_ID,
+        aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+    )
+
+    try:
+        # Check if bucket exists by trying to get its location
+        s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
+        logging.info(f"Bucket '{S3_BUCKET_NAME}' already exists.")
+    except ClientError as e:
+        error_code = int(e.response["Error"]["Code"])
+        if error_code == 404:
+            # Bucket doesn't exist, create it
+            logging.info(f"Bucket '{S3_BUCKET_NAME}' doesn't exist. Creating it...")
+            try:
+                s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
+                logging.info(f"Successfully created bucket '{S3_BUCKET_NAME}'.")
+            except ClientError as create_error:
+                logging.error(
+                    f"Failed to create bucket '{S3_BUCKET_NAME}': {create_error}"
+                )
+                sys.exit(1)
+        else:
+            # Some other error occurred
+            logging.error(f"Error checking bucket '{S3_BUCKET_NAME}': {e}")
+            sys.exit(1)
+
+
 def upload_files_to_s3(project_id: str) -> list[str]:
     """
     Uploads all files from the local dataset folder to S3/MinIO.
@@ -189,14 +223,17 @@ def main():
     # Step 1: Create the project
     project_id = create_gopie_project()
 
-    # Step 2: Upload local files to S3
+    # Step 2: Ensure S3 bucket exists
+    create_s3_bucket_if_not_exists()
+
+    # Step 3: Upload local files to S3
     s3_paths = upload_files_to_s3(project_id)
 
     if not s3_paths:
         logging.info("No files were uploaded to S3. Exiting.")
         return
 
-    # Step 3: Ingest each S3 file as a dataset in the project
+    # Step 4: Ingest each S3 file as a dataset in the project
     logging.info(
         f"Starting dataset ingestion for {len(s3_paths)} files into project {project_id}."
     )

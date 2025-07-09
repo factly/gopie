@@ -1040,6 +1040,8 @@ function ChatPageClient() {
   const isCurrentUserOwner =
     !chatDetails || chatDetails.created_by === currentUserId;
 
+  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+
   console.log("currentUserId", currentUserId);
   console.log("chatDetails", chatDetails);
   console.log("isCurrentUserOwner", isCurrentUserOwner);
@@ -1205,7 +1207,7 @@ function ChatPageClient() {
             right: isResultsPanelOpen ? sqlPanelWidth : 0,
           }}
         >
-          {isCurrentUserOwner ? (
+          {isCurrentUserOwner || isAuthDisabled ? (
             <ChatInput
               onStop={handleStop}
               isStreaming={isStreaming}

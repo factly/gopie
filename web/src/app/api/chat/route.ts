@@ -33,8 +33,8 @@ export async function POST(req: Request) {
     const { messages, project_ids, dataset_ids, chat_id } = body;
 
     // Validate environment variable
-    if (!process.env.NEXT_PUBLIC_GOPIE_API_URL) {
-      throw new Error("NEXT_PUBLIC_GOPIE_API_URL is not defined");
+    if (!process.env.GOPIE_API_URL) {
+      throw new Error("GOPIE_API_URL is not defined");
     }
 
     console.log("Processing request with:", {
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
     // Create OpenAI-compatible client pointed at our API
     const openAI = createOpenAI({
-      baseURL: process.env.NEXT_PUBLIC_GOPIE_API_URL + "/v1/api",
+      baseURL: process.env.GOPIE_API_URL + "/v1/api",
       apiKey: "not-needed",
       name: "GoPie",
     });
