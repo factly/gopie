@@ -6,20 +6,60 @@ from typing import Any, TypedDict
 
 
 @dataclass
+class ResultSummary:
+    total_records: str | None = None
+    truncated_data: list | None = None
+    note: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+
+        if self.total_records is not None:
+            result["total_records"] = self.total_records
+        if self.truncated_data is not None:
+            result["truncated_data"] = self.truncated_data
+        if self.note is not None:
+            result["note"] = self.note
+
+        return result
+
+    def to_string(self) -> str:
+        lines = []
+
+        if self.total_records:
+            lines.append(f"Total Records: {self.total_records}")
+
+        if self.truncated_data:
+            lines.append(f"Truncated Data ({len(self.truncated_data)} rows):")
+            for i, row in enumerate(self.truncated_data, 1):
+                if isinstance(row, dict):
+                    row_items = []
+                    for key, value in row.items():
+                        if key == "additional_fields_count":
+                            row_items.append(f"... (+{value} more fields)")
+                        else:
+                            row_items.append(f"{key}: {value}")
+                    lines.append(f"  Row {i}: {' | '.join(row_items)}")
+                else:
+                    lines.append(f"  Row {i}: {row}")
+
+        if self.note:
+            lines.append(f"\n{self.note}")
+
+        return "\n".join(lines)
+
+
+@dataclass
 class SqlQueryInfo:
     sql_query: str
     explanation: str
-    sql_query_result: Any = None
-    contains_large_results: bool = False
-    summary: dict | None = None
+    sql_query_result: list | ResultSummary | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "sql_query": self.sql_query,
             "explanation": self.explanation,
             "sql_query_result": self.sql_query_result,
-            "contains_large_results": self.contains_large_results,
-            "summary": self.summary,
         }
 
 

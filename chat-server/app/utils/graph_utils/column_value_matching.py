@@ -147,7 +147,7 @@ async def check_exact_match(
         FROM {table_name}
         WHERE LOWER({column_name}) = LOWER('{value}')
         """
-        result = await execute_sql(query)
+        result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             logger.debug(f"Exact match found for '{value}' in '{column_name}'")
@@ -176,7 +176,7 @@ async def find_similar_values(
         WHERE LOWER({column_name}) LIKE LOWER('%{value}%')
         LIMIT 5
         """
-        result = await execute_sql(query)
+        result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             similar_values = [

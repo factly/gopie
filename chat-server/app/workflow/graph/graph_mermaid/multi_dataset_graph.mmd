@@ -13,7 +13,6 @@ graph TD;
 	generate_result(generate_result)
 	analyze_dataset(analyze_dataset)
 	validate_query_result(validate_query_result)
-	extract_summary(extract_summary)
 	stream_updates(stream_updates)
 	tools(tools)
 	route_response(route_response)
@@ -26,12 +25,10 @@ graph TD;
 	execute_query -. &nbsp;reidentify_datasets&nbsp; .-> identify_datasets;
 	execute_query -. &nbsp;replan&nbsp; .-> plan_query;
 	execute_query -.-> validate_query_result;
-	extract_summary --> route_response;
 	generate_subqueries --> analyze_query;
 	identify_datasets -.-> analyze_dataset;
 	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
 	plan_query --> execute_query;
-	route_response -. &nbsp;large_sql_output&nbsp; .-> extract_summary;
 	route_response -.-> generate_result;
 	route_response -.-> stream_updates;
 	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;

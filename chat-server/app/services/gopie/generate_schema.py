@@ -15,7 +15,7 @@ async def generate_summary(
     sample_values_query = (
         f"SELECT DISTINCT * FROM {dataset_name} LIMIT {limit}"
     )
-    sample_data = await execute_sql(sample_values_query)
+    sample_data = await execute_sql(query=sample_values_query)
 
     data = None
 

@@ -1,4 +1,4 @@
-from app.models.query import QueryResult
+from app.models.query import QueryResult, ResultSummary
 
 
 def format_multi_query_result(query_result: QueryResult) -> str:
@@ -33,19 +33,15 @@ def format_multi_query_result(query_result: QueryResult) -> str:
                     sql_section.append(f"Query: {sql_info.sql_query}")
                     sql_section.append(f"Explanation: {sql_info.explanation}")
 
-                    if sql_info.sql_query_result is not None:
-                        if (
-                            sql_info.contains_large_results
-                            and sql_info.summary
-                        ):
+                    sql_result = sql_info.sql_query_result
+
+                    if sql_result is not None:
+                        if isinstance(sql_result, ResultSummary):
                             sql_section.append(
-                                "Result: Large dataset (showing summary)"
+                                f"Result: {sql_result.to_string()}"
                             )
-                            sql_section.append(f"Summary: {sql_info.summary}")
                         else:
-                            sql_section.append(
-                                f"Result: {sql_info.sql_query_result}"
-                            )
+                            sql_section.append(f"Result: {sql_result}")
                     else:
                         sql_section.append("Result: No data returned")
 

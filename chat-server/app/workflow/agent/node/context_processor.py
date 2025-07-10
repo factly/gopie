@@ -89,7 +89,7 @@ Context Summary: {context_summary}
                     logger.debug(
                         f"Executing SQL query for context: {query_snippet}..."
                     )
-                    sql_result = await execute_sql(sql_query)
+                    sql_result = await execute_sql(query=sql_query)
 
                     if sql_result:
                         data = [list(d.values()) for d in sql_result]
