@@ -29,6 +29,18 @@ services:
     networks:
       - gopie
 
+  companion:
+    image: transloadit/companion:sha-e80a7f7
+    ports:
+      - "3020:3020"
+    env_file:
+      - ./config-noauth.env
+    networks:
+      - gopie
+    depends_on:
+      - minio
+
+
   # gopie-starter:
   #   build:
   #     context: ./scripts/starter-project
