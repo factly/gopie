@@ -43,7 +43,7 @@ def is_result_too_large(result: Any) -> tuple[bool, str]:
         return False, ""
 
 
-def truncate_result_for_llm(result: Any) -> Any:
+def truncate_result_for_llm(result: list[dict]) -> list[dict]:
     """
     Truncate large results to make them suitable for LLM processing.
 
@@ -53,9 +53,6 @@ def truncate_result_for_llm(result: Any) -> Any:
     Returns:
         Truncated result
     """
-    if not isinstance(result, list):
-        return result
-
     if len(result) <= 10:
         return result
 
