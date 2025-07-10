@@ -21,16 +21,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// contains checks if a string is present in a slice of strings.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 // @title GoPie API
 // @version 1.1
 // @description GoPie API documentation

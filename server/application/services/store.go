@@ -81,6 +81,7 @@ func (service *DatasetService) List(projectID string, limit, offset int) (*model
 	if limit != 0 {
 		pagination.Limit = limit
 	}
+	pagination.Offset = offset
 	return service.datasetRepo.List(context.Background(), projectID, pagination)
 }
 

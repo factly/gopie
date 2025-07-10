@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -25,24 +25,21 @@ var reindexSchemasCmd = &cobra.Command{
 	Use:   "reindex-schemas",
 	Short: "Re-indexes all project and dataset schemas and uploads them to the AI agent.",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Initialize logger
-		appLogger, err := logger.NewLogger(map[string]any{
-			"log_level": cfg.Logger.Level,
-			"mode":      cfg.Logger.Mode,
-			"log_file":  cfg.Logger.LogFile,
-		})
+		viper.AutomaticEnv()
+		appLogger, err := logger.NewLogger(nil)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		// Store setup
 		storeRepo := store.NewPostgresStoreRepository(appLogger)
-		err = storeRepo.Connect(&cfg.Postgres)
+		err = storeRepo.Connect(&config.PostgresConfig{
+			Host:     viper.GetString("GOPIE_POSTGRES_HOST"),
+			Port:     viper.GetString("GOPIE_POSTGRES_PORT"),
+			Database: viper.GetString("GOPIE_POSTGRES_DB"),
+			User:     viper.GetString("GOPIE_POSTGRES_USER"),
+			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
+		})
 		if err != nil {
 			appLogger.Error("error connecting to postgres", zap.Error(err))
 			return
@@ -52,13 +49,13 @@ var reindexSchemasCmd = &cobra.Command{
 		// Initialize repositories
 		projectStore := projects.NewPostgresProjectStore(storeRepo.GetDB(), appLogger)
 		datasetStore := datasets.NewPostgresDatasetStore(storeRepo.GetDB(), appLogger)
-		aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
+		aiAgentRepo := aiagent.NewAIAgent(viper.GetString("GOPIE_AI_AGENT_URL"), appLogger)
 
 		// Initialize services
 		projectService := services.NewProjectService(projectStore)
 		datasetService := services.NewDatasetService(datasetStore)
 
-		fmt.Println("Re-indexing schemas...")
+		appLogger.Info("Re-indexing schemas...")
 
 		// Get all projects
 		projects, err := projectService.ListAllProjects()
@@ -66,49 +63,75 @@ var reindexSchemasCmd = &cobra.Command{
 			appLogger.Fatal("failed to list projects", zap.Error(err))
 		}
 
+		const numWorkers = 10
+
 		// Iterate over each project
 		for _, project := range projects {
+			appLogger.Info("Processing project...", zap.String("project", project.ID))
+
+			// Create a buffered channel for jobs
+			jobs := make(chan *models.Dataset, numWorkers*2) // Buffer for 2 batches per worker
 			var wg sync.WaitGroup
+
+			// Start the worker pool with a fixed number of workers
+			for i := 0; i < numWorkers; i++ {
+				wg.Add(1)
+				go func(workerID int) {
+					defer wg.Done()
+					for dataset := range jobs {
+						appLogger.Info("Indexing dataset...", zap.Int("workerID", workerID), zap.String("datasetID", dataset.ID))
+
+						err := aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
+							ProjectID: project.ID,
+							DatasetID: dataset.ID,
+						})
+						if err != nil {
+							appLogger.Error("failed to upload schema for dataset",
+								zap.String("project_id", project.ID),
+								zap.String("dataset_id", dataset.ID),
+								zap.Int("worker_id", workerID),
+								zap.Error(err))
+						} else {
+							appLogger.Info("Successfully uploaded schema for dataset", zap.Int("workerID", workerID), zap.String("datasetID", dataset.ID))
+						}
+					}
+				}(i + 1)
+			}
+
+			// Fetch datasets in batches and send them directly to workers
+			datasetsLoaded := 0
 			limit := 10
 			offset := 0
-
 			for {
-				// Get a batch of datasets for the current project
 				datasets, err := datasetService.List(project.ID, limit, offset)
 				if err != nil {
 					appLogger.Error("failed to list datasets for project", zap.String("project_id", project.ID), zap.Error(err))
-					break // Break on error to move to the next project
-				}
-
-				if len(datasets.Results) == 0 {
-					// No more datasets for this project
 					break
 				}
 
-				// Iterate over each dataset in the batch and upload schema concurrently
+				appLogger.Info("loaded datasets Successfully", zap.Int("length", len(datasets.Results)))
+
+				batchSize := len(datasets.Results)
+				if batchSize == 0 {
+					break
+				}
+
+				datasetsLoaded += batchSize
+
 				for _, dataset := range datasets.Results {
-					wg.Add(1)
-					go func(d *models.Dataset) {
-						defer wg.Done()
-						// Upload the schema to the AI agent
-						err := aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
-							ProjectID: project.ID,
-							DatasetID: d.ID,
-						})
-						if err != nil {
-							appLogger.Error("failed to upload schema for dataset", zap.String("dataset_id", d.ID), zap.Error(err))
-						} else {
-							fmt.Printf("Successfully uploaded schema for dataset %s in project %s\n", d.ID, project.ID)
-						}
-					}(dataset) // Pass the dataset pointer to the goroutine
+					jobs <- dataset
 				}
 
 				offset += limit
 			}
-			// Wait for all uploads for the current project to complete
+
+			appLogger.Info("Dispatched datasets to workers", zap.Int("datasetsLoaded", datasetsLoaded), zap.String("projectID", project.ID))
+
+			close(jobs)
 			wg.Wait()
+			appLogger.Info("Finished processing project", zap.String("projectID", project.ID))
 		}
 
-		fmt.Println("Schema re-indexing complete.")
+		appLogger.Info("Schema re-indexing complete.")
 	},
 }
