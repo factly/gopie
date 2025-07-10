@@ -5,10 +5,6 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
 from app.models.message import ErrorMessage, IntermediateStep
-from app.utils.graph_utils.result_validation import (
-    is_result_too_large,
-    truncate_result_for_llm,
-)
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
@@ -24,29 +20,6 @@ async def validate_result(
 ) -> dict[str, Any]:
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
-
-    # Process large SQL outputs
-    if query_result:
-        for sql_query_info in query_result.get("sql_results", []) or []:
-            if not sql_query_info.get("result"):
-                continue
-
-            is_too_large, reason = is_result_too_large(
-                sql_query_info.get("result")
-            )
-
-            if is_too_large:
-                warning_message = (
-                    f"Large result detected ({reason}). Query successful but "
-                    f"data truncated for response generation. "
-                    f"User can still see the complete result."
-                )
-                sql_query_info["large_result"] = warning_message
-
-                truncated_result = truncate_result_for_llm(
-                    sql_query_info.get("result")
-                )
-                sql_query_info["result"] = truncated_result
 
     # Validate the result with the LLM
     try:

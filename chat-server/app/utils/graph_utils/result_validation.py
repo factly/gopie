@@ -62,8 +62,10 @@ def truncate_result_for_llm(result: list[dict]) -> list[dict]:
         truncated.append(
             {
                 "__note__": (
-                    f"Result truncated for validation. "
-                    f"Original had {len(result)} rows."
+                    f"This result was large ({len(result)} rows) and has been "
+                    f"truncated. User can see . "
+                    f"Please let the user know that the result is truncated but "
+                    f"the complete result is available with you."
                 )
             }
         )

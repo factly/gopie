@@ -47,16 +47,6 @@ async def execute_sql(
 
     if is_too_large:
         truncated_result = truncate_result_for_llm(result)
-        truncated_result.append(
-            {
-                "__note__": (
-                    f"This result was large ({len(result)} rows) and has been "
-                    f"truncated. User can see . "
-                    f"Please let the user know that the result is truncated but "
-                    f"the complete result is available with you."
-                )
-            }
-        )
         return truncated_result
 
     return result

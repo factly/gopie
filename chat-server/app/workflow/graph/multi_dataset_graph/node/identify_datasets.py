@@ -63,7 +63,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             try:
                 semantic_searched_datasets = await search_schemas(
                     user_query=user_query,
-                    embeddings_model=embeddings_model,
+                    embeddings=embeddings_model,
                     dataset_ids=dataset_ids,
                     project_ids=project_ids,
                 )

@@ -29,14 +29,24 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
     writer = csv.writer(output)
 
     if rows:
-        headers = list(rows[0].keys())
+        headers = ["row_num"] + list(rows[0].keys())
         writer.writerow(headers)
 
-        for row in rows:
-            record = [
-                str(value) if value is not None else ""
-                for value in row.values()
-            ]
+        for idx, row in enumerate(rows, 1):
+            record = [str(idx)]
+
+            for value in row.values():
+                if value is None:
+                    record.append("NULL")
+                elif value == "":
+                    record.append("EMPTY_STRING")
+                elif isinstance(value, str) and value.strip() == "":
+                    record.append("WHITESPACE_ONLY")
+                elif isinstance(value, (int, float)) and value == 0:
+                    record.append("0")
+                else:
+                    record.append(str(value))
+
             writer.writerow(record)
 
     return output.getvalue()

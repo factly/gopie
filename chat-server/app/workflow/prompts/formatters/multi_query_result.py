@@ -1,4 +1,4 @@
-from app.models.query import QueryResult, ResultSummary
+from app.models.query import QueryResult
 
 
 def format_multi_query_result(query_result: QueryResult) -> str:
@@ -36,12 +36,7 @@ def format_multi_query_result(query_result: QueryResult) -> str:
                     sql_result = sql_info.sql_query_result
 
                     if sql_result is not None:
-                        if isinstance(sql_result, ResultSummary):
-                            sql_section.append(
-                                f"Result: {sql_result.to_string()}"
-                            )
-                        else:
-                            sql_section.append(f"Result: {sql_result}")
+                        sql_section.append(f"Result: {sql_result}")
                     else:
                         sql_section.append("Result: No data returned")
 

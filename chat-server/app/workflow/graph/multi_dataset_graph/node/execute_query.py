@@ -75,8 +75,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         state: The current state containing messages and retry information
 
     Returns:
-        Routing decision: "replan", "reidentify_datasets", or
-        "validate_query_result"
+        Routing decision: "replan", "reidentify_datasets" or "route_response"
     """
 
     last_message = state["messages"][-1]
@@ -108,6 +107,6 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         elif "replan" in response_text:
             return "replan"
         else:
-            return "validate_query_result"
+            return "route_response"
 
-    return "validate_query_result"
+    return "route_response"

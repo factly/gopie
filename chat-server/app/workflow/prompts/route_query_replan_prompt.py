@@ -29,7 +29,7 @@ AVAILABLE OPTIONS:
    Choose this when the query itself needs reformulation but the dataset
    understanding is correct
 
-3. "validate_query_result"
+3. "route_response"
    Choose this when either:
    - The current results are sufficient despite the error
    - Further retries would be futile
@@ -38,14 +38,14 @@ AVAILABLE OPTIONS:
      the query
 
 IMPORTANT NOTES:
-- "validate_query_result" doesn't mean success - it means we proceed with
+- "route_response" doesn't mean success - it means we proceed with
   what we have
 - Avoid making simplistic decisions based solely on error keywords
 - Synthesize all available context to determine the most appropriate action
 
 RESPONSE FORMAT:
 Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
-"validate_query_result"
+"route_response"
 """
 
     content_str = (
