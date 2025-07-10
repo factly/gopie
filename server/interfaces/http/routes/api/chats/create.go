@@ -23,7 +23,6 @@ import (
 
 // @Description Request body for creating a streaming chat conversation with an AI agent - OpenAI compatible
 type chatWithAgentRequestBody struct {
-	Model       string                 `json:"model"`
 	Messages    []models.AIChatMessage `json:"messages" validate:"required,dive"`
 	Stream      bool                   `json:"stream" validate:"omitempty" default:"true"`
 	Temperature float64                `json:"temperature" validate:"omitempty"`
@@ -72,7 +71,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 	projectIDs := ctx.Get("x-project-ids")
 	datasetIDs := ctx.Get("x-dataset-ids")
 
-	for _, id := range strings.Split(datasetIDs, ",") {
+	for id := range strings.SplitSeq(datasetIDs, ",") {
 		if strings.HasPrefix(id, "gp_") {
 			dataset, err := h.datasetSvc.GetByTableName(id, orgID)
 			if err != nil {
@@ -144,11 +143,12 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 	aiPrevMessages := make([]models.AIChatMessage, 0, len(prevMessages))
 	for _, msg := range prevMessages {
-		if msg.Choices != nil && len(msg.Choices) > 0 {
+		if len(msg.Choices) > 0 {
 			if msg.Choices[0].Delta.Role != nil && msg.Choices[0].Delta.Content != nil {
 				aiPrevMessages = append(aiPrevMessages, models.AIChatMessage{
-					Role:    *msg.Choices[0].Delta.Role,
-					Content: *msg.Choices[0].Delta.Content,
+					Role:      *msg.Choices[0].Delta.Role,
+					Content:   *msg.Choices[0].Delta.Content,
+					ToolCalls: msg.Choices[0].Delta.ToolCalls,
 				})
 			}
 		}
@@ -174,17 +174,20 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		assistantMessageBuilder := strings.Builder{}
 		assistantMessage := models.ChatMessage{}
+		toolCalls := []any{}
 		role := "user"
+		assistantRole := "assistant"
 		messages := []models.ChatMessage{
 			{
 				CreatedAt: time.Now(),
-				Model:     body.Model,
+				Model:     "gopie-chat",
 				Object:    "user.message",
 				Choices: []models.Choice{
 					{
 						Delta: models.Delta{
-							Role:    &role,
-							Content: &body.Messages[len(body.Messages)-1].Content,
+							Role:      &role,
+							Content:   &body.Messages[len(body.Messages)-1].Content,
+							ToolCalls: toolCalls,
 						},
 					},
 				},
@@ -206,36 +209,38 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				_ = json.Unmarshal(dataChunk, &data)
 				data.ID = sessionID
 
-				if data.Choices != nil && len(data.Choices) > 0 &&
-					data.Choices[0].Delta.Role != nil &&
-					*data.Choices[0].Delta.Role == "assistant" {
-					if data.Choices[0].Delta.Content != nil {
-						assistantMessageBuilder.WriteString(*data.Choices[0].Delta.Content)
-						s := assistantMessageBuilder.String()
-						assistantMessage = models.ChatMessage{
-							ID:        data.ID,
-							CreatedAt: data.CreatedAt,
-							Model:     data.Model,
-							Object:    data.Object,
-							Choices: []models.Choice{
-								{
-									Delta: models.Delta{
-										Role:         data.Choices[0].Delta.Role,
-										FunctionCall: data.Choices[0].Delta.FunctionCall,
-										Refusal:      data.Choices[0].Delta.Refusal,
-										ToolCalls:    data.Choices[0].Delta.ToolCalls,
-										Content:      &s,
-									},
+				if len(data.Choices) > 0 {
+					choice := data.Choices[0]
+
+					if choice.Delta.Content != nil {
+						assistantMessageBuilder.WriteString(*choice.Delta.Content)
+					}
+
+					if len(choice.Delta.ToolCalls) > 0 {
+						toolCalls = append(toolCalls, choice.Delta.ToolCalls...)
+					}
+
+					s := assistantMessageBuilder.String()
+					assistantMessage = models.ChatMessage{
+						ID:        data.ID,
+						CreatedAt: data.CreatedAt,
+						Model:     data.Model,
+						Object:    data.Object,
+						Choices: []models.Choice{
+							{
+								Delta: models.Delta{
+									Role:         &assistantRole,
+									FunctionCall: choice.Delta.FunctionCall,
+									Refusal:      choice.Delta.Refusal,
+									ToolCalls:    toolCalls, // Use the accumulated toolCalls
+									Content:      &s,
 								},
 							},
-						}
+						},
 					}
-				} else {
-					messages = append(messages, data)
 				}
 
 				dataToSend, _ = json.Marshal(data)
-
 				if _, err := fmt.Fprintf(w, "data: %s\n\n", dataToSend); err != nil {
 					h.logger.Error("SSE: Error writing data to stream", zap.Error(err), zap.String("session_id", sessionID))
 					return
@@ -299,15 +304,15 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					}
 
 					h.logger.Info("SSE: Stream finished successfully (EOF received).", zap.String("session_id", sessionID))
-					doneEvent := map[string]interface{}{
+					doneEvent := map[string]any{
 						"id":      sessionID,
 						"object":  "chat.completion.chunk",
 						"created": time.Now().Unix(),
-						"model":   body.Model,
-						"choices": []map[string]interface{}{
+						"model":   "gopie-chat",
+						"choices": []map[string]any{
 							{
 								"index":         0,
-								"delta":         map[string]interface{}{},
+								"delta":         map[string]any{},
 								"finish_reason": "stop",
 							},
 						},
@@ -331,8 +336,8 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				}
 
 				h.logger.Error("SSE: Error received from AI service.", zap.Error(serviceErr), zap.String("session_id", sessionID))
-				errorPayload := map[string]interface{}{
-					"error": map[string]interface{}{
+				errorPayload := map[string]any{
+					"error": map[string]any{
 						"message": serviceErr.Error(),
 						"type":    "service_error",
 					},

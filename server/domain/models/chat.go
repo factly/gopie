@@ -103,19 +103,12 @@ type Delta struct {
 	FunctionCall *FunctionCall `json:"function_call"`
 	Refusal      any           `json:"refusal"`
 	Role         *string       `json:"role"`
-	ToolCalls    []ToolCall    `json:"tool_calls"`
+	ToolCalls    []any         `json:"tool_calls"`
 }
 
 type FunctionCall struct {
 	Arguments string `json:"arguments"`
 	Name      string `json:"name"`
-}
-
-type ToolCall struct {
-	Index    int          `json:"index"`
-	ID       string       `json:"id"`
-	Function ToolFunction `json:"function"`
-	Type     string       `json:"type"`
 }
 
 type ToolFunction struct {
