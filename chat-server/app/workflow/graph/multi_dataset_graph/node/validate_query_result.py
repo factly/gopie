@@ -1,5 +1,7 @@
 from app.models.message import ErrorMessage, IntermediateStep
+from app.models.query import ResultSummary
 from app.utils.graph_utils.result_validation import is_result_too_large
+from app.utils.graph_utils.summary_extraction import create_result_summary
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -17,53 +19,49 @@ async def validate_query_result(state: State) -> dict:
     query_result = state.get("query_result", None)
     messages = state.get("messages", [])
     subquery_index = state.get("subquery_index", 0)
+    subquery = query_result.subqueries[subquery_index]
 
     # If previous step had an error, pass through without validation
     last_message = messages[-1] if messages else None
     if isinstance(last_message, ErrorMessage):
         pass
 
-    result_dict = {"message": "Validation completed successfully"}
+    result_messages = []
+    summaries_created = False
 
     try:
-        if query_result and hasattr(query_result, "subqueries"):
-            if 0 <= subquery_index < len(query_result.subqueries):
-                subquery = query_result.subqueries[subquery_index]
+        for i, sql_query_info in enumerate(subquery.sql_queries):
+            if not sql_query_info.sql_query_result:
+                continue
 
-                large_result_found = False
-                for i, sql_query_info in enumerate(subquery.sql_queries):
-                    if not sql_query_info.sql_query_result:
-                        continue
+            is_too_large = is_result_too_large(
+                result=sql_query_info.sql_query_result
+            )
 
-                    is_too_large, reason = is_result_too_large(
-                        sql_query_info.sql_query_result
+            if is_too_large:
+                result = sql_query_info.sql_query_result
+                if isinstance(result, list):
+                    summary: ResultSummary = create_result_summary(
+                        result=result
                     )
+                    sql_query_info.sql_query_result = summary
 
-                    if is_too_large:
-                        sql_query_info.contains_large_results = True
-                        large_result_found = True
+                    result_messages.append(
+                        f"Created summary for SQL query {i + 1} in subquery "
+                        f"{subquery_index + 1} "
+                        f"({len(result)} total rows)"
+                    )
+                    summaries_created = True
 
-                        warning = (
-                            f"SQL query {i + 1} in subquery "
-                            f"{subquery_index + 1} "
-                            f"result was too large: {reason}. "
-                        )
-                        warning += "Flagged for summary extraction."
-                        query_result.add_error_message(
-                            warning, "Result Size Warning"
-                        )
-
-                if large_result_found:
-                    result_dict = {
-                        "warning": "Query result was too large and has been "
-                        "flagged for summary extraction",
-                    }
+        if not summaries_created:
+            message = "No large results found that needed summarization."
+        else:
+            message = "; ".join(result_messages)
 
         return {
             "query_result": query_result,
-            "messages": [IntermediateStep.from_json(result_dict)],
+            "messages": [IntermediateStep(content=message)],
         }
-
     except Exception as e:
         error_msg = f"Query result validation error: {e!s}"
         if query_result:

@@ -56,7 +56,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         if not dataset_id:
             raise Exception("No dataset ID provided")
 
-        dataset_schema = await get_schema_from_qdrant(dataset_id)
+        dataset_schema = await get_schema_from_qdrant(dataset_id=dataset_id)
         if dataset_schema is None:
             raise Exception("Schema fetch error: Dataset not found")
 
@@ -64,7 +64,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         user_provided_dataset_name = dataset_schema.name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
-        sample_data = await execute_sql(sample_data_query)
+        sample_data = await execute_sql(query=sample_data_query)
 
         rows_csv = convert_rows_to_csv(sample_data)
 
@@ -114,7 +114,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
             for q, exp in zip(sql_queries, explanations):
                 try:
-                    result_data = await execute_sql(q)
+                    result_data = await execute_sql(query=q)
                     sql_results.append(
                         {
                             "sql_query": q,

@@ -1,6 +1,6 @@
 from typing import Any
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
@@ -79,7 +79,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         llm = get_model_provider(config).get_llm_with_tools(
             "analyze_query", tools_names
         )
-        response: Any = await llm.ainvoke(prompt)
+        response = await llm.ainvoke(prompt)
 
         if has_tool_calls(response):
             return _handle_tool_call_response(
@@ -186,7 +186,7 @@ def _handle_tool_call_response(
 
     ai_message = (
         response
-        if isinstance(response, AIMessage)
+        if isinstance(response, BaseMessage)
         else AIMessage(content=str(response))
     )
 

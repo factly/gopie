@@ -39,6 +39,7 @@ async def validate_result(
                 warning_message = (
                     f"Large result detected ({reason}). Query successful but "
                     f"data truncated for response generation. "
+                    f"User can still see the complete result."
                 )
                 sql_query_info["large_result"] = warning_message
 

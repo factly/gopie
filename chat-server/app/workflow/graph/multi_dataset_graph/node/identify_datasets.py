@@ -55,15 +55,15 @@ async def identify_datasets(state: State, config: RunnableConfig):
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
         required_dataset_schemas = await get_schema_by_dataset_ids(
-            required_dataset_ids
+            dataset_ids=required_dataset_ids
         )
 
         semantic_searched_datasets = []
         if need_semantic_search or not required_dataset_schemas:
             try:
                 semantic_searched_datasets = await search_schemas(
-                    user_query,
-                    embeddings_model,
+                    user_query=user_query,
+                    embeddings_model=embeddings_model,
                     dataset_ids=dataset_ids,
                     project_ids=project_ids,
                 )
