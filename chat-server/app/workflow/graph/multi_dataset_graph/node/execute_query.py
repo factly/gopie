@@ -87,8 +87,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
 
     if (
         isinstance(last_message, ErrorMessage)
-        and query_result.subqueries[query_index].retry_count
-        < settings.MAX_RETRY_COUNT
+        and query_result.subqueries[query_index].retry_count < settings.MAX_RETRY_COUNT
     ):
         prompt_messages = get_prompt(
             "route_query_replan",

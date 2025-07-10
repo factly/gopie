@@ -54,9 +54,7 @@ Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
         else last_message_content
     )
 
-    errors_str = (
-        str(subquery_errors) if subquery_errors else "No previous errors"
-    )
+    errors_str = str(subquery_errors) if subquery_errors else "No previous errors"
 
     human_template_str = """
 I encountered an error when executing the SQL query:

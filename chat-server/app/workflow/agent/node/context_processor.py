@@ -46,9 +46,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         enhanced_query = parsed_response.get("enhanced_query", user_input)
         context_summary = parsed_response.get("context_summary", "")
         is_follow_up = parsed_response.get("is_follow_up", False)
-        need_semantic_search = parsed_response.get(
-            "need_semantic_search", True
-        )
+        need_semantic_search = parsed_response.get("need_semantic_search", True)
         required_dataset_ids = parsed_response.get("required_dataset_ids", [])
         visualization_data = parsed_response.get("visualization_data", [])
         previous_sql_queries = parsed_response.get("previous_sql_queries", [])
@@ -70,11 +68,7 @@ Context Summary: {context_summary}
         datasets = []
         if visualization_data:
             for viz_data in visualization_data:
-                if (
-                    isinstance(viz_data, dict)
-                    and "data" in viz_data
-                    and "description" in viz_data
-                ):
+                if isinstance(viz_data, dict) and "data" in viz_data and "description" in viz_data:
                     dataset = Dataset(
                         data=viz_data["data"],
                         description=viz_data["description"],
@@ -86,9 +80,7 @@ Context Summary: {context_summary}
             try:
                 for sql_query in previous_sql_queries:
                     query_snippet = sql_query[:100]
-                    logger.debug(
-                        f"Executing SQL query for context: {query_snippet}..."
-                    )
+                    logger.debug(f"Executing SQL query for context: {query_snippet}...")
                     sql_result = await execute_sql(query=sql_query)
 
                     if sql_result:

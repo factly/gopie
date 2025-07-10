@@ -59,9 +59,7 @@ async def search_schemas(
         for doc in results:
             schemas.append(DatasetSchema(**doc.metadata))
 
-        logger.debug(
-            f"Found {len(schemas)} schemas matching query: {user_query}"
-        )
+        logger.debug(f"Found {len(schemas)} schemas matching query: {user_query}")
         return schemas
 
     except Exception as e:

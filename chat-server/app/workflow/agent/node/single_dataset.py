@@ -23,9 +23,7 @@ def transform_output_state(
 ) -> AgentState | dict:
     datasets = []
     dataset_count = 0
-    query_result: SingleDatasetQueryResult | None = output_state.get(
-        "query_result"
-    )
+    query_result: SingleDatasetQueryResult | None = output_state.get("query_result")
 
     if query_result is not None:
         sql_queries = query_result.get("sql_queries")
@@ -47,9 +45,7 @@ def transform_output_state(
     }
 
 
-async def call_single_dataset_agent(
-    state: AgentState, config: RunnableConfig
-) -> AgentState:
+async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -> AgentState:
     dataset_ids = state.get("dataset_ids", [])
     dataset_id = dataset_ids[0] if dataset_ids else None
 
@@ -59,7 +55,5 @@ async def call_single_dataset_agent(
         "user_query": state.get("user_query", ""),
     }
 
-    output_state = await single_dataset_graph.ainvoke(
-        input_state, config=config
-    )
+    output_state = await single_dataset_graph.ainvoke(input_state, config=config)
     return transform_output_state(output_state)  # type: ignore

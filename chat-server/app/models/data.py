@@ -45,9 +45,7 @@ class ColumnValueMatching(BaseModel):
     class ColumnAnalysis(BaseModel):
         column_name: str
         verified_values: list["ColumnValueMatching.VerifiedValue"] = []
-        suggested_alternatives: list[
-            "ColumnValueMatching.SuggestedAlternative"
-        ] = []
+        suggested_alternatives: list["ColumnValueMatching.SuggestedAlternative"] = []
 
     class DatasetAnalysis(BaseModel):
         dataset_name: str

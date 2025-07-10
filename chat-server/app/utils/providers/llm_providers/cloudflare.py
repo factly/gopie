@@ -3,7 +3,8 @@ import json
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.llm_providers.base import BaseLLMProvider
+
+from .base import BaseLLMProvider
 
 
 class CloudflareLLMProvider(BaseLLMProvider):
@@ -17,13 +18,9 @@ class CloudflareLLMProvider(BaseLLMProvider):
         account_id = settings.CLOUDFLARE_ACCOUNT_ID
         gateway_id = settings.CLOUDFLARE_GATEWAY_ID
 
-        self.openai_compat_url = (
-            f"{base_url}/{provider}/{account_id}/{gateway_id}/compat"
-        )
+        self.openai_compat_url = f"{base_url}/{provider}/{account_id}/{gateway_id}/compat"
 
-    def get_llm_model(
-        self, model_name: str, streaming: bool = True
-    ) -> ChatOpenAI:
+    def get_llm_model(self, model_name: str, streaming: bool = True) -> ChatOpenAI:
         base_url = self.openai_compat_url
         headers = {
             "Content-Type": "application/json",

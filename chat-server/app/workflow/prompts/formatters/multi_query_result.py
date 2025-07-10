@@ -10,9 +10,7 @@ def format_multi_query_result(query_result: QueryResult) -> str:
     ]
 
     if query_result.has_subqueries():
-        input_parts.append(
-            f"SUBQUERIES PROCESSED: {len(query_result.subqueries)}"
-        )
+        input_parts.append(f"SUBQUERIES PROCESSED: {len(query_result.subqueries)}")
 
         for i, subquery in enumerate(query_result.subqueries, 1):
             subquery_section = [f"\n--- SUBQUERY {i} ---"]
@@ -25,9 +23,7 @@ def format_multi_query_result(query_result: QueryResult) -> str:
                 subquery_section.append(f"Tables: {subquery.tables_used}")
 
             if subquery.sql_queries:
-                subquery_section.append(
-                    f"SQL Queries Executed: {len(subquery.sql_queries)}"
-                )
+                subquery_section.append(f"SQL Queries Executed: {len(subquery.sql_queries)}")
                 for j, sql_info in enumerate(subquery.sql_queries, 1):
                     sql_section = [f"\nSQL Query {j}:"]
                     sql_section.append(f"Query: {sql_info.sql_query}")
@@ -43,9 +39,7 @@ def format_multi_query_result(query_result: QueryResult) -> str:
                     subquery_section.extend(sql_section)
 
             if subquery.tool_used_result is not None:
-                subquery_section.append(
-                    f"Tool Result: {subquery.tool_used_result}"
-                )
+                subquery_section.append(f"Tool Result: {subquery.tool_used_result}")
 
             if subquery.error_message:
                 subquery_section.append("Errors encountered:")
@@ -54,9 +48,7 @@ def format_multi_query_result(query_result: QueryResult) -> str:
                         subquery_section.append(f"- {error_type}: {error_msg}")
 
             if subquery.confidence_score != 5:
-                subquery_section.append(
-                    f"Confidence: {subquery.confidence_score}/10"
-                )
+                subquery_section.append(f"Confidence: {subquery.confidence_score}/10")
 
             if subquery.node_messages:
                 subquery_section.append("Additional Context:")

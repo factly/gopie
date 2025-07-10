@@ -1,6 +1,3 @@
-import uuid
-
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
@@ -32,14 +29,10 @@ async def stream_graph_updates(
     Yields:
         str: JSON-formatted event data for streaming in SSE format
     """
-    if not trace_id:
-        trace_id = str(uuid.uuid4())
     if project_ids is None and dataset_ids is None:
         raise ValueError("At least one dataset or project ID must be provided")
 
-    chat_history = [
-        convert_to_langchain_message(message) for message in messages[:-1]
-    ]
+    chat_history = [message.model_dump() for message in messages[:-1]]
 
     input_state = {
         "messages": [message.model_dump() for message in messages],
@@ -67,9 +60,7 @@ async def stream_graph_updates(
             version="v2",
             config=config,
         ):
-            extracted_event_data = event_stream_handler.handle_events_stream(
-                event
-            )
+            extracted_event_data = event_stream_handler.handle_events_stream(event)
             if extracted_event_data.role:
                 yield extracted_event_data
 
@@ -81,12 +72,3 @@ async def stream_graph_updates(
         )
         yield output
         logger.exception(e)
-
-
-def convert_to_langchain_message(message: Message):
-    if message.role == "user":
-        return HumanMessage(content=message.content)
-    elif message.role == "assistant":
-        return AIMessage(content=message.content)
-    else:
-        raise ValueError(f"Unknown role: {message.role}")

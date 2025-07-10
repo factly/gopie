@@ -84,20 +84,17 @@ def format_process_query_input(
 ) -> dict:
     formatted_schema = dataset_schema.format_for_prompt()
 
-    sections = [
-        f"❓ USER QUERY: {user_query}",
-        "",
-        f"📊 DATASET INFORMATION:\n{formatted_schema}",
-        "",
-        f"📄 SAMPLE DATA ({dataset_name}):",
-        rows_csv,
-    ]
+    input_str = f"""❓ USER QUERY: {user_query}
+
+📊 DATASET INFORMATION:
+{formatted_schema}
+
+📄 SAMPLE DATA ({dataset_name}):
+{rows_csv}"""
 
     if prev_query_result:
         formatted_prev_result = format_single_query_result(prev_query_result)
-        sections.extend(
-            ["", "🔄 PREVIOUS QUERY CONTEXT:", formatted_prev_result]
-        )
+        input_str += f"\n\n🔄 PREVIOUS QUERY CONTEXT:\n{formatted_prev_result}"
 
     if validation_result:
         confidence = validation_result["confidence"]
@@ -112,15 +109,9 @@ def format_process_query_input(
             confidence_meaning = "some issues, improvements recommended"
         else:  # 0.0-0.3
             confidence_desc = "Low confidence"
-            confidence_meaning = (
-                "major issues, significant improvements needed"
-            )
+            confidence_meaning = "major issues, significant improvements needed"
 
-        validation_status = (
-            "✅ Valid"
-            if validation_result["is_valid"]
-            else "❌ Needs Improvement"
-        )
+        validation_status = "✅ Valid" if validation_result["is_valid"] else "❌ Needs Improvement"
 
         context_note = (
             "📋 ANALYSIS: After reviewing the previous query result above"
@@ -128,23 +119,16 @@ def format_process_query_input(
             else "📋 ANALYSIS: Initial validation"
         )
 
-        validation_info = [
-            "",
-            context_note,
-            f"🔍 VALIDATION: {validation_status}",
-            f"📊 Confidence: {confidence:.2f}/1.0 ({confidence_desc} - {confidence_meaning})",
-            f"💭 Reasoning: {validation_result['reasoning']}",
-            "⚠️  The previous query result requires improvements before providing a final response.",
-        ]
+        input_str += f"""
+
+{context_note}
+🔍 VALIDATION: {validation_status}
+📊 Confidence: {confidence:.2f}/1.0 ({confidence_desc} - {confidence_meaning})
+💭 Reasoning: {validation_result['reasoning']}
+⚠️  The previous query result requires improvements before providing a final response."""
 
         missing_elements = validation_result.get("missing_elements")
         if missing_elements:
-            validation_info.append(
-                f"❓ Still Missing: {', '.join(missing_elements)}"
-            )
+            input_str += f"\n❓ Still Missing: {', '.join(missing_elements)}"
 
-        sections.extend(validation_info)
-
-    formatted_input = "\n".join(sections)
-
-    return {"input": formatted_input}
+    return {"input": input_str}

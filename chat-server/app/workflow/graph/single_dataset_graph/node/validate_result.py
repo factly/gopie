@@ -15,9 +15,7 @@ from app.workflow.graph.single_dataset_graph.types import State
     role="intermediate",
     progress_message="Validating query result...",
 )
-async def validate_result(
-    state: State, config: RunnableConfig
-) -> dict[str, Any]:
+async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any]:
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
 
@@ -48,10 +46,7 @@ async def validate_result(
             "retry_count": retry_count,
             "validation_result": None,
             "messages": [
-                ErrorMessage(
-                    content=f"Validation error: {str(e)}. "
-                    f"Proceeding with response."
-                )
+                ErrorMessage(content=f"Validation error: {str(e)}. " f"Proceeding with response.")
             ],
         }
 

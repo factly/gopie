@@ -35,9 +35,7 @@ async def match_column_values(
             logger.warning("Dataset name not found in assumption, skipping")
             continue
 
-        dataset_analysis = ColumnValueMatching.DatasetAnalysis(
-            dataset_name=dataset_name
-        )
+        dataset_analysis = ColumnValueMatching.DatasetAnalysis(dataset_name=dataset_name)
         result.datasets[dataset_name] = dataset_analysis
 
         for col_idx, column_obj in enumerate(columns):
@@ -46,14 +44,10 @@ async def match_column_values(
             fuzzy_values = column_obj.get("fuzzy_values", [])
 
             if not column_name:
-                logger.warning(
-                    f"Skipping column {col_idx + 1}: No column name provided"
-                )
+                logger.warning(f"Skipping column {col_idx + 1}: No column name provided")
                 continue
 
-            column_entry = ColumnValueMatching.ColumnAnalysis(
-                column_name=column_name
-            )
+            column_entry = ColumnValueMatching.ColumnAnalysis(column_name=column_name)
 
             dataset_analysis.columns_analyzed.append(column_entry)
 
@@ -73,9 +67,7 @@ async def match_column_values(
                     dataset_name,
                 )
 
-    result.datasets = {
-        k: v for k, v in result.datasets.items() if v.columns_analyzed
-    }
+    result.datasets = {k: v for k, v in result.datasets.items() if v.columns_analyzed}
 
     result.summary = f"Analyzed values for {len(result.datasets)} datasets"
     return result
@@ -120,9 +112,7 @@ async def verify_fuzzy_values(
     Verify fuzzy values against the column and collect suggestions.
     """
     for value in fuzzy_values:
-        similar_values = await find_similar_values(
-            value, column_name, table_name
-        )
+        similar_values = await find_similar_values(value, column_name, table_name)
 
         suggestion = ColumnValueMatching.SuggestedAlternative(
             requested_value=value,
@@ -134,9 +124,7 @@ async def verify_fuzzy_values(
         column_entry.suggested_alternatives.append(suggestion)
 
 
-async def check_exact_match(
-    value: str, column_name: str, table_name: str
-) -> bool:
+async def check_exact_match(value: str, column_name: str, table_name: str) -> bool:
     """
     Check if the value exactly matches any value in the column.
     """
@@ -162,9 +150,7 @@ async def check_exact_match(
     return False
 
 
-async def find_similar_values(
-    value: str, column_name: str, table_name: str
-) -> list[str]:
+async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
     """
     Find values similar to the given value in the column.
     """
@@ -179,9 +165,7 @@ async def find_similar_values(
         result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
-            similar_values = [
-                str(row.get(column_name)) for row in result if row
-            ]
+            similar_values = [str(row.get(column_name)) for row in result if row]
 
     except Exception as e:
         logger.error(

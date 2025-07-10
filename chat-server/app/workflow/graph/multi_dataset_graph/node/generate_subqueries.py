@@ -26,9 +26,7 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             "assess_query_complexity",
             user_input=user_input,
         )
-        llm = get_model_provider(config).get_llm_for_node(
-            "generate_subqueries"
-        )
+        llm = get_model_provider(config).get_llm_for_node("generate_subqueries")
         assessment_response = await llm.ainvoke(assessment_prompt)
 
         parser = JsonOutputParser()
@@ -50,8 +48,7 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             subqueries = subqueries_parsed.get("subqueries", [])
 
             subqueries_message = (
-                "I'll break down your query into steps to give you "
-                "a more complete answer:"
+                "I'll break down your query into steps to give you a more complete answer:"
             )
 
             for i, subquery in enumerate(subqueries, 1):

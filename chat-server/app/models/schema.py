@@ -19,9 +19,7 @@ def get_possible_number_field():
     return Field(default=None, union_mode="left_to_right")
 
 
-ColumnFieldsToExclude = Literal[
-    "sample_values", "stats", "unique_count", "avg", "count", "std"
-]
+ColumnFieldsToExclude = Literal["sample_values", "stats", "unique_count", "avg", "count", "std"]
 
 
 class ColumnSummary(BaseModel):
@@ -38,9 +36,7 @@ class ColumnSummary(BaseModel):
     count: int
     null_percentage: dict[str, int]
 
-    @field_validator(
-        "min", "max", "avg", "std", "q25", "q50", "q75", mode="before"
-    )
+    @field_validator("min", "max", "avg", "std", "q25", "q50", "q75", mode="before")
     def replace_str_with_none(cls, value):
         if isinstance(value, str) and value == "":
             return None
@@ -51,9 +47,7 @@ class ColumnSchema(ColumnSummary):
     column_description: Optional[str] = None
     sample_values: list[PossibleNumberType] = Field(default_factory=list)
 
-    def format_for_prompt(
-        self, fields_to_exclude: list[ColumnFieldsToExclude] = []
-    ):
+    def format_for_prompt(self, fields_to_exclude: list[ColumnFieldsToExclude] = []):
         sample_str = ""
         stats_info = ""
         unique_count = ""
@@ -62,9 +56,7 @@ class ColumnSchema(ColumnSummary):
             sample_str = ""
             if sample_values:
                 formatted_samples = [str(val) for val in sample_values[:5]]
-                sample_str = (
-                    f" | Sample values: {', '.join(formatted_samples)}"
-                )
+                sample_str = f" | Sample values: {', '.join(formatted_samples)}"
                 if len(sample_values) > 5:
                     sample_str += "..."
         if "stats" not in fields_to_exclude:
@@ -108,9 +100,7 @@ class DatasetSchema(BaseModel):
 
     def format_for_prompt(
         self,
-        fields_to_exclude: list[
-            Literal["dataset_custom_prompt", "project_custom_prompt"]
-        ] = [],
+        fields_to_exclude: list[Literal["dataset_custom_prompt", "project_custom_prompt"]] = [],
         columns_fields_to_exclude: list[ColumnFieldsToExclude] = [],
     ):
         columns = self.columns or []
@@ -118,23 +108,15 @@ class DatasetSchema(BaseModel):
         text += f"- Table Name (for SQL): {self.dataset_name}\n"
         text += f"- Description: {self.dataset_description}\n"
         # TODO: Change project_custom_prompt only once per project.
-        if (
-            self.project_custom_prompt
-            and "project_custom_prompt" not in fields_to_exclude
-        ):
+        if self.project_custom_prompt and "project_custom_prompt" not in fields_to_exclude:
             text += "- Project Specific Instructions: "
             text += f"{self.project_custom_prompt}\n"
-        if (
-            self.dataset_custom_prompt
-            and "dataset_custom_prompt" not in fields_to_exclude
-        ):
+        if self.dataset_custom_prompt and "dataset_custom_prompt" not in fields_to_exclude:
             text += "- Dataset Specific Instructions: "
             text += f"{self.dataset_custom_prompt}\n"
         text += f"COLUMNS ({len(columns)} total):\n"
         for i, column in enumerate(columns, 1):
-            text += (
-                f"{i}. {column.format_for_prompt(columns_fields_to_exclude)}\n"
-            )
+            text += f"{i}. {column.format_for_prompt(columns_fields_to_exclude)}\n"
         return text
 
 

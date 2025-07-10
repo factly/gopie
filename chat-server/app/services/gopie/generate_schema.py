@@ -12,9 +12,7 @@ async def generate_summary(
     url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/summary/{dataset_name}"
     headers = {"accept": "application/json"}
 
-    sample_values_query = (
-        f"SELECT DISTINCT * FROM {dataset_name} LIMIT {limit}"
-    )
+    sample_values_query = f"SELECT DISTINCT * FROM {dataset_name} LIMIT {limit}"
     sample_data = await execute_sql(query=sample_values_query)
 
     data = None

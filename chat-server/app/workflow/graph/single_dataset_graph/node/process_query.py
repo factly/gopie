@@ -131,7 +131,6 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             "explanation": exp,
                             "result": result_data,
                             "success": True,
-                            "large_result": None,
                             "error": None,
                         }
                     )
@@ -143,7 +142,6 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             "explanation": exp,
                             "result": None,
                             "success": False,
-                            "large_result": None,
                             "error": error_str,
                         }
                     )
@@ -151,9 +149,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result["sql_results"] = sql_results
 
             return {
-                "messages": [
-                    AIMessage(content=json.dumps(query_result, indent=2))
-                ],
+                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
                 "query_result": query_result,
             }
 
@@ -161,9 +157,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result["response_for_non_sql"] = response_for_non_sql
 
             return {
-                "messages": [
-                    AIMessage(content=json.dumps(query_result, indent=2))
-                ],
+                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
                 "query_result": query_result,
             }
 

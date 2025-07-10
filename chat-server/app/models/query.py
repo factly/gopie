@@ -19,6 +19,12 @@ class SqlQueryInfo:
         }
 
 
+class ToolUsedResult(TypedDict):
+    tool_call_id: str
+    content: str
+    name: str | None
+
+
 @dataclass
 class SubQueryInfo:
     """
@@ -31,7 +37,7 @@ class SubQueryInfo:
     query_type: str | None = None
     error_message: list[dict] | None = None
     retry_count: int = 0
-    tool_used_result: Any = None
+    tool_used_result: list[ToolUsedResult] | None = None
     confidence_score: int = 5
     node_messages: dict = field(default_factory=dict)
 
@@ -57,8 +63,7 @@ class SubQueryInfo:
 class QueryInfo(TypedDict, total=False):
     tables_used: str | None
     query_type: str | None
-    query_result: Any
-    tool_used_result: Any
+    tool_used_result: list[ToolUsedResult] | None
     confidence_score: int
     node_messages: dict
 
@@ -85,43 +90,24 @@ class QueryResult:
         sql_queries: list[SqlQueryInfo],
         query_info: QueryInfo | None = None,
     ):
-        """
-        Add a subquery with detailed information
-        """
         subquery_info = SubQueryInfo(
             query_text=query_text,
             sql_queries=sql_queries,
             tables_used=query_info.get("tables_used") if query_info else None,
             query_type=query_info.get("query_type") if query_info else None,
-            tool_used_result=(
-                query_info.get("tool_used_result") if query_info else None
-            ),
-            confidence_score=(
-                query_info.get("confidence_score", 5) if query_info else 5
-            ),
-            node_messages=(
-                query_info.get("node_messages", {}) if query_info else {}
-            ),
+            tool_used_result=(query_info.get("tool_used_result") if query_info else None),
+            confidence_score=(query_info.get("confidence_score", 5) if query_info else 5),
+            node_messages=(query_info.get("node_messages", {}) if query_info else {}),
         )
         self.subqueries.append(subquery_info)
 
     def has_subqueries(self) -> bool:
-        """Check if there are any subqueries."""
         return len(self.subqueries) > 0
 
     def add_error_message(self, error_message: str, error_origin_type: str):
-        """
-        Add an error message to the current subquery
-        """
         self.subqueries[-1].add_error_message(error_message, error_origin_type)
 
     def set_node_message(self, node_name: str, node_message: Any):
-        """
-        Set a message from the current node for subsequent nodes
-
-        Args:
-            message: The message content to be passed along
-        """
         if self.has_subqueries():
             self.subqueries[-1].node_messages[node_name] = node_message
 

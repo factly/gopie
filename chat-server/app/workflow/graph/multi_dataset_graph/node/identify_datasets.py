@@ -35,11 +35,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
     3. Use semantic search only (LLM chooses from semantic search results)
     """
     query_index = state.get("subquery_index", 0)
-    user_query = (
-        state.get("subqueries")[query_index]
-        if state.get("subqueries")
-        else "No input"
-    )
+    user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
@@ -54,9 +50,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
-        required_dataset_schemas = await get_schema_by_dataset_ids(
-            dataset_ids=required_dataset_ids
-        )
+        required_dataset_schemas = await get_schema_by_dataset_ids(dataset_ids=required_dataset_ids)
 
         semantic_searched_datasets = []
         if need_semantic_search or not required_dataset_schemas:
@@ -69,8 +63,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 )
             except Exception as e:
                 logger.warning(
-                    f"Vector search error: {e!s}. Unable to retrieve dataset "
-                    "information."
+                    f"Vector search error: {e!s}. Unable to retrieve dataset information."
                 )
 
         if not required_dataset_schemas and not semantic_searched_datasets:
@@ -91,9 +84,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
             # convert data_query to conversational if no datasets found
             if query_type == "data_query":
-                query_result.subqueries[
-                    query_index
-                ].query_type = "conversational"
+                query_result.subqueries[query_index].query_type = "conversational"
 
             return {
                 "query_result": query_result,
@@ -102,8 +93,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
                     IntermediateStep.from_json(
                         {
                             "error": (
-                                "No relevant datasets found. "
-                                "Treating as conversational query."
+                                "No relevant datasets found. " "Treating as conversational query."
                             )
                         }
                     )
@@ -126,9 +116,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
         parsed_content = parser.parse(response_content)
 
         selected_datasets = parsed_content.get("selected_dataset", [])
-        selected_datasets.extend(
-            [schema.dataset_name for schema in required_dataset_schemas]
-        )
+        selected_datasets.extend([schema.dataset_name for schema in required_dataset_schemas])
         query_result.subqueries[query_index].tables_used = selected_datasets
 
         column_assumptions = parsed_content.get("column_assumptions", [])
@@ -141,19 +129,13 @@ async def identify_datasets(state: State, config: RunnableConfig):
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
 
-        all_available_schemas = (
-            required_dataset_schemas + semantic_searched_datasets
-        )
+        all_available_schemas = required_dataset_schemas + semantic_searched_datasets
 
         filtered_dataset_schemas = [
-            schema
-            for schema in all_available_schemas
-            if schema.dataset_name in selected_datasets
+            schema for schema in all_available_schemas if schema.dataset_name in selected_datasets
         ]
 
-        selected_dataset_ids = [
-            schema.dataset_id for schema in filtered_dataset_schemas
-        ]
+        selected_dataset_ids = [schema.dataset_id for schema in filtered_dataset_schemas]
 
         datasets_info = DatasetsInfo(
             schemas=filtered_dataset_schemas,
@@ -203,9 +185,7 @@ def route_from_datasets(state: State) -> str:
 
     query_result = state.get("query_result")
     query_index = state.get("subquery_index", 0)
-    last_message = (
-        state.get("messages", [])[-1] if state.get("messages") else None
-    )
+    last_message = state.get("messages", [])[-1] if state.get("messages") else None
 
     query_type = query_result.subqueries[query_index].query_type
     identified_datasets = state.get("identified_datasets")

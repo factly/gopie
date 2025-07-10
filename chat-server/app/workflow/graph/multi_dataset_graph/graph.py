@@ -17,9 +17,7 @@ from .node.response.stream_updates import (
 )
 from .types import ConfigSchema, InputState, OutputState, State
 
-graph_builder = StateGraph(
-    State, config_schema=ConfigSchema, input=InputState, output=OutputState
-)
+graph_builder = StateGraph(State, config_schema=ConfigSchema, input=InputState, output=OutputState)
 
 graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("identify_datasets", identify_datasets)
