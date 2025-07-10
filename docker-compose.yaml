@@ -159,6 +159,14 @@ services:
         /usr/bin/mc anonymous set public myminio/gopie
       "
 
+  gopie-reindex:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.reindex
+    env_file:
+        - ./config.env
+    networks:
+      - gopie
   #########################################################################
   #####                          COMPANION                            #####
   #########################################################################

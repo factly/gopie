@@ -10,7 +10,7 @@ import (
 type StoreRepository interface {
 	Connect(cfg *config.PostgresConfig) error
 	Close() error
-	GetDB() interface{}
+	GetDB() any
 }
 
 type ProjectStoreRepository interface {
@@ -20,6 +20,7 @@ type ProjectStoreRepository interface {
 	Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error)
 	SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error)
 	GetProjectByID(ctx context.Context, datasetID string) (*models.Project, error)
+	ListAllProjects(ctx context.Context) ([]*models.Project, error)
 }
 
 type DatasetStoreRepository interface {
@@ -38,6 +39,7 @@ type DatasetStoreRepository interface {
 	CreateDatasetSummary(ctx context.Context, datasetName string, summary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error)
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
+	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
 }
 
 type ChatStoreRepository interface {

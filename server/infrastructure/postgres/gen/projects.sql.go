@@ -144,6 +144,39 @@ func (q *Queries) GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int6
 	return count, err
 }
 
+const listAllProjects = `-- name: ListAllProjects :many
+select id, name, org_id, description, created_at, updated_at, created_by, updated_by from projects
+`
+
+func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
+	rows, err := q.db.Query(ctx, listAllProjects)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Project
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OrgID,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchProjects = `-- name: SearchProjects :many
 SELECT 
     p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,

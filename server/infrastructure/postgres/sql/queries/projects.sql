@@ -8,6 +8,9 @@ insert into projects (
 ) values ($1, $2, $3, $4, $5)
 returning *;
 
+-- name: ListAllProjects :many
+select * from projects;
+
 -- name: GetProject :one
 select 
     p.*,

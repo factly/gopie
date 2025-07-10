@@ -178,6 +178,45 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 	return i, err
 }
 
+const listAllDatasets = `-- name: ListAllDatasets :many
+select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
+`
+
+func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, listAllDatasets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Format,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchDatasets = `-- name: SearchDatasets :many
 select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
 where 

@@ -50,6 +50,10 @@ func (service *ProjectService) List(query string, limit, offset int, orgID strin
 	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
 }
 
+func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {
+	return service.projectRepo.ListAllProjects(context.Background())
+}
+
 type DatasetService struct {
 	datasetRepo repositories.DatasetStoreRepository
 }
@@ -114,4 +118,8 @@ func (services *DatasetService) GetDatasetSummary(datasetName string) (*models.D
 
 func (services *DatasetService) GetDatasetByID(datasetID string) (*models.Dataset, error) {
 	return services.datasetRepo.GetDatasetByID(context.Background(), datasetID)
+}
+
+func (service *DatasetService) ListAllDatasets() ([]*models.Dataset, error) {
+	return service.datasetRepo.ListAllDatasets(context.Background())
 }

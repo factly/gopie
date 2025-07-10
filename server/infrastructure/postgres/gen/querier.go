@@ -43,6 +43,8 @@ type Querier interface {
 	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
 	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
+	ListAllDatasets(ctx context.Context) ([]Dataset, error)
+	ListAllProjects(ctx context.Context) ([]Project, error)
 	ListChatsByUser(ctx context.Context, arg ListChatsByUserParams) ([]Chat, error)
 	ListDatabaseSources(ctx context.Context, arg ListDatabaseSourcesParams) ([]DatabaseSource, error)
 	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
