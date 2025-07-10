@@ -15,7 +15,7 @@ type Querier interface {
 	// Batch Operations
 	BatchAddDatasetsToProject(ctx context.Context, arg BatchAddDatasetsToProjectParams) error
 	BatchRemoveDatasetsFromProject(ctx context.Context, arg BatchRemoveDatasetsFromProjectParams) error
-	CountChatsByUser(ctx context.Context, createdBy pgtype.Text) (int64, error)
+	CountChatsByUser(ctx context.Context, arg CountChatsByUserParams) (int64, error)
 	CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error)
 	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
 	CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error)
@@ -25,22 +25,26 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DeleteChat(ctx context.Context, arg DeleteChatParams) error
 	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
-	DeleteDataset(ctx context.Context, id string) error
+	DeleteDataset(ctx context.Context, arg DeleteDatasetParams) error
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
-	DeleteProject(ctx context.Context, id string) error
-	GetChatById(ctx context.Context, arg GetChatByIdParams) (Chat, error)
+	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
+	GetChatById(ctx context.Context, id string) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
-	GetDatabaseSource(ctx context.Context, id pgtype.UUID) (DatabaseSource, error)
-	GetDataset(ctx context.Context, id string) (Dataset, error)
-	GetDatasetByName(ctx context.Context, name string) (Dataset, error)
+	GetDatabaseSource(ctx context.Context, arg GetDatabaseSourceParams) (DatabaseSource, error)
+	GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset, error)
+	GetDatasetByID(ctx context.Context, id string) (Dataset, error)
+	GetDatasetByName(ctx context.Context, arg GetDatasetByNameParams) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)
 	GetDatasetSummary(ctx context.Context, datasetName string) (DatasetSummary, error)
 	GetFailedDatasetUploadsCount(ctx context.Context) (int64, error)
-	GetProject(ctx context.Context, id string) (GetProjectRow, error)
+	GetProject(ctx context.Context, arg GetProjectParams) (GetProjectRow, error)
+	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
-	GetProjectsCount(ctx context.Context) (int64, error)
+	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
+	ListAllDatasets(ctx context.Context) ([]Dataset, error)
+	ListAllProjects(ctx context.Context) ([]Project, error)
 	ListChatsByUser(ctx context.Context, arg ListChatsByUserParams) ([]Chat, error)
 	ListDatabaseSources(ctx context.Context, arg ListDatabaseSourcesParams) ([]DatabaseSource, error)
 	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
@@ -50,6 +54,7 @@ type Querier interface {
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error)
 	UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams) (Chat, error)
+	UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error)
 	UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 }

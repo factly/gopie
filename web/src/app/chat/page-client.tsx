@@ -34,11 +34,15 @@ import { VoiceMode } from "@/components/chat/voice-mode";
 import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
+import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
+import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
+import { ReadOnlyMessage } from "@/components/chat/read-only-message";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSidebar } from "@/components/ui/sidebar";
 import { UIMessage } from "ai";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 // Type for the messages from AI SDK
 interface ChatMessage {
@@ -54,12 +58,14 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setLinkedDatasetId,
   searchParams,
   router,
+  currentUserId,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
   searchParams: URLSearchParams;
   router: ReturnType<typeof useRouter>;
+  currentUserId: string;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -72,7 +78,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     isLoading,
     error,
   } = useChats({
-    variables: { userID: "1", limit: 100 }, // Using hardcoded user ID "1" as in the API route
+    variables: { userID: currentUserId, limit: 100 },
   });
 
   // Flatten all pages, filter out null values, and sort chats by updated_at descending
@@ -125,7 +131,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     try {
       await deleteChat.mutateAsync({
         chatId,
-        userId: "1", // Using hardcoded user ID "1" as in the API route
+        userId: currentUserId,
       });
 
       // Invalidate the chats query to refetch data
@@ -260,6 +266,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       {chat.title || "New Chat"}
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <ChatVisibilityIndicator visibility={chat.visibility} />
                       <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
                         {dateString}
                       </span>
@@ -508,6 +515,10 @@ function ChatPageClient() {
   const [activeTab, setActiveTab] = useState("chat");
   const queryClient = useQueryClient();
 
+  // Get current user from auth store
+  const { user } = useAuthStore();
+  const currentUserId = user?.id || "1"; // Fallback to "1" if no user
+
   const {
     open: isSidebarOpen,
     isMobile,
@@ -599,7 +610,7 @@ function ChatPageClient() {
   } = useChatDetails({
     variables: {
       chatId: selectedChatId || "",
-      userId: "1", // Using hardcoded user ID "1" as in other queries
+      userId: currentUserId,
     },
     enabled: !!selectedChatId,
   });
@@ -879,6 +890,15 @@ function ChatPageClient() {
     }
   }, [selectedChatId, chatIdFromUrl, updateUrlWithChatId, isInitialized]);
 
+  // Refresh chat details when chat ID changes
+  useEffect(() => {
+    if (selectedChatId) {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-details", { chatId: selectedChatId }],
+      });
+    }
+  }, [selectedChatId, queryClient]);
+
   useEffect(() => {
     if (contextData) {
       try {
@@ -1016,6 +1036,17 @@ function ChatPageClient() {
     setIsStreaming(false);
   }, [stop]);
 
+  // Check if current user owns the chat
+  const isCurrentUserOwner =
+    !chatDetails || chatDetails.created_by === currentUserId;
+
+  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+
+  console.log("currentUserId", currentUserId);
+  console.log("chatDetails", chatDetails);
+  console.log("isCurrentUserOwner", isCurrentUserOwner);
+  console.log("chatDetails.created_by", chatDetails?.created_by);
+
   // Close sidebar when chat page opens
   useEffect(() => {
     if (isMobile) {
@@ -1041,13 +1072,20 @@ function ChatPageClient() {
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
                   >
-                    <span className="truncate">
-                      {isLoadingChatDetails && selectedChatId
-                        ? "Loading..."
-                        : selectedChatTitle
-                        ? selectedChatTitle
-                        : "Chat"}
-                    </span>
+                    <div className="flex items-center gap-2 truncate">
+                      {chatDetails?.visibility && (
+                        <ChatVisibilityIndicator
+                          visibility={chatDetails.visibility}
+                        />
+                      )}
+                      <span className="truncate">
+                        {isLoadingChatDetails && selectedChatId
+                          ? "Loading..."
+                          : selectedChatTitle
+                          ? selectedChatTitle
+                          : "Chat"}
+                      </span>
+                    </div>
                   </TabsTrigger>
                   <TabsTrigger
                     value="history"
@@ -1077,6 +1115,12 @@ function ChatPageClient() {
                   <MessageSquarePlus className="h-4 w-4 mr-1" />
                   New Chat
                 </Button>
+                {selectedChatId && (
+                  <ShareChatDialog
+                    chatId={selectedChatId}
+                    currentVisibility={chatDetails?.visibility || "private"}
+                  />
+                )}
                 {hasResults && (
                   <Button
                     variant="ghost"
@@ -1132,6 +1176,7 @@ function ChatPageClient() {
                   setLinkedDatasetId={setLinkedDatasetId}
                   searchParams={searchParams}
                   router={router}
+                  currentUserId={currentUserId}
                 />
               </TabsContent>
             </Tabs>
@@ -1162,23 +1207,31 @@ function ChatPageClient() {
             right: isResultsPanelOpen ? sqlPanelWidth : 0,
           }}
         >
-          <ChatInput
-            onStop={handleStop}
-            isStreaming={isStreaming}
-            selectedContexts={selectedContexts}
-            onSelectContext={handleSelectContext}
-            onRemoveContext={handleRemoveContext}
-            isVoiceModeActive={isVoiceModeActive}
-            setIsVoiceModeActive={setIsVoiceModeActive}
-            lockableContextIds={
-              selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-            }
-            hasContext={selectedContexts.length > 0}
-            input={input}
-            handleInputChange={handleInputChange}
-            handleSubmit={handleSubmit}
-            isLoading={isLoading}
-          />
+          {isCurrentUserOwner || isAuthDisabled ? (
+            <ChatInput
+              onStop={handleStop}
+              isStreaming={isStreaming}
+              selectedContexts={selectedContexts}
+              onSelectContext={handleSelectContext}
+              onRemoveContext={handleRemoveContext}
+              isVoiceModeActive={isVoiceModeActive}
+              setIsVoiceModeActive={setIsVoiceModeActive}
+              lockableContextIds={
+                selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+              }
+              hasContext={selectedContexts.length > 0}
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              isLoading={isLoading}
+            />
+          ) : selectedChatId ? (
+            <ReadOnlyMessage
+              chatOwner={chatDetails?.created_by}
+              chatVisibility={chatDetails?.visibility}
+              chatTitle={chatDetails?.title}
+            />
+          ) : null}
         </div>
       )}
       {isVoiceModeActive && latestAssistantMessage && (

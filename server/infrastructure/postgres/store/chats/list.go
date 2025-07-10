@@ -36,11 +36,12 @@ func (s *PostgresChatStore) GetChatMessages(ctx context.Context, chatID string) 
 	return chatMessages, nil
 }
 
-func (s *PostgresChatStore) ListUserChats(ctx context.Context, userID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
+func (s *PostgresChatStore) ListUserChats(ctx context.Context, userID string, orgID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
 	res, err := s.q.ListChatsByUser(ctx, gen.ListChatsByUserParams{
-		CreatedBy: pgtype.Text{String: userID, Valid: true},
-		Offset:    int32(pagination.Offset),
-		Limit:     int32(pagination.Limit),
+		CreatedBy:      pgtype.Text{String: userID, Valid: true},
+		OrganizationID: pgtype.Text{String: orgID, Valid: true},
+		Offset:         int32(pagination.Offset),
+		Limit:          int32(pagination.Limit),
 	})
 	if err != nil {
 		return nil, err
@@ -49,13 +50,21 @@ func (s *PostgresChatStore) ListUserChats(ctx context.Context, userID string, pa
 	chats := make([]*models.Chat, len(res))
 	for _, c := range res {
 		chats = append(chats, &models.Chat{
-			ID:        c.ID,
-			Title:     c.Title.String,
-			CreatedAt: c.CreatedAt.Time,
-			UpdatedAt: c.UpdatedAt.Time,
-			CreatedBy: c.CreatedBy.String,
+			ID:             c.ID,
+			Title:          c.Title.String,
+			CreatedAt:      c.CreatedAt.Time,
+			UpdatedAt:      c.UpdatedAt.Time,
+			CreatedBy:      c.CreatedBy.String,
+			Visibility:     string(c.Visibility.ChatVisibility),
+			OrganizationID: c.OrganizationID.String,
 		})
 	}
-	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, len(res), chats)
+
+	count, err := s.q.CountChatsByUser(ctx, gen.CountChatsByUserParams{
+		CreatedBy:      pgtype.Text{String: userID, Valid: true},
+		OrganizationID: pgtype.Text{String: orgID, Valid: true},
+	})
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), chats)
 	return &paginationView, nil
 }

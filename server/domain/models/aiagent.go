@@ -6,8 +6,9 @@ type UploadSchemaParams struct {
 }
 
 type AIChatMessage struct {
-	Content string `json:"content"`
-	Role    string `json:"role"`
+	Content   string `json:"content"`
+	Role      string `json:"role"`
+	ToolCalls []any  `json:"tool_calls"`
 }
 
 type AIAgentChatParams struct {

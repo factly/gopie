@@ -17,6 +17,7 @@ type RouterParams struct {
 	ProjectService *services.ProjectService
 	DatasetService *services.DatasetService
 	OlapService    *services.OlapService
+	AiAgentService *services.AIService
 }
 
 func Routes(router fiber.Router, params RouterParams) {
@@ -34,5 +35,21 @@ func Routes(router fiber.Router, params RouterParams) {
 		DatasetSvc:  params.DatasetService,
 		OlapService: params.OlapService,
 		ProjectSvc:  params.ProjectService,
+		AiAgentSvc:  params.AiAgentService,
+	})
+}
+
+func InternalRoutes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{
+		logger: params.Logger,
+		svc:    params.ProjectService,
+	}
+	router.Get("/:projectID", httpHandler.getByID)
+	datasets.InternalRoutes(router.Group("/:projectID/datasets"), datasets.RouterParams{
+		Logger:      params.Logger,
+		DatasetSvc:  params.DatasetService,
+		OlapService: params.OlapService,
+		ProjectSvc:  params.ProjectService,
+		AiAgentSvc:  params.AiAgentService,
 	})
 }

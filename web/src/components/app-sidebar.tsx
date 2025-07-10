@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { MessageSquareIcon, LifeBuoy, Send } from "lucide-react";
+import {
+  MessageSquareIcon,
+  LifeBuoy,
+  Send,
+  KeyIcon,
+  SettingsIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -23,6 +29,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -111,7 +120,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return null;
   }
 
+  // Check if we're on a settings page
+  const isSettingsPage = pathname.startsWith("/settings");
+
   const navSecondary = [
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: SettingsIcon,
+    },
     {
       title: "Support",
       url: "#",
@@ -125,6 +142,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ];
 
   const shouldShowPeek = state === "collapsed" && isPeeking;
+
+  // Settings navigation items
+  const settingsItems = [
+    {
+      title: "Manage Secrets",
+      url: "/settings/secrets",
+      icon: KeyIcon,
+    },
+  ];
+
+  // Settings navigation component
+  const NavSettings = () => {
+    const isActive = (href: string) => pathname === href;
+
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel className="flex items-center gap-2">
+          <SettingsIcon className="h-4 w-4" />
+          Settings
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {settingsItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.url)}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                >
+                  <Link href={item.url}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
 
   return (
     <>
@@ -250,17 +308,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuItem>
                   </SidebarMenu>
 
-                  <CommandSearch projectId={projectId} onNavigate={() => {}} />
+                  {!isSettingsPage && (
+                    <CommandSearch
+                      projectId={projectId}
+                      onNavigate={() => {}}
+                    />
+                  )}
                 </SidebarHeader>
                 <SidebarContent className="flex-1">
-                  <NavProjectsChat />
-                  <NavProjects />
+                  {isSettingsPage ? (
+                    <NavSettings />
+                  ) : (
+                    <>
+                      <NavProjectsChat />
+                      <NavProjects />
+                    </>
+                  )}
                   <NavSecondary items={navSecondary} className="mt-auto" />
                 </SidebarContent>
                 <SidebarFooter className="border-t">
-                  <div className="flex flex-col gap-2 p-2">
-                    <NavSchema />
-                  </div>
+                  {!isSettingsPage && (
+                    <div className="flex flex-col gap-2 p-2">
+                      <NavSchema />
+                    </div>
+                  )}
                   <NavUser />
                 </SidebarFooter>
               </div>
@@ -314,17 +385,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
           </SidebarMenu>
 
-          <CommandSearch projectId={projectId} onNavigate={() => {}} />
+          {!isSettingsPage && (
+            <CommandSearch projectId={projectId} onNavigate={() => {}} />
+          )}
         </SidebarHeader>
         <SidebarContent>
-          <NavProjectsChat />
-          <NavProjects />
+          {isSettingsPage ? (
+            <NavSettings />
+          ) : (
+            <>
+              <NavProjectsChat />
+              <NavProjects />
+            </>
+          )}
           <NavSecondary items={navSecondary} className="mt-auto" />
         </SidebarContent>
         <SidebarFooter className="border-t">
-          <div className="flex flex-col gap-2 p-2">
-            <NavSchema />
-          </div>
+          {!isSettingsPage && (
+            <div className="flex flex-col gap-2 p-2">
+              <NavSchema />
+            </div>
+          )}
           <NavUser />
         </SidebarFooter>
       </Sidebar>

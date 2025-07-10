@@ -32,6 +32,35 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 	}, nil
 }
 
+func (s *PostgresChatStore) UpdateChatVisibility(ctx context.Context, chatID, userID string, params *models.UpdateChatVisibilityParams) (*models.Chat, error) {
+	visibility := gen.NullChatVisibility{
+		ChatVisibility: gen.ChatVisibility(params.Visibility),
+		Valid:          params.Visibility != "",
+	}
+
+	c, err := s.q.UpdateChatVisibility(ctx, gen.UpdateChatVisibilityParams{
+		ID:         chatID,
+		Visibility: visibility,
+		CreatedBy: pgtype.Text{
+			String: userID,
+			Valid:  userID != "",
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.Chat{
+		ID:             c.ID,
+		Title:          c.Title.String,
+		CreatedAt:      c.CreatedAt.Time,
+		UpdatedAt:      c.UpdatedAt.Time,
+		CreatedBy:      c.CreatedBy.String,
+		Visibility:     string(c.Visibility.ChatVisibility),
+		OrganizationID: c.OrganizationID.String,
+	}, nil
+}
+
 func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error) {
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

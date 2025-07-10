@@ -4,6 +4,7 @@ package models
 type DatabaseSource struct {
 	ID               string `json:"id"`
 	ConnectionString string `json:"connection_string"`
+	OrganizationID   string `json:"organization_id"`
 	SQLQuery         string `json:"sql_query"`
 	CreatedAt        string `json:"created_at"`
 	UpdatedAt        string `json:"updated_at"`
@@ -17,6 +18,7 @@ type CreateDatabaseSourceParams struct {
 	Description      string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
 	ProjectID        string `json:"project_id" validate:"required,uuid"`
 	CreatedBy        string `json:"created_by" validate:"required"`
+	OrganizationID   string `json:"organization_id" validate:"required,string"`
 	Driver           string `json:"driver" validate:"required,oneof=postgres mysql" example:"postgres"`
 }
 

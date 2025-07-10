@@ -2,8 +2,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
+
+from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
 
 
 def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
@@ -76,18 +77,18 @@ You must provide a well-formatted version of the SQL query for UI display with:
 
 # RESPONSE FORMAT
 Respond in this JSON format:
-{{
+{
     "reasoning": "Explain your overall thought process for planning the query. Discuss whether datasets can be joined.",
     "sql_queries": [
-        {{
+        {
             "sql_query": "the SQL query to fetch the required data",
             "explanation": "brief explanation of the overall query strategy",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
-        }}
+        }
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
-}}
+}
 
 Note: If datasets are related and you only need one query,
 "sql_queries" should contain only one element. If datasets aren't
@@ -102,7 +103,7 @@ each dataset needed.
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
@@ -117,157 +118,85 @@ each dataset needed.
 
 def format_plan_query_input(
     user_query: str,
-    datasets_info: dict,
+    datasets_info: DatasetsInfo,
     error_messages: list | None = None,
     retry_count: int = 0,
     node_messages: dict | None = None,
 ) -> dict:
-    input_parts = [
-        f"USER QUERY: {user_query}",
-    ]
+    input_str = f"USER QUERY: {user_query}\n"
 
     if retry_count > 0:
-        input_parts.append(f"RETRY ATTEMPT: {retry_count}/3")
+        input_str += f"RETRY ATTEMPT: {retry_count}/3\n"
 
     if datasets_info:
-        input_parts.append("\n--- DATASETS INFORMATION ---")
+        input_str += "\n--- DATASETS INFORMATION ---\n"
 
         schemas = datasets_info.get("schemas", [])
         if schemas:
-            input_parts.append(f"\nDataset Schemas ({len(schemas)}):")
+            input_str += f"\nDataset Schemas ({len(schemas)}):\n"
 
             for i, schema in enumerate(schemas, 1):
-                schema_section = [
-                    f"\n--- DATASET {i}: {schema.get('name', 'Unknown')} ---"
-                ]
-                schema_section.append(
-                    f"Table Name: {schema.get('dataset_name', 'N/A')}"
-                )
+                schema_section = f"\n--- DATASET {i}: ---\n"
+                schema_section += schema.format_for_prompt()
+                input_str += schema_section + "\n"
 
-                if schema.get("dataset_description"):
-                    schema_section.append(
-                        f"Description: {schema.get('dataset_description')}"
-                    )
-
-                columns = schema.get("columns", [])
-                if columns:
-                    schema_section.append(f"Columns ({len(columns)}):")
-
-                    for column in columns:
-                        col_name = column.get("column_name", "unknown")
-                        col_type = column.get("column_type", "unknown")
-                        col_line = f"- {col_name} ({col_type})"
-
-                        if column.get("column_description"):
-                            col_line += (
-                                f" - {column.get('column_description')}"
-                            )
-
-                        if col_type in [
-                            "BIGINT",
-                            "INTEGER",
-                            "DOUBLE",
-                            "FLOAT",
-                            "DECIMAL",
-                            "NUMERIC",
-                        ]:
-                            stats_info = []
-                            if (
-                                column.get("min") is not None
-                                and column.get("max") is not None
-                            ):
-                                stats_info.append(
-                                    f"Range: {column.get('min')}-{column.get('max')}"
-                                )
-                            if column.get("avg") is not None:
-                                stats_info.append(f"Avg: {column.get('avg')}")
-                            if stats_info:
-                                col_line += f" [{', '.join(stats_info)}]"
-
-                        sample_values = column.get("sample_values", [])
-                        if sample_values:
-                            unique_samples = list(
-                                dict.fromkeys(sample_values)
-                            )[:3]
-                            samples_str = ", ".join(
-                                str(s) for s in unique_samples if s is not None
-                            )
-                            if samples_str:
-                                col_line += f" (samples: {samples_str})"
-
-                        schema_section.append(col_line)
-
-                input_parts.extend(schema_section)
-
-        column_requirements = datasets_info.get(
-            "correct_column_requirements", {}
-        )
+        column_requirements = datasets_info["correct_column_requirements"]
         if column_requirements:
-            input_parts.append("\n--- COLUMN VALUE ANALYSIS ---")
-            input_parts.append(
-                "Verified column values from database analysis:"
-            )
+            input_str += "\n--- COLUMN VALUE ANALYSIS ---\n"
+            input_str += "Verified column values from database analysis:"
 
-            datasets_analysis = column_requirements.get("datasets", {})
+            datasets_analysis = column_requirements.datasets
             for dataset_name, analysis in datasets_analysis.items():
-                input_parts.append(f"\nDataset: {dataset_name}")
-                columns_analyzed = analysis.get("columns_analyzed", [])
+                input_str += f"\nDataset: {dataset_name}\n"
+                columns_analyzed = analysis.columns_analyzed
 
                 for col_analysis in columns_analyzed:
-                    col_name = col_analysis.get("column_name", "unknown")
-                    input_parts.append(f"- Column: {col_name}")
+                    col_name = col_analysis.column_name
+                    input_str += f"- Column: {col_name}\n"
 
-                    verified_values = col_analysis.get("verified_values", [])
+                    verified_values = col_analysis.verified_values
                     if verified_values:
                         exact_vals = [
-                            v.get("value")
+                            v.value
                             for v in verified_values
-                            if v.get("found_in_database")
+                            if v.found_in_database
                         ]
                         if exact_vals:
-                            input_parts.append(
-                                f"  ✓ Exact matches found: {', '.join(exact_vals)}"
-                            )
+                            input_str += f"  ✓ Exact matches found: {', '.join(exact_vals)}"
 
-                    suggested_alternatives = col_analysis.get(
-                        "suggested_alternatives", []
+                    suggested_alternatives = (
+                        col_analysis.suggested_alternatives
                     )
                     if suggested_alternatives:
                         for alt in suggested_alternatives:
-                            if alt.get("found_similar_values"):
-                                similar_vals = alt.get("similar_values", [])[
-                                    :3
-                                ]  # Limit to 3
+                            if alt.found_similar_values:
+                                similar_vals = alt.similar_values[:5]
                                 if similar_vals:
-                                    input_parts.append(
-                                        f"  ⚠ Similar values for '{alt.get('requested_value')}': {', '.join(similar_vals)}"
-                                    )
+                                    input_str += f"  ⚠ Similar values for '{alt.requested_value}': {', '.join(similar_vals)}"
 
     if error_messages and retry_count > 0:
-        input_parts.append("\n--- PREVIOUS ERRORS ---")
-        input_parts.append(
+        input_str += "\n--- PREVIOUS ERRORS ---\n"
+        input_str += (
             f"Previous attempt {retry_count} failed. Errors encountered:"
         )
         for error in error_messages:
             for error_type, error_msg in error.items():
-                input_parts.append(f"- {error_type}: {error_msg}")
-        input_parts.append(
+                input_str += f"- {error_type}: {error_msg}\n"
+        input_str += (
             "Please analyze these errors and generate corrected SQL queries."
         )
 
     if node_messages:
-        input_parts.append("\n--- WORKFLOW CONTEXT ---")
-        input_parts.append("Previous workflow steps information:")
+        input_str += "\n--- WORKFLOW CONTEXT ---"
+        input_str += "Previous workflow steps information:"
         for node, message in node_messages.items():
             if isinstance(message, dict):
-                input_parts.append(f"- {node}:")
+                input_str += f"- {node}:"
                 for key, value in message.items():
-                    input_parts.append(f"  {key}: {value}")
+                    input_str += f"  {key}: {value}"
             else:
-                input_parts.append(f"- {node}: {message}")
-
-    formatted_input = "\n".join(input_parts)
+                input_str += f"- {node}: {message}"
 
     return {
-        "input": formatted_input,
+        "input": input_str,
     }

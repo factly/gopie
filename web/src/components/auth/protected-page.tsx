@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { redirect } from "next/navigation";
 import { PageLoading } from "@/components/ui/loading";
 
@@ -10,22 +10,30 @@ interface ProtectedPageProps {
 }
 
 export function ProtectedPage({ children }: ProtectedPageProps) {
-  const { status, data: session } = useAuthSession();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+  const { isAuthenticated, isLoading, user, checkSession } = useAuthStore();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const [hasCheckedSession, setHasCheckedSession] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isAuthDisabled && !hasCheckedSession) {
+      checkSession();
+      setHasCheckedSession(true);
+    }
+  }, [checkSession, hasCheckedSession, isAuthDisabled]);
 
   // Allow access if auth is disabled
   if (isAuthDisabled) {
     return <>{children}</>;
   }
 
-  // Show loading state
-  if (status === "loading") {
+  // Show loading state while checking session
+  if (isLoading || !hasCheckedSession) {
     return <PageLoading />;
   }
 
   // Redirect to login if not authenticated
-  if (!session?.user) {
-    redirect("/api/auth/signin");
+  if (!isAuthenticated || !user) {
+    redirect("/auth/login");
   }
 
   return <>{children}</>;

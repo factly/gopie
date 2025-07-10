@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
 	github.com/elliot14A/meterus-go v0.1.7
 	github.com/go-playground/validator/v10 v10.25.0
+	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/contrib/fiberzap v1.0.2
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/gofiber/swagger v1.1.1

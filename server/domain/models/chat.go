@@ -54,11 +54,13 @@ type D_AiChatResponse struct {
 }
 
 type Chat struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	CreatedBy string    `json:"created_by"`
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	CreatedBy      string    `json:"created_by"`
+	Visibility     string    `json:"visibility"`
+	OrganizationID string    `json:"organization_id"`
 }
 
 type ChatMessage struct {
@@ -71,19 +73,22 @@ type ChatMessage struct {
 }
 
 type ChatWithMessages struct {
-	ID        string        `json:"id"`
-	Title     string        `json:"title"`
-	CreatedAt time.Time     `json:"created_at"`
-	UpdatedAt time.Time     `json:"updated_at"`
-	CreatedBy string        `json:"created_by"`
-	Messages  []ChatMessage `json:"messages"`
+	ID             string        `json:"id"`
+	Title          string        `json:"title"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedBy      string        `json:"created_by"`
+	Messages       []ChatMessage `json:"messages"`
+	Visibility     string        `json:"visibility"`
+	OrganizationID string        `json:"organization_id"`
 }
 
 type CreateChatParams struct {
-	ID        string        `json:"id"`
-	Title     string        `json:"title"`
-	CreatedBy string        `json:"created_by"`
-	Messages  []ChatMessage `json:"messages"`
+	ID             string        `json:"id"`
+	Title          string        `json:"title"`
+	CreatedBy      string        `json:"created_by"`
+	Messages       []ChatMessage `json:"messages"`
+	OrganizationID string        `json:"organization_id"`
 }
 
 type Choice struct {
@@ -98,7 +103,7 @@ type Delta struct {
 	FunctionCall *FunctionCall `json:"function_call"`
 	Refusal      any           `json:"refusal"`
 	Role         *string       `json:"role"`
-	ToolCalls    []ToolCall    `json:"tool_calls"`
+	ToolCalls    []any         `json:"tool_calls"`
 }
 
 type FunctionCall struct {
@@ -106,14 +111,12 @@ type FunctionCall struct {
 	Name      string `json:"name"`
 }
 
-type ToolCall struct {
-	Index    int          `json:"index"`
-	ID       string       `json:"id"`
-	Function ToolFunction `json:"function"`
-	Type     string       `json:"type"`
-}
-
 type ToolFunction struct {
 	Arguments string `json:"arguments"`
 	Name      string `json:"name"`
+}
+
+type UpdateChatVisibilityParams struct {
+	OrganizationID string
+	Visibility     string
 }

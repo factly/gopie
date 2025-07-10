@@ -54,27 +54,6 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 
-  let currentAssistantMessage: {
-    id: string;
-    textContent: string;
-    streamingContent: string;
-    createdAt: Date;
-    toolInvocations: Array<{
-      state: string;
-      step: number;
-      toolCallId: string;
-      toolName: string;
-      args: Record<string, unknown>;
-      result: {
-        type: string;
-        toolCallId: string;
-        toolName: string;
-        args: Record<string, unknown>;
-      };
-    }>;
-    parts: Array<Record<string, unknown>>;
-  } | null = null;
-
   for (const chunk of sortedChunks) {
     if (!chunk.choices || chunk.choices.length === 0) continue;
 
@@ -87,12 +66,6 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       delta.role === "user" &&
       delta.content
     ) {
-      // Finalize any pending assistant message before adding user message
-      if (currentAssistantMessage) {
-        finalizeAssistantMessage(currentAssistantMessage, messages);
-        currentAssistantMessage = null;
-      }
-
       messages.push({
         id: chunk.id,
         role: "user",
@@ -108,51 +81,53 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       continue;
     }
 
-    // Handle chat completion chunks - these need to be aggregated
-    if (chunk.object === "chat.completion.chunk") {
-      // Initialize assistant message if not already started
-      if (!currentAssistantMessage) {
-        currentAssistantMessage = {
-          id: chunk.id, // Use first chunk's ID as the message ID
-          textContent: "",
-          streamingContent: "",
-          createdAt: new Date(chunk.created_at),
-          toolInvocations: [],
-          parts: [{ type: "step-start" }],
+    // Handle assistant messages - these are now complete messages
+    if (
+      chunk.object === "chat.completion.chunk" &&
+      delta.role === "assistant" &&
+      delta.content
+    ) {
+      const toolInvocations: Array<{
+        state: string;
+        step: number;
+        toolCallId: string;
+        toolName: string;
+        args: Record<string, unknown>;
+        result: {
+          type: string;
+          toolCallId: string;
+          toolName: string;
+          args: Record<string, unknown>;
         };
-      }
+      }> = [];
 
-      // Handle final assistant message (the one with role "assistant")
-      if (delta.role === "assistant" && delta.content) {
-        // This is the final message with complete content
-        currentAssistantMessage.textContent = delta.content;
-        continue;
-      }
+      const parts: Array<Record<string, unknown>> = [{ type: "step-start" }];
 
-      // Handle tool calls
-      if (delta.tool_calls) {
-        for (const toolCall of delta.tool_calls) {
+      // Process tool calls if they exist
+      if (delta.tool_calls && delta.tool_calls.length > 0) {
+        for (let i = 0; i < delta.tool_calls.length; i++) {
+          const toolCall = delta.tool_calls[i];
           try {
             const args = JSON.parse(toolCall.function.arguments);
 
             const toolInvocation = {
               state: "result",
-              step: 0,
+              step: i,
               toolCallId: toolCall.id,
               toolName: toolCall.function.name,
               args: args,
               result: {
                 type: "tool-call",
-                toolCallId: toolCall.function.name,
+                toolCallId: toolCall.id,
                 toolName: toolCall.function.name,
                 args: args,
               },
             };
 
-            currentAssistantMessage.toolInvocations.push(toolInvocation);
+            toolInvocations.push(toolInvocation);
 
             // Add tool invocation to parts
-            currentAssistantMessage.parts.push({
+            parts.push({
               type: "tool-invocation",
               toolInvocation: toolInvocation,
             });
@@ -162,69 +137,27 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
         }
       }
 
-      // Handle content chunks (streaming assistant response)
-      if (delta.content && !delta.role) {
-        // Append content to the streaming content
-        currentAssistantMessage.streamingContent += delta.content;
+      // Add text content to parts
+      if (delta.content) {
+        parts.push({
+          type: "text",
+          text: delta.content,
+        });
       }
+
+      messages.push({
+        id: chunk.id,
+        role: "assistant",
+        content: delta.content,
+        createdAt: new Date(chunk.created_at),
+        parts: parts,
+        toolInvocations: toolInvocations,
+      } as UIMessage);
+      continue;
     }
   }
 
-  // Finalize any remaining assistant message
-  if (currentAssistantMessage) {
-    finalizeAssistantMessage(currentAssistantMessage, messages);
-  }
-
   return messages;
-}
-
-function finalizeAssistantMessage(
-  assistantMessage: {
-    id: string;
-    textContent: string;
-    streamingContent: string;
-    createdAt: Date;
-    toolInvocations: Array<{
-      state: string;
-      step: number;
-      toolCallId: string;
-      toolName: string;
-      args: Record<string, unknown>;
-      result: {
-        type: string;
-        toolCallId: string;
-        toolName: string;
-        args: Record<string, unknown>;
-      };
-    }>;
-    parts: Array<Record<string, unknown>>;
-  },
-  messages: UIMessage[]
-) {
-  // Combine final text content and streaming content
-  let finalContent = assistantMessage.textContent;
-  if (assistantMessage.streamingContent) {
-    // If we have streaming content, combine it with the final content
-    finalContent =
-      assistantMessage.textContent + assistantMessage.streamingContent;
-  }
-
-  // Add text part if we have content
-  if (finalContent) {
-    assistantMessage.parts.push({
-      type: "text",
-      text: finalContent,
-    });
-  }
-
-  messages.push({
-    id: assistantMessage.id,
-    role: "assistant",
-    content: finalContent,
-    createdAt: assistantMessage.createdAt,
-    parts: assistantMessage.parts,
-    toolInvocations: assistantMessage.toolInvocations,
-  } as UIMessage);
 }
 
 async function fetchMessages(

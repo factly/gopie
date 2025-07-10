@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -15,7 +14,7 @@ type ServerConfig struct {
 	Port string
 }
 
-type ApiServerConfig struct {
+type InternalServerConfig struct {
 	Host string
 	Port string
 }
@@ -40,18 +39,18 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server        ServerConfig
-	S3            S3Config
-	Logger        LoggerConfig
-	OlapDB        OlapDBConfig
-	PortKey       PortKeyConfig
-	Meterus       MeterusConfig
-	Postgres      PostgresConfig
-	Zitadel       ZitadelConfig
-	AIAgent       AIAgentConfig
-	ApiServer     ApiServerConfig
-	EncryptionKey string
-	EnabledServers []string
+	Server         ServerConfig
+	S3             S3Config
+	Logger         LoggerConfig
+	OlapDB         OlapDBConfig
+	PortKey        PortKeyConfig
+	Meterus        MeterusConfig
+	Postgres       PostgresConfig
+	Zitadel        ZitadelConfig
+	AIAgent        AIAgentConfig
+	InternalServer InternalServerConfig
+	EnableZitadel  bool
+	EncryptionKey  string
 }
 
 type OlapDBConfig struct {
@@ -94,13 +93,10 @@ type AIAgentConfig struct {
 }
 
 type ZitadelConfig struct {
-	Protocol            string
-	Domain              string
-	InsecurePort        string
-	ProjectID           string
-	PersonalAccessToken string
-	ServiceUserID       string
-	LoginURL            string
+	Protocol     string
+	Domain       string
+	InsecurePort string
+	ProjectID    string
 }
 
 func initializeViper() error {
@@ -135,12 +131,15 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
 		{config.EncryptionKey, "encryption key"},
-		// {config.Zitadel.Protocol, "zitadel protocol"},
-		// {config.Zitadel.Domain, "zitadel domain"},
-		// {config.Zitadel.ProjectID, "zitadel project id"},
-		// {config.Zitadel.PersonalAccessToken, "zitadel personal access token"},
-		// {config.Zitadel.ServiceUserID, "zitadel service user id"},
-		// {config.Zitadel.LoginURL, "zitadel app login url"},
+	}
+
+	if config.EnableZitadel {
+		validations = append(validations,
+			validation{config.Zitadel.Protocol, "zitadel protocol"},
+			validation{config.Zitadel.Domain, "zitadel domain"},
+			validation{config.Zitadel.InsecurePort, "zitadel insecure port"},
+			validation{config.Zitadel.ProjectID, "zitadel project id"},
+		)
 	}
 
 	if config.OlapDB.DB == "" {
@@ -223,8 +222,8 @@ func ensureDirectoryExists(path string) error {
 func setDefaults() {
 	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
 	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
-	viper.SetDefault("GOPIE_API_SERVER_HOST", "localhost")
-	viper.SetDefault("GOPIE_API_SERVER_PORT", "8001")
+	viper.SetDefault("GOPIE_INTERNAL_SERVER_HOST", "localhost")
+	viper.SetDefault("GOPIE_INTERNAL_SERVER_PORT", "8001")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_S3_SSL", false)
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
@@ -232,7 +231,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
 	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
 	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
-	viper.SetDefault("GOPIE_ENABLED_SERVERS", "api,webapp") // Default to running both servers
+	viper.SetDefault("GOPIE_ENABLE_ZITADEL", false)
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
@@ -251,9 +250,9 @@ func LoadConfig() (*GopieConfig, error) {
 			Host: viper.GetString("GOPIE_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_SERVER_PORT"),
 		},
-		ApiServer: ApiServerConfig{
-			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
-			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
+		InternalServer: InternalServerConfig{
+			Host: viper.GetString("GOPIE_INTERNAL_SERVER_HOST"),
+			Port: viper.GetString("GOPIE_INTERNAL_SERVER_PORT"),
 		},
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
@@ -289,32 +288,17 @@ func LoadConfig() (*GopieConfig, error) {
 			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
 		},
 		Zitadel: ZitadelConfig{
-			Protocol:            viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
-			Domain:              viper.GetString("GOPIE_ZITADEL_DOMAIN"),
-			InsecurePort:        viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
-			ProjectID:           viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
-			PersonalAccessToken: viper.GetString("GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN"),
-			ServiceUserID:       viper.GetString("GOPIE_ZITADEL_SERVICE_USER_ID"),
-			LoginURL:            viper.GetString("GOPIE_ZITADEL_APP_LOGIN_URL"),
+			Protocol:     viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
+			Domain:       viper.GetString("GOPIE_ZITADEL_DOMAIN"),
+			InsecurePort: viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
+			ProjectID:    viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
 		},
+		EnableZitadel: viper.GetBool("GOPIE_ENABLE_ZITADEL"),
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
-
-	enabledServersStr := viper.GetString("GOPIE_ENABLED_SERVERS")
-	var enabledServersList []string
-	if enabledServersStr != "" {
-		servers := strings.Split(enabledServersStr, ",")
-		for _, server := range servers {
-			trimmedServer := strings.TrimSpace(server)
-			if trimmedServer != "" {
-				enabledServersList = append(enabledServersList, trimmedServer)
-			}
-		}
-	}
-	config.EnabledServers = enabledServersList
 
 	var err error
 	if config, err = validateConfig(config); err != nil {

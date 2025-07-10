@@ -1,0 +1,3 @@
+# requirements.txt
+requests
+boto3

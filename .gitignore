@@ -259,5 +259,6 @@ data
 
 TODO.md
 img
+config-noauth.env
 agent_test.ipynb
 test_cases.py

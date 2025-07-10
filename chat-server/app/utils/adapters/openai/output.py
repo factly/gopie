@@ -45,7 +45,7 @@ class OpenAIOutputAdapter:
     ) -> AsyncIterable[str]:
         async for chunk in self._create_chat_completion_stream(event_chunks):
             if chunk:
-                yield f"data: {chunk.model_dump_json()}\n\n"
+                yield f"data: {chunk.model_dump_json(exclude_defaults=True)}\n\n"
         yield "data: [DONE]\n\n"
 
     def create_tool_call_chunk(

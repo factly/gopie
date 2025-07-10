@@ -32,4 +32,5 @@ func Routes(router fiber.Router, params RouterParams) {
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)
 	router.Delete("/:chatID", httpHandler.deleteChat)
 	router.Get("/:chatID", httpHandler.details)
+	router.Put("/:chatID/visibility", httpHandler.updateVisibility)
 }

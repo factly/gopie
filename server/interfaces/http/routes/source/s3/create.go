@@ -6,6 +6,7 @@ import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -41,6 +42,15 @@ type uploadRequestBody struct {
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /source/s3/upload [post]
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
+	orgID := ctx.Get(middleware.OrganizationIDHeader)
+	if orgID == "" {
+		h.logger.Error("Organization ID header is missing")
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":   "Organization ID header is required",
+			"message": "Please provide the organization ID in the request header",
+			"code":    fiber.StatusForbidden,
+		})
+	}
 	// Get request body from context
 	var body uploadRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
@@ -62,7 +72,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	}
 
 	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID)
+	project, err := h.projectSvc.Details(body.ProjectID, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
@@ -97,6 +107,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			UpdatedBy:   body.CreatedBy,
 			CreatedBy:   body.CreatedBy,
 			Alias:       body.Alias,
+			OrgID:       orgID,
 		})
 		if e != nil {
 			h.logger.Error("Error creating dataset record", zap.Error(e))
@@ -153,6 +164,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		Alias:       body.Alias,
 		CreatedBy:   body.CreatedBy,
 		UpdatedBy:   body.CreatedBy,
+		OrgID:       orgID,
 	})
 	if err != nil {
 		h.logger.Error("Error creating dataset record", zap.Error(err))
@@ -172,7 +184,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error fetching dataset summary", zap.Error(err))
 		// Clean up the dataset record and OLAP table since dataset summary fetch failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}
@@ -206,7 +218,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logger.Error("Error creating dataset summary", zap.Error(err))
 		// Clean up the dataset record and OLAP table since dataset summary creation failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}
@@ -233,7 +245,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", res.TableName))
 		}
 
-		deleteErr := h.datasetSvc.Delete(dataset.ID)
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
 		}

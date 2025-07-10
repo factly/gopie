@@ -28,6 +28,6 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 }
 
 func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {
-	httpHandler := httpHandler{logger: logger, config: config}
-	router.Post("/authorize", httpHandler.authorize)
+	// httpHandler := httpHandler{logger: logger, config: config}
+	// router.Post("/authorize", httpHandler.authorize)
 }

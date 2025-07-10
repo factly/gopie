@@ -12,12 +12,14 @@ create table if not exists datasets(
     -- in bytes
     size bigint,
     file_path text not null,
-    columns jsonb
+    columns jsonb,
+    org_id text
 );
 
 create table if not exists projects(
     id text primary key default uuid_generate_v4(),
     name text not null,
+    org_id text,
     description text default null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
@@ -49,13 +51,18 @@ create table if not exists database_sources (
     connection_string text not null,
     sql_query text not null,
     driver text not null,
+    org_id text default null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now()
 );
 
+create type chat_visibility as enum ('private', 'public', 'organization');
+
 create table if not exists chats (
     id text primary key,
     title text,
+    visibility chat_visibility default 'private',
+    organization_id text default null,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now(),
     created_by text default null

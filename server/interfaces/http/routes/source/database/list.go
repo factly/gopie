@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -20,6 +21,8 @@ import (
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /source/database [get]
 func (h *httpHandler) list(ctx *fiber.Ctx) error {
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+
 	pageStr := ctx.Query("page", "1")
 	limitStr := ctx.Query("limit", strconv.Itoa(models.DefaultLimit))
 
@@ -45,7 +48,7 @@ func (h *httpHandler) list(ctx *fiber.Ctx) error {
 
 	offset := (page - 1) * limit
 
-	sources, err := h.dbSourceSvc.List(limit, offset)
+	sources, err := h.dbSourceSvc.List(limit, offset, orgID)
 	if err != nil {
 		h.logger.Error("Error listing database sources", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

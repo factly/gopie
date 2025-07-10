@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 from qdrant_client.http.models import FieldCondition, Filter, MatchAny
 
 from app.core.config import settings
-from app.services.qdrant.qdrant_setup import initialize_qdrant_client
+from app.services.qdrant.qdrant_setup import QdrantSetup
 
 
 @tool
@@ -37,7 +37,7 @@ async def get_datasets_schemas(
         A dictionary with schema information for the provided dataset ids.
     """
     try:
-        client = initialize_qdrant_client()
+        client = await QdrantSetup.get_async_client()
 
         filter_conditions = []
 
@@ -58,7 +58,7 @@ async def get_datasets_schemas(
             )
 
         if filter_conditions:
-            search_result = client.scroll(
+            search_result = await client.scroll(
                 collection_name=settings.QDRANT_COLLECTION,
                 scroll_filter=Filter(should=filter_conditions),
             )
@@ -66,7 +66,7 @@ async def get_datasets_schemas(
         schemas = []
         for result in search_result:
             if result:
-                payload = result[0].payload  # type: ignore
+                payload = result[0].payload
                 if payload:
                     schema = json.loads(payload.get("page_content", "{}"))
                     schemas.append(schema)

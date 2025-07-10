@@ -31,6 +31,7 @@ type Dataset struct {
 	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// UpdatedBy represents the user who last updated the dataset
 	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID     string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
 }
 
 // ListProjectDatasetsResults represents a dataset in project listing
@@ -99,7 +100,8 @@ type CreateDatasetParams struct {
 	// Column definitions
 	Columns []map[string]any `json:"columns"`
 	// Size of the dataset in bytes
-	Size int `json:"size" example:"1048576"`
+	Size  int    `json:"size" example:"1048576"`
+	OrgID string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
 }
 
 // UpdateDatasetParams represents parameters for updating a dataset

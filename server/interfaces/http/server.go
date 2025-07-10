@@ -5,14 +5,12 @@ import (
 	"log"
 	"sync"
 
-	"github.com/elliot14A/meterus-go/client"
 	"github.com/factly/gopie/application/services"
 	_ "github.com/factly/gopie/docs" // Import generated Swagger docs
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/aiagent"
 	"github.com/factly/gopie/infrastructure/duckdb"
-	"github.com/factly/gopie/infrastructure/meterus"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
@@ -20,30 +18,8 @@ import (
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
-	"github.com/factly/gopie/interfaces/http/middleware"
-	"github.com/factly/gopie/interfaces/http/routes/api"
-	"github.com/factly/gopie/interfaces/http/routes/api/ai"
-	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
-	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
-	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
-	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
-	"github.com/gofiber/contrib/fiberzap"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/swagger"
 	"go.uber.org/zap"
-	"fmt"
 )
-
-// contains checks if a string is present in a slice of strings.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
 
 // @title GoPie API
 // @version 1.1
@@ -70,6 +46,7 @@ func ServeHttp() error {
 		log.Fatal("error initializing logger: ", err)
 		return err
 	}
+	appLogger.Info("logger initialized")
 
 	// Initialize repositories and services
 	source := s3.NewS3SourceRepository(&cfg.S3, appLogger)
@@ -117,178 +94,32 @@ func ServeHttp() error {
 		DbSourceService: dbSourceService,
 	}
 
-	// Create a wait group to wait for both servers to shut down
 	var wg sync.WaitGroup
+
+	// Create a wait group to wait for both servers to shut down
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	wg.Add(2)
 
-	// Determine which servers to start based on config
-	runWebAppServer := contains(cfg.EnabledServers, "webapp")
-	runApiServer := contains(cfg.EnabledServers, "api")
-
-	if !runWebAppServer && !runApiServer {
-		errMsg := "No servers enabled to start. Check GOPIE_ENABLED_SERVERS. Valid options: 'api', 'webapp'."
-		appLogger.Error(errMsg)
-		return fmt.Errorf("%s", errMsg)
-	}
-
-	if runWebAppServer {
-		appLogger.Info("Web Application server is enabled via config. Starting in a goroutine...")
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := serveWebApp(cfg, params, ctx); err != nil {
-				appLogger.Error("Web Application server failed to start", zap.Error(err))
-				cancel()
-			}
-		}()
-	} else {
-		appLogger.Info("Web Application server is disabled via config.")
-	}
-
-	if runApiServer {
-		appLogger.Info("API server is enabled via config. Starting...")
-		if err := serveApiServer(cfg, params); err != nil {
-			appLogger.Error("API server failed to start", zap.Error(err))
-			cancel()
-			return err
-		}
-	} else {
-		appLogger.Info("API server is disabled via config. Main goroutine will wait for other active servers if any.")
-	}
-
-	// Wait for both servers to shut down
-	wg.Wait()
-	return nil
-}
-
-// serveWebApp starts the web application server
-func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
-	// zitadel interceptor setup
-	// zitadel.SetupZitadelInterceptor(cfg, appLogger)
-
-	appLogger := params.Logger
-
-	appLogger.Info("Initializing main server",
-		zap.String("host", cfg.Server.Host),
-		zap.String("port", cfg.Server.Port))
-
-	app := fiber.New(fiber.Config{
-		CaseSensitive: true,
-		AppName:       "gopie",
-	})
-
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id",
-		AllowCredentials: true,
-		MaxAge:           86400,
-	}))
-
-	app.Use(fiberzap.New(fiberzap.Config{
-		Logger: appLogger.Logger,
-	}))
-
-	// Swagger route
-	app.Get("/swagger/*", swagger.HandlerDefault)
-
-	// auth route
-	api.AuthRoutes(app.Group("/v1/oauth"), appLogger, cfg)
-
-	// Only enable authorization if meterus is configured
-	if cfg.Meterus.ApiKey == "" || cfg.Meterus.Addr == "" {
-		appLogger.Warn("meterus is not configured, authorization will be disabled")
-	} else {
-		appLogger.Info("meterus config found, initializing...")
-		meterusClient, err := client.NewMeterusClient(cfg.Meterus.Addr, cfg.Meterus.ApiKey)
-		if err != nil {
-			appLogger.Error("error creating meterus client", zap.Error(err))
-			return err
-		}
-		appLogger.Info("meterus client created")
-		meterusValidator := meterus.NewMeterusApiKeyValidator(meterusClient)
-		app.Use(middleware.WithApiKeyAuth(meterusValidator, appLogger))
-	}
-
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status": "ok",
-		})
-	})
-
-	if cfg.OlapDB.AccessMode != "read_only" {
-		appLogger.Info("Initializing read-write routes...")
-
-		// S3 routes
-		s3Routes.Routes(app.Group("/source/s3"), params.OlapService, params.DatasetService, params.ProjectService, params.AIAgentService, appLogger)
-
-		// Database source routes
-		databaseRoutes.Routes(
-			app.Group("/source/database"),
-			params.OlapService,
-			params.DatasetService,
-			params.ProjectService,
-			params.AIAgentService,
-			params.DbSourceService,
-			appLogger,
-		)
-	} else {
-		appLogger.Info("Running in read-only mode, write endpoints are disabled")
-	}
-
-	// Setup API routes
-	appLogger.Info("Setting up API routes...")
-
-	// AI routes
-	ai.Routes(app.Group("/v1/api/ai"), params.AIService, appLogger)
-
-	// Main API routes
-	api.Routes(app.Group("/v1/api"), params.OlapService, params.AIService, params.DatasetService, appLogger)
-
-	// Project routes
-	projectApi.Routes(app.Group("/v1/api/projects"), projectApi.RouterParams{
-		Logger:         appLogger,
-		ProjectService: params.ProjectService,
-		DatasetService: params.DatasetService,
-		OlapService:    params.OlapService,
-	})
-
-	// Chat routes
-	chatApi.Routes(app.Group("/v1/api/chat"), chatApi.RouterParams{
-		Logger:         appLogger,
-		ChatService:    params.ChatService,
-		DatasetService: params.DatasetService,
-		OlapService:    params.OlapService,
-	})
-
-	// Create a channel to listen for server shutdown
-	serverShutdown := make(chan struct{})
-
-	// Start the server in a goroutine
 	go func() {
-		addr := ":" + cfg.Server.Port
-		appLogger.Info("Main server is starting...",
-			zap.String("host", cfg.Server.Host),
-			zap.String("port", cfg.Server.Port))
-
-		if err := app.Listen(addr); err != nil {
-			appLogger.Error("Main server error", zap.Error(err))
+		defer wg.Done()
+		appLogger.Info("Web Application server is enabled via config. Starting in a goroutine...")
+		if err := serve(cfg, params, ctx); err != nil {
+			appLogger.Error("Web Application server failed to start", zap.Error(err))
+			cancel()
 		}
-		close(serverShutdown)
 	}()
 
-	// Wait for context cancellation or server shutdown
-	select {
-	case <-ctx.Done():
-		appLogger.Info("Shutdown signal received, gracefully shutting down...")
-		if err := app.Shutdown(); err != nil {
-			appLogger.Error("Error during server shutdown", zap.Error(err))
-			return err
+	go func() {
+		defer wg.Done()
+		appLogger.Info("Internal server is enabled via config. Starting in a goroutine...")
+		if err := serveInternal(cfg, params, ctx); err != nil {
+			appLogger.Error("Web Application server failed to start", zap.Error(err))
+			cancel()
 		}
-	case <-serverShutdown:
-		appLogger.Info("Server stopped")
-	}
+	}()
 
+	wg.Wait()
+	appLogger.Info("All servers have shut down gracefully.")
 	return nil
 }

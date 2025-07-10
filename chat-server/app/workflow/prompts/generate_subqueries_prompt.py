@@ -2,7 +2,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -48,10 +47,10 @@ Follow these STRICT guidelines:
    - Keep it simple and client-friendly
 
 RESPONSE FORMAT:
-{{
+{
   "needs_breakdown": true/false,
   "explanation": "Brief explanation of decision"
-}}
+}
 
 IMPORTANT: The default position is to NOT break down queries.
            Only do so when absolutely necessary.
@@ -64,7 +63,7 @@ User Query: {user_input}
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
@@ -115,9 +114,9 @@ STRICT PROHIBITIONS:
     procedural steps for information gathering
 
 RESPONSE FORMAT:
-{{
+{
   "subqueries": ["subquery1", "subquery2"]
-}}
+}
 
 IMPORTANT: Ensure each subquery is a natural language question
            that a human would ask.
@@ -130,7 +129,7 @@ User Query: {user_input}
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

@@ -1,7 +1,5 @@
-import json
-from typing import Any
-
 from app.models.message import ErrorMessage, IntermediateStep
+from app.utils.graph_utils.result_validation import is_result_too_large
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -75,44 +73,3 @@ async def validate_query_result(state: State) -> dict:
             "query_result": query_result,
             "messages": [ErrorMessage.from_json({"error": error_msg})],
         }
-
-
-def is_result_too_large(result: Any) -> tuple[bool, str]:
-    """
-    Check if the result from SQL query is too large for LLM processing.
-
-    Args:
-        result: The query result to check
-
-    Returns:
-        Tuple of (is_too_large, reason)
-    """
-    try:
-        if isinstance(result, list):
-            if len(result) > 200:
-                return True, f"Query returned too many records: {len(result)}"
-
-            result_json = json.dumps(result)
-            # ~25k tokens approximation
-            if len(result_json) > 100000:
-                return True, f"Query result is too large: {len(result_json)}"
-
-            # Check number of columns in first record
-            if result and isinstance(result[0], dict) and len(result[0]) > 50:
-                return (
-                    True,
-                    f"Query returned too many columns: {len(result[0])}",
-                )
-
-        # For non-list results, check the total size
-        elif isinstance(result, dict):
-            result_json = json.dumps(result)
-            if len(result_json) > 100000:
-                return (
-                    True,
-                    f"Query result is too large: {len(result_json)}",
-                )
-
-        return False, ""
-    except Exception:
-        return False, ""

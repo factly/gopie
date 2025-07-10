@@ -21,12 +21,12 @@ func NewChatService(store repositories.ChatStoreRepository, ai repositories.AiCh
 	return &ChatService{store, ai, aiAgent}
 }
 
-func (service *ChatService) DeleteChat(id, createdBy string) error {
-	return service.store.DeleteChat(context.Background(), id, createdBy)
+func (service *ChatService) DeleteChat(id, createdBy, orgID string) error {
+	return service.store.DeleteChat(context.Background(), id, createdBy, orgID)
 }
 
-func (service *ChatService) ListUserChats(userID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
-	return service.store.ListUserChats(context.Background(), userID, pagination)
+func (service *ChatService) ListUserChats(userID, orgID string, pagination models.Pagination) (*models.PaginationView[*models.Chat], error) {
+	return service.store.ListUserChats(context.Background(), userID, orgID, pagination)
 }
 
 func (service *ChatService) UpdateChat(chatID string, params *models.UpdateChatParams) (*models.Chat, error) {
@@ -101,7 +101,7 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 		if msg.Object == "user.message" {
 			userMessage = &msg
 		}
-		if msg.Choices != nil && len(msg.Choices) > 0 {
+		if len(msg.Choices) > 0 {
 			filteredMessages = append(filteredMessages, msg)
 		}
 	}
@@ -123,10 +123,18 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	return chat, err
 }
 
-func (service *ChatService) GetChatByID(chatID, userID string) (*models.Chat, error) {
-	chat, err := service.store.GetChatByID(context.Background(), chatID, userID)
+func (service *ChatService) GetChatByID(chatID string) (*models.Chat, error) {
+	chat, err := service.store.GetChatByID(context.Background(), chatID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting chat by ID: %w", err)
+	}
+	return chat, nil
+}
+
+func (services *ChatService) UpdateChatVisibility(chatID, userID string, params *models.UpdateChatVisibilityParams) (*models.Chat, error) {
+	chat, err := services.store.UpdateChatVisibility(context.Background(), chatID, userID, params)
+	if err != nil {
+		return nil, fmt.Errorf("error updating chat visibility: %w", err)
 	}
 	return chat, nil
 }

@@ -78,14 +78,6 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 			continue
 		}
 
-		select {
-		case params.DataChan <- respData:
-			// Data sent successfully
-		}
+		params.DataChan <- respData
 	}
-}
-
-// ErrorResponse represents an error response from the API
-type ErrorResponse struct {
-	Message string `json:"message"`
 }

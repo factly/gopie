@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,8 +12,16 @@ export function ProtectedRoute({
   children,
   alternativeContent,
 }: ProtectedRouteProps) {
-  const { status, data: session } = useAuthSession();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+  const { user, isAuthenticated, isLoading, checkSession } = useAuthStore();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const [hasCheckedSession, setHasCheckedSession] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isAuthDisabled && !hasCheckedSession) {
+      checkSession();
+      setHasCheckedSession(true);
+    }
+  }, [checkSession, hasCheckedSession, isAuthDisabled]);
 
   // Allow access if auth is disabled
   if (isAuthDisabled) {
@@ -21,7 +29,7 @@ export function ProtectedRoute({
   }
 
   // Show loading state
-  if (status === "loading") {
+  if (isLoading || !hasCheckedSession) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="animate-pulse text-lg font-medium">Loading...</div>
@@ -30,7 +38,7 @@ export function ProtectedRoute({
   }
 
   // Display alternative content or nothing
-  if (!session?.user) {
+  if (!isAuthenticated || !user) {
     return alternativeContent || null;
   }
 

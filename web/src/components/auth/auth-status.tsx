@@ -5,7 +5,7 @@ import { UserDropdown } from "@/components/auth/user-dropdown";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 interface AuthStatusProps {
   showName?: boolean;
@@ -18,10 +18,8 @@ export function AuthStatus({
   size = "md",
   className = "",
 }: AuthStatusProps) {
-  const { data: session, status } = useAuthSession();
-  const isLoading = status === "loading";
-  const user = session?.user;
-  const isAuthDisabled = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
 
   // If auth is disabled, show a disabled auth indicator
   if (isAuthDisabled) {
@@ -43,7 +41,7 @@ export function AuthStatus({
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <Button
@@ -52,7 +50,7 @@ export function AuthStatus({
           asChild
           className={className}
         >
-          <Link href="/api/auth/signin">Sign In</Link>
+          <Link href="/auth/login">Sign In</Link>
         </Button>
       </div>
     );
@@ -62,7 +60,7 @@ export function AuthStatus({
     <div className={`flex items-center gap-3 ${className}`}>
       {showName && (
         <span className="text-sm font-medium hidden sm:inline-block">
-          {user.name}
+          {user.displayName}
         </span>
       )}
       <UserDropdown />

@@ -30,10 +30,8 @@ async def analyze_dataset(state: State) -> dict:
 
         column_mappings = await match_column_values(column_assumptions)
 
-        datasets_info[
-            "correct_column_requirements"
-        ] = column_mappings.model_dump()
-        datasets_info.pop("column_assumptions", None)
+        datasets_info["correct_column_requirements"] = column_mappings
+        datasets_info["column_assumptions"] = None
 
         return {
             "datasets_info": datasets_info,

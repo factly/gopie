@@ -18,8 +18,8 @@ COPY . .
 
 # Environment variables must be present at build time
 # Set env variables.
-ENV NEXT_PUBLIC_COMPANION_URL="https://companion-gopie.factly.dev/"
-ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
+# ENV NEXT_PUBLIC_COMPANION_URL="https://companion-gopie.factly.dev/"
+# ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Build Next.js based on the preferred package manager

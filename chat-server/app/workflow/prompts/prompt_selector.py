@@ -36,6 +36,10 @@ from .stream_updates_prompt import (
     create_execution_analysis_prompt,
     create_stream_update_prompt,
 )
+from .validate_result_prompt import (
+    create_validate_result_prompt,
+    format_validate_result_input,
+)
 from .visualize_data_prompt import create_visualize_data_prompt
 
 NodeName = Literal[
@@ -53,6 +57,7 @@ NodeName = Literal[
     "route_query_replan",
     "process_context",
     "plan_sql_query_tool",
+    "validate_result",
     "visualize_data",
 ]
 
@@ -74,6 +79,7 @@ class PromptSelector:
             "route_query_replan": create_route_query_replan_prompt,
             "process_context": create_process_context_prompt,
             "plan_sql_query_tool": create_sql_planning_prompt,
+            "validate_result": create_validate_result_prompt,
             "visualize_data": create_visualize_data_prompt,
         }
 
@@ -84,6 +90,7 @@ class PromptSelector:
             "process_query": format_process_query_input,
             "response": format_response_input,
             "plan_sql_query_tool": format_sql_planning_input,
+            "validate_result": format_validate_result_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

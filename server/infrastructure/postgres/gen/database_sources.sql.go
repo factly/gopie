@@ -15,26 +15,34 @@ const createDatabaseSource = `-- name: CreateDatabaseSource :one
 INSERT INTO database_sources (
     connection_string,
     sql_query,
-    driver
+    driver,
+    org_id
 ) VALUES (
-    $1, $2, $3
-) RETURNING id, connection_string, sql_query, driver, created_at, updated_at
+    $1, $2, $3, $4
+) RETURNING id, connection_string, sql_query, driver, org_id, created_at, updated_at
 `
 
 type CreateDatabaseSourceParams struct {
 	ConnectionString string
 	SqlQuery         string
 	Driver           string
+	OrgID            pgtype.Text
 }
 
 func (q *Queries) CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error) {
-	row := q.db.QueryRow(ctx, createDatabaseSource, arg.ConnectionString, arg.SqlQuery, arg.Driver)
+	row := q.db.QueryRow(ctx, createDatabaseSource,
+		arg.ConnectionString,
+		arg.SqlQuery,
+		arg.Driver,
+		arg.OrgID,
+	)
 	var i DatabaseSource
 	err := row.Scan(
 		&i.ID,
 		&i.ConnectionString,
 		&i.SqlQuery,
 		&i.Driver,
+		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -52,18 +60,24 @@ func (q *Queries) DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) erro
 }
 
 const getDatabaseSource = `-- name: GetDatabaseSource :one
-SELECT id, connection_string, sql_query, driver, created_at, updated_at FROM database_sources
-WHERE id = $1
+SELECT id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
+WHERE id = $1 and org_id = $2
 `
 
-func (q *Queries) GetDatabaseSource(ctx context.Context, id pgtype.UUID) (DatabaseSource, error) {
-	row := q.db.QueryRow(ctx, getDatabaseSource, id)
+type GetDatabaseSourceParams struct {
+	ID    pgtype.UUID
+	OrgID pgtype.Text
+}
+
+func (q *Queries) GetDatabaseSource(ctx context.Context, arg GetDatabaseSourceParams) (DatabaseSource, error) {
+	row := q.db.QueryRow(ctx, getDatabaseSource, arg.ID, arg.OrgID)
 	var i DatabaseSource
 	err := row.Scan(
 		&i.ID,
 		&i.ConnectionString,
 		&i.SqlQuery,
 		&i.Driver,
+		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -71,18 +85,20 @@ func (q *Queries) GetDatabaseSource(ctx context.Context, id pgtype.UUID) (Databa
 }
 
 const listDatabaseSources = `-- name: ListDatabaseSources :many
-SELECT id, connection_string, sql_query, driver, created_at, updated_at FROM database_sources
+SELECT id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
+WHERE org_id = $1
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+LIMIT $2 OFFSET $3
 `
 
 type ListDatabaseSourcesParams struct {
+	OrgID  pgtype.Text
 	Limit  int32
 	Offset int32
 }
 
 func (q *Queries) ListDatabaseSources(ctx context.Context, arg ListDatabaseSourcesParams) ([]DatabaseSource, error) {
-	rows, err := q.db.Query(ctx, listDatabaseSources, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listDatabaseSources, arg.OrgID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +111,7 @@ func (q *Queries) ListDatabaseSources(ctx context.Context, arg ListDatabaseSourc
 			&i.ConnectionString,
 			&i.SqlQuery,
 			&i.Driver,
+			&i.OrgID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

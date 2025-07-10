@@ -9,7 +9,7 @@ interface ListChatsVariables {
 }
 
 export async function fetchChats(
-  { userID, limit }: ListChatsVariables,
+  { limit }: ListChatsVariables,
   context: { pageParam: number }
 ): Promise<{ data: PaginatedResponse<Chat> }> {
   try {
@@ -20,7 +20,7 @@ export async function fetchChats(
 
     const response = await apiClient.get(`v1/api/chat?${searchParams}`, {
       headers: {
-        "x-user-id": userID,
+        // "x-user-id": userID,
       },
     });
     return response.json();

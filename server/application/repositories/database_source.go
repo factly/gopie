@@ -9,7 +9,7 @@ import (
 // DatabaseSourceStoreRepository defines interface for database source repository
 type DatabaseSourceStoreRepository interface {
 	Create(ctx context.Context, params models.CreateDatabaseSourceParams) (*models.DatabaseSource, error)
-	Get(ctx context.Context, id string) (*models.DatabaseSource, error)
+	Get(ctx context.Context, id string, orgID string) (*models.DatabaseSource, error)
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*models.DatabaseSource, error)
+	List(ctx context.Context, limit, offset int, orgID string) ([]*models.DatabaseSource, error)
 }

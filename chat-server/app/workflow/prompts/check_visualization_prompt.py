@@ -2,7 +2,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
 )
 
 
@@ -55,17 +54,18 @@ Examples that should return FALSE:
 
 RESPONSE FORMAT:
 Respond with JSON:
-{{
+{
     "wants_visualization": true/false,
     "reasoning": "clear explanation of why you chose true/false"
-}}"""
+}
+"""
 
     human_template_str = "User question: {user_query}"
 
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessagePromptTemplate.from_template(system_content),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

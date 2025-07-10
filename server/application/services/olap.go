@@ -148,7 +148,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		d.logger.Error("Invalid query", zap.Error(err))
 		return nil, fmt.Errorf("failed to validate query type: %w", err)
 	}
-	if !isSelect {
+	if !isSelect && !strings.HasPrefix(strings.ToLower(sql), "with") {
 		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
 		return nil, domain.ErrNotSelectStatement
 	}

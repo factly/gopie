@@ -1,0 +1,11 @@
+FROM golang:1.24
+
+# Install goose migration tool
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+WORKDIR /app
+
+# Copy migration files
+COPY ./infrastructure/postgres/migrations /app/migrations
+
+CMD ["goose", "up"]

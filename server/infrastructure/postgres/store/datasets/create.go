@@ -12,7 +12,10 @@ import (
 
 func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatasetParams) (*models.Dataset, error) {
 	// check if project exists
-	project, err := s.q.GetProject(ctx, params.ProjectID)
+	project, err := s.q.GetProject(ctx, gen.GetProjectParams{
+		ID:    params.ProjectID,
+		OrgID: pgtype.Text{String: params.OrgID, Valid: true},
+	})
 	if err != nil {
 		s.logger.Error("Error fetching project", zap.Error(err))
 		return nil, err
@@ -34,6 +37,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Alias:       pgtype.Text{String: params.Alias, Valid: true},
 		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
 		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
+		OrgID:       pgtype.Text{String: params.OrgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating dataset", zap.Error(err))
@@ -63,6 +67,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		Alias:       d.Alias.String,
 		CreatedBy:   d.CreatedBy.String,
 		UpdatedBy:   d.UpdatedBy.String,
+		OrgID:       d.OrgID.String,
 	}, nil
 }
 

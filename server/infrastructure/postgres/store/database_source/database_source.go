@@ -46,6 +46,7 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 		ConnectionString: encryptedConnectionString,
 		SqlQuery:         params.SQLQuery,
 		Driver:           params.Driver,
+		OrgID:            pgtype.Text{String: params.OrganizationID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error creating database source", zap.Error(err))
@@ -62,9 +63,12 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 }
 
 // Get retrieves a database source by ID
-func (s *DatabaseSourceStore) Get(ctx context.Context, id string) (*models.DatabaseSource, error) {
+func (s *DatabaseSourceStore) Get(ctx context.Context, id, orgID string) (*models.DatabaseSource, error) {
 	parseUUID, _ := uuid.Parse(id)
-	row, err := s.q.GetDatabaseSource(ctx, pgtype.UUID{Bytes: parseUUID, Valid: true})
+	row, err := s.q.GetDatabaseSource(ctx, gen.GetDatabaseSourceParams{
+		ID:    pgtype.UUID{Bytes: parseUUID, Valid: true},
+		OrgID: pgtype.Text{String: orgID, Valid: true},
+	})
 	if err != nil {
 		s.logger.Error("Error getting database source", zap.Error(err))
 		return nil, err
@@ -79,6 +83,7 @@ func (s *DatabaseSourceStore) Get(ctx context.Context, id string) (*models.Datab
 	return &models.DatabaseSource{
 		ID:               row.ID.String(),
 		ConnectionString: decryptedConnectionString,
+		OrganizationID:   row.OrgID.String,
 		SQLQuery:         row.SqlQuery,
 		CreatedAt:        row.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:        row.UpdatedAt.Time.Format(time.RFC3339),
@@ -98,10 +103,11 @@ func (s *DatabaseSourceStore) Delete(ctx context.Context, id string) error {
 }
 
 // List lists all database sources
-func (s *DatabaseSourceStore) List(ctx context.Context, limit, offset int) ([]*models.DatabaseSource, error) {
+func (s *DatabaseSourceStore) List(ctx context.Context, limit, offset int, orgID string) ([]*models.DatabaseSource, error) {
 	rows, err := s.q.ListDatabaseSources(ctx, gen.ListDatabaseSourcesParams{
 		Limit:  int32(limit),
 		Offset: int32(offset),
+		OrgID:  pgtype.Text{String: orgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error listing database sources", zap.Error(err))
@@ -119,6 +125,7 @@ func (s *DatabaseSourceStore) List(ctx context.Context, limit, offset int) ([]*m
 		result = append(result, &models.DatabaseSource{
 			ID:               row.ID.String(),
 			ConnectionString: decryptedConnectionString,
+			OrganizationID:   row.OrgID.String,
 			SQLQuery:         row.SqlQuery,
 			CreatedAt:        row.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:        row.UpdatedAt.Time.Format(time.RFC3339),
