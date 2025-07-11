@@ -1,7 +1,8 @@
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.llm_providers.base import BaseLLMProvider
+
+from .base import BaseLLMProvider
 
 
 class LiteLLMProvider(BaseLLMProvider):
@@ -32,9 +33,7 @@ class LiteLLMProvider(BaseLLMProvider):
                 self.litellm_key_header_name: self.litellm_virtual_key,
             }
 
-    def get_llm_model(
-        self, model_name: str, streaming: bool = True
-    ) -> ChatOpenAI:
+    def get_llm_model(self, model_name: str, streaming: bool = True) -> ChatOpenAI:
         return ChatOpenAI(
             api_key="X",  # type: ignore
             base_url=settings.LITELLM_BASE_URL,

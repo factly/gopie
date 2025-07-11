@@ -99,9 +99,7 @@ class PromptSelector:
 
         return self.prompt_map[node_name](prompt_template=True)
 
-    def get_prompt(
-        self, node_name: NodeName, **kwargs
-    ) -> list[BaseMessage] | str:
+    def get_prompt(self, node_name: NodeName, **kwargs) -> list[BaseMessage] | str:
         if node_name not in self.prompt_map:
             raise ValueError(f"No prompt available for node: {node_name}")
 
@@ -112,9 +110,7 @@ class PromptSelector:
         else:
             return self.prompt_map[node_name](**kwargs)
 
-    def format_prompt_input(
-        self, node_name: NodeName, **kwargs
-    ) -> dict | None:
+    def format_prompt_input(self, node_name: NodeName, **kwargs) -> dict | None:
         if node_name not in self.format_prompt_input_map:
             return None
 

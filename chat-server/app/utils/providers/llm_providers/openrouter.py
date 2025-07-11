@@ -1,7 +1,8 @@
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
-from app.utils.llm_providers.base import BaseLLMProvider
+
+from .base import BaseLLMProvider
 
 
 class OpenRouterLLMProvider(BaseLLMProvider):

@@ -35,13 +35,9 @@ class PromptManager:
                 langsmith_prompt = pull_prompt(langsmith_prompt_name)
 
                 if formatted_input:
-                    formatted_prompt = langsmith_prompt.format_messages(
-                        **formatted_input
-                    )
+                    formatted_prompt = langsmith_prompt.format_messages(**formatted_input)
                 else:
-                    formatted_prompt = langsmith_prompt.format_messages(
-                        *args, **kwargs
-                    )
+                    formatted_prompt = langsmith_prompt.format_messages(*args, **kwargs)
 
                 return formatted_prompt
 
@@ -52,23 +48,15 @@ class PromptManager:
                     f"Using fallback prompt instead."
                 )
 
-                return self.get_fallback_prompt(
-                    langsmith_prompt_name, *args, **kwargs
-                )
+                return self.get_fallback_prompt(langsmith_prompt_name, *args, **kwargs)
 
         else:
-            return self.get_fallback_prompt(
-                langsmith_prompt_name, *args, **kwargs
-            )
+            return self.get_fallback_prompt(langsmith_prompt_name, *args, **kwargs)
 
-    def get_fallback_prompt(
-        self, node_name: NodeName, *args, **kwargs
-    ) -> list[BaseMessage] | str:
+    def get_fallback_prompt(self, node_name: NodeName, *args, **kwargs) -> list[BaseMessage] | str:
         return PromptSelector().get_prompt(node_name, *args, **kwargs)
 
 
-def get_prompt(
-    node_name: NodeName, *args, **kwargs
-) -> list[BaseMessage] | str:
+def get_prompt(node_name: NodeName, *args, **kwargs) -> list[BaseMessage] | str:
     input_messages = PromptManager().get_prompt(node_name, *args, **kwargs)
     return input_messages

@@ -48,9 +48,7 @@ class OpenAIOutputAdapter:
                 yield f"data: {chunk.model_dump_json(exclude_defaults=True)}\n\n"
         yield "data: [DONE]\n\n"
 
-    def create_tool_call_chunk(
-        self, event_chunk: EventChunkData
-    ) -> ResponseChunk:
+    def create_tool_call_chunk(self, event_chunk: EventChunkData) -> ResponseChunk:
         tool_call_params = None
         if event_chunk.extra_data:
             name = event_chunk.extra_data.name
@@ -136,15 +134,11 @@ class OpenAIOutputAdapter:
             ],
         )
 
-    async def create_chat_completion(
-        self, event_chunks: AsyncIterable[EventChunkData]
-    ) -> Response:
+    async def create_chat_completion(self, event_chunks: AsyncIterable[EventChunkData]) -> Response:
         tool_calls = []
         content = ""
 
-        async for completion_chunk in self._create_chat_completion_stream(
-            event_chunks
-        ):
+        async for completion_chunk in self._create_chat_completion_stream(event_chunks):
             if completion_chunk.choices[0].delta.content:
                 content += completion_chunk.choices[0].delta.content
             if completion_chunk.choices[0].delta.tool_calls:

@@ -9,10 +9,7 @@ from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
 async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
-    url = (
-        f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/"
-        f"datasets/{dataset_id}"
-    )
+    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/" f"datasets/{dataset_id}"
     headers = {"accept": "application/json"}
 
     try:
@@ -51,11 +48,7 @@ def create_dataset_schema(
 
         samples = []
         if sample_data and isinstance(sample_data, list):
-            samples = [
-                item.get(column_name)
-                for item in sample_data
-                if column_name in item
-            ]
+            samples = [item.get(column_name) for item in sample_data if column_name in item]
 
         column_schema = ColumnSchema(
             **column_data.model_dump(),
@@ -94,9 +87,7 @@ def format_schema_for_embedding(
     page_content += f"Dataset Description: {schema.dataset_description}\n"
     for column in schema.columns:
         if not column.column_description:
-            raise ValueError(
-                f"Column description not found for column:{column.column_name}"
-            )
+            raise ValueError(f"Column description not found for column:{column.column_name}")
         page_content += f"Column Name: {column.column_name}\n"
         page_content += f"Column Type: {column.column_type}\n"
         page_content += f"Column Description: {column.column_description}\n"

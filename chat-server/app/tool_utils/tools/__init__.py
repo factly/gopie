@@ -34,12 +34,8 @@ def get_tool(
         tool_category = getattr(module, "__tool_category__", tool_func_name)
         metadata = {
             "tool_category": tool_category,
-            "get_dynamic_tool_text": getattr(
-                module, "__get_dynamic_tool_text__", None
-            ),
-            "should_display_tool": getattr(
-                module, "__should_display_tool__", False
-            ),
+            "get_dynamic_tool_text": getattr(module, "__get_dynamic_tool_text__", None),
+            "should_display_tool": getattr(module, "__should_display_tool__", False),
         }
 
         return tool_func_name, tool, metadata

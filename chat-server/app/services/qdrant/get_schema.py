@@ -47,7 +47,8 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
         if not payload:
             return None
 
-        dataset_schema = DatasetSchema(**payload)
+        metadata = payload.get("metadata", {})
+        dataset_schema = DatasetSchema(**metadata)
 
         return dataset_schema
 
@@ -96,7 +97,8 @@ async def get_schema_by_dataset_ids(
                 payload = point.payload
                 if payload:
                     try:
-                        dataset_schema = DatasetSchema(**payload)
+                        metadata = payload.get("metadata", {})
+                        dataset_schema = DatasetSchema(**metadata)
                         schemas.append(dataset_schema)
                     except json.JSONDecodeError as e:
                         logger.warning(f"Error parsing schema JSON: {e}")

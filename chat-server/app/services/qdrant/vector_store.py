@@ -1,5 +1,3 @@
-
-
 from langchain_core.documents import Document
 from langchain_core.vectorstores.base import VectorStore
 
@@ -8,10 +6,9 @@ from app.core.log import logger
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.utils.model_registry.model_provider import get_model_provider
 
+
 async def add_document_to_vector_store(document: Document):
-    vector_store = QdrantSetup.get_vector_store(
-        get_model_provider().get_embeddings_model()
-    )
+    vector_store = QdrantSetup.get_vector_store(get_model_provider().get_embeddings_model())
     project_id = document.metadata["project_id"]
     dataset_id = document.metadata["dataset_id"]
     document_id = QdrantSetup.get_document_id(project_id, dataset_id)
@@ -36,13 +33,10 @@ async def perform_similarity_search(
     """
 
     try:
-        return await vector_store.asimilarity_search(
-            query, k=top_k, filter=query_filter
-        )
+        return await vector_store.asimilarity_search(query, k=top_k, filter=query_filter)
     except Exception as e:
         logger.error(
-            f"Error performing similarity search: {e!s} | "
-            f"Filter criteria: {query_filter}"
+            f"Error performing similarity search: {e!s} | " f"Filter criteria: {query_filter}"
         )
         if query_filter:
             logger.info("Attempting unfiltered search as fallback...")

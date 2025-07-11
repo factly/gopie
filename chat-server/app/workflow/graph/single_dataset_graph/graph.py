@@ -5,9 +5,7 @@ from .node.response import response
 from .node.validate_result import route_result_validation, validate_result
 from .types import ConfigSchema, InputState, OutputState, State
 
-graph_builder = StateGraph(
-    State, config_schema=ConfigSchema, input=InputState, output=OutputState
-)
+graph_builder = StateGraph(State, config_schema=ConfigSchema, input=InputState, output=OutputState)
 
 graph_builder.add_node("process_query", process_query)
 graph_builder.add_node("response", response)

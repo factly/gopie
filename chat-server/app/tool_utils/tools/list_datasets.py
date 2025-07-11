@@ -33,9 +33,7 @@ async def list_datasets(
 
     try:
         session = SingletonAiohttp.get_aiohttp_client()
-        async with session.get(
-            url, params=params, headers=headers, ssl=False
-        ) as response:
+        async with session.get(url, params=params, headers=headers, ssl=False) as response:
             json_response = await response.json()
             response.raise_for_status()
             return json_response.get("results", [])
@@ -62,9 +60,7 @@ async def list_projects(limit: int = 10, page: int = 1) -> list[dict]:
 
     try:
         session = SingletonAiohttp.get_aiohttp_client()
-        async with session.get(
-            url, params=params, headers=headers, ssl=False
-        ) as response:
+        async with session.get(url, params=params, headers=headers, ssl=False) as response:
             response.raise_for_status()
             return (await response.json()).get("results", [])
     except Exception as e:

@@ -45,15 +45,11 @@ async def plan_sql_query(
             limitations: any assumptions or limitations
     """
     try:
-        prompt = get_prompt(
-            "plan_sql_query_tool", user_query=user_query, schemas=schemas
-        )
+        prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
         model_id = get_node_model("plan_sql_query_tool")
         llm = get_model_provider(config).get_llm(model_id=model_id)
         response = await llm.ainvoke(prompt)
-        content = (
-            response.content if hasattr(response, "content") else str(response)
-        )
+        content = response.content if hasattr(response, "content") else str(response)
 
         parser = JsonOutputParser()
         parsed = parser.parse(str(content))

@@ -13,6 +13,7 @@ class AgentInput(TypedDict):
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
+    initial_user_query: str | None
     dataset_ids: list[str] | None
     project_ids: list[str] | None
     user_query: str | None

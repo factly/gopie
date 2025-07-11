@@ -4,6 +4,8 @@ from langchain_core.tools import tool
 from qdrant_client.http.models import FieldCondition, Filter, MatchAny
 
 from app.core.config import settings
+from app.core.log import logger
+from app.models.schema import DatasetSchema
 from app.services.qdrant.qdrant_setup import QdrantSetup
 
 
@@ -11,7 +13,7 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 async def get_datasets_schemas(
     dataset_ids: list[str] = [],
     project_ids: list[str] = [],
-) -> list[dict] | dict:
+) -> str:
     """
     Get the schema of a specific tables from Qdrant database.
 
@@ -64,23 +66,22 @@ async def get_datasets_schemas(
             )
 
         schemas = []
-        for result in search_result:
-            if result:
-                payload = result[0].payload
+        if search_result[0]:
+            for point in search_result[0]:
+                payload = point.payload
                 if payload:
-                    schema = json.loads(payload.get("page_content", "{}"))
-                    schemas.append(schema)
+                    try:
+                        metadata = payload.get("metadata", {})
+                        dataset_schema = DatasetSchema(**metadata)
+                        schemas.append(dataset_schema.format_for_prompt())
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Error parsing schema JSON: {e}")
+                        continue
 
-        return schemas
+        return "\n\n".join(schemas)
 
     except Exception as e:
-        return [
-            {
-                "error": f"Error retrieving schema from Qdrant: {e!s}",
-                "dataset_ids": dataset_ids,
-                "project_ids": project_ids,
-            }
-        ]
+        return f"Error retrieving schema from Qdrant: {e!s}"
 
 
 def get_dynamic_tool_text(args: dict) -> str:

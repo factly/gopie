@@ -1,11 +1,11 @@
 from typing import Any
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.models.query import QueryResult
+from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -41,7 +41,6 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             query_info={
                 "query_type": "conversational",
                 "tables_used": None,
-                "query_result": None,
                 "tool_used_result": None,
                 "confidence_score": 5,
                 "node_messages": {},
@@ -53,9 +52,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
     collect_and_store_tool_messages(query_result, query_index, state)
 
     if not user_input or user_input == "No input":
-        return _create_error_response(
-            query_result, "No user query provided", "analyze_query"
-        )
+        return _create_error_response(query_result, "No user query provided", "analyze_query")
 
     try:
         tools_results = query_result.subqueries[query_index].tool_used_result
@@ -76,19 +73,13 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             ToolNames.PLAN_SQL_QUERY,
         ]
 
-        llm = get_model_provider(config).get_llm_with_tools(
-            "analyze_query", tools_names
-        )
-        response: Any = await llm.ainvoke(prompt)
+        llm = get_model_provider(config).get_llm_with_tools("analyze_query", tools_names)
+        response = await llm.ainvoke(prompt)
 
         if has_tool_calls(response):
-            return _handle_tool_call_response(
-                response, query_result, query_index, tool_call_count
-            )
+            return _handle_tool_call_response(response, query_result, query_index, tool_call_count)
         else:
-            return _handle_analysis_response(
-                response, query_result, query_index, tool_call_count
-            )
+            return _handle_analysis_response(response, query_result, query_index, tool_call_count)
 
     except Exception as e:
         error_msg = f"Error analyzing query: {e!s}"
@@ -115,9 +106,7 @@ def route_from_analysis(state: State) -> str:
         String name of the next node to route to
     """
     # Check if we've reached the tool call limit
-    if state.get("tool_call_count", 0) >= 5 and has_tool_calls(
-        state["messages"][-1]
-    ):
+    if state.get("tool_call_count", 0) >= 5 and has_tool_calls(state["messages"][-1]):
         return "basic_conversation"
 
     last_message = state["messages"][-1]
@@ -131,11 +120,7 @@ def route_from_analysis(state: State) -> str:
     confidence_score = query_result.subqueries[query_index].confidence_score
 
     if query_type == "conversational":
-        return (
-            "basic_conversation"
-            if confidence_score >= 7
-            else "identify_datasets"
-        )
+        return "basic_conversation" if confidence_score >= 7 else "identify_datasets"
     else:
         return "identify_datasets"
 
@@ -147,9 +132,7 @@ def _get_user_input(state: State, query_index: int) -> str:
     return "No input"
 
 
-def _should_add_new_subquery(
-    state: State, query_result: QueryResult, query_index: int
-) -> bool:
+def _should_add_new_subquery(state: State, query_result: QueryResult, query_index: int) -> bool:
     subqueries = state.get("subqueries", [])
 
     if query_index == -1 or not query_result.subqueries:
@@ -184,11 +167,7 @@ def _handle_tool_call_response(
 ) -> dict:
     query_result.subqueries[query_index].query_type = "conversational"
 
-    ai_message = (
-        response
-        if isinstance(response, AIMessage)
-        else AIMessage(content=str(response))
-    )
+    ai_message = response if isinstance(response, BaseMessage) else AIMessage(content=str(response))
 
     return {
         "query_result": query_result,
@@ -231,10 +210,10 @@ def _handle_analysis_response(
     }
 
 
-def collect_and_store_tool_messages(
-    query_result: QueryResult, query_index: int, state: State
-):
-    """Collect tool messages from state and store them in query result."""
+def collect_and_store_tool_messages(query_result: QueryResult, query_index: int, state: State):
+    """
+    Collect tool messages from state and store them in query result.
+    """
     if query_index < 0 or query_index >= len(query_result.subqueries):
         return
 
@@ -245,12 +224,11 @@ def collect_and_store_tool_messages(
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             tool_messages.append(
-                {
-                    "tool_call_id": msg.tool_call_id,
-                    "content": msg.content,
-                    "name": getattr(msg, "name", None),
-                    "type": "tool_message",
-                }
+                ToolUsedResult(
+                    tool_call_id=msg.tool_call_id,
+                    content=str(msg.content),
+                    name=getattr(msg, "name", None),
+                )
             )
         else:
             break

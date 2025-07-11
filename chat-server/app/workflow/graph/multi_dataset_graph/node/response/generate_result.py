@@ -3,7 +3,7 @@ import json
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
-from app.models.message import AIMessage, ErrorMessage, FinalQueryOutput
+from app.models.message import AIMessage, ErrorMessage
 from app.models.query import QueryResult
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
@@ -55,10 +55,10 @@ async def generate_result(state: State, config: RunnableConfig) -> dict:
             "messages": [
                 AIMessage(
                     content=[
-                        FinalQueryOutput(
-                            result=str(response.content),
-                            execution_time=query_result.execution_time,
-                        ).to_dict()
+                        {
+                            "result": str(response.content),
+                            "execution_time": query_result.execution_time,
+                        }
                     ]
                 )
             ],

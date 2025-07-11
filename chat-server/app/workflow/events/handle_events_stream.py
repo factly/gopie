@@ -27,9 +27,7 @@ class EventStreamHandler:
 
         if event_type.startswith("on_tool"):
             role = Role.INTERMEDIATE
-            content, category, should_display_tool = self._handle_tool_events(
-                event
-            )
+            content, category, should_display_tool = self._handle_tool_events(event)
             if not should_display_tool:
                 return self._create_empty_event_data()
 
@@ -44,9 +42,7 @@ class EventStreamHandler:
             return self._create_empty_event_data()
 
         elif self._is_chat_model_event(event_type):
-            content = self._handle_chat_model_events(
-                event_type, event, role, progress_message
-            )
+            content = self._handle_chat_model_events(event_type, event, role, progress_message)
             if content is None:
                 return self._create_empty_event_data()
 
@@ -128,8 +124,6 @@ class EventStreamHandler:
     def _handle_tool_events(self, event: StreamEvent) -> tuple[str, str, bool]:
         content = event.get("metadata", {}).get("tool_text", "Using Tool")
         category = event.get("metadata", {}).get("tool_category", "")
-        should_display_tool = event.get("metadata", {}).get(
-            "should_display_tool", False
-        )
+        should_display_tool = event.get("metadata", {}).get("should_display_tool", False)
 
         return content, category, should_display_tool

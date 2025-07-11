@@ -23,7 +23,7 @@ async def execute_sql_query(
     try:
         results = []
         for query in queries:
-            result = await execute_sql(query)
+            result = await execute_sql(query=query)
             results.append(result)
         return results
     except Exception as e:

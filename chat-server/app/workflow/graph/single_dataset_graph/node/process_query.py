@@ -29,14 +29,24 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
     writer = csv.writer(output)
 
     if rows:
-        headers = list(rows[0].keys())
+        headers = ["row_num"] + list(rows[0].keys())
         writer.writerow(headers)
 
-        for row in rows:
-            record = [
-                str(value) if value is not None else ""
-                for value in row.values()
-            ]
+        for idx, row in enumerate(rows, 1):
+            record = [str(idx)]
+
+            for value in row.values():
+                if value is None:
+                    record.append("NULL")
+                elif value == "":
+                    record.append("EMPTY_STRING")
+                elif isinstance(value, str) and value.strip() == "":
+                    record.append("WHITESPACE_ONLY")
+                elif isinstance(value, (int, float)) and value == 0:
+                    record.append("0")
+                else:
+                    record.append(str(value))
+
             writer.writerow(record)
 
     return output.getvalue()
@@ -56,7 +66,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         if not dataset_id:
             raise Exception("No dataset ID provided")
 
-        dataset_schema = await get_schema_from_qdrant(dataset_id)
+        dataset_schema = await get_schema_from_qdrant(dataset_id=dataset_id)
         if dataset_schema is None:
             raise Exception("Schema fetch error: Dataset not found")
 
@@ -64,7 +74,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         user_provided_dataset_name = dataset_schema.name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
-        sample_data = await execute_sql(sample_data_query)
+        sample_data = await execute_sql(query=sample_data_query)
 
         rows_csv = convert_rows_to_csv(sample_data)
 
@@ -114,14 +124,13 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
             for q, exp in zip(sql_queries, explanations):
                 try:
-                    result_data = await execute_sql(q)
+                    result_data = await execute_sql(query=q)
                     sql_results.append(
                         {
                             "sql_query": q,
                             "explanation": exp,
                             "result": result_data,
                             "success": True,
-                            "large_result": None,
                             "error": None,
                         }
                     )
@@ -133,7 +142,6 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             "explanation": exp,
                             "result": None,
                             "success": False,
-                            "large_result": None,
                             "error": error_str,
                         }
                     )
@@ -141,9 +149,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result["sql_results"] = sql_results
 
             return {
-                "messages": [
-                    AIMessage(content=json.dumps(query_result, indent=2))
-                ],
+                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
                 "query_result": query_result,
             }
 
@@ -151,9 +157,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result["response_for_non_sql"] = response_for_non_sql
 
             return {
-                "messages": [
-                    AIMessage(content=json.dumps(query_result, indent=2))
-                ],
+                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
                 "query_result": query_result,
             }
 

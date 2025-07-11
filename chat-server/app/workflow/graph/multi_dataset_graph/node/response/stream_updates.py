@@ -48,9 +48,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     return {"messages": [AIMessage(content=response.content)]}
 
 
-async def check_further_execution_requirement(
-    state: State, config: RunnableConfig
-) -> str:
+async def check_further_execution_requirement(state: State, config: RunnableConfig) -> str:
     """
     Determines if further execution is required based on the current state.
     Returns a string indicating the next step: "next_sub_query" or
@@ -64,9 +62,7 @@ async def check_further_execution_requirement(
         last_stream_message_content=last_stream_message.content,
     )
 
-    llm = get_model_provider(config).get_llm_for_node(
-        "check_further_execution_requirement"
-    )
+    llm = get_model_provider(config).get_llm_for_node("check_further_execution_requirement")
     response = await llm.ainvoke(analysis_prompt)
 
     try:
