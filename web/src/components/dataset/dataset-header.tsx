@@ -41,6 +41,53 @@ interface DatasetHeaderProps {
   onUpdate?: () => Promise<void>;
 }
 
+// Helper function to determine dataset source
+function getDatasetSource(dataset: Dataset): string {
+  // Check if dataset was sourced from database
+  if (
+    dataset.description?.includes("Dataset sourced from database via GoPie Web")
+  ) {
+    // Try to determine specific database from description or file path
+    if (
+      dataset.description.toLowerCase().includes("postgres") ||
+      dataset.file_path?.toLowerCase().includes("postgres")
+    ) {
+      return "PostgreSQL";
+    }
+    if (
+      dataset.description.toLowerCase().includes("mysql") ||
+      dataset.file_path?.toLowerCase().includes("mysql")
+    ) {
+      return "MySQL";
+    }
+    // Generic database if we can't determine specific type
+    return "Database";
+  }
+
+  // Check if it's a file upload (S3 path)
+  if (dataset.file_path?.startsWith("s3:/")) {
+    // Return the actual file format
+    const format = dataset.format?.toLowerCase();
+    switch (format) {
+      case "csv":
+        return "CSV";
+      case "parquet":
+        return "Parquet";
+      case "json":
+        return "JSON";
+      case "excel":
+        return "Excel";
+      case "duckdb":
+        return "DuckDB";
+      default:
+        return dataset.format || "File";
+    }
+  }
+
+  // Fallback to format if we can't determine source
+  return dataset.format || "Unknown";
+}
+
 export function DatasetHeader({
   dataset,
   projectId,
@@ -209,7 +256,7 @@ export function DatasetHeader({
                     <PencilIcon className="h-4 w-4" />
                   </Button>
                   <Badge variant="secondary" className="bg-secondary/50">
-                    CSV
+                    {getDatasetSource(dataset)}
                   </Badge>
                 </div>
 
