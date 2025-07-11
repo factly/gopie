@@ -41,7 +41,9 @@ jobs:
           - NEXT_PUBLIC_ENABLE_AUTH=${{ secrets.NEXT_PUBLIC_ENABLE_AUTH }}
           - ZITADEL_AUTHORITY=${{ secrets.ZITADEL_AUTHORITY }}
           - ZITADEL_CLIENT_ID=${{ secrets.ZITADEL_CLIENT_ID }}
-          - ZITADEL_CLIENT_SECRET=${{ secrets.ZITADEL_CLIENT_SECRET }}
           - ZITADEL_PROJECT_ID=${{ secrets.ZITADEL_PROJECT_ID }}
-          - ZITADEL_PAT=${{ secrets.ZITADEL_PAT }}
           - ZITADEL_IDP_ID=${{ secrets.ZITADEL_IDP_ID }}
+
+        secrets: |
+          zitadel_client_secret: ${{ secrets.ZITADEL_CLIENT_SECRET }}
+          zitadel_pat: ${{ secrets.ZITADEL_PAT }}
