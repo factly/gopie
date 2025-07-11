@@ -137,9 +137,12 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		validations = append(validations,
 			validation{config.Zitadel.Protocol, "zitadel protocol"},
 			validation{config.Zitadel.Domain, "zitadel domain"},
-			validation{config.Zitadel.InsecurePort, "zitadel insecure port"},
 			validation{config.Zitadel.ProjectID, "zitadel project id"},
 		)
+	}
+
+	if viper.GetString("GOPIE_ZITADEL_PROTOCOL") != "https" {
+		validations = append(validations, validation{config.Zitadel.InsecurePort, "zitadel insecure port"})
 	}
 
 	if config.OlapDB.DB == "" {
