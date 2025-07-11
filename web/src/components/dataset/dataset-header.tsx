@@ -12,9 +12,10 @@ import {
   TableIcon,
   RowsIcon,
   ClockIcon,
-  HardDriveIcon,
   ChevronRightIcon,
   FolderIcon,
+  InfoIcon,
+  UserIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,14 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 interface DatasetHeaderProps {
   dataset: Dataset;
@@ -65,7 +74,6 @@ export function DatasetHeader({
         updated_by: "gopie-web-ui",
       });
 
-      // Invalidate both dataset and datasets queries to ensure all data is refreshed
       await queryClient.invalidateQueries({
         queryKey: ["dataset", { projectId, datasetId: dataset.id }],
       });
@@ -74,7 +82,6 @@ export function DatasetHeader({
         queryKey: ["datasets"],
       });
 
-      // Call the parent's onUpdate if provided
       if (onUpdate) {
         await onUpdate();
       }
@@ -110,7 +117,6 @@ export function DatasetHeader({
   };
 
   const handleChatClick = () => {
-    // Create context data for this dataset
     const contextData = encodeURIComponent(
       JSON.stringify([
         {
@@ -126,45 +132,45 @@ export function DatasetHeader({
   };
 
   return (
-    <div className="relative">
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-[400px,1fr] gap-8">
-        {/* Left Column - Header Section */}
-        <div className="space-y-3">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link
-              href={`/${projectId}`}
-              className="hover:text-primary transition-colors flex items-center gap-1"
-            >
-              <FolderIcon className="h-4 w-4" />
-              Datasets
-            </Link>
-            <ChevronRightIcon className="h-4 w-4" />
-            <span className="text-muted-foreground truncate">
-              {dataset.name}
-            </span>
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link
+          href={`/${projectId}`}
+          className="hover:text-primary transition-colors flex items-center gap-1"
+        >
+          <FolderIcon className="h-4 w-4" />
+          Datasets
+        </Link>
+        <ChevronRightIcon className="h-4 w-4" />
+        <span className="text-muted-foreground truncate">{dataset.name}</span>
+      </div>
+
+      {/* Main Header */}
+      <div className="flex items-start gap-6">
+        {/* Left Section - Main Info */}
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          <div className="bg-primary/10 rounded-lg border p-3 flex-shrink-0">
+            <FileIcon className="h-6 w-6 text-primary" />
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="bg-background/50 rounded-lg border p-2">
-              <FileIcon className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div className="min-w-0 flex-1">
-              {isEditing ? (
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Title and Badge */}
+            {isEditing ? (
+              <div className="space-y-3">
+                <Input
+                  value={editedAlias}
+                  onChange={(e) => setEditedAlias(e.target.value)}
+                  className="text-2xl font-bold h-11 text-foreground"
+                  placeholder="Enter a friendly name..."
+                />
                 <div className="space-y-2">
-                  <Input
-                    value={editedAlias}
-                    onChange={(e) => setEditedAlias(e.target.value)}
-                    className="text-lg font-semibold h-9"
-                    placeholder="Enter a friendly name..."
-                  />
                   <Textarea
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
-                    className="mt-2 resize-none"
+                    className="resize-none min-h-[100px]"
                     placeholder="Enter a description..."
-                    rows={3}
+                    rows={4}
                   />
                   <div className="flex gap-2">
                     <Button
@@ -172,7 +178,6 @@ export function DatasetHeader({
                       size="sm"
                       onClick={handleUpdate}
                       disabled={isUpdating}
-                      className="h-7"
                     >
                       <CheckIcon className="h-4 w-4 mr-1" />
                       Save
@@ -182,171 +187,220 @@ export function DatasetHeader({
                       size="sm"
                       onClick={handleCancel}
                       disabled={isUpdating}
-                      className="h-7"
                     >
                       <XIcon className="h-4 w-4 mr-1" />
                       Cancel
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-lg font-semibold truncate">
-                      {dataset.alias || "Untitled Dataset"}
-                    </h1>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full hover:bg-secondary/80"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <PencilIcon className="h-3.5 w-3.5" />
-                    </Button>
-                    <Badge
-                      variant="secondary"
-                      className="h-5 px-1.5 text-xs font-medium bg-secondary/50"
-                    >
-                      CSV
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground line-clamp-2">
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold text-foreground truncate">
+                    {dataset.alias || "Untitled Dataset"}
+                  </h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full hover:bg-secondary/80 flex-shrink-0"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </Button>
+                  <Badge variant="secondary" className="bg-secondary/50">
+                    CSV
+                  </Badge>
+                </div>
+
+                {/* Description */}
+                <div className="group">
+                  <div className="flex items-start gap-2">
+                    <p className="text-muted-foreground leading-relaxed flex-1 min-h-[60px] pr-8">
                       {dataset.description || "No description provided"}
                     </p>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 rounded-full hover:bg-secondary/80 flex-shrink-0"
+                      className="h-6 w-6 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       onClick={() => setIsEditing(true)}
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 mt-6">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 hover:bg-secondary/80"
-                      title="Download Dataset"
-                    >
-                      <DownloadIcon className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 hover:bg-secondary/80"
-                      title="Chat with Dataset"
-                      onClick={handleChatClick}
-                    >
-                      <MessageSquareIcon className="h-5 w-5" />
-                    </Button>
-                    <Link href={`/${projectId}/${dataset.id}/data/`}>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-secondary/80"
-                        title="Query Dataset"
-                      >
-                        <DatabaseIcon className="h-5 w-5" />
-                      </Button>
-                    </Link>
-                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Quick Stats */}
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <TableIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {new Intl.NumberFormat("en", {
+                        notation: "compact",
+                      }).format(dataset.row_count || 0)}
+                    </span>
+                    <span className="text-muted-foreground">rows</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
+                    <span className="font-medium">
+                      {dataset.columns?.length || 0}
+                    </span>
+                    <span className="text-muted-foreground">columns</span>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-muted-foreground hover:text-foreground"
+                      >
+                        <InfoIcon className="h-4 w-4 mr-1" />
+                        More details
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Dataset Details</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {/* Basic Stats */}
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Statistics</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-secondary/20 rounded-lg p-3">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                Rows
+                              </div>
+                              <div className="font-semibold">
+                                {new Intl.NumberFormat("en", {
+                                  notation: "compact",
+                                }).format(dataset.row_count || 0)}
+                              </div>
+                            </div>
+                            <div className="bg-secondary/20 rounded-lg p-3">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                Columns
+                              </div>
+                              <div className="font-semibold">
+                                {dataset.columns?.length || 0}
+                              </div>
+                            </div>
+                            <div className="bg-secondary/20 rounded-lg p-3 col-span-2">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                File Size
+                              </div>
+                              <div className="font-semibold">
+                                {dataset.size
+                                  ? `${(dataset.size / (1024 * 1024)).toFixed(
+                                      1
+                                    )} MB`
+                                  : "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Timestamps */}
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Timeline</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm">
+                              <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Created:
+                              </span>
+                              <span className="font-medium">
+                                {format(
+                                  new Date(dataset.created_at),
+                                  "MMM d, yyyy 'at' h:mm a"
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Updated:
+                              </span>
+                              <span className="font-medium">
+                                {format(
+                                  new Date(dataset.updated_at),
+                                  "MMM d, yyyy 'at' h:mm a"
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Contributors */}
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Contributors</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Created by:
+                              </span>
+                              <span className="font-medium">
+                                {dataset.created_by}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Updated by:
+                              </span>
+                              <span className="font-medium">
+                                {dataset.updated_by}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column - Info Section */}
-        <div className="pt-3 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            {/* Dataset Info - First Row */}
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <TableIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Rows
-                </div>
-                <div className="text-sm font-semibold tabular-nums">
-                  {new Intl.NumberFormat("en", {
-                    notation: "compact",
-                  }).format(dataset.row_count || 0)}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Columns
-                </div>
-                <div className="text-sm font-semibold tabular-nums">
-                  {dataset.columns?.length || 0}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <HardDriveIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Size
-                </div>
-                <div className="text-sm font-semibold tabular-nums">
-                  {dataset.size
-                    ? `${(dataset.size / (1024 * 1024)).toFixed(1)} MB`
-                    : "N/A"}
-                </div>
-              </div>
-            </div>
+        {/* Right Section - Action Buttons */}
+        {!isEditing && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 hover:bg-secondary/80"
+              title="Download Dataset"
+            >
+              <DownloadIcon className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 hover:bg-secondary/80"
+              title="Chat with Dataset"
+              onClick={handleChatClick}
+            >
+              <MessageSquareIcon className="h-5 w-5" />
+            </Button>
+            <Link href={`/${projectId}/${dataset.id}/data/`}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 hover:bg-secondary/80"
+                title="Query Dataset"
+              >
+                <DatabaseIcon className="h-5 w-5" />
+              </Button>
+            </Link>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {/* Dataset Info - Second Row */}
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Created
-                </div>
-                <div className="text-[11px] font-medium">
-                  {format(new Date(dataset.created_at), "MMM d, yyyy")}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Updated
-                </div>
-                <div className="text-[11px] font-medium">
-                  {format(new Date(dataset.updated_at), "MMM d, yyyy")}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Created by
-                </div>
-                <div className="text-[11px] font-medium">
-                  {dataset.created_by}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-secondary/20 rounded-lg px-2.5 py-1.5">
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">
-                  Updated by
-                </div>
-                <div className="text-[11px] font-medium">
-                  {dataset.updated_by}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
