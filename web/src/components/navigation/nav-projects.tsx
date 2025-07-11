@@ -3,7 +3,7 @@
 import {
   ChevronDown,
   TableIcon,
-  DatabaseIcon,
+  // DatabaseIcon,
   CodeIcon,
   // MessageSquareIcon,
   NetworkIcon,
@@ -83,12 +83,12 @@ export function NavProjects() {
           icon: TableIcon,
           isActive: isActive(`/${projectId}`, true),
         },
-        {
-          title: "Relationships",
-          url: `/${projectId}/schemas`,
-          icon: DatabaseIcon,
-          isActive: isActive(`/${projectId}/schemas`, true),
-        },
+        // {
+        //   title: "Relationships",
+        //   url: `/${projectId}/schemas`,
+        //   icon: DatabaseIcon,
+        //   isActive: isActive(`/${projectId}/schemas`, true),
+        // },
       ]
     : [];
 
