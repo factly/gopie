@@ -69,13 +69,13 @@ export class ZitadelClient {
     this.clientSecret = process.env.ZITADEL_CLIENT_SECRET!;
     this.pat = process.env.ZITADEL_PAT!;
     this.idpId = process.env.ZITADEL_IDP_ID!;
-  }
 
-  console.log("ZITADEL_AUTHORITY:", process.env.ZITADEL_AUTHORITY);
-  console.log("ZITADEL_CLIENT_ID:", process.env.ZITADEL_CLIENT_ID);
-  console.log("ZITADEL_CLIENT_SECRET:", process.env.ZITADEL_CLIENT_SECRET);
-  console.log("ZITADEL_PAT:", process.env.ZITADEL_PAT);
-  console.log("ZITADEL_IDP_ID:", process.env.ZITADEL_IDP_ID);
+    console.log("ZITADEL_AUTHORITY:", process.env.ZITADEL_AUTHORITY);
+    console.log("ZITADEL_CLIENT_ID:", process.env.ZITADEL_CLIENT_ID);
+    console.log("ZITADEL_CLIENT_SECRET:", process.env.ZITADEL_CLIENT_SECRET);
+    console.log("ZITADEL_PAT:", process.env.ZITADEL_PAT);
+    console.log("ZITADEL_IDP_ID:", process.env.ZITADEL_IDP_ID);
+  }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${this.authority}${endpoint}`;
