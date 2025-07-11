@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  DatabaseIcon,
+  // DatabaseIcon,
   TableIcon,
   // MessageSquareIcon,
   CodeIcon,
@@ -125,7 +125,7 @@ export function NavProjects() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(`/${projectId}/schemas`, true)}
@@ -135,7 +135,7 @@ export function NavProjects() {
                     <span>Relationships</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
             </SidebarMenu>
           </SidebarGroupContent>
         )}
