@@ -45,5 +45,5 @@ jobs:
           - ZITADEL_IDP_ID=${{ secrets.ZITADEL_IDP_ID }}
 
         secrets: |
-          zitadel_client_secret: ${{ secrets.ZITADEL_CLIENT_SECRET }}
-          zitadel_pat: ${{ secrets.ZITADEL_PAT }}
+          id=zitadel_client_secret,env=${{ env.ZITADEL_CLIENT_SECRET }}
+          id=zitadel_pat,env=${{ env.ZITADEL_PAT }}
