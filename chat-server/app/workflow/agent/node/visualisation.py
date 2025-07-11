@@ -16,11 +16,10 @@ from ..types import AgentState
     progress_message="Checking visualization needs...",
 )
 async def check_visualization(state: AgentState, config: RunnableConfig) -> dict:
-    messages = state.get("messages", [])
-    user_query = str(messages[-1].content)
+    user_input = state.get("initial_user_query", "")
     prompt_messages = get_prompt(
         "check_visualization",
-        user_query=user_query,
+        user_query=user_input,
     )
 
     llm = get_model_provider(config).get_llm_for_node("check_visualization")

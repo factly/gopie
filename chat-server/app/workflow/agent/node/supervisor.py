@@ -8,8 +8,13 @@ def supervisor(
 ) -> Command:
     dataset_ids = state.get("dataset_ids", None)
     datasets_count = len(dataset_ids) if dataset_ids else 0
-
-    if datasets_count == 1:
+    datasets = state.get("datasets", [])
+    needs_visualization = state.get("needs_visualization", False)
+    if datasets and needs_visualization:
+        return Command(
+            goto="visualization_agent",
+        )
+    elif datasets_count == 1:
         return Command(
             goto="single_dataset_agent",
         )

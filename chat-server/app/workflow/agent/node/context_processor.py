@@ -1,4 +1,3 @@
-from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
@@ -19,13 +18,7 @@ from ..types import AgentState, Dataset
     progress_message="Processing chat context...",
 )
 async def process_context(state: AgentState, config: RunnableConfig) -> dict:
-    messages = state.get("messages", [])
-
-    if messages and isinstance(messages[-1], HumanMessage):
-        user_input = str(messages[-1].content)
-    else:
-        raise Exception("Last Message must be a user message")
-
+    user_input = state.get("initial_user_query", "")
     chat_history = get_chat_history(config)
     if not chat_history:
         return {"user_query": user_input}
