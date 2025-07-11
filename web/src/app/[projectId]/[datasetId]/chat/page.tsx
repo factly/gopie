@@ -501,7 +501,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                   index === allMessages.length - 1 &&
                                   !sortedOptimisticMessages.length
                                 }
-                                datasetId={params.datasetId}
                               />
                             ))}
 
@@ -519,7 +518,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                                     sortedOptimisticMessages.length - 1 &&
                                   !message.isLoading
                                 }
-                                datasetId={params.datasetId}
                               />
                             ))}
                           </div>

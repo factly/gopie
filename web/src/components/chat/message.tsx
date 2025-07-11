@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEffect, useState, useCallback } from "react";
 import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
-import { TTSButton } from "./tts-button";
+// import { TTSButton } from "./tts-button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -78,7 +78,7 @@ function parseMessageContent(content: string): MessageContent {
 
 interface ChatMessageProps {
   id: string;
-  content?: string | StreamEvent[]; // Made optional
+  content: string | MessageContent[] | StreamEvent[];
   message?: UIMessage;
   role: "user" | "assistant" | "intermediate" | "ai";
   createdAt: string;
@@ -87,9 +87,8 @@ interface ChatMessageProps {
   onDelete?: (messageId: string) => void;
   chatId?: string;
   isLatest?: boolean;
-  datasetId?: string;
   finalizedDatasets?: string[];
-  finalizedSqlQuery?: string | null | undefined;
+  finalizedSqlQuery?: string;
 }
 
 // New component for dataset details
@@ -179,7 +178,6 @@ export function ChatMessage({
   onDelete,
   chatId,
   isLatest,
-  datasetId,
   finalizedDatasets,
   finalizedSqlQuery,
 }: ChatMessageProps) {
@@ -330,19 +328,29 @@ export function ChatMessage({
       const streamSqlQueries: string[] = [];
       const intermediateMessages: string[] = [];
 
-      content.forEach((event: StreamEvent) => {
-        if (event.datasets_used) {
-          event.datasets_used.forEach((dataset) =>
-            allStreamDatasets.add(dataset)
-          );
-        }
-        if (event.generated_sql_query) {
-          streamSqlQueries.push(event.generated_sql_query);
-        }
-        if (event.role === "intermediate") {
-          intermediateMessages.push(event.content);
-        }
-      });
+      // Type guard to check if it's StreamEvent[]
+      const isStreamEventArray = (
+        arr: MessageContent[] | StreamEvent[]
+      ): arr is StreamEvent[] => {
+        return arr.length > 0 && "role" in arr[0];
+      };
+
+      if (isStreamEventArray(content)) {
+        const streamContent = content as StreamEvent[];
+        streamContent.forEach((event) => {
+          if (event.datasets_used) {
+            event.datasets_used.forEach((dataset) =>
+              allStreamDatasets.add(dataset)
+            );
+          }
+          if (event.generated_sql_query) {
+            streamSqlQueries.push(event.generated_sql_query);
+          }
+          if (event.role === "intermediate") {
+            intermediateMessages.push(event.content);
+          }
+        });
+      }
 
       setDisplayDatasets(Array.from(allStreamDatasets));
       setDisplaySqlQueries(streamSqlQueries);
@@ -848,13 +856,13 @@ export function ChatMessage({
                 {new Date(createdAt).toLocaleTimeString()}
               </span>
 
-              <div id={`tts-button-container-${id}`} data-tts-message-id={id}>
+              {/* <div id={`tts-button-container-${id}`} data-tts-message-id={id}>
                 <TTSButton
                   text={textContent}
                   role={styleRole}
                   datasetId={datasetId}
                 />
-              </div>
+              </div> */}
 
               {onDelete && chatId && (
                 <DropdownMenu>
