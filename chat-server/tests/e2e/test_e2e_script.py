@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import traceback
+from datetime import datetime
 
 import requests
 from dotenv import load_dotenv
@@ -16,8 +17,9 @@ from app.core.constants import (
     SQL_QUERIES_GENERATED,
 )
 
-from .multi_dataset_cases import COMPLEX_QUERY_CASES
+from .multi_dataset_cases import MULTI_DATASET_TEST_CASES
 from .single_dataset_cases import SINGLE_DATASET_TEST_CASES
+from .terminal_formatter import TerminalFormatter
 
 load_dotenv()
 
@@ -26,16 +28,16 @@ url = "http://localhost:8001/api/v1/chat/completions"
 
 def setup_model():
     api_key = os.getenv("PORTKEY_API_KEY")
-    virtual_key = os.getenv("GEMINI_VIRTUAL_KEY")
+    provider = os.getenv("PORTKEY_PROVIDER_NAME")
 
     model = ChatOpenAI(
         api_key="X",  # type: ignore
         base_url=PORTKEY_GATEWAY_URL,
         default_headers=createHeaders(
             api_key=api_key,
-            virtual_key=virtual_key,
+            provider=provider,
         ),
-        model="gemini-2.5-flash-preview-04-17",
+        model="gpt-4o-mini",
     )
     return model
 
@@ -138,9 +140,7 @@ def process_tool_calls(tool_calls):
                 if args.get("role") == "intermediate":
                     tool_messages.append(content)
 
-                    if category == DATASETS_USED or (
-                        content and "dataset" in content.lower()
-                    ):
+                    if category == DATASETS_USED or (content and "dataset" in content.lower()):
                         if "datasets" in args:
                             datasets = args.get("datasets")
                             if isinstance(datasets, list):
@@ -152,17 +152,11 @@ def process_tool_calls(tool_calls):
                                 "using dataset" in content.lower()
                                 or "selected dataset" in content.lower()
                             ):
-                                datasets_part = content.split(":", 1)[
-                                    1
-                                ].strip()
+                                datasets_part = content.split(":", 1)[1].strip()
                                 selected_datasets.append(datasets_part)
 
                     if category == SQL_QUERIES_GENERATED or (
-                        content
-                        and (
-                            ("sql" in content.lower())
-                            or ("query" in content.lower())
-                        )
+                        content and (("sql" in content.lower()) or ("query" in content.lower()))
                     ):
                         if "query" in args:
                             query = args.get("query")
@@ -187,7 +181,9 @@ def process_tool_calls(tool_calls):
     return tool_messages, generated_sql_queries, selected_datasets
 
 
-async def process_single_test_case(query, chain, server_url=None):
+async def process_single_test_case(
+    query, chain, formatter, server_url=None, test_number=None, total_tests=None
+):
     query_copy = query.copy()
     expected_result = query_copy.get("expected_result", {})
     if "expected_result" in query_copy:
@@ -195,20 +191,22 @@ async def process_single_test_case(query, chain, server_url=None):
 
     test_url = server_url if server_url else url
 
-    print(f"Processing query: {query['messages'][0]['content']}")
+    test_query = query["messages"][0]["content"]
+    formatter.print_test_case_header(test_number, total_tests, test_query)
+
     results = {
-        "query": query["messages"][0]["content"],
+        "query": test_query,
         "passed": False,
         "reasoning": "",
         "used_datasets": [],
         "sql_query_count": 0,
         "expected_dataset": "",
-        "expected_sql_count": expected_result.get(
-            "sql_query_count", "Not specified"
-        ),
+        "expected_sql_count": expected_result.get("sql_query_count", "Not specified"),
     }
 
     try:
+        formatter.print_processing_status("Processing query...")
+
         response = requests.post(
             test_url,
             json={
@@ -251,22 +249,18 @@ async def process_single_test_case(query, chain, server_url=None):
 
                     tool_calls = delta.get("tool_calls")
                     if tool_calls is not None:
-                        msgs, queries, datasets = process_tool_calls(
-                            tool_calls
-                        )
+                        msgs, queries, datasets = process_tool_calls(tool_calls)
                         tool_messages.extend(msgs)
                         generated_sql_queries.extend(queries)
                         selected_datasets.extend(datasets)
             except json.JSONDecodeError:
                 continue
 
-        final_response += f"\n     used_datasets: {selected_datasets}"
-        final_response += (
-            f"\n     generated_sql queries: {generated_sql_queries}"
+        formatter.print_response_summary(
+            final_response, selected_datasets, generated_sql_queries, tool_messages
         )
-        final_response += f"\n     tool_messages: {tool_messages}"
 
-        print(f"Final AI Response: {final_response}")
+        formatter.print_evaluation_status()
 
         result = await chain.ainvoke(
             {
@@ -282,26 +276,21 @@ async def process_single_test_case(query, chain, server_url=None):
         if "dataset_identified" in expected_result:
             results["expected_dataset"] = expected_result["dataset_identified"]
         else:
-            results[
-                "expected_dataset"
-            ] = "Not applicable for single dataset case"
+            results["expected_dataset"] = "Not applicable for single dataset case"
 
         if result["correct"] == "true":
             results["passed"] = True
-            print("✅ Query passed")
+            formatter.print_test_result("passed")
         elif result["correct"] == "partial":
             results["passed"] = "partial"
-            print("🟡 Query partially correct")
-            print(f"Reasoning: {results['reasoning']}")
+            formatter.print_test_result("partial", results["reasoning"])
         else:
-            print("❌ Query failed")
-            print(f"Reasoning: {results['reasoning']}")
+            formatter.print_test_result("failed", results["reasoning"])
 
         return results
 
     except Exception as e:
-        print(f"API request failed: {str(e)}")
-        print(traceback.format_exc())
+        formatter.print_error(str(e), traceback.format_exc())
         results["reasoning"] = f"Error: {str(e)}"
         return results
 
@@ -310,43 +299,31 @@ def get_test_cases(test_type="all"):
     if test_type == "single":
         return SINGLE_DATASET_TEST_CASES
     elif test_type == "multi":
-        return COMPLEX_QUERY_CASES
+        return MULTI_DATASET_TEST_CASES
     else:
-        return SINGLE_DATASET_TEST_CASES + COMPLEX_QUERY_CASES
+        return SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES
 
 
-async def run_tests(
-    test_type="all", server_url="http://localhost:8001/api/v1/chat/completions"
-):
-    print(f"\nRunning {test_type} dataset tests against {server_url}")
+async def run_tests(test_type="all", server_url="http://localhost:8001/api/v1/chat/completions"):
+    start_time = datetime.now()
+
+    formatter = TerminalFormatter(use_colors=True)
+
+    formatter.print_framework_header(start_time)
 
     chain = create_chain()
     test_cases = get_test_cases(test_type)
     results = []
 
-    print(f"Running {len(test_cases)} test cases")
+    formatter.print_test_suite_info(len(test_cases), test_type, server_url)
 
-    for query in test_cases:
-        print(f"Running test case: {query['messages'][0]['content']}")
-        result = await process_single_test_case(query, chain, server_url)
+    for i, query in enumerate(test_cases, 1):
+        result = await process_single_test_case(
+            query, chain, formatter, server_url, i, len(test_cases)
+        )
         results.append(result)
 
-    passed = sum(1 for r in results if r["passed"] is True)
-    partial = sum(1 for r in results if r["passed"] == "partial")
-    failed = sum(1 for r in results if r["passed"] is False)
-
-    print("\n== Results Summary ==")
-    print(f"Total tests: {len(results)}")
-    print(f"Passed: {passed}")
-    print(f"Partial: {partial}")
-    print(f"Failed: {failed}")
-
-    if failed > 0 or partial > 0:
-        print("\n== Failed Tests ==")
-        for ft in results:
-            if ft["passed"] is not True:
-                print(f"Query: {ft['query']}")
-                print(f"Reason: {ft['reasoning']}\n")
+    formatter.print_results_summary(results, test_type, server_url, start_time)
 
     return results
 
