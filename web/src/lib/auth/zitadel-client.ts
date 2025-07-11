@@ -168,7 +168,10 @@ export class ZitadelClient {
       // Our service-user PAT acts as the actor_token performing the impersonation.
       actor_token: this.pat,
       actor_token_type: "urn:ietf:params:oauth:token-type:access_token",
-      scope: "openid profile email",
+      scope:
+        "openid profile email urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
+        process.env.ZITADEL_PROJECT_ID +
+        ":roles",
     });
 
     const basicAuth = Buffer.from(
