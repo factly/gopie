@@ -16,7 +16,7 @@ import {
 } from "@/lib/validation/validate-file";
 import { useDuckDb } from "@/hooks/useDuckDb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
 import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
@@ -582,6 +582,70 @@ export function FileValidationUppy({
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Display rejected rows warning */}
+      {validationResult?.isValid &&
+        validationResult.rejectedRowCount &&
+        validationResult.rejectedRowCount > 0 && (
+          <Alert variant="default" className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="text-amber-900 dark:text-amber-100">
+              Data Type Validation Warnings
+            </AlertTitle>
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <div className="space-y-2">
+                <p>
+                  {validationResult.rejectedRowCount} row(s) contain data that
+                  doesn&apos;t match the expected types and will be excluded from the
+                  dataset:
+                </p>
+                {validationResult.rejectedRows &&
+                  validationResult.rejectedRows.slice(0, 5).map((rejection, index) => {
+                    let displayMessage = "";
+                    
+                    if (rejection.actualValue && rejection.actualValue.trim() !== "") {
+                      // Show actual value if it exists and is not just whitespace
+                      const actualValue = rejection.actualValue.length > 50 ? 
+                        `${rejection.actualValue.substring(0, 50)}...` : 
+                        rejection.actualValue;
+                      displayMessage = `got '${actualValue}'`;
+                    } else {
+                      // For empty values, just say "is empty" or "is missing"
+                      displayMessage = "is empty";
+                    }
+                    
+                    const displayExpectedType = rejection.expectedType === "unknown" ? 
+                      "a valid type" : 
+                      rejection.expectedType;
+                    
+                    return (
+                      <div key={index} className="text-xs bg-amber-100 dark:bg-amber-900 p-2 rounded border border-amber-200 dark:border-amber-700">
+                        <span className="font-medium">Row {rejection.rowNumber}:</span>{" "}
+                        Column &apos;{rejection.columnName}&apos; expected{" "}
+                        <span className="font-mono text-amber-700 dark:text-amber-300">{displayExpectedType}</span> but {displayMessage}
+                        {rejection.errorMessage !== "Data type mismatch" && (
+                          <div className="mt-1 text-amber-600 dark:text-amber-400">
+                            {rejection.errorMessage}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                {validationResult.rejectedRows &&
+                  validationResult.rejectedRows.length > 5 && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      ... and {validationResult.rejectedRows.length - 5} more
+                      issue(s)
+                    </p>
+                  )}
+                <p className="text-sm font-medium">
+                  You can proceed with the upload (rejected rows will be skipped)
+                  or fix the data and try again.
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Display supported file formats */}
       <div className="mb-4 text-sm text-gray-600">

@@ -19,6 +19,16 @@ export interface ValidationResult {
   error?: string;
   columnMappings?: Record<string, string>;
   tables?: string[]; // For DuckDB files that may contain multiple tables
+  rejectedRows?: RejectedRow[]; // Rows that failed validation due to data type mismatches
+  rejectedRowCount?: number; // Total number of rejected rows
+}
+
+export interface RejectedRow {
+  rowNumber: number;
+  columnName: string;
+  expectedType: string;
+  actualValue: string;
+  errorMessage: string;
 }
 
 export interface FileFormatInfo {
@@ -193,18 +203,31 @@ async function validateCsvFile(
     );
 
     const tempTableName = `temp_validate_${Date.now()}`;
+    
+    // Use IGNORE_ERRORS and STORE_REJECTS to handle data type mismatches
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
-      SELECT * FROM read_csv_auto('${virtualFileName}', header=true)
+      SELECT * FROM read_csv_auto(
+        '${virtualFileName}', 
+        header=true,
+        IGNORE_ERRORS=true,
+        STORE_REJECTS=true
+      )
     `);
 
     const result = await validateTableStructure(conn, tempTableName);
+    
+    // Check for rejected rows
+    const rejectedRowsResult = await getRejectedRows(conn);
+    
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
     return {
       ...result,
       format: "csv",
+      rejectedRows: rejectedRowsResult.rejectedRows,
+      rejectedRowCount: rejectedRowsResult.rejectedRowCount,
     };
   } catch (error) {
     await conn.close();
@@ -233,18 +256,39 @@ async function validateParquetFile(
     );
 
     const tempTableName = `temp_validate_${Date.now()}`;
-    await conn.query(`
-      CREATE TABLE ${tempTableName} AS 
-      SELECT * FROM read_parquet('${virtualFileName}')
-    `);
+    
+    // Try with IGNORE_ERRORS first, fallback to regular read if not supported
+    try {
+      await conn.query(`
+        CREATE TABLE ${tempTableName} AS 
+        SELECT * FROM read_parquet('${virtualFileName}')
+        WHERE 1=1 -- Parquet doesn't support IGNORE_ERRORS directly, so we'll handle errors differently
+      `);
+    } catch (initialError) {
+      // If there's an error, the file might have data type issues
+      // For Parquet, we'll validate by attempting to read and catching schema errors
+      await conn.close();
+      return {
+        isValid: false,
+        format: "parquet",
+        error: `Parquet validation failed: ${(initialError as Error).message}`,
+      };
+    }
 
     const result = await validateTableStructure(conn, tempTableName);
+    
+    // For Parquet files, rejected rows are less common due to schema enforcement
+    // But we'll still check if any reject_errors were created
+    const rejectedRowsResult = await getRejectedRows(conn);
+    
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
     return {
       ...result,
       format: "parquet",
+      rejectedRows: rejectedRowsResult.rejectedRows,
+      rejectedRowCount: rejectedRowsResult.rejectedRowCount,
     };
   } catch (error) {
     await conn.close();
@@ -274,31 +318,51 @@ async function validateJsonFile(
 
     const tempTableName = `temp_validate_${Date.now()}`;
 
-    // Try different JSON formats
+    // Try different JSON formats with IGNORE_ERRORS
     let createQuery = "";
+    let lastError: Error | null = null;
+    
     try {
-      // Try auto-detection first
-      createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}')`;
+      // Try auto-detection first with IGNORE_ERRORS
+      createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true, store_rejects=true)`;
       await conn.query(createQuery);
-    } catch {
+    } catch (autoError) {
+      lastError = autoError as Error;
       try {
         // Try newline-delimited JSON
-        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited')`;
+        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited', ignore_errors=true, store_rejects=true)`;
         await conn.query(createQuery);
-      } catch {
-        // Try array format
-        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='array')`;
-        await conn.query(createQuery);
+        lastError = null;
+      } catch (ndJsonError) {
+        lastError = ndJsonError as Error;
+        try {
+          // Try array format
+          createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='array', ignore_errors=true, store_rejects=true)`;
+          await conn.query(createQuery);
+          lastError = null;
+        } catch (arrayError) {
+          lastError = arrayError as Error;
+        }
       }
+    }
+    
+    if (lastError) {
+      throw lastError;
     }
 
     const result = await validateTableStructure(conn, tempTableName);
+    
+    // Check for rejected rows
+    const rejectedRowsResult = await getRejectedRows(conn);
+    
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
     return {
       ...result,
       format: "json",
+      rejectedRows: rejectedRowsResult.rejectedRows,
+      rejectedRowCount: rejectedRowsResult.rejectedRowCount,
     };
   } catch (error) {
     await conn.close();
@@ -359,6 +423,8 @@ async function validateExcelFile(
       ...result,
       format: "excel",
       error: result.error ? `Excel file processed: ${result.error}` : undefined,
+      rejectedRows: result.rejectedRows,
+      rejectedRowCount: result.rejectedRowCount,
     };
     
   } catch (error) {
@@ -507,6 +573,113 @@ async function validateTableStructure(
 }
 
 /**
+ * Retrieves rejected rows from DuckDB's reject_errors table
+ */
+async function getRejectedRows(
+  conn: duckdb.AsyncDuckDBConnection
+): Promise<{ rejectedRows: RejectedRow[]; rejectedRowCount: number }> {
+  try {
+    // First check if reject_errors table exists
+    const tableExistsQuery = await conn.query(`
+      SELECT COUNT(*) as table_count 
+      FROM information_schema.tables 
+      WHERE table_name = 'reject_errors'
+    `);
+    
+    const tableExists = Number(tableExistsQuery.toArray()[0]?.table_count || 0) > 0;
+    
+    if (!tableExists) {
+      return {
+        rejectedRows: [],
+        rejectedRowCount: 0,
+      };
+    }
+
+    // First, let's see what columns are available in reject_errors
+    const columnsQuery = await conn.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'reject_errors'
+    `);
+    
+    const availableColumns = columnsQuery.toArray().map(row => row.column_name?.toString());
+    console.log("Available columns in reject_errors:", availableColumns);
+
+    // Query the reject_errors table to get information about rejected rows
+    // Using the available column names
+    const rejectedQuery = await conn.query(`
+      SELECT *
+      FROM reject_errors
+      ORDER BY file_id, line
+      LIMIT 100
+    `);
+
+    const rejectedData = rejectedQuery.toArray();
+    console.log("Sample rejected row data:", rejectedData[0]);
+    console.log("All rejected data keys:", Object.keys(rejectedData[0] || {}));
+    
+    const rejectedRows: RejectedRow[] = rejectedData.map((row) => {
+      // Debug each row to understand the data structure
+      console.log("Processing row:", row);
+      
+      // Try to extract meaningful information from available fields
+      const rowNumber = Number(row.line || row.csv_line || row.row || 0);
+      const columnName = row.column_name?.toString() || row.column?.toString() || "unknown";
+      
+      // For expected type, DuckDB might store this differently
+      let expectedType = "unknown";
+      if (row.expected_type) {
+        expectedType = row.expected_type.toString();
+      } else if (row.type) {
+        expectedType = row.type.toString();
+      } else if (row.csv_type) {
+        expectedType = row.csv_type.toString();
+      }
+      
+      // For actual value, try different possible column names
+      let actualValue = "";
+      if (row.actual_value !== undefined && row.actual_value !== null) {
+        actualValue = row.actual_value.toString();
+      } else if (row.value !== undefined && row.value !== null) {
+        actualValue = row.value.toString();
+      } else if (row.csv_value !== undefined && row.csv_value !== null) {
+        actualValue = row.csv_value.toString();
+      }
+      
+      // For error message
+      const errorMessage = row.error_message?.toString() || 
+                          row.error?.toString() || 
+                          row.message?.toString() || 
+                          "Data type mismatch";
+      
+      return {
+        rowNumber,
+        columnName,
+        expectedType,
+        actualValue,
+        errorMessage,
+      };
+    });
+
+    // Get total count of rejected rows
+    const countQuery = await conn.query(`SELECT COUNT(*) as total FROM reject_errors`);
+    const totalCount = Number(countQuery.toArray()[0]?.total || 0);
+
+    return {
+      rejectedRows,
+      rejectedRowCount: totalCount,
+    };
+  } catch (error) {
+    // If reject_errors table doesn't exist or query fails, return empty results
+    console.warn("Could not retrieve rejected rows:", (error as Error).message);
+    return {
+      rejectedRows: [],
+      rejectedRowCount: 0,
+    };
+  }
+}
+
+/**
  * Converts a file with the specified column types using DuckDB
  * Currently only supports CSV conversion, others will pass through unchanged
  */
@@ -547,9 +720,10 @@ async function convertCsvWithTypes(
     );
 
     const tempTableName = `temp_convert_${Date.now()}`;
+    
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
-      SELECT * FROM read_csv_auto('${sourceFileName}', header=true)
+      SELECT * FROM read_csv_auto('${sourceFileName}', header=true, IGNORE_ERRORS=true, STORE_REJECTS=true)
     `);
 
     let createCastTableSQL = `CREATE TABLE ${tempTableName}_cast AS SELECT `;
