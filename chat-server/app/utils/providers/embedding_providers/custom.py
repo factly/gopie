@@ -1,7 +1,8 @@
 from langchain_openai import OpenAIEmbeddings
 
 from app.core.config import settings
-from app.utils.embedding_providers.base import BaseEmbeddingProvider
+
+from .base import BaseEmbeddingProvider
 
 
 class CustomEmbeddingProvider(BaseEmbeddingProvider):

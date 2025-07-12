@@ -41,12 +41,8 @@ def from_openai_format(
                 project_ids.extend(value.split(","))
             elif key.startswith("dataset_id"):
                 dataset_ids.extend(value.split(","))
-    project_ids = [
-        project_id.strip() for project_id in project_ids if project_id.strip()
-    ]
-    dataset_ids = [
-        dataset_id.strip() for dataset_id in dataset_ids if dataset_id.strip()
-    ]
+    project_ids = [project_id.strip() for project_id in project_ids if project_id.strip()]
+    dataset_ids = [dataset_id.strip() for dataset_id in dataset_ids if dataset_id.strip()]
     return QueryRequest(
         messages=messages,
         model_id=request.get("model"),

@@ -32,9 +32,7 @@ async def store_schema_in_qdrant(
             dataset_details=dataset_details,
         )
 
-        column_descriptions = await generate_column_descriptions(
-            dataset_schema
-        )
+        column_descriptions = await generate_column_descriptions(dataset_schema)
 
         for column in dataset_schema.columns:
             column.column_description = column_descriptions[column.column_name]
@@ -83,8 +81,7 @@ async def delete_schema_from_qdrant(
         )
 
         logger.debug(
-            f"Successfully deleted schema for project_id={project_id}, "
-            f"dataset_id={dataset_id}"
+            f"Successfully deleted schema for project_id={project_id}, " f"dataset_id={dataset_id}"
         )
         return True
 

@@ -29,16 +29,10 @@ async def execute_query(state: State) -> dict:
             raise ValueError("No SQL query/queries found in plan")
 
         for index, query_info in enumerate(sql_queries):
-            result_records = await execute_sql(query_info.sql_query)
+            result_records = await execute_sql(query=query_info.sql_query)
 
             if not result_records:
                 raise ValueError("No results found for the query")
-
-            result_dict = {
-                "result": "Query executed successfully",
-                "query_executed": query_info.sql_query,
-                "data": result_records,
-            }
 
             query_result.subqueries[query_index].sql_queries[
                 index
@@ -52,7 +46,7 @@ async def execute_query(state: State) -> dict:
         )
         return {
             "query_result": query_result,
-            "messages": [IntermediateStep.from_json(result_dict)],
+            "messages": [IntermediateStep(content=str(result_records))],
         }
 
     except Exception as e:
@@ -81,8 +75,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         state: The current state containing messages and retry information
 
     Returns:
-        Routing decision: "replan", "reidentify_datasets", or
-        "validate_query_result"
+        Routing decision: "replan", "reidentify_datasets" or "route_response"
     """
 
     last_message = state["messages"][-1]
@@ -94,8 +87,7 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
 
     if (
         isinstance(last_message, ErrorMessage)
-        and query_result.subqueries[query_index].retry_count
-        < settings.MAX_RETRY_COUNT
+        and query_result.subqueries[query_index].retry_count < settings.MAX_RETRY_COUNT
     ):
         prompt_messages = get_prompt(
             "route_query_replan",
@@ -114,6 +106,6 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         elif "replan" in response_text:
             return "replan"
         else:
-            return "validate_query_result"
+            return "route_response"
 
-    return "validate_query_result"
+    return "route_response"

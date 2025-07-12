@@ -35,11 +35,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
     try:
         identified_datasets = state.get("identified_datasets", [])
         query_index = state.get("subquery_index", 0)
-        user_query = (
-            state.get("subqueries")[query_index]
-            if state.get("subqueries")
-            else "No input"
-        )
+        user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
 
@@ -54,10 +50,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             raise Exception("No dataset selected for query planning")
 
         if not datasets_info:
-            raise Exception(
-                "Could not get preview information for any of the selected "
-                "datasets"
-            )
+            raise Exception("Could not get preview information for any of the selected " "datasets")
 
         llm_prompt = get_prompt(
             "plan_query",
@@ -109,9 +102,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                 "plan_query",
                 {
                     "query_strategy": (
-                        "single_query"
-                        if len(sql_queries) == 1
-                        else "multiple_queries"
+                        "single_query" if len(sql_queries) == 1 else "multiple_queries"
                     ),
                     "tables_used": list(set(tables_used)),
                     "query_count": len(sql_queries),
@@ -134,9 +125,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             }
 
         except Exception as parse_error:
-            raise Exception(
-                f"Failed to parse LLM response: {parse_error!s}"
-            ) from parse_error
+            raise Exception(f"Failed to parse LLM response: {parse_error!s}") from parse_error
 
     except Exception as e:
         query_result.add_error_message(str(e), "Error in query planning")

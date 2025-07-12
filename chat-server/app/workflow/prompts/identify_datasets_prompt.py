@@ -109,33 +109,38 @@ def format_identify_datasets_input(
     confidence_score: float | None = None,
     query_type: str | None = None,
 ) -> dict:
-    input_str = ""
-    input_str += f"USER QUERY: {user_query}\n\n"
+    input_str = f"USER QUERY: {user_query}"
 
     if query_type:
-        input_str += f"QUERY TYPE: {query_type}\n\n"
+        input_str += f"\nQUERY TYPE: {query_type}"
 
     if confidence_score is not None:
-        input_str += f"CONFIDENCE SCORE: {confidence_score}/10\n\n"
+        input_str += f"\nCONFIDENCE SCORE: {confidence_score}/10"
+
+    input_str += f"\n\n=== REQUIRED DATASETS (Auto-Selected): {len(required_dataset_schemas)} ==="
 
     if required_dataset_schemas:
-        input_str += f"\n=== REQUIRED DATASETS (Auto-Selected): {len(required_dataset_schemas)} ===\n"
-        input_str += "These datasets are ALREADY SELECTED and will be used automatically.\n"
-        input_str += "Provide column assumptions for these datasets.\n"
+        input_str += "\nThese datasets are ALREADY SELECTED and will be used automatically."
+        input_str += "\nProvide column assumptions for these datasets."
+
         for i, schema in enumerate(required_dataset_schemas, 1):
-            input_str += f"--- REQUIRED DATASET {i} ---\n"
-            input_str += schema.format_for_prompt()
+            input_str += f"\n\n--- REQUIRED DATASET {i} ---"
+            input_str += f"\n{schema.format_for_prompt()}"
     else:
-        input_str += "=== REQUIRED DATASETS: None ===\n"
+        input_str += "\nNone available"
+
+    input_str += f"\n\n=== SEMANTIC SEARCHED DATASETS (Choose from these): {len(semantic_searched_datasets)} ==="
 
     if semantic_searched_datasets:
-        input_str += f"\n=== SEMANTIC SEARCHED DATASETS (Choose from these): {len(semantic_searched_datasets)} ===\n"
-        input_str += "SELECT the most relevant datasets from these options:\n"
+        input_str += "\nSELECT the most relevant datasets from these options:"
+
         for i, schema in enumerate(semantic_searched_datasets, 1):
-            input_str += f"\n--- AVAILABLE DATASET {i} ---\n"
-            input_str += schema.format_for_prompt()
+            input_str += f"\n\n--- AVAILABLE DATASET {i} ---"
+            input_str += f"\n{schema.format_for_prompt()}"
     else:
-        input_str += "=== SEMANTIC SEARCHED DATASETS: None available ===\n"
+        input_str += "\nNone available"
+
     if not required_dataset_schemas and not semantic_searched_datasets:
-        input_str += "\nNo datasets available for analysis\n"
+        input_str += "\n\n⚠️  No datasets available for analysis"
+
     return {"input": input_str}

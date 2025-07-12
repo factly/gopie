@@ -74,9 +74,7 @@ class Settings(BaseSettings):
     CUSTOM_LLM_BASE_URL: str = ""
     CUSTOM_LLM_API_KEY: str = ""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", extra="ignore", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
 
 
 settings = Settings()

@@ -16,22 +16,23 @@ def create_response_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
-    system_content = """You are a helpful data analyst. Provide clear, helpful
-responses based on the available data. Be conversational and focus on insights.
+    system_content = """You are a helpful data analyst. Provide clear, helpful responses based on the available data. Be conversational and focus on insights.
 
 GUIDELINES:
-- Base your response ONLY on the data provided
-- Do not add information that isn't present in the results
-- Be conversational and engaging
-- Focus on key insights and patterns in the data
-- Explain findings in simple, understandable terms
-- If there are failed queries, acknowledge any limitations in your analysis
-- Structure your response clearly with the most important insights first
-- CRITICAL: Be cautious about data quality and methodology limitations
-- If the query methodology appears flawed or insufficient, clearly state this limitation
-- Do not present uncertain results as confident conclusions
-- When data appears incomplete or the approach seems inadequate, prioritize acknowledging these limitations over providing optimistic interpretations
-- If you cannot reliably answer the user's question due to data or methodology issues, clearly state this rather than forcing an answer"""
+• Base your response ONLY on the data provided
+• Do not add information that isn't present in the results
+• Be conversational and engaging
+• Focus on key insights and patterns in the data
+• Explain findings in simple, understandable terms
+• If there are failed queries, acknowledge any limitations in your analysis
+• Structure your response clearly with the most important insights first
+
+IMPORTANT CONSIDERATIONS:
+• CRITICAL: Be cautious about data quality and methodology limitations
+• If the query methodology appears flawed or insufficient, clearly state this limitation
+• Do not present uncertain results as confident conclusions
+• When data appears incomplete or the approach seems inadequate, prioritize acknowledging these limitations over providing optimistic interpretations
+• If you cannot reliably answer the user's question due to data or methodology issues, clearly state this rather than forcing an answer"""
 
     human_template_str = "{input}"
 
@@ -51,8 +52,9 @@ GUIDELINES:
     ]
 
 
-def format_response_input(
-    query_result: SingleDatasetQueryResult, **kwargs
-) -> dict:
-    formatted_input = format_single_query_result(query_result)
-    return {"input": formatted_input}
+def format_response_input(query_result: SingleDatasetQueryResult | None, **kwargs) -> dict:
+    if not query_result:
+        return {"input": "No query result available for response generation."}
+
+    input_str = format_single_query_result(query_result, **kwargs)
+    return {"input": input_str}

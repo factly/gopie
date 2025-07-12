@@ -23,9 +23,9 @@ ARG GOPIE_API_URL
 ARG NEXT_PUBLIC_ENABLE_AUTH
 ARG ZITADEL_AUTHORITY
 ARG ZITADEL_CLIENT_ID
-ARG ZITADEL_CLIENT_SECRET
+# ARG ZITADEL_CLIENT_SECRET
 ARG ZITADEL_PROJECT_ID
-ARG ZITADEL_PAT
+# ARG ZITADEL_PAT
 ARG ZITADEL_IDP_ID
 
 # Set environment variables from build arguments
@@ -35,20 +35,30 @@ ENV GOPIE_API_URL=$GOPIE_API_URL
 ENV NEXT_PUBLIC_ENABLE_AUTH=$NEXT_PUBLIC_ENABLE_AUTH
 ENV ZITADEL_AUTHORITY=$ZITADEL_AUTHORITY
 ENV ZITADEL_CLIENT_ID=$ZITADEL_CLIENT_ID
-ENV ZITADEL_CLIENT_SECRET=$ZITADEL_CLIENT_SECRET
+# ENV ZITADEL_CLIENT_SECRET=$ZITADEL_CLIENT_SECRET
 ENV ZITADEL_PROJECT_ID=$ZITADEL_PROJECT_ID
-ENV ZITADEL_PAT=$ZITADEL_PAT
+# ENV ZITADEL_PAT=$ZITADEL_PAT
 ENV ZITADEL_IDP_ID=$ZITADEL_IDP_ID
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build Next.js based on the preferred package manager
-RUN \
-    if [ -f yarn.lock ]; then yarn build; \
-    elif [ -f package-lock.json ]; then npm run build; \
-    elif [ -f pnpm-lock.yaml ]; then pnpm build; \
-    elif [ -f bun.lockb ]; then bun run build; \
-    else bun run build; \
-    fi
+RUN --mount=type=secret,id=zitadel_client_secret \
+    --mount=type=secret,id=zitadel_pat \
+  export ZITADEL_CLIENT_SECRET=$(cat /run/secrets/zitadel_client_secret) && \
+  export ZITADEL_PAT=$(cat /run/secrets/zitadel_pat) && \
+  if [ -f yarn.lock ]; then yarn build; \
+  elif [ -f package-lock.json ]; then npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then pnpm build; \
+  elif [ -f bun.lockb ]; then bun run build; \
+  else bun run build; \
+  fi
+# RUN \
+#     if [ -f yarn.lock ]; then yarn build; \
+#     elif [ -f package-lock.json ]; then npm run build; \
+#     elif [ -f pnpm-lock.yaml ]; then pnpm build; \
+#     elif [ -f bun.lockb ]; then bun run build; \
+#     else bun run build; \
+#     fi
 
 # Start Next.js based on the preferred package manager
 CMD \

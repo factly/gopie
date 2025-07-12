@@ -26,9 +26,7 @@ def pull_prompt(prompt_name: str):
 def push_prompt(prompt_name: str, prompt_template: ChatPromptTemplate):
     client = get_langsmith_client()
     try:
-        result = client.push_prompt(
-            prompt_identifier=prompt_name, object=prompt_template
-        )
+        result = client.push_prompt(prompt_identifier=prompt_name, object=prompt_template)
         return result
     except Exception as e:
         raise e

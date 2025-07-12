@@ -34,3 +34,16 @@ jobs:
         tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:${{ env.RELEASE_VERSION }},asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:latest
         context: web
         file: web/Dockerfile.prod
+        build-args: |
+          - NEXT_PUBLIC_COMPANION_URL=${{ secrets.NEXT_PUBLIC_COMPANION_URL }}
+          - NEXT_PUBLIC_GOPIE_API_URL=${{ secrets.NEXT_PUBLIC_GOPIE_API_URL }}
+          - GOPIE_API_URL=${{ secrets.GOPIE_API_URL }}
+          - NEXT_PUBLIC_ENABLE_AUTH=${{ secrets.NEXT_PUBLIC_ENABLE_AUTH }}
+          - ZITADEL_AUTHORITY=${{ secrets.ZITADEL_AUTHORITY }}
+          - ZITADEL_CLIENT_ID=${{ secrets.ZITADEL_CLIENT_ID }}
+          - ZITADEL_PROJECT_ID=${{ secrets.ZITADEL_PROJECT_ID }}
+          - ZITADEL_IDP_ID=${{ secrets.ZITADEL_IDP_ID }}
+
+        secrets: |
+          id=zitadel_client_secret,env=${{ env.ZITADEL_CLIENT_SECRET }}
+          id=zitadel_pat,env=${{ env.ZITADEL_PAT }}

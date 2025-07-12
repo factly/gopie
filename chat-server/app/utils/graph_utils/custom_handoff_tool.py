@@ -7,9 +7,7 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
 
-def create_handoff_tool(
-    *, agent_name: str, description: str | None = None
-) -> BaseTool:
+def create_handoff_tool(*, agent_name: str, description: str | None = None) -> BaseTool:
     name = f"transfer_to_{agent_name}"
     description = description or f"Ask {agent_name} for help."
 

@@ -19,9 +19,7 @@ class ModifiedToolNode(ToolNode):
     ) -> None:
         tools = get_tools(tool_names)
         tool_functions = [tool for tool, _ in tools.values()]
-        tool_metadatas = {
-            tool_name: tool_data[1] for tool_name, tool_data in tools.items()
-        }
+        tool_metadatas = {tool_name: tool_data[1] for tool_name, tool_data in tools.items()}
         self.tool_metadatas = tool_metadatas
         super().__init__(*args, tools=tool_functions, **kwargs)
 
@@ -49,9 +47,7 @@ class ModifiedToolNode(ToolNode):
         config: RunnableConfig,
     ) -> ToolMessage:
         tool_config = self.get_tool_config(call)
-        return super()._run_one(
-            call, input_type, merge_configs(config, tool_config)
-        )
+        return super()._run_one(call, input_type, merge_configs(config, tool_config))
 
     async def _arun_one(
         self,
@@ -60,9 +56,7 @@ class ModifiedToolNode(ToolNode):
         config: RunnableConfig,
     ) -> ToolMessage:
         tool_config = self.get_tool_config(call)
-        return await super()._arun_one(
-            call, input_type, merge_configs(config, tool_config)
-        )
+        return await super()._arun_one(call, input_type, merge_configs(config, tool_config))
 
 
 def has_tool_calls(message):

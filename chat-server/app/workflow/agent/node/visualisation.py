@@ -15,14 +15,11 @@ from ..types import AgentState
     role="intermediate",
     progress_message="Checking visualization needs...",
 )
-async def check_visualization(
-    state: AgentState, config: RunnableConfig
-) -> dict:
-    messages = state.get("messages", [])
-    user_query = str(messages[-1].content)
+async def check_visualization(state: AgentState, config: RunnableConfig) -> dict:
+    user_input = state.get("initial_user_query", "")
     prompt_messages = get_prompt(
         "check_visualization",
-        user_query=user_query,
+        user_query=user_input,
     )
 
     llm = get_model_provider(config).get_llm_for_node("check_visualization")
@@ -34,9 +31,7 @@ async def check_visualization(
     return {"needs_visualization": needs_visualization}
 
 
-async def call_visualization_agent(
-    state: AgentState, config: RunnableConfig
-) -> AgentState | None:
+async def call_visualization_agent(state: AgentState, config: RunnableConfig) -> AgentState | None:
     input_state = {
         "user_query": state.get("user_query", ""),
         "datasets": state.get("datasets", []),

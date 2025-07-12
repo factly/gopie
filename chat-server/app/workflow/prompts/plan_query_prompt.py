@@ -156,17 +156,11 @@ def format_plan_query_input(
 
                     verified_values = col_analysis.verified_values
                     if verified_values:
-                        exact_vals = [
-                            v.value
-                            for v in verified_values
-                            if v.found_in_database
-                        ]
+                        exact_vals = [v.value for v in verified_values if v.found_in_database]
                         if exact_vals:
                             input_str += f"  ✓ Exact matches found: {', '.join(exact_vals)}"
 
-                    suggested_alternatives = (
-                        col_analysis.suggested_alternatives
-                    )
+                    suggested_alternatives = col_analysis.suggested_alternatives
                     if suggested_alternatives:
                         for alt in suggested_alternatives:
                             if alt.found_similar_values:
@@ -176,15 +170,11 @@ def format_plan_query_input(
 
     if error_messages and retry_count > 0:
         input_str += "\n--- PREVIOUS ERRORS ---\n"
-        input_str += (
-            f"Previous attempt {retry_count} failed. Errors encountered:"
-        )
+        input_str += f"Previous attempt {retry_count} failed. Errors encountered:"
         for error in error_messages:
             for error_type, error_msg in error.items():
                 input_str += f"- {error_type}: {error_msg}\n"
-        input_str += (
-            "Please analyze these errors and generate corrected SQL queries."
-        )
+        input_str += "Please analyze these errors and generate corrected SQL queries."
 
     if node_messages:
         input_str += "\n--- WORKFLOW CONTEXT ---"

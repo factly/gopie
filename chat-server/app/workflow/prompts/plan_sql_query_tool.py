@@ -63,5 +63,7 @@ multiple queries are needed, explain the sequence and purpose of each."""
 def format_sql_planning_input(user_query: str, schemas: list[dict]) -> dict:
     if schemas:
         formatted_schemas = json.dumps(schemas, indent=2)
-    formatted_input = f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
+    formatted_input = (
+        f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
+    )
     return {"input": formatted_input}

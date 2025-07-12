@@ -29,9 +29,7 @@ class QdrantSetup:
             if not await cls._async_collection_exists(cls.async_client):
                 await cls.async_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
-                    vectors_config=VectorParams(
-                        size=3072, distance=Distance.COSINE
-                    ),
+                    vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
                 )
         return cls.async_client
 
@@ -45,16 +43,12 @@ class QdrantSetup:
             if not cls._collection_exists(cls.sync_client):
                 cls.sync_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
-                    vectors_config=VectorParams(
-                        size=3072, distance=Distance.COSINE
-                    ),
+                    vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
                 )
         return cls.sync_client
 
     @classmethod
-    def get_vector_store(
-        cls, embeddings: OpenAIEmbeddings
-    ) -> QdrantVectorStore:
+    def get_vector_store(cls, embeddings: OpenAIEmbeddings) -> QdrantVectorStore:
         client = cls.get_sync_client()
         return QdrantVectorStore(
             client=client,
