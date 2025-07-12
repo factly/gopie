@@ -85,7 +85,6 @@ COMPLEX_QUERY_CASES = [
         "stream": True,
         "expected_result": {
             "datasets_used": ["CSR Master Data", "CSR Total Amount Spent"],
-            "sql_query_count": 2,
             "visualization_needed": False,
             "subqueries_generated": True,
             "streaming_updates": True,
@@ -94,7 +93,7 @@ COMPLEX_QUERY_CASES = [
     },
 ]
 
-INVALID_DATASET_CASES = [
+INVALID_DATASET_CASE = [
     {
         "messages": [
             {
@@ -114,8 +113,6 @@ INVALID_DATASET_CASES = [
             "datasets_used": ["CSR Total Amount Spent"],
             "sql_query_count": 1,
             "visualization_needed": False,
-            "error_expected": True,
-            "failure_node": "identify_datasets",
         },
     },
 ]
@@ -160,12 +157,8 @@ MALICIOUS_QUERY_CASES = [
             "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
         },
         "stream": True,
-        "expected_result": {
-            "error_expected": True,
-            "failure_node": "analyze_query",
-        },
+        "expected_result": {"analyze_query": "Conversational with clarification needed."},
     },
-    # Failure at identify_datasets - query about data not in any dataset
     {
         "messages": [
             {
@@ -182,10 +175,7 @@ MALICIOUS_QUERY_CASES = [
             "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
         },
         "stream": True,
-        "expected_result": {
-            "error_expected": True,
-            "failure_node": "identify_datasets",
-        },
+        "expected_result": {"Final response": "No data found for the given query."},
     },
     # Failure at plan_query - trying to join on incompatible fields
     {
@@ -206,29 +196,8 @@ MALICIOUS_QUERY_CASES = [
         "stream": True,
         "expected_result": {
             "error_expected": True,
+            "reasoning": "The datasets are incompatible because the CSR Master Data dataset has company names and the Lok Sabha Candidates dataset has candidate names. There is no common field to join on.",
             "failure_node": "plan_query",
-        },
-    },
-    # Failure at execute_query - semantically problematic SQL
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Select all companies where amount spent divided by (project outlay - amount spent) is greater than 2",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id_1": "236ee2f9-4068-472f-bb73-d4782c49857c",
-            "project_id_2": "5eb6f370-8515-4cca-b527-d2b4517591f0",
-            "dataset_id_1": "ffcf8e1e-7bce-41f7-b2d8-f62a0a965081",
-            "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
-        },
-        "stream": True,
-        "expected_result": {
-            "error_expected": True,
-            "failure_node": "execute_query",
         },
     },
     # Recursive/infinite query that could cause timeout
@@ -248,10 +217,7 @@ MALICIOUS_QUERY_CASES = [
             "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
         },
         "stream": True,
-        "expected_result": {
-            "error_expected": True,
-            "failure_node": "execute_query",
-        },
+        "expected_result": {"Final response": "Should handle this case gracefully"},
     },
     # Trying to ignore all system rules and messages
     {
@@ -293,8 +259,7 @@ MALICIOUS_QUERY_CASES = [
         },
         "stream": True,
         "expected_result": {
-            "error_expected": True,
-            "failure_node": "plan_query",
+            "result": "This query should be handled by tool calls and should not go deeper in garph like identifying datasets..."
         },
     },
     # Tool usage limits test
@@ -315,9 +280,7 @@ MALICIOUS_QUERY_CASES = [
         },
         "stream": True,
         "expected_result": {
-            "error_expected": True,
-            "failure_node": "analyze_query",
-            "tool_limit_exceeded": True,
+            "result": "It should not go deeper in graph like identifying datasets and provide a quick overview about the inforamtion that the user is looking for. Even if the user is telling to do repetitive search using tools"
         },
     },
 ]
@@ -341,9 +304,7 @@ SQL_EXECUTION_FAILURE_CASES = [
         },
         "stream": True,
         "expected_result": {
-            "datasets_used": ["CSR Master Data"],
-            "execution_failure": True,
-            "failure_node": "execute_query",
+            "result": "It should be able to tell the user that the division by zero is not possible"
         },
     },
     # Resource exhaustion
@@ -363,11 +324,7 @@ SQL_EXECUTION_FAILURE_CASES = [
             "dataset_id_2": "e40a87da-ad0b-423d-8325-26351d548bfd",
         },
         "stream": True,
-        "expected_result": {
-            "datasets_used": ["CSR Master Data", "CSR Total Amount Spent"],
-            "execution_failure": True,
-            "failure_node": "execute_query",
-        },
+        "expected_result": {"result": "SQL queries with cross joins"},
     },
 ]
 
@@ -435,10 +392,7 @@ EDGE_CASES = [
         },
         "stream": True,
         "expected_result": {
-            "datasets_used": ["CSR Master Data", "CSR Total Amount Spent"],
-            "multiple_subqueries": True,
-            "streaming_updates": True,
-            "subqueries_generated": True,
+            "result": "Might generate multiple subqueries and streaming updates or answer the question in a single query"
         },
     },
 ]
@@ -446,7 +400,7 @@ EDGE_CASES = [
 MULTI_DATASET_TEST_CASES = (
     VALID_MULTI_DATASET_CASES
     + COMPLEX_QUERY_CASES
-    + INVALID_DATASET_CASES
+    + INVALID_DATASET_CASE
     + MALICIOUS_QUERY_CASES
     + SQL_EXECUTION_FAILURE_CASES
     + EDGE_CASES

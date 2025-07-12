@@ -8,7 +8,10 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.single_dataset_graph.types import State
+from app.workflow.graph.single_dataset_graph.types import (
+    State,
+    ValidationResult,
+)
 
 
 @configure_node(
@@ -29,16 +32,17 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         llm = get_model_provider(config).get_llm_for_node("validate_result")
         parser = JsonOutputParser()
         response = await llm.ainvoke(prompt_messages)
-        parsed_validation = parser.parse(str(response.content))
+        parsed_response = parser.parse(str(response.content))
+        validation_result = ValidationResult(**parsed_response)
 
-        if parsed_validation.get("recommendation", "") == "rerun_query":
+        if validation_result["recommendation"] == "rerun_query":
             retry_count += 1
 
         return {
             "retry_count": retry_count,
-            "validation_result": parsed_validation,
+            "validation_result": validation_result,
             "query_result": query_result,
-            "messages": [IntermediateStep.from_json(parsed_validation)],
+            "messages": [IntermediateStep.from_json(parsed_response)],
         }
 
     except Exception as e:
@@ -46,25 +50,26 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
             "retry_count": retry_count,
             "validation_result": None,
             "messages": [
-                ErrorMessage(content=f"Validation error: {str(e)}. " f"Proceeding with response.")
+                ErrorMessage(content=f"Validation error: {str(e)}. Proceeding with response.")
             ],
         }
 
 
 async def route_result_validation(state: State) -> str:
+    last_message = state.get("messages", [])[-1]
     validation_result = state.get("validation_result", None)
     retry_count = state.get("retry_count", 0)
 
     if not validation_result:
         return "respond_to_user"
 
-    is_valid = validation_result.get("is_valid", True)
-    recommendation = validation_result.get("recommendation", "respond_to_user")
+    is_valid = validation_result["is_valid"]
+    recommendation = validation_result["recommendation"]
 
     if (
         is_valid
         or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
-        or isinstance(validation_result, ErrorMessage)
+        or isinstance(last_message, ErrorMessage)
     ):
         return "respond_to_user"
 

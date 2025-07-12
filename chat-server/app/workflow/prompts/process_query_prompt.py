@@ -7,6 +7,7 @@ from langchain_core.prompts import (
 from app.models.schema import DatasetSchema
 from app.workflow.graph.single_dataset_graph.types import (
     SingleDatasetQueryResult,
+    ValidationResult,
 )
 from app.workflow.prompts.formatters.single_query_result import (
     format_single_query_result,
@@ -79,7 +80,7 @@ def format_process_query_input(
     dataset_schema: DatasetSchema,
     rows_csv: str,
     prev_query_result: SingleDatasetQueryResult | None = None,
-    validation_result: dict | None = None,
+    validation_result: ValidationResult | None = None,
     **kwargs,
 ) -> dict:
     formatted_schema = dataset_schema.format_for_prompt()
@@ -127,7 +128,7 @@ def format_process_query_input(
 💭 Reasoning: {validation_result['reasoning']}
 ⚠️  The previous query result requires improvements before providing a final response."""
 
-        missing_elements = validation_result.get("missing_elements")
+        missing_elements = validation_result["missing_elements"]
         if missing_elements:
             input_str += f"\n❓ Still Missing: {', '.join(missing_elements)}"
 

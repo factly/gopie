@@ -44,8 +44,14 @@ IMPORTANT NOTES:
 - Synthesize all available context to determine the most appropriate action
 
 RESPONSE FORMAT:
-Return ONLY one of these exact strings: "reidentify_datasets", "replan", or
-"route_response"
+Return your response in JSON format with the following structure:
+{
+    "action": "reidentify_datasets|replan|route_response",
+    "reasoning": "Detailed explanation of why this action was chosen based on the analysis of the error and context"
+}
+
+The "action" field must be exactly one of: "reidentify_datasets", "replan", or "route_response"
+The "reasoning" field should provide a clear explanation of your decision-making process.
 """
 
     content_str = (

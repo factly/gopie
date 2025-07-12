@@ -28,6 +28,14 @@ class InputState(TypedDict):
     user_query: str
 
 
+class ValidationResult(TypedDict):
+    is_valid: bool
+    reasoning: str
+    recommendation: str
+    confidence: float
+    missing_elements: list[str]
+
+
 class OutputState(TypedDict):
     query_result: SingleDatasetQueryResult | None
     response_text: str
@@ -36,8 +44,7 @@ class OutputState(TypedDict):
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     retry_count: int
-    # TODO: create a specific type for validation result
-    validation_result: dict | None
+    validation_result: ValidationResult | None
     dataset_id: str | None
     user_query: str | None
     query_result: SingleDatasetQueryResult | None

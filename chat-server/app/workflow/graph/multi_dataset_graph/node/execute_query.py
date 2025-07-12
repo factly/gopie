@@ -1,4 +1,5 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
@@ -99,13 +100,11 @@ async def route_query_replan(state: State, config: RunnableConfig) -> str:
         llm = get_model_provider(config).get_llm_for_node("route_query_replan")
 
         response = await llm.ainvoke(prompt_messages)
-        response_text = str(response.content).lower()
+        parsed_response = JsonOutputParser().parse(str(response.content))
 
-        if "reidentify_datasets" in response_text:
-            return "reidentify_datasets"
-        elif "replan" in response_text:
-            return "replan"
-        else:
-            return "route_response"
+        next_action = parsed_response.get("action", "route_response")
+
+        if next_action == "reidentify_datasets" or next_action == "replan":
+            return next_action
 
     return "route_response"

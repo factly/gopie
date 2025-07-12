@@ -153,25 +153,56 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
 async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
     """
     Find values similar to the given value in the column.
+    Uses LIKE matching first, then falls back to trigram similarity if no results found.
     """
     similar_values = []
+
+    # First attempt: ILIKE matching (case-insensitive exact substring)
     try:
         query = f"""
         SELECT DISTINCT {column_name}
         FROM {table_name}
-        WHERE LOWER({column_name}) LIKE LOWER('%{value}%')
+        WHERE {column_name} ILIKE '%{value}%'
         LIMIT 5
         """
         result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             similar_values = [str(row.get(column_name)) for row in result if row]
+            logger.debug(
+                f"Found {len(similar_values)} ILIKE matches for '{value}' in '{column_name}'"
+            )
 
     except Exception as e:
         logger.error(
-            f"Error finding similar values for '{value}' in "
-            f"'{table_name}.{column_name}': {str(e)}",
+            f"Error in ILIKE search for '{value}' in " f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
         )
+
+    # Fallback: Trigram similarity matching if no LIKE results found
+    if not similar_values:
+        try:
+            trigram_query = f"""
+            SELECT DISTINCT {column_name}, similarity({column_name}, '{value}') as sim_score
+            FROM {table_name}
+            WHERE {column_name} % '{value}'
+            ORDER BY sim_score DESC
+            LIMIT 5
+            """
+            trigram_result = await execute_sql(query=trigram_query)
+
+            if isinstance(trigram_result, list) and trigram_result:
+                similar_values = [str(row.get(column_name)) for row in trigram_result if row]
+                logger.debug(
+                    f"Found {len(similar_values)} trigram matches for '{value}' in '{column_name}'"
+                )
+
+        except Exception as e:
+            logger.warning(
+                f"Trigram similarity search failed for '{value}' in "
+                f"'{table_name}.{column_name}': {str(e)}. "
+                "This may indicate pg_trgm extension is not enabled.",
+                exc_info=True,
+            )
 
     return similar_values

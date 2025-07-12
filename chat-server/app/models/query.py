@@ -2,8 +2,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, TypedDict
 
-# TODO: Add type hints for all the fields in this
-
 
 @dataclass
 class SqlQueryInfo:
