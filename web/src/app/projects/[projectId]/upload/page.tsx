@@ -160,7 +160,7 @@ export default function UploadDatasetPage({
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
 
-      router.push(`/${projectId}/${res.data.dataset.id}`);
+      router.push(`/projects/${projectId}/datasets/${res.data.dataset.id}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -179,7 +179,7 @@ export default function UploadDatasetPage({
     queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
     setIsDbDialogOpen(false);
     setSelectedDriver(null);
-    router.push(`/${projectId}/${datasetId}`);
+    router.push(`/projects/${projectId}/datasets/${datasetId}`);
   };
 
   const handleDbSourceError = (errorMessage: string) => {
@@ -203,7 +203,7 @@ export default function UploadDatasetPage({
           variant="ghost"
           size="sm"
           className="flex items-center gap-1 mb-4"
-          onClick={() => router.push(`/${projectId}`)}
+          onClick={() => router.push(`/projects/${projectId}`)}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to project

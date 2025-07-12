@@ -183,7 +183,7 @@ export function DatasetHeader({
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
-          href={`/${projectId}`}
+          href={`/projects/${projectId}`}
           className="hover:text-primary transition-colors flex items-center gap-1"
         >
           <FolderIcon className="h-4 w-4" />
@@ -436,7 +436,7 @@ export function DatasetHeader({
             >
               <MessageSquareIcon className="h-5 w-5" />
             </Button>
-            <Link href={`/${projectId}/${dataset.id}/data/`}>
+            <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
               <Button
                 variant="outline"
                 size="icon"

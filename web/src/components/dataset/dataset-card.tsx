@@ -139,7 +139,7 @@ export function DatasetCard({
   };
 
   return (
-    <Link href={`/${projectId}/${dataset.id}`} className="block">
+    <Link href={`/projects/${projectId}/datasets/${dataset.id}`} className="block">
       <Card
         className={cn(
           "group transition-all duration-300 relative overflow-hidden border border-border/40 hover:border-border/80",

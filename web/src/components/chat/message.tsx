@@ -132,7 +132,7 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
         >
           {projectId ? (
             <Link
-              href={`/${projectId}/${datasetId}`}
+              href={`/projects/${projectId}/datasets/${datasetId}`}
               className="flex items-center gap-1 hover:underline"
             >
               {dataset.alias}

@@ -183,7 +183,7 @@ function Breadcrumb({
                         <DropdownMenuItem
                           key={dataset.id}
                           onSelect={() =>
-                            router.push(`/${projectId}/${dataset.id}`)
+                            router.push(`/projects/${projectId}/datasets/${dataset.id}`)
                           }
                           className="min-w-[200px]"
                         >
