@@ -126,6 +126,20 @@ export function getSupportedMimeTypes(): string[] {
 }
 
 /**
+ * Gets a display-friendly name for a file format
+ */
+export function getFileFormatDisplay(format: SupportedFileFormat): string {
+  const formatNames = {
+    csv: "CSV",
+    parquet: "Parquet",
+    json: "JSON",
+    excel: "Excel",
+    duckdb: "DuckDB",
+  };
+  return formatNames[format] || format.toUpperCase();
+}
+
+/**
  * Validates a file using DuckDB WASM in the browser
  */
 export async function validateFileWithDuckDb(

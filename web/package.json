@@ -57,6 +57,7 @@
     "@uppy/progress-bar": "^4.1.0",
     "@uppy/react": "^4.0.4",
     "@uppy/status-bar": "^4.0.6",
+    "@uppy/url": "^4.2.4",
     "@uppy/xhr-upload": "^4.2.3",
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
