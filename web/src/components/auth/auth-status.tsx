@@ -19,7 +19,7 @@ export function AuthStatus({
   className = "",
 }: AuthStatusProps) {
   const { user, isAuthenticated, isLoading } = useAuthStore();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
   // If auth is disabled, show a disabled auth indicator
   if (isAuthDisabled) {

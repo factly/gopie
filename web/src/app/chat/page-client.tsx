@@ -1037,7 +1037,7 @@ function ChatPageClient() {
   const isCurrentUserOwner =
     !chatDetails || chatDetails.created_by === currentUserId;
 
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
   console.log("currentUserId", currentUserId);
   console.log("chatDetails", chatDetails);

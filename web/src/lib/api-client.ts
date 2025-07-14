@@ -59,7 +59,7 @@ export const apiClient = ky.create({
   hooks: {
     beforeRequest: [
       (request) => {
-        const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
+        const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
         // If auth is disabled, force admin headers and skip token logic
         if (!isAuthEnabled) {

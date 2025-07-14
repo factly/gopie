@@ -11,7 +11,7 @@ interface ProtectedPageProps {
 
 export function ProtectedPage({ children }: ProtectedPageProps) {
   const { isAuthenticated, isLoading, user, checkSession } = useAuthStore();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
   const [hasCheckedSession, setHasCheckedSession] = React.useState(false);
 
   React.useEffect(() => {

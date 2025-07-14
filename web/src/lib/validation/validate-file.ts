@@ -430,7 +430,7 @@ async function validateExcelFile(
     const csvBuffer = new TextEncoder().encode(csvData);
     
     // Use the existing CSV validation function
-    const result = await validateCsvFile(db, csvBuffer.buffer);
+    const result = await validateCsvFile(db, csvBuffer.buffer as ArrayBuffer);
     
     // Return result with Excel format but CSV validation
     return {

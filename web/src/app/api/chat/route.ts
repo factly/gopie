@@ -8,7 +8,7 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
+    const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
     // Retrieve session only when auth is enabled
     const session = isAuthEnabled ? await getSession() : null;
