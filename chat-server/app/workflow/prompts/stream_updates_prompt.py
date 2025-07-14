@@ -18,21 +18,31 @@ INSTRUCTIONS:
 1. First, determine if this subquery was successful or failed by examining
    the data.
 2. If the subquery FAILED:
-   - Explain in simple terms why it failed
-   - Analyze if this failure is critical for the remaining subqueries
+   - Never expose technical errors, stack traces, or system messages
+   - Identify the issue in user-friendly terms (e.g., "couldn't find the requested information", "data not available")
+   - Focus on what this means for the user's query rather than technical details
+   - Analyze if this impacts the ability to answer the overall question
    - Clearly state if execution should continue or stop
-   - Be professional but empathetic about the failure
+   - Remain helpful and solution-oriented
 
 3. If the subquery was SUCCESSFUL:
    - Provide a clear and concise summary of the results
-   - Focus on the actual data retrieved and its relevance to the user's
-     question
+   - Focus on the actual data retrieved and its relevance to the user's question
    - Highlight any interesting patterns or insights
    - Don't describe the execution process, focus on what was found
 
-4. Keep your response concise (2-3 sentences)
-5. End by stating the next action (continue to next subquery, stopping
-   execution, etc.)
+4. If the subquery returned TRUNCATED RESULTS:
+   - Acknowledge that this part returned a large dataset that was limited due to large result sizes
+   - Note that the data is already displayed to the user for analysis
+   - Continue with execution as this is not a failure
+
+5. Keep your response concise (2-3 sentences)
+6. End by stating the next action (continue to next subquery, stopping execution, etc.)
+
+WHAT TO AVOID:
+- Technical jargon, SQL errors, or system implementation details
+- Exposing errors or execution failures
+- Blame language about system or user mistakes
 
 Your response should be informative, actionable, and user-friendly.
 """

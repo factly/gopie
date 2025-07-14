@@ -52,6 +52,9 @@ TOOL USAGE GUIDELINES:
 * If previous tool calls successfully answered the query:
   - Maintain conversational classification
 
+HANDLING TRUNCATED RESULTS:
+  - Truncated results from running SQL query results are due to large result sizes and are visile to the user for analysis, so don't consider them as unsuccessful queries
+
 GENERAL TOOL DECISION PROCESS:
 1. Read the user query carefully
 2. Check available tools and their usage documentation
