@@ -5,6 +5,7 @@ from app.models.schema import ConfigSchema
 from .node.context_processor import process_context
 from .node.multi_dataset import call_multi_dataset_agent
 from .node.single_dataset import call_single_dataset_agent
+from .node.stream_invalid_response import stream_invalid_response
 from .node.supervisor import supervisor
 from .node.validate_input import validate_input, should_validate_input
 from .node.visualisation import call_visualization_agent, check_visualization
@@ -22,6 +23,7 @@ graph_builder = StateGraph(AgentState, config_schema=ConfigSchema)
 
 
 graph_builder.add_node("validate_input", validate_input)
+graph_builder.add_node("stream_invalid_response", stream_invalid_response)
 graph_builder.add_node("process_context", process_context)
 graph_builder.add_node(
     supervisor,
@@ -37,8 +39,8 @@ graph_builder.add_conditional_edges(
     "validate_input",
     should_validate_input,
     {
-        "process_context": "process_context",
-        END: END,
+        "valid": "process_context",
+        "invalid": "stream_invalid_response",
     },
 )
 
@@ -61,9 +63,9 @@ graph_builder.add_conditional_edges(
 )
 
 graph_builder.add_edge(START, "validate_input")
-graph_builder.add_edge("validate_input", "check_visualization")
+graph_builder.add_edge("process_context", "check_visualization")
 graph_builder.add_edge("check_visualization", "supervisor")
-graph_builder.add_edge("process_context", "supervisor")
+graph_builder.add_edge("stream_invalid_response", END)
 graph_builder.add_edge("visualization_agent", END)
 
 agent_graph = graph_builder.compile()

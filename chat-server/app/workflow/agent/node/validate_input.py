@@ -1,8 +1,8 @@
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END
 
+from app.models.message import IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
@@ -43,23 +43,27 @@ async def validate_input(state: AgentState, config: RunnableConfig):
         validation_result = parser.parse(str(response.content))
 
         invalid_input = validation_result.get("is_malicious", False)
+        reasoning = validation_result.get("reasoning", "No reasoning provided")
+        user_response = validation_result.get("response", "Request cannot be processed.")
 
         if invalid_input:
-            reasoning = validation_result.get("reasoning", "No reasoning provided")
-            user_response = validation_result.get("response", "Request cannot be processed.")
-            raise Exception(f"Malicious prompt detected: {reasoning}. Response: {user_response}")
+            print(f"Malicious prompt detected: {reasoning}")
 
     except Exception as e:
         print(f"Warning: User input validation failed: {e}")
+        invalid_input = False
 
     return {
         "initial_user_query": user_input,
         "invalid_input": invalid_input,
+        "messages": [IntermediateStep(content=user_response)],
     }
 
 
 async def should_validate_input(state: AgentState):
-    if state.get("messages", []):
-        return "process_context"
+    invalid_input = state.get("invalid_input", False)
+
+    if invalid_input:
+        return "invalid"
     else:
-        return END
+        return "valid"

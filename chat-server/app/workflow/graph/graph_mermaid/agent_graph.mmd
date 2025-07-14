@@ -6,6 +6,7 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	validate_input(validate_input)
+	stream_invalid_response(stream_invalid_response)
 	process_context(process_context)
 	supervisor(supervisor)
 	multi_dataset_agent(multi_dataset_agent)
@@ -17,15 +18,15 @@ graph TD;
 	check_visualization --> supervisor;
 	multi_dataset_agent -.-> __end__;
 	multi_dataset_agent -.-> visualization_agent;
-	process_context --> supervisor;
+	process_context --> check_visualization;
 	single_dataset_agent -.-> __end__;
 	single_dataset_agent -.-> visualization_agent;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
 	supervisor -.-> visualization_agent;
-	validate_input -.-> __end__;
-	validate_input --> check_visualization;
-	validate_input -.-> process_context;
+	validate_input -. &nbsp;valid&nbsp; .-> process_context;
+	validate_input -. &nbsp;invalid&nbsp; .-> stream_invalid_response;
+	stream_invalid_response --> __end__;
 	visualization_agent --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
