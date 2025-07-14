@@ -21,3 +21,4 @@ class AgentState(TypedDict):
     required_dataset_ids: list[str] | None
     needs_visualization: bool | None
     datasets: list[Dataset] | None
+    invalid_input: bool | None
