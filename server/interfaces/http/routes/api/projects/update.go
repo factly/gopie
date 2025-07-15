@@ -50,7 +50,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	project, err := h.svc.Update(projectID, &models.UpdateProjectParams{
+	project, err := h.projectSvc.Update(projectID, &models.UpdateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
 		UpdatedBy:   body.UpdatedBy,
