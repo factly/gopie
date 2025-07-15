@@ -1,5 +1,6 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END
 
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
@@ -16,7 +17,7 @@ from ..types import AgentState
     progress_message="Checking visualization needs...",
 )
 async def check_visualization(state: AgentState, config: RunnableConfig) -> dict:
-    user_input = state.get("initial_user_query", "")
+    user_input = state.get("user_query", "")
     prompt_messages = get_prompt(
         "check_visualization",
         user_query=user_input,
@@ -38,3 +39,10 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
     }
 
     _ = await visualize_data_graph.ainvoke(input_state, config=config)
+
+
+async def should_visualize(state: AgentState):
+    if state.get("needs_visualization", False) and state.get("datasets", []):
+        return "visualization_agent"
+    else:
+        return END

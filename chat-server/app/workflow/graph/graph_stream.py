@@ -3,8 +3,9 @@ from langchain_core.runnables import RunnableConfig
 from app.core.log import logger
 from app.models.chat import EventChunkData, Role
 from app.models.router import Message
-from app.workflow.agent import agent_graph
+from app.workflow.agent.graph import agent_graph
 from app.workflow.events.handle_events_stream import EventStreamHandler
+from app.utils.graph_utils.extract_user_input import extract_user_input
 
 
 async def stream_graph_updates(
@@ -33,11 +34,13 @@ async def stream_graph_updates(
         raise ValueError("At least one dataset or project ID must be provided")
 
     chat_history = [message.model_dump() for message in messages[:-1]]
+    user_input = extract_user_input(messages)
 
     input_state = {
         "messages": [message.model_dump() for message in messages],
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
+        "initial_user_query": user_input,
     }
 
     event_stream_handler = EventStreamHandler()

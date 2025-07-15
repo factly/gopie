@@ -1,7 +1,8 @@
-from langchain_core.messages import AIMessage, HumanMessage
+from app.core.log import logger
+from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.model_registry.model_provider import get_model_provider
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from app.workflow.events.event_utils import configure_node
 
 from ..types import AgentState
@@ -12,17 +13,13 @@ from ..types import AgentState
     progress_message="",
 )
 async def stream_invalid_response(state: AgentState, config: RunnableConfig):
-    last_message = state.get("messages", [])[-1].content
+    last_message = state.get("messages", [])[-1]
+    if not isinstance(last_message, AIMessage):
+        logger.debug(f"Last message is not an AIMessage: {last_message}")
+        pass
 
-    prompt = [
-        HumanMessage(
-            content=f"Please output exactly this message, word for word, "
-            f"with no additions or modifications: {last_message}"
-        )
-    ]
-
-    llm = get_model_provider(config).get_llm("gpt-3.5-turbo")
-    response = await llm.ainvoke(prompt)
+    llm = GenericFakeChatModel(messages=iter([last_message]), metadata=config.get("metadata", {}))
+    response = await llm.ainvoke(input=last_message.content)
 
     return {
         "messages": [AIMessage(content=response.content)],

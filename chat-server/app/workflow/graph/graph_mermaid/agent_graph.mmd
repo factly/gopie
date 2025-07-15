@@ -13,19 +13,22 @@ graph TD;
 	single_dataset_agent(single_dataset_agent)
 	visualization_agent(visualization_agent)
 	check_visualization(check_visualization)
+	query_router(query_router)
 	__end__([<p>__end__</p>]):::last
+	__start__ --> process_context;
 	__start__ --> validate_input;
-	check_visualization --> supervisor;
+	check_visualization --> query_router;
 	multi_dataset_agent -.-> __end__;
 	multi_dataset_agent -.-> visualization_agent;
 	process_context --> check_visualization;
+	query_router -. &nbsp;invalid&nbsp; .-> stream_invalid_response;
+	query_router -. &nbsp;valid&nbsp; .-> supervisor;
 	single_dataset_agent -.-> __end__;
 	single_dataset_agent -.-> visualization_agent;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
 	supervisor -.-> visualization_agent;
-	validate_input -. &nbsp;valid&nbsp; .-> process_context;
-	validate_input -. &nbsp;invalid&nbsp; .-> stream_invalid_response;
+	validate_input --> query_router;
 	stream_invalid_response --> __end__;
 	visualization_agent --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2

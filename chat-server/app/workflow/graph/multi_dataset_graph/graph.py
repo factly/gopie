@@ -17,7 +17,12 @@ from .node.response.stream_updates import (
 )
 from .types import ConfigSchema, InputState, OutputState, State
 
-graph_builder = StateGraph(State, config_schema=ConfigSchema, input=InputState, output=OutputState)
+graph_builder = StateGraph(
+    state_schema=State,
+    config_schema=ConfigSchema,
+    input_schema=InputState,
+    output_schema=OutputState,
+)
 
 graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("identify_datasets", identify_datasets)
@@ -28,7 +33,7 @@ graph_builder.add_node("generate_result", generate_result)
 graph_builder.add_node("analyze_dataset", analyze_dataset)
 graph_builder.add_node("stream_updates", stream_updates)
 graph_builder.add_node("tools", ToolNode(tool_names=list(ToolNames)))
-graph_builder.add_node("route_response", lambda x: x)
+graph_builder.add_node("route_response", lambda state: state)
 
 graph_builder.add_conditional_edges(
     "analyze_query",

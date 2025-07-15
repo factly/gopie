@@ -9,6 +9,7 @@ class AgentInput(TypedDict):
     messages: list
     dataset_ids: list[str] | None
     project_ids: list[str] | None
+    initial_user_query: str | None
 
 
 class AgentState(TypedDict):

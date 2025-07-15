@@ -1,4 +1,3 @@
-from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
@@ -18,15 +17,7 @@ async def validate_input(state: AgentState, config: RunnableConfig):
     """
     Validate user input for malicious content using LLM-based analysis.
     """
-    messages = state.get("messages", [])
-
-    if messages and isinstance(messages[-1], HumanMessage):
-        user_input = str(messages[-1].content)
-    else:
-        raise Exception("Last Message must be a user message")
-
-    if user_input == "":
-        raise Exception("User input cannot be empty")
+    user_input = state.get("initial_user_query")
 
     try:
         prompt_messages = get_prompt(
@@ -58,12 +49,3 @@ async def validate_input(state: AgentState, config: RunnableConfig):
         "invalid_input": invalid_input,
         "messages": [IntermediateStep(content=user_response)],
     }
-
-
-async def should_validate_input(state: AgentState):
-    invalid_input = state.get("invalid_input", False)
-
-    if invalid_input:
-        return "invalid"
-    else:
-        return "valid"
