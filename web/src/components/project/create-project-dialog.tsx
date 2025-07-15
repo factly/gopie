@@ -74,7 +74,7 @@ export function CreateProjectDialog() {
 
       // Redirect to the newly created project
       if (project && project.data.id) {
-        router.push(`/${project.data.id}`);
+        router.push(`/projects/${project.data.id}`);
       }
     } catch (error) {
       const message =
