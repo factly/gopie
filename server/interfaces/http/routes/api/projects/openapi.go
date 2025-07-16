@@ -83,17 +83,17 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 		}
 
 		// Add dataset endpoints
-		prefix := "/projects/" + projectID + "/datasets/" + tableName
-		paths[prefix] = map[string]interface{}{
-			"get": map[string]interface{}{
+		prefix := "v1/api"
+		paths[prefix+"/tables"+tableName] = map[string]any{
+			"get": map[string]any{
 				"summary":     "Get dataset table data",
 				"description": "Returns the table data for dataset " + tableName,
-				"parameters": []map[string]interface{}{
+				"parameters": []map[string]any{
 					{
 						"name":        "columns",
 						"in":          "query",
 						"description": "Comma-separated list of columns to return",
-						"schema":      map[string]interface{}{"type": "string"},
+						"schema":      map[string]any{"type": "string"},
 						"example":     "id,name,value",
 					},
 					{
@@ -143,7 +143,7 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 			},
 		}
 
-		paths[prefix+"/schema"] = map[string]interface{}{
+		paths[prefix+"/schemas/"+tableName] = map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     "Get dataset schema",
 				"description": "Returns the schema information for dataset " + tableName,
@@ -173,7 +173,7 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 			},
 		}
 
-		paths[prefix+"/summary"] = map[string]interface{}{
+		paths[prefix+"/summary/"+tableName] = map[string]interface{}{
 			"get": map[string]interface{}{
 				"summary":     "Get dataset summary",
 				"description": "Returns summary information for dataset " + tableName,

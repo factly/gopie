@@ -233,34 +233,34 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
-		DatasetID: dataset.ID,
-		ProjectID: project.ID,
-	})
-	if err != nil {
-		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
-		// Clean up all created resources since schema upload failed
-		summaryErr := h.datasetSvc.DeleteDatasetSummary(res.TableName)
-		if summaryErr != nil {
-			h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", res.TableName))
-		}
-
-		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-		}
-
-		dropErr := h.olapSvc.DropTable(res.TableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", res.TableName))
-		}
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error uploading schema to AI agent",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+	// err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	// 	DatasetID: dataset.ID,
+	// 	ProjectID: project.ID,
+	// })
+	// if err != nil {
+	// 	h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
+	// 	// Clean up all created resources since schema upload failed
+	// 	summaryErr := h.datasetSvc.DeleteDatasetSummary(res.TableName)
+	// 	if summaryErr != nil {
+	// 		h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", res.TableName))
+	// 	}
+	//
+	// 	deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
+	// 	if deleteErr != nil {
+	// 		h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
+	// 	}
+	//
+	// 	dropErr := h.olapSvc.DropTable(res.TableName)
+	// 	if dropErr != nil {
+	// 		h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", res.TableName))
+	// 	}
+	//
+	// 	return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error":   err.Error(),
+	// 		"message": "Error uploading schema to AI agent",
+	// 		"code":    fiber.StatusInternalServerError,
+	// 	})
+	// }
 
 	h.logger.Info("File upload completed successfully",
 		zap.String("dataset_id", dataset.ID),

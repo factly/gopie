@@ -25,21 +25,21 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 
 	// Generate property definitions based on schema if available
 	schemaProperties := make(map[string]interface{})
-	
+
 	// Process the schema data - GetTableSchema returns []map[string]any directly
 	for _, columnInfo := range schema {
 		// Extract column name and type from the schema
 		columnName, nameOk := columnInfo["column_name"].(string)
 		if !nameOk {
-			// Try alternate field name 
+			// Try alternate field name
 			columnName, nameOk = columnInfo["name"].(string)
 			if !nameOk {
 				continue // Skip if we can't find column name
 			}
 		}
-		
+
 		// Extract type information
-		columnType, typeOk := columnInfo["column_type"].(string) 
+		columnType, typeOk := columnInfo["column_type"].(string)
 		if !typeOk {
 			// Try alternate field name
 			columnType, typeOk = columnInfo["type"].(string)
@@ -47,7 +47,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 				continue // Skip if we can't find column type
 			}
 		}
-		
+
 		// Convert DuckDB types to OpenAPI types
 		openAPIType := "string" // Default
 		switch strings.ToUpper(columnType) {
@@ -58,12 +58,14 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 		case "BOOLEAN":
 			openAPIType = "boolean"
 		}
-		
+
 		// Add the property to our schema
 		schemaProperties[columnName] = map[string]interface{}{
 			"type": openAPIType,
 		}
 	}
+
+	prefix := "v1/api"
 
 	// Generate OpenAPI specification for the dataset
 	spec := map[string]interface{}{
@@ -74,7 +76,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 			"version":     "1.0.0",
 		},
 		"paths": map[string]interface{}{
-			"/tables/" + tableName: map[string]interface{}{
+			prefix + "/tables/" + tableName: map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Get dataset table data",
 					"description": "Returns the table data for the specified dataset",
@@ -132,7 +134,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 					},
 				},
 			},
-			"/schemas/" + tableName: map[string]interface{}{
+			prefix + "/schemas/" + tableName: map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Get dataset schema",
 					"description": "Returns the schema information for the specified dataset",
@@ -161,7 +163,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 					},
 				},
 			},
-			"/summary/" + tableName: map[string]interface{}{
+			prefix + "/summary/" + tableName: map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Get dataset summary",
 					"description": "Returns summary information for the specified dataset",
@@ -201,7 +203,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 					},
 				},
 			},
-			"/sql": map[string]interface{}{
+			prefix + "/sql": map[string]interface{}{
 				"post": map[string]interface{}{
 					"summary":     "Execute SQL query",
 					"description": "Executes SQL query against the datasets",
@@ -250,7 +252,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 					},
 				},
 			},
-			"/nl2sql": map[string]interface{}{
+			prefix + "/nl2sql": map[string]interface{}{
 				"post": map[string]interface{}{
 					"summary":     "Convert natural language to SQL",
 					"description": "Converts a natural language query to SQL for the specified dataset",

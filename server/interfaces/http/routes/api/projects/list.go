@@ -27,7 +27,7 @@ func (h *httpHandler) list(ctx *fiber.Ctx) error {
 
 	limit, page := pkg.ParseLimitAndPage(limitStr, pageStr)
 
-	projects, err := h.svc.List(query, limit, page, organizationID)
+	projects, err := h.projectSvc.List(query, limit, page, organizationID)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {
