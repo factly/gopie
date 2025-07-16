@@ -48,7 +48,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	project, err := h.svc.Create(models.CreateProjectParams{
+	project, err := h.projectSvc.Create(models.CreateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
 		CreatedBy:   userID,

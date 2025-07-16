@@ -20,7 +20,7 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 	orgID := ctx.Get(middleware.OrganizationIDHeader)
 
-	project, err := h.svc.Details(projectID, orgID)
+	project, err := h.projectSvc.Details(projectID, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -41,7 +41,7 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 
 func (h *httpHandler) getByID(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
-	project, err := h.svc.GetProjectByID(projectID)
+	project, err := h.projectSvc.GetProjectByID(projectID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{

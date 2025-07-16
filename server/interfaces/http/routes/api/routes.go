@@ -22,6 +22,8 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	router.Post("/nl2sql", httpHandler.nl2sql)
 	router.Get("/schemas/:tableName", httpHandler.schemas)
 	router.Get("/summary/:tableName", httpHandler.summary)
+	// Add OpenAPI specification endpoint
+	router.Get("/openapi/:tableName", httpHandler.datasetOpenAPI)
 
 	// Register datasets routes
 	datasets.NewHTTPHandler(router, datasetsSvc, logger)
