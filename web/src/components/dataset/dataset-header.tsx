@@ -6,7 +6,6 @@ import {
   PencilIcon,
   CheckIcon,
   XIcon,
-  FileIcon,
   MessageSquareIcon,
   DatabaseIcon,
   TableIcon,
@@ -197,10 +196,6 @@ export function DatasetHeader({
       <div className="flex items-start gap-6">
         {/* Left Section - Main Info */}
         <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="bg-primary/10 border p-3 flex-shrink-0">
-            <FileIcon className="h-6 w-6 text-primary" />
-          </div>
-
           <div className="flex-1 min-w-0 space-y-3">
             {/* Title and Badge */}
             {isEditing ? (
