@@ -179,17 +179,52 @@ export function DatasetHeader({
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link
-          href={`/projects/${projectId}`}
-          className="hover:text-primary transition-colors flex items-center gap-1"
-        >
-          <FolderIcon className="h-4 w-4" />
-          Datasets
-        </Link>
-        <ChevronRightIcon className="h-4 w-4" />
-        <span className="text-muted-foreground truncate">{dataset.name}</span>
+      {/* Breadcrumb with Action Buttons */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link
+            href={`/projects/${projectId}`}
+            className="hover:text-primary transition-colors flex items-center gap-1"
+          >
+            <FolderIcon className="h-4 w-4" />
+            Datasets
+          </Link>
+          <ChevronRightIcon className="h-4 w-4" />
+          <span className="text-muted-foreground truncate">{dataset.name}</span>
+        </div>
+        
+        {/* Action Buttons */}
+        {!isEditing && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 hover:bg-secondary/80"
+              title="Download Dataset"
+            >
+              <DownloadIcon className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 hover:bg-secondary/80"
+              title="Chat with Dataset"
+              onClick={handleChatClick}
+            >
+              <MessageSquareIcon className="h-5 w-5" />
+            </Button>
+            <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 hover:bg-secondary/80"
+                title="Query Dataset"
+              >
+                <DatabaseIcon className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Main Header */}
@@ -408,38 +443,7 @@ export function DatasetHeader({
           </div>
         </div>
 
-        {/* Right Section - Action Buttons */}
-        {!isEditing && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Download Dataset"
-            >
-              <DownloadIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Chat with Dataset"
-              onClick={handleChatClick}
-            >
-              <MessageSquareIcon className="h-5 w-5" />
-            </Button>
-            <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 hover:bg-secondary/80"
-                title="Query Dataset"
-              >
-                <DatabaseIcon className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        )}
+
       </div>
     </div>
   );
