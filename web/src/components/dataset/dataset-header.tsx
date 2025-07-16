@@ -250,9 +250,6 @@ export function DatasetHeader({
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Button>
-                  <Badge variant="secondary" className="bg-secondary/50">
-                    {getDatasetSource(dataset)}
-                  </Badge>
                 </div>
 
                 {/* Description */}
