@@ -8,6 +8,7 @@ from app.services.gopie.sql_executor import execute_sql
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.graph.multi_dataset_graph.types import State
+from app.models.query import SqlQueryInfo
 
 
 async def execute_query(state: State) -> dict:
@@ -29,15 +30,33 @@ async def execute_query(state: State) -> dict:
         if not sql_queries:
             raise ValueError("No SQL query/queries found in plan")
 
-        for index, query_info in enumerate(sql_queries):
-            result_records = await execute_sql(query=query_info.sql_query)
+        sql_results: list[SqlQueryInfo] = []
 
-            if not result_records:
-                raise ValueError("No results found for the query")
+        for query_info in sql_queries:
+            try:
+                result_data = await execute_sql(query=query_info.sql_query)
+                sql_results.append(
+                    SqlQueryInfo(
+                        sql_query=query_info.sql_query,
+                        explanation=query_info.explanation,
+                        sql_query_result=result_data,
+                        success=True,
+                        error=None,
+                    )
+                )
+            except Exception as err:
+                error_str = str(err)
+                sql_results.append(
+                    SqlQueryInfo(
+                        sql_query=query_info.sql_query,
+                        explanation=query_info.explanation,
+                        sql_query_result=None,
+                        success=False,
+                        error=error_str,
+                    )
+                )
 
-            query_result.subqueries[query_index].sql_queries[
-                index
-            ].sql_query_result = result_records
+        query_result.subqueries[query_index].sql_queries = sql_results
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -47,7 +66,7 @@ async def execute_query(state: State) -> dict:
         )
         return {
             "query_result": query_result,
-            "messages": [IntermediateStep(content=str(result_records))],
+            "messages": [IntermediateStep(content=str(sql_results))],
         }
 
     except Exception as e:

@@ -64,12 +64,11 @@ class SubQueryInfo:
 
 @dataclass
 class SingleDatasetQueryResult:
-    user_query: str
     user_friendly_dataset_name: str | None
     dataset_name: str | None
     sql_results: list[SqlQueryInfo] | None
     response_for_non_sql: str | None
-    error: list[dict] | None
+    error: str | None
 
 
 class QueryInfo(TypedDict, total=False):
@@ -90,6 +89,7 @@ class QueryResult:
     original_user_query: str
     execution_time: float
     timestamp: datetime
+    single_dataset_query_result: SingleDatasetQueryResult | None = None
     subqueries: list[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
