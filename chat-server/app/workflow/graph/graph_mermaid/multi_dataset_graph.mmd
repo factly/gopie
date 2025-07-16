@@ -10,11 +10,11 @@ graph TD;
 	analyze_query(analyze_query)
 	plan_query(plan_query)
 	execute_query(execute_query)
-	generate_result(generate_result)
 	analyze_dataset(analyze_dataset)
 	stream_updates(stream_updates)
 	tools(tools)
 	route_response(route_response)
+	pass_on_results(pass_on_results)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> generate_subqueries;
 	analyze_dataset --> plan_query;
@@ -28,12 +28,12 @@ graph TD;
 	identify_datasets -.-> analyze_dataset;
 	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
 	plan_query --> execute_query;
-	route_response -.-> generate_result;
+	route_response -.-> pass_on_results;
 	route_response -.-> stream_updates;
 	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;
 	stream_updates -. &nbsp;next_sub_query&nbsp; .-> analyze_query;
 	tools --> analyze_query;
-	generate_result --> __end__;
+	pass_on_results --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

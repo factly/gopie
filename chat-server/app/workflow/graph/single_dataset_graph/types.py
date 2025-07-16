@@ -38,7 +38,6 @@ class ValidationResult(TypedDict):
 
 class OutputState(TypedDict):
     query_result: SingleDatasetQueryResult | None
-    response_text: str
 
 
 class State(TypedDict):
@@ -48,7 +47,6 @@ class State(TypedDict):
     dataset_id: str | None
     user_query: str | None
     query_result: SingleDatasetQueryResult | None
-    response_text: str
 
 
 class ConfigSchema(TypedDict):

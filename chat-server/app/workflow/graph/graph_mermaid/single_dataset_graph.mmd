@@ -6,14 +6,12 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	process_query(process_query)
-	response(response)
 	validate_result(validate_result)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> process_query;
 	process_query --> validate_result;
+	validate_result -. &nbsp;pass_on_results&nbsp; .-> __end__;
 	validate_result -. &nbsp;rerun_query&nbsp; .-> process_query;
-	validate_result -. &nbsp;respond_to_user&nbsp; .-> response;
-	response --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

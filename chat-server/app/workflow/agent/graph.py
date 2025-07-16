@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.models.schema import ConfigSchema
 from app.workflow.agent.node.router import query_router
-
+from app.workflow.agent.node.generate_result import generate_result
 from .node.context_processor import process_context
 from .node.multi_dataset import call_multi_dataset_agent
 from .node.single_dataset import call_single_dataset_agent
@@ -27,6 +27,7 @@ graph_builder.add_node("multi_dataset_agent", call_multi_dataset_agent)
 graph_builder.add_node("single_dataset_agent", call_single_dataset_agent)
 graph_builder.add_node("visualization_agent", call_visualization_agent)
 graph_builder.add_node("check_visualization", check_visualization)
+graph_builder.add_node("generate_result", generate_result)
 graph_builder.add_node("query_router", lambda state: state, defer=True)
 
 graph_builder.add_conditional_edges(
@@ -43,7 +44,7 @@ graph_builder.add_conditional_edges(
     should_visualize,
     {
         "visualization_agent": "visualization_agent",
-        END: END,
+        "generate_result": "generate_result",
     },
 )
 
@@ -52,7 +53,7 @@ graph_builder.add_conditional_edges(
     should_visualize,
     {
         "visualization_agent": "visualization_agent",
-        END: END,
+        "generate_result": "generate_result",
     },
 )
 
@@ -62,6 +63,7 @@ graph_builder.add_edge("process_context", "check_visualization")
 graph_builder.add_edge("check_visualization", "query_router")
 graph_builder.add_edge("validate_input", "query_router")
 graph_builder.add_edge("stream_invalid_response", END)
-graph_builder.add_edge("visualization_agent", END)
+graph_builder.add_edge("visualization_agent", "generate_result")
+graph_builder.add_edge("generate_result", END)
 
 agent_graph = graph_builder.compile()

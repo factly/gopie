@@ -36,7 +36,6 @@ class InputState(TypedDict):
 
 class OutputState(TypedDict):
     query_result: QueryResult
-    response_text: str
 
 
 class State(TypedDict):
@@ -49,7 +48,6 @@ class State(TypedDict):
     user_query: str
     messages: Annotated[list[BaseMessage], add_messages]
     query_result: QueryResult
-    response_text: str
     tool_call_count: int
     need_semantic_search: bool | None
     required_dataset_ids: list[str] | None
