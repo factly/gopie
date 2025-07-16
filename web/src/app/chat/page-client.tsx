@@ -30,8 +30,8 @@ import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
-import { VoiceMode } from "@/components/chat/voice-mode";
-import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
+// import { VoiceMode } from "@/components/chat/voice-mode";
+// import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
 import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
@@ -309,8 +309,8 @@ interface ChatInputProps {
   selectedContexts: ContextItem[];
   onSelectContext: (context: ContextItem) => void;
   onRemoveContext: (contextId: string) => void;
-  isVoiceModeActive: boolean;
-  setIsVoiceModeActive: (active: boolean) => void;
+  // isVoiceModeActive: boolean;
+  // setIsVoiceModeActive: (active: boolean) => void;
   lockableContextIds?: string[];
   hasContext: boolean;
   input: string;
@@ -326,8 +326,8 @@ const ChatInput = React.memo(
     selectedContexts,
     onSelectContext,
     onRemoveContext,
-    isVoiceModeActive,
-    setIsVoiceModeActive,
+    // isVoiceModeActive,
+    // setIsVoiceModeActive,
     lockableContextIds = [],
     hasContext,
     input,
@@ -369,12 +369,12 @@ const ChatInput = React.memo(
             stopMessageStream={onStop}
             lockableContextIds={lockableContextIds}
             hasContext={hasContext}
-            actionButtons={
-              <VoiceModeToggle
-                isActive={isVoiceModeActive}
-                onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-              />
-            }
+            // actionButtons={
+            //   <VoiceModeToggle
+            //     isActive={isVoiceModeActive}
+            //     onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
+            //   />
+            // }
           />
         </div>
       </div>
@@ -388,7 +388,7 @@ interface ChatViewProps {
   handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
   isLoading: boolean;
   messages: UIMessage[];
-  selectedContexts: ContextItem[];
+  // selectedContexts: ContextItem[]; // Removed since not used in component
   selectedChatId: string | null;
   isLoadingChatMessages?: boolean;
   hasNextPage?: boolean;
@@ -402,7 +402,7 @@ const ChatView = React.memo(
     handleScroll,
     isLoading,
     messages,
-    selectedContexts,
+    // selectedContexts, // Removed since not used in component
     selectedChatId,
     isLoadingChatMessages = false,
     hasNextPage = false,
@@ -486,9 +486,6 @@ const ChatView = React.memo(
                     message === messages[messages.length - 1] &&
                     message.role !== "user"
                   }
-                  datasetId={
-                    selectedContexts.find((ctx) => ctx.type === "dataset")?.id
-                  }
                   isLoading={
                     message.role === "assistant" && message.content === ""
                   }
@@ -553,10 +550,10 @@ function ChatPageClient() {
     results?.error ||
     visualizationPaths.length > 0
   );
-  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
-  const [latestAssistantMessage, setLatestAssistantMessage] = useState<
-    string | null
-  >(null);
+  // const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+  // const [latestAssistantMessage, setLatestAssistantMessage] = useState<
+  //   string | null
+  // >(null);
 
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
@@ -661,7 +658,7 @@ function ChatPageClient() {
 
       // Update latest assistant message for voice mode
       if (message.role === "assistant") {
-        setLatestAssistantMessage(message.content);
+        // setLatestAssistantMessage(message.content); // Removed voice mode state
         setIsStreaming(false);
       }
 
@@ -992,16 +989,16 @@ function ChatPageClient() {
     setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
   }, []);
 
-  const handleSendVoiceMessage = useCallback(
-    async (message: string) => {
-      handleInputChange(message);
+  // const handleSendVoiceMessage = useCallback(
+  //   async (message: string) => {
+  //     handleInputChange(message);
 
-      // Create a submit event for the form
-      const submitEvent = new Event("submit", { bubbles: true });
-      handleSubmit(submitEvent as unknown as React.FormEvent);
-    },
-    [handleInputChange, handleSubmit]
-  );
+  //     // Create a submit event for the form
+  //     const submitEvent = new Event("submit", { bubbles: true });
+  //     handleSubmit(submitEvent as unknown as React.FormEvent);
+  //   },
+  //   [handleInputChange, handleSubmit]
+  // );
 
   useEffect(() => {
     if (!isResultsPanelOpen) {
@@ -1039,6 +1036,8 @@ function ChatPageClient() {
   // Check if current user owns the chat
   const isCurrentUserOwner =
     !chatDetails || chatDetails.created_by === currentUserId;
+
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
   console.log("currentUserId", currentUserId);
   console.log("chatDetails", chatDetails);
@@ -1154,7 +1153,6 @@ function ChatPageClient() {
                     handleScroll={handleScroll}
                     isLoading={isLoading}
                     messages={displayMessages}
-                    selectedContexts={selectedContexts}
                     selectedChatId={selectedChatId}
                     isLoadingChatMessages={isLoadingChatMessages}
                     hasNextPage={hasNextPage}
@@ -1205,15 +1203,15 @@ function ChatPageClient() {
             right: isResultsPanelOpen ? sqlPanelWidth : 0,
           }}
         >
-          {isCurrentUserOwner ? (
+          {isCurrentUserOwner || isAuthDisabled ? (
             <ChatInput
               onStop={handleStop}
               isStreaming={isStreaming}
               selectedContexts={selectedContexts}
               onSelectContext={handleSelectContext}
               onRemoveContext={handleRemoveContext}
-              isVoiceModeActive={isVoiceModeActive}
-              setIsVoiceModeActive={setIsVoiceModeActive}
+              // isVoiceModeActive={isVoiceModeActive}
+              // setIsVoiceModeActive={setIsVoiceModeActive}
               lockableContextIds={
                 selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
               }
@@ -1232,7 +1230,7 @@ function ChatPageClient() {
           ) : null}
         </div>
       )}
-      {isVoiceModeActive && latestAssistantMessage && (
+      {/* {isVoiceModeActive && latestAssistantMessage && (
         <VoiceMode
           isActive={isVoiceModeActive}
           onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
@@ -1243,7 +1241,7 @@ function ChatPageClient() {
           }
           isWaitingForResponse={isLoading}
         />
-      )}
+      )} */}
     </main>
   );
 }

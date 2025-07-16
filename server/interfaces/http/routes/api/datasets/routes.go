@@ -20,7 +20,15 @@ func NewHTTPHandler(router fiber.Router, datasetsSvc *services.DatasetService, l
 
 	// Setup routes
 	datasetsRouter := router.Group("/datasets")
-	{
-		datasetsRouter.Get("/:datasetID", handler.details)
+	datasetsRouter.Get("/:datasetID", handler.details)
+}
+
+func NewHTTPHandlerInternal(router fiber.Router, datasetsSvc *services.DatasetService, logger *logger.Logger) {
+	handler := &httpHandler{
+		datasetsSvc: datasetsSvc,
+		logger:      logger,
 	}
+
+	datasetsRouter := router.Group("/datasets")
+	datasetsRouter.Get("/:datasetID", handler.getByID)
 }

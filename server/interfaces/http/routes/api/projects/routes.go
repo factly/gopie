@@ -8,8 +8,10 @@ import (
 )
 
 type httpHandler struct {
-	logger *logger.Logger
-	svc    *services.ProjectService
+	logger      *logger.Logger
+	projectSvc  *services.ProjectService
+	datasetSvc  *services.DatasetService
+	olapService *services.OlapService
 }
 
 type RouterParams struct {
@@ -22,15 +24,35 @@ type RouterParams struct {
 
 func Routes(router fiber.Router, params RouterParams) {
 	httpHandler := httpHandler{
-		logger: params.Logger,
-		svc:    params.ProjectService,
+		logger:      params.Logger,
+		projectSvc:  params.ProjectService,
+		datasetSvc:  params.DatasetService,
+		olapService: params.OlapService,
 	}
 	router.Get("/", httpHandler.list)
 	router.Post("/", httpHandler.create)
 	router.Get("/:projectID", httpHandler.details)
+	router.Get("/:projectID/openapi", httpHandler.projectOpenAPI)
 	router.Patch("/:projectID", httpHandler.update)
 	router.Delete("/:projectID", httpHandler.delete)
 	datasets.Routes(router.Group("/:projectID/datasets"), datasets.RouterParams{
+		Logger:      params.Logger,
+		DatasetSvc:  params.DatasetService,
+		OlapService: params.OlapService,
+		ProjectSvc:  params.ProjectService,
+		AiAgentSvc:  params.AiAgentService,
+	})
+}
+
+func InternalRoutes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{
+		logger:      params.Logger,
+		projectSvc:  params.ProjectService,
+		datasetSvc:  params.DatasetService,
+		olapService: params.OlapService,
+	}
+	router.Get("/:projectID", httpHandler.getByID)
+	datasets.InternalRoutes(router.Group("/:projectID/datasets"), datasets.RouterParams{
 		Logger:      params.Logger,
 		DatasetSvc:  params.DatasetService,
 		OlapService: params.OlapService,

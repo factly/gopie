@@ -33,12 +33,15 @@ type OlapDBDriver struct {
 	dbName   string
 	// Only used for MotherDuck
 	helperDB *sql.DB
+	// S3 configuration to reapply for each S3 operation
+	s3Config *config.S3Config
 }
 
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (repositories.OlapRepository, error) {
 	olap := OlapDBDriver{
-		logger: logger,
+		logger:   logger,
+		s3Config: s3Cfg, // Store S3 config for later use
 	}
 	logger.Info("initializing duckdb driver",
 		zap.String("db_type", cfg.DB),
@@ -273,6 +276,52 @@ func (m *OlapDBDriver) generateHttpFsCommands(s3Cfg *config.S3Config) []string {
 	return append(baseCommands, s3Commands...)
 }
 
+// generateS3Commands generates only the S3-specific commands for applying to transactions
+func (m *OlapDBDriver) generateS3Commands(s3Cfg *config.S3Config) []string {
+	s3Commands := []string{}
+	if s3Cfg.AccessKey != "" {
+		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_access_key_id='%s';", s3Cfg.AccessKey))
+	}
+	if s3Cfg.SecretKey != "" {
+		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_secret_access_key='%s';", s3Cfg.SecretKey))
+	}
+	if s3Cfg.Endpoint != "" {
+		// remove protocol if present
+		endpoint := s3Cfg.Endpoint
+		if strings.HasPrefix(s3Cfg.Endpoint, "http://") || strings.HasPrefix(s3Cfg.Endpoint, "https://") {
+			endpoint = strings.TrimPrefix(endpoint, "http://")
+			endpoint = strings.TrimPrefix(endpoint, "https://")
+		}
+		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_endpoint='%s';", endpoint))
+	}
+	if s3Cfg.Region != "" {
+		s3Commands = append(s3Commands, fmt.Sprintf("SET s3_region='%s';", s3Cfg.Region))
+	}
+	s3Commands = append(s3Commands, fmt.Sprintf("SET s3_use_ssl=%v;", s3Cfg.SSL))
+	s3Commands = append(s3Commands, "SET s3_url_style='path';")
+
+	return s3Commands
+}
+
+// applyS3SettingsToTransaction applies S3 settings within a transaction context
+func (m *OlapDBDriver) applyS3SettingsToTransaction(tx *sql.Tx) error {
+	if m.s3Config == nil {
+		return nil // No S3 config to apply
+	}
+
+	s3Commands := m.generateS3Commands(m.s3Config)
+	for _, cmd := range s3Commands {
+		m.logger.Debug("reapplying S3 setting in transaction", zap.String("command", cmd))
+		if _, err := tx.Exec(cmd); err != nil {
+			m.logger.Error("failed to reapply S3 setting in transaction",
+				zap.String("command", cmd),
+				zap.Error(err))
+			return fmt.Errorf("failed reapplying S3 setting '%s': %w", cmd, err)
+		}
+	}
+	return nil
+}
+
 // Close closes the database connection(s).
 func (m *OlapDBDriver) Close() error {
 	var firstErr error
@@ -371,6 +420,15 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 		return err
 	}
 	defer tx.Rollback() // Ensure rollback on error or panic if commit isn't reached
+
+	// Apply S3 settings to the transaction if this is an S3 operation
+	if isS3 && m.olapType == "duckdb" {
+		m.logger.Debug("applying S3 settings to transaction for S3 operation")
+		if err := m.applyS3SettingsToTransaction(tx); err != nil {
+			m.logger.Error("failed to apply S3 settings to transaction", zap.Error(err))
+			return fmt.Errorf("failed to apply S3 settings to transaction: %w", err)
+		}
+	}
 
 	_, err = tx.Exec(createSql)
 	if err != nil {

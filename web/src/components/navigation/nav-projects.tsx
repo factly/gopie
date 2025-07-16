@@ -3,7 +3,7 @@
 import {
   ChevronDown,
   TableIcon,
-  DatabaseIcon,
+  // DatabaseIcon,
   CodeIcon,
   // MessageSquareIcon,
   NetworkIcon,
@@ -83,12 +83,12 @@ export function NavProjects() {
           icon: TableIcon,
           isActive: isActive(`/${projectId}`, true),
         },
-        {
-          title: "Relationships",
-          url: `/${projectId}/schemas`,
-          icon: DatabaseIcon,
-          isActive: isActive(`/${projectId}/schemas`, true),
-        },
+        // {
+        //   title: "Relationships",
+        //   url: `/${projectId}/schemas`,
+        //   icon: DatabaseIcon,
+        //   isActive: isActive(`/${projectId}/schemas`, true),
+        // },
       ]
     : [];
 
@@ -195,7 +195,7 @@ export function NavProjects() {
               >
                 {datasets.results.map((dataset) => (
                   <DropdownMenuItem asChild key={dataset.id}>
-                    <Link href={`/${projectId}/${dataset.id}`}>
+                    <Link href={`/projects/${projectId}/datasets/${dataset.id}`}>
                       <span className="truncate">
                         {dataset.alias || dataset.name}
                       </span>

@@ -102,19 +102,26 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile.prod
+
     environment:
-      - NEXT_PUBLIC_COMPANION_URL=${NEXT_PUBLIC_COMPANION_URL}
-      - NEXT_PUBLIC_GOPIE_API_URL=${NEXT_PUBLIC_GOPIE_API_URL}
-      - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - AUTH_SECRET=${AUTH_SECRET}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID}
-      - ZITADEL_CLIENT_SECRET=${ZITADEL_CLIENT_SECRET}
-      - ZITADEL_ISSUER=${ZITADEL_ISSUER}
-      - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
+      - NEXT_PUBLIC_COMPANION_URL=http://localhost:3020
+      - NEXT_PUBLIC_GOPIE_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_LIVEKIT_URL=http://localhost:7880
+      - NEXTAUTH_URL=http://localhost:3000
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - AUTH_SECRET=secret
+      - NEXTAUTH_SECRET=secret
+      - ZITADEL_AUTHORITY=http://localhost:4455
+      - ZITADEL_PAT=secret
+      - ZITADEL_CLIENT_ID=devkey
+      - ZITADEL_CLIENT_SECRET=secret
+      - ZITADEL_ISSUER=http://localhost:4455
+      - ZITADEL_PROJECT_ID=devkey
+      - ZITADEL_IDP_ID=devkey
+      - NEXT_PUBLIC_ENABLE_AUTH=true
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - GOPIE_API_URL=http://localhost:8000
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -159,6 +166,14 @@ services:
         /usr/bin/mc anonymous set public myminio/gopie
       "
 
+  gopie-reindex:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.reindex
+    env_file:
+        - ./config.env
+    networks:
+      - gopie
   #########################################################################
   #####                          COMPANION                            #####
   #########################################################################

@@ -17,35 +17,28 @@ services:
     networks:
       - gopie
 
-  # gopie-web:
-  #   build:
-  #     context: ./web
-  #     dockerfile: Dockerfile.prod
-  #   env_file:
-  #       - ./config-noauth.env
-  #   ports:
-  #     - "3000:3000"
-  #   restart: unless-stopped
-  #   networks:
-  #     - gopie
-
-  gopie-starter-project:
+  gopie-web:
     build:
-      context: ./server
-      dockerfile: Dockerfile-sp
+      context: ./web
+      dockerfile: Dockerfile.prod
     env_file:
-        - ./config-noauth.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      gopie-migrate:
-        condition: service_completed_successfully
-    volumes:
-      - ./volumes/duckdb:/dataful
+      - ./config-noauth.env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
     networks:
       - gopie
-    command: >
-      sh -c "cd /home/gopie && gopie starter-project"
+
+  companion:
+    image: transloadit/companion:sha-e80a7f7
+    ports:
+      - "3020:3020"
+    env_file:
+      - ./config-noauth.env
+    networks:
+      - gopie
+    depends_on:
+      - minio
 
   gopie-migrate:
     build:
@@ -54,7 +47,7 @@ services:
     environment:
       - GOOSE_DBSTRING=postgres://postgres:postgres@postgres:5432/gopie?sslmode=disable
       - GOOSE_DRIVER=postgres
-      - GOOSE_MIGRATION_DIR=migrations 
+      - GOOSE_MIGRATION_DIR=migrations
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,21 +59,21 @@ services:
       context: ./server
       dockerfile: Dockerfile
     env_file:
-        - ./config-noauth.env
+      - ./config-noauth.env
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
-      gopie-starter-project:
-        condition: service_completed_successfully
     volumes:
-      - ./volumes/duckdb:/dataful
+      - ./volumes/duckdb:/home/gopie/dataful
     networks:
       - gopie
+    user: "0:0"
     command: >
-      sh -c "cd /home/gopie && gopie serve"
-
+      sh -c "chown -R 1001:1001 /home/gopie/dataful && 
+             chmod -R 755 /home/gopie/dataful && 
+             su -s /bin/sh gopie -c 'cd /home/gopie && gopie serve'"
 
   minio:
     image: minio/minio

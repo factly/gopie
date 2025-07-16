@@ -69,6 +69,12 @@ export class ZitadelClient {
     this.clientSecret = process.env.ZITADEL_CLIENT_SECRET!;
     this.pat = process.env.ZITADEL_PAT!;
     this.idpId = process.env.ZITADEL_IDP_ID!;
+
+    console.log("ZITADEL_AUTHORITY:", process.env.ZITADEL_AUTHORITY);
+    console.log("ZITADEL_CLIENT_ID:", process.env.ZITADEL_CLIENT_ID);
+    console.log("ZITADEL_CLIENT_SECRET:", process.env.ZITADEL_CLIENT_SECRET);
+    console.log("ZITADEL_PAT:", process.env.ZITADEL_PAT);
+    console.log("ZITADEL_IDP_ID:", process.env.ZITADEL_IDP_ID);
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
@@ -168,7 +174,10 @@ export class ZitadelClient {
       // Our service-user PAT acts as the actor_token performing the impersonation.
       actor_token: this.pat,
       actor_token_type: "urn:ietf:params:oauth:token-type:access_token",
-      scope: "openid profile email",
+      scope:
+        "openid profile email urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
+        process.env.ZITADEL_PROJECT_ID +
+        ":roles",
     });
 
     const basicAuth = Buffer.from(

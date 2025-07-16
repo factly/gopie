@@ -43,6 +43,11 @@ export function getGlobalOrganizationId(): string | null {
   return tokenManager.getOrganizationId();
 }
 
+console.log(
+  "NEXT_PUBLIC_GOPIE_API_URL:",
+  process.env.NEXT_PUBLIC_GOPIE_API_URL,
+);
+
 export const apiClient = ky.create({
   prefixUrl: process.env.NEXT_PUBLIC_GOPIE_API_URL,
   headers: {
@@ -54,7 +59,7 @@ export const apiClient = ky.create({
   hooks: {
     beforeRequest: [
       (request) => {
-        const isAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_AUTH === "true";
+        const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
         // If auth is disabled, force admin headers and skip token logic
         if (!isAuthEnabled) {

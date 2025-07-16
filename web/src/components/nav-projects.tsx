@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  DatabaseIcon,
+  // DatabaseIcon,
   TableIcon,
   // MessageSquareIcon,
   CodeIcon,
@@ -96,7 +96,7 @@ export function NavProjects() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
                 {allProjects?.results?.map((p) => (
-                  <Link href={`/${p.id}`} key={p.id}>
+                  <Link href={`/projects/${p.id}`} key={p.id}>
                     <DropdownMenuItem>
                       <span className="truncate">{p.name}</span>
                       {p.id === project.id && (
@@ -117,25 +117,25 @@ export function NavProjects() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(`/${projectId}`, true)}
+                  isActive={isActive(`/projects/${projectId}`, true)}
                 >
-                  <Link href={`/${projectId}`}>
+                  <Link href={`/projects/${projectId}`}>
                     <TableIcon className="h-4 w-4" />
                     <span>Datasets</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(`/${projectId}/schemas`, true)}
                 >
-                  <Link href={`/${projectId}/schemas`}>
+                  <Link href={`/projects/${projectId}/schemas`}>
                     <DatabaseIcon className="h-4 w-4" />
                     <span>Relationships</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
             </SidebarMenu>
           </SidebarGroupContent>
         )}
@@ -163,7 +163,7 @@ export function NavProjects() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
                 {datasets.results.map((dataset) => (
-                  <Link href={`/${projectId}/${dataset.id}`} key={dataset.id}>
+                  <Link href={`/projects/${projectId}/datasets/${dataset.id}`} key={dataset.id}>
                     <DropdownMenuItem>
                       <span className="truncate">
                         {dataset.alias || dataset.name}
@@ -184,9 +184,9 @@ export function NavProjects() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(`/${projectId}/${datasetId}`, true)}
+                  isActive={isActive(`/projects/${projectId}/datasets/${datasetId}`, true)}
                 >
-                  <Link href={`/${projectId}/${datasetId}`}>
+                  <Link href={`/projects/${projectId}/datasets/${datasetId}`}>
                     <TableIcon className="h-4 w-4" />
                     <span>Overview</span>
                   </Link>
@@ -195,9 +195,9 @@ export function NavProjects() {
               {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(`/${projectId}/${datasetId}/chat`)}
+                  isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/chat`)}
                 >
-                  <Link href={`/${projectId}/${datasetId}/chat`}>
+                  <Link href={`/projects/${projectId}/datasets/${datasetId}/chat`}>
                     <MessageSquareIcon className="h-4 w-4" />
                     <span>Chat</span>
                   </Link>
@@ -206,9 +206,9 @@ export function NavProjects() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(`/${projectId}/${datasetId}/data`)}
+                  isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/data`)}
                 >
-                  <Link href={`/${projectId}/${datasetId}/data`}>
+                  <Link href={`/projects/${projectId}/datasets/${datasetId}/data`}>
                     <CodeIcon className="h-4 w-4" />
                     <span>Query</span>
                   </Link>
@@ -217,9 +217,9 @@ export function NavProjects() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(`/${projectId}/${datasetId}/api`)}
+                  isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/api`)}
                 >
-                  <Link href={`/${projectId}/${datasetId}/api`}>
+                  <Link href={`/projects/${projectId}/datasets/${datasetId}/api`}>
                     <NetworkIcon className="h-4 w-4" />
                     <span>Rest API</span>
                   </Link>

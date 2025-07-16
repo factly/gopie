@@ -143,7 +143,7 @@ export function ProjectsSidebar() {
     event: React.MouseEvent
   ) => {
     event.stopPropagation(); // Prevent toggling project expansion
-    router.push(`/${projectId}/${datasetId}`);
+    router.push(`/projects/${projectId}/datasets/${datasetId}`);
   };
 
   // Only render for the chat page
@@ -204,7 +204,7 @@ export function ProjectsSidebar() {
                             className="truncate text-sm font-medium group-hover:text-accent-foreground"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/${project.id}`);
+                              router.push(`/projects/${project.id}`);
                             }}
                           >
                             {project.name}

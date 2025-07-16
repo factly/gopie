@@ -16,13 +16,29 @@ RUN bun install
 
 COPY . .
 
-# Environment variables must be present at build time
-# Set env variables.
-# ENV NEXT_PUBLIC_COMPANION_URL="https://companion-gopie.factly.dev/"
-# ENV NEXT_PUBLIC_GOPIE_API_URL="https://gopie-server.factly.dev"
-ENV NEXT_TELEMETRY_DISABLED 1
+# Make the entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Set placeholder values for build time. These will be replaced by the entrypoint script at runtime.
+ENV NEXT_PUBLIC_COMPANION_URL=__NEXT_PUBLIC_COMPANION_URL__
+ENV NEXT_PUBLIC_GOPIE_API_URL=__NEXT_PUBLIC_GOPIE_API_URL__
+ENV NEXT_PUBLIC_LIVEKIT_URL=__NEXT_PUBLIC_LIVEKIT_URL__
+ENV NEXT_PUBLIC_ENABLE_AUTH=__NEXT_PUBLIC_ENABLE_AUTH__
+ENV NEXT_PUBLIC_APP_URL=__NEXT_PUBLIC_APP_URL__
 
 # Build Next.js based on the preferred package manager
+# RUN --mount=type=secret,id=zitadel_client_secret \
+#     --mount=type=secret,id=zitadel_pat \
+#   export ZITADEL_CLIENT_SECRET=$(cat /run/secrets/zitadel_client_secret) && \
+#   export ZITADEL_PAT=$(cat /run/secrets/zitadel_pat) && \
+#   if [ -f yarn.lock ]; then yarn build; \
+#   elif [ -f package-lock.json ]; then npm run build; \
+#   elif [ -f pnpm-lock.yaml ]; then pnpm build; \
+#   elif [ -f bun.lockb ]; then bun run build; \
+#   else bun run build; \
+#   fi
 RUN \
     if [ -f yarn.lock ]; then yarn build; \
     elif [ -f package-lock.json ]; then npm run build; \
@@ -30,6 +46,9 @@ RUN \
     elif [ -f bun.lockb ]; then bun run build; \
     else bun run build; \
     fi
+
+# Set the entrypoint to our script. The CMD will be passed to this script.
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Start Next.js based on the preferred package manager
 CMD \

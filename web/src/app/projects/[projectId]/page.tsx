@@ -118,7 +118,7 @@ export default function ProjectPage({
               {datasets?.total || 0}
             </Badge>
           </h2>
-          <Link href={`/${projectId}/upload`}>
+          <Link href={`/projects/${projectId}/upload`}>
             <Button size="sm" className="h-9">
               <UploadIcon className="mr-2 size-4" />
               Create Dataset
@@ -136,7 +136,7 @@ export default function ProjectPage({
             <p className="text-base text-muted-foreground">
               No datasets added yet
             </p>
-            <Link href={`/${projectId}/upload`}>
+            <Link href={`/projects/${projectId}/upload`}>
               <Button size="sm" className="h-9">
                 <UploadIcon className="mr-2 size-4" />
                 Create Dataset

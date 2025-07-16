@@ -101,7 +101,7 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 		if msg.Object == "user.message" {
 			userMessage = &msg
 		}
-		if msg.Choices != nil && len(msg.Choices) > 0 {
+		if len(msg.Choices) > 0 {
 			filteredMessages = append(filteredMessages, msg)
 		}
 	}

@@ -27,6 +27,10 @@ func (service *ProjectService) Details(id, orgID string) (*models.Project, error
 	return service.projectRepo.Details(context.Background(), id, orgID)
 }
 
+func (service *ProjectService) GetProjectByID(id string) (*models.Project, error) {
+	return service.projectRepo.GetProjectByID(context.Background(), id)
+}
+
 // Update - Update project
 func (service *ProjectService) Update(projectID string, params *models.UpdateProjectParams) (*models.Project, error) {
 	return service.projectRepo.Update(context.Background(), projectID, params)
@@ -44,6 +48,10 @@ func (service *ProjectService) List(query string, limit, offset int, orgID strin
 		pagination.Limit = limit
 	}
 	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
+}
+
+func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {
+	return service.projectRepo.ListAllProjects(context.Background())
 }
 
 type DatasetService struct {
@@ -73,6 +81,7 @@ func (service *DatasetService) List(projectID string, limit, offset int) (*model
 	if limit != 0 {
 		pagination.Limit = limit
 	}
+	pagination.Offset = offset
 	return service.datasetRepo.List(context.Background(), projectID, pagination)
 }
 
@@ -106,4 +115,12 @@ func (services *DatasetService) DeleteDatasetSummary(datasetName string) error {
 
 func (services *DatasetService) GetDatasetSummary(datasetName string) (*models.DatasetSummaryWithName, error) {
 	return services.datasetRepo.GetDatasetSummary(context.Background(), datasetName)
+}
+
+func (services *DatasetService) GetDatasetByID(datasetID string) (*models.Dataset, error) {
+	return services.datasetRepo.GetDatasetByID(context.Background(), datasetID)
+}
+
+func (service *DatasetService) ListAllDatasets() ([]*models.Dataset, error) {
+	return service.datasetRepo.ListAllDatasets(context.Background())
 }

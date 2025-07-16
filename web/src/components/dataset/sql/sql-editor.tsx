@@ -98,14 +98,15 @@ export function SqlEditor({
 
   const initVimMode = React.useCallback(
     (editor: monaco.editor.IStandaloneCodeEditor) => {
-      window.require.config({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window.require as any).config({
         paths: {
           "monaco-vim": "https://unpkg.com/monaco-vim/dist/monaco-vim",
         },
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      window.require(["monaco-vim"], function (MonacoVim: any) {
+      (window.require as any)(["monaco-vim"], function (MonacoVim: any) {
         if (vimModeRef.current) {
           vimModeRef.current.dispose();
         }

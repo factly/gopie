@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { UploadConfirmationDialog } from "./upload-confirmation-dialog";
+import {
+  getSupportedFileExtensions,
+  getSupportedMimeTypes,
+  detectFileFormat,
+  SUPPORTED_FORMATS,
+} from "@/lib/validation/validate-file";
 
 interface CustomFileUploaderProps {
   onFileSelected: (file: File) => void;
@@ -33,16 +39,29 @@ export function CustomFileUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
+  // Get supported file types for validation
+  const supportedExtensions = getSupportedFileExtensions();
+  const supportedMimeTypes = getSupportedMimeTypes();
+
+  const validateFile = (file: File): boolean => {
+    const format = detectFileFormat(file.name, file.type);
+    if (!format) {
+      const supportedFormats = Object.keys(SUPPORTED_FORMATS).join(", ");
+      toast.error(
+        `Unsupported file format. Supported formats: ${supportedFormats}`
+      );
+      return false;
+    }
+    return true;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      // Check if it's a CSV file
-      if (!file.name.endsWith(".csv") && file.type !== "text/csv") {
-        toast.error("Only CSV files are supported");
-        return;
+      if (validateFile(file)) {
+        onFileSelected(file);
       }
-      onFileSelected(file);
     }
   };
 
@@ -62,12 +81,9 @@ export function CustomFileUploader({
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      // Check if it's a CSV file
-      if (!file.name.endsWith(".csv") && file.type !== "text/csv") {
-        toast.error("Only CSV files are supported");
-        return;
+      if (validateFile(file)) {
+        onFileSelected(file);
       }
-      onFileSelected(file);
     }
   };
 
@@ -109,9 +125,17 @@ export function CustomFileUploader({
   const getDefaultDatasetName = () => {
     if (!selectedFile) return "";
     return selectedFile.name
-      .replace(/\.csv$/, "")
+      .replace(
+        /\.(csv|parquet|json|jsonl|ndjson|xlsx|duckdb|db|ddb|tsv|txt|parq)$/,
+        ""
+      )
       .replace(/[^a-zA-Z0-9.-]/g, "_");
   };
+
+  // Create accept attribute for file input
+  const acceptAttribute = [...supportedExtensions, ...supportedMimeTypes].join(
+    ","
+  );
 
   return (
     <div className={cn("w-full", className)}>
@@ -133,14 +157,17 @@ export function CustomFileUploader({
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept=".csv,text/csv"
+            accept={acceptAttribute}
           />
           <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-1">Upload CSV Dataset</h3>
+          <h3 className="text-lg font-medium mb-1">Upload Dataset File</h3>
           <p className="text-sm text-muted-foreground text-center mb-2">
-            Drag and drop a CSV file here or click to browse
+            Drag and drop a file here or click to browse
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground text-center">
+            Supports CSV, Parquet, JSON, Excel (.xlsx), and DuckDB files
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
             Files will be validated before upload
           </p>
         </div>
@@ -153,6 +180,15 @@ export function CustomFileUploader({
                 <p className="font-medium text-sm">{selectedFile.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(selectedFile.size)}
+                  {selectedFile && (
+                    <span className="ml-2">
+                      •{" "}
+                      {detectFileFormat(
+                        selectedFile.name,
+                        selectedFile.type
+                      )?.toUpperCase() || "Unknown format"}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>

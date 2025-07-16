@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 export function SidebarUser() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
   const handleSignOut = async () => {
     await logout();

@@ -18,7 +18,7 @@ import { NavProjects } from "@/components/nav-projects";
 import { NavProjectsChat } from "@/components/nav-projects-chat";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
-import { NavSchema } from "@/components/nav-schema";
+// import { NavSchema } from "@/components/nav-schema";
 import { CommandSearch } from "@/components/search/command-search";
 import { ThemeToggle } from "@/components/theme/toggle";
 import {
@@ -327,11 +327,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <NavSecondary items={navSecondary} className="mt-auto" />
                 </SidebarContent>
                 <SidebarFooter className="border-t">
-                  {!isSettingsPage && (
+                  {/* {!isSettingsPage && (
                     <div className="flex flex-col gap-2 p-2">
                       <NavSchema />
                     </div>
-                  )}
+                  )} */}
                   <NavUser />
                 </SidebarFooter>
               </div>
@@ -401,11 +401,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavSecondary items={navSecondary} className="mt-auto" />
         </SidebarContent>
         <SidebarFooter className="border-t">
-          {!isSettingsPage && (
+          {/* {!isSettingsPage && (
             <div className="flex flex-col gap-2 p-2">
               <NavSchema />
             </div>
-          )}
+          )} */}
           <NavUser />
         </SidebarFooter>
       </Sidebar>

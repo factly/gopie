@@ -654,7 +654,7 @@ export function DataPreview(props: { datasetId: string }) {
         transition={{ delay: 0.3 }}
         className="flex items-center justify-between"
       >
-        <p className="text-sm font-medium text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground whitespace-nowrap">
           Page {currentPage}
         </p>
         <Pagination className="justify-center">

@@ -13,7 +13,7 @@ export function ProtectedRoute({
   alternativeContent,
 }: ProtectedRouteProps) {
   const { user, isAuthenticated, isLoading, checkSession } = useAuthStore();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
   const [hasCheckedSession, setHasCheckedSession] = React.useState(false);
 
   React.useEffect(() => {

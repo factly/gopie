@@ -19,8 +19,7 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 export function UserDropdown() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
-  const isAuthDisabled = process.env.NEXT_PUBLIC_ENABLE_AUTH !== "true";
-
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
   const handleSignOut = async () => {
     await logout();
     router.push("/auth/login");

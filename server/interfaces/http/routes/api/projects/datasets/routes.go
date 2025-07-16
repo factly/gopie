@@ -34,3 +34,8 @@ func Routes(router fiber.Router, params RouterParams) {
 	router.Delete("/:datasetID", httpHandler.delete)
 	router.Put("/:datasetID", httpHandler.update)
 }
+
+func InternalRoutes(router fiber.Router, params RouterParams) {
+	httpHandler := httpHandler{logger: params.Logger, datasetsSvc: params.DatasetSvc, olapSvc: params.OlapService, aiAgentSvc: params.AiAgentSvc}
+	router.Get("/:datasetID", httpHandler.getByID)
+}

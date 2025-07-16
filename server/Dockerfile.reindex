@@ -29,11 +29,8 @@ RUN groupadd -g 1001 gopie \
 RUN mkdir -p $DATA_DIR
 RUN chown -R $USER:$USER $HOME_DIR
 
-COPY --from=builder /app/starter-project-datasets $HOME_DIR/starter-project-datasets
-ENV GOPIE_DATASET_FILES_PATH $HOME_DIR/starter-project-datasets/
-
 WORKDIR $HOME_DIR
 
 USER gopie
 
-CMD ["gopie", "starter-project"]
+CMD ["gopie", "reindex-schemas"]

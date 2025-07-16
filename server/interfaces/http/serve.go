@@ -19,10 +19,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// serveWebApp starts the web application server
-func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
-	// zitadel interceptor setup
-	zitadel.SetupZitadelInterceptor(cfg, params.Logger)
+// serve starts the web application server
+func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+	var authMiddleware []fiber.Handler
+	if cfg.EnableZitadel {
+		// zitadel interceptor setup
+		params.Logger.Info("Zitadel is enabled, setting up zitadel interceptor")
+		zitadel.SetupZitadelInterceptor(cfg, params.Logger)
+		authMiddleware = []fiber.Handler{middleware.ZitadelAuthorizer(params.Logger), middleware.ZitadelAuth(params.Logger)}
+	} else {
+		params.Logger.Info("Zitadel is disabled, setting up authorize headers interceptor")
+		authMiddleware = []fiber.Handler{middleware.AuthorizeHeaders(params.Logger)}
+	}
 
 	appLogger := params.Logger
 
@@ -53,21 +61,6 @@ func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Cont
 	// auth route
 	api.AuthRoutes(app.Group("/v1/oauth"), appLogger, cfg)
 
-	// // Only enable authorization if meterus is configured
-	// if cfg.Meterus.ApiKey == "" || cfg.Meterus.Addr == "" {
-	// 	appLogger.Warn("meterus is not configured, authorization will be disabled")
-	// } else {
-	// 	appLogger.Info("meterus config found, initializing...")
-	// 	meterusClient, err := client.NewMeterusClient(cfg.Meterus.Addr, cfg.Meterus.ApiKey)
-	// 	if err != nil {
-	// 		appLogger.Error("error creating meterus client", zap.Error(err))
-	// 		return err
-	// 	}
-	// 	appLogger.Info("meterus client created")
-	// 	meterusValidator := meterus.NewMeterusApiKeyValidator(meterusClient)
-	// 	app.Use(middleware.WithApiKeyAuth(meterusValidator, appLogger))
-	// }
-
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status": "ok",
@@ -77,7 +70,7 @@ func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Cont
 	if cfg.OlapDB.AccessMode != "read_only" {
 		appLogger.Info("Initializing read-write routes...")
 
-		sourceGroup := app.Group("/source", middleware.ZitadelAuthorizer(appLogger), middleware.SetupZitadelAuthCtx(appLogger))
+		sourceGroup := app.Group("/source", authMiddleware...)
 		// S3 routes
 		s3Routes.Routes(sourceGroup.Group("/s3"), params.OlapService, params.DatasetService, params.ProjectService, params.AIAgentService, appLogger)
 
@@ -98,7 +91,7 @@ func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Cont
 	// Setup API routes
 	appLogger.Info("Setting up API routes...")
 
-	apiGroup := app.Group("/v1/api", middleware.ZitadelAuthorizer(appLogger), middleware.SetupZitadelAuthCtx(appLogger))
+	apiGroup := app.Group("/v1/api", authMiddleware...)
 
 	// AI routes
 	ai.Routes(apiGroup.Group("/ai"), params.AIService, appLogger)
@@ -135,6 +128,80 @@ func serveWebApp(cfg *config.GopieConfig, params *ServerParams, ctx context.Cont
 
 		if err := app.Listen(addr); err != nil {
 			appLogger.Error("Main server error", zap.Error(err))
+		}
+		close(serverShutdown)
+	}()
+
+	// Wait for context cancellation or server shutdown
+	select {
+	case <-ctx.Done():
+		appLogger.Info("Shutdown signal received, gracefully shutting down...")
+		if err := app.Shutdown(); err != nil {
+			appLogger.Error("Error during server shutdown", zap.Error(err))
+			return err
+		}
+	case <-serverShutdown:
+		appLogger.Info("Server stopped")
+	}
+
+	return nil
+}
+
+func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+	appLogger := params.Logger
+
+	appLogger.Info("Initializing internal server",
+		zap.String("host", cfg.InternalServer.Host),
+		zap.String("port", cfg.InternalServer.Port),
+	)
+
+	app := fiber.New(fiber.Config{
+		CaseSensitive: true,
+		AppName:       "gopie-internal",
+	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
+		AllowCredentials: true,
+		MaxAge:           86400,
+	}))
+
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: appLogger.Logger,
+	}))
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
+	apiGroup := app.Group("/v1/api")
+
+	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, appLogger)
+
+	projectApi.InternalRoutes(apiGroup.Group("/projects"), projectApi.RouterParams{
+		Logger:         appLogger,
+		ProjectService: params.ProjectService,
+		DatasetService: params.DatasetService,
+		OlapService:    params.OlapService,
+		AiAgentService: params.AIAgentService,
+	})
+
+	// Create a channel to listen for server shutdown
+	serverShutdown := make(chan struct{})
+
+	// Start the server in a goroutine
+	go func() {
+		addr := ":" + cfg.InternalServer.Port
+		appLogger.Info("Internal server is starting...",
+			zap.String("host", cfg.InternalServer.Host),
+			zap.String("port", cfg.InternalServer.Port))
+
+		if err := app.Listen(addr); err != nil {
+			appLogger.Error("Internal server error", zap.Error(err))
 		}
 		close(serverShutdown)
 	}()

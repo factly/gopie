@@ -54,6 +54,11 @@ FIELD DEFINITIONS (populate **all** fields exactly as specified):
 
 - visualization_data (object[]): *Only for visualization follow-ups*
   • Each element must have keys: data (list[list[Any]]), description (string), csv_path (null or string).
+  • The description should be a short description of the data and the column description for each column.
+  • The data follows the following format:
+    - Each list in the data list is a row
+    - The first row is the header row (column names)
+    - All the remaining rows are the data rows
   • Provide tabular data extracted from the prior assistant result that the user wants visualized.
   • If no visualization is requested or the user want's visualization but also wants to do some other thing that just don't rely on visualization from the available data from chat history, return an empty list [].
 

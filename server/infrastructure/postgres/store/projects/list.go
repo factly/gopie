@@ -45,3 +45,27 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), projects)
 	return &paginationView, nil
 }
+
+func (s *PostgresProjectStore) ListAllProjects(ctx context.Context) ([]*models.Project, error) {
+	ps, err := s.q.ListAllProjects(ctx)
+	if err != nil {
+		s.logger.Error("Error fetching projects", zap.Error(err))
+		return nil, err
+	}
+
+	var projects []*models.Project
+	for _, p := range ps {
+		projects = append(projects, &models.Project{
+			ID:          p.ID,
+			Name:        p.Name,
+			Description: p.Description.String,
+			CreatedAt:   p.CreatedAt.Time,
+			UpdatedAt:   p.UpdatedAt.Time,
+			CreatedBy:   p.CreatedBy.String,
+			UpdatedBy:   p.UpdatedBy.String,
+			OrgID:       p.OrgID.String,
+		})
+	}
+
+	return projects, nil
+}
