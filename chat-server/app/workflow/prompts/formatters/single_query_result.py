@@ -3,7 +3,7 @@ from app.workflow.graph.single_dataset_graph.types import (
 )
 
 
-def format_single_query_result(query_result: SingleDatasetQueryResult, **kwargs) -> str:
+def format_single_query_result(query_result: SingleDatasetQueryResult) -> str:
     if not query_result:
         return "No query result found"
 

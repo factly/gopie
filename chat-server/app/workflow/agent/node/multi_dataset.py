@@ -4,6 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from app.workflow.graph.multi_dataset_graph.graph import multi_dataset_graph
 from app.workflow.graph.multi_dataset_graph.types import (
     OutputState as MultiDatasetOutputState,
+    InputState,
 )
 from app.workflow.graph.multi_dataset_graph.types import QueryResult
 
@@ -25,9 +26,7 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
             description = f"Query: {sql_query_info.sql_query}\n\n"
             description += f"Explanation: {sql_query_info.explanation}\n\n"
             if sql_query_info.sql_query_result:
-                data = list_of_dict_to_list_of_lists(
-                    sql_query_info.sql_query_result
-                )
+                data = list_of_dict_to_list_of_lists(sql_query_info.sql_query_result)
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
     return datasets
@@ -36,27 +35,25 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
 def transform_output_state(
     output_state: MultiDatasetOutputState,
 ) -> dict:
-    datasets = query_result_to_datasets(output_state.get("query_result", None))
-    response_text = output_state.get("response_text", "No response")
+    query_result = output_state.get("query_result", {})
+    datasets = query_result_to_datasets(query_result)
+    response_text = "No response"
     return {
+        "query_result": query_result,
         "datasets": datasets,
         "messages": [AIMessage(content=response_text)],
     }
 
 
-async def call_multi_dataset_agent(
-    state: AgentState, config: RunnableConfig
-) -> dict:
-    input_state = {
+async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:
+    input_state: InputState = {
         "messages": state["messages"],
         "dataset_ids": state["dataset_ids"],
         "project_ids": state["project_ids"],
-        "user_query": state["user_query"],
+        "user_query": state["user_query"] or "",
         "need_semantic_search": state.get("need_semantic_search", True),
         "required_dataset_ids": state.get("required_dataset_ids", []),
     }
 
-    output_state = await multi_dataset_graph.ainvoke(
-        input_state, config=config
-    )
+    output_state = await multi_dataset_graph.ainvoke(input_state, config=config)
     return transform_output_state(output_state)  # type: ignore

@@ -4,6 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from app.workflow.graph.single_dataset_graph.graph import single_dataset_graph
 from app.workflow.graph.single_dataset_graph.types import (
     OutputState as SingleDatasetOutputState,
+    InputState,
 )
 from app.workflow.graph.single_dataset_graph.types import (
     SingleDatasetQueryResult,
@@ -38,21 +39,23 @@ def transform_output_state(
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
 
-    response_text = output_state.get("response_text", "No response")
+    response_text = "No response"
     return {
+        "query_result": query_result,
         "datasets": datasets,
         "messages": [AIMessage(content=response_text)],
     }
 
 
-async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -> AgentState:
+async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:
     dataset_ids = state.get("dataset_ids", [])
     dataset_id = dataset_ids[0] if dataset_ids else None
+    user_query = state.get("user_query", "") or ""
 
-    input_state = {
+    input_state: InputState = {
         "messages": state["messages"],
         "dataset_id": dataset_id,
-        "user_query": state.get("user_query", ""),
+        "user_query": user_query,
     }
 
     output_state = await single_dataset_graph.ainvoke(input_state, config=config)

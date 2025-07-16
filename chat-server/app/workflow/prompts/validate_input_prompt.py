@@ -11,8 +11,8 @@ def create_validate_input_prompt(
     prompt_template = kwargs.get("prompt_template", False)
     user_input = kwargs.get("user_input", "")
 
-    system_content = """\
-Validate the user input
+    system_content = """
+Validate user input.
 
 Respond with a JSON object with exactly these three fields:
 {

@@ -1,6 +1,5 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END
 
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
@@ -45,4 +44,4 @@ async def should_visualize(state: AgentState):
     if state.get("needs_visualization", False) and state.get("datasets", []):
         return "visualization_agent"
     else:
-        return END
+        return "generate_result"

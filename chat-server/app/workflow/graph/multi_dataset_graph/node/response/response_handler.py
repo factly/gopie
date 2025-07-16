@@ -12,4 +12,4 @@ def route_response_handler(state: State) -> str:
     if len(subqueries) - 1 > query_index:
         return "stream_updates"
     else:
-        return "generate_result"
+        return "pass_on_results"

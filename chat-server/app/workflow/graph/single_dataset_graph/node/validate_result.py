@@ -61,7 +61,7 @@ async def route_result_validation(state: State) -> str:
     retry_count = state.get("retry_count", 0)
 
     if not validation_result:
-        return "respond_to_user"
+        return "pass_on_results"
 
     is_valid = validation_result["is_valid"]
     recommendation = validation_result["recommendation"]
@@ -71,9 +71,9 @@ async def route_result_validation(state: State) -> str:
         or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
         or isinstance(last_message, ErrorMessage)
     ):
-        return "respond_to_user"
+        return "pass_on_results"
 
     if recommendation == "rerun_query":
         return "rerun_query"
 
-    return "respond_to_user"
+    return "pass_on_results"
