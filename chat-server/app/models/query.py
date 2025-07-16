@@ -8,12 +8,16 @@ class SqlQueryInfo:
     sql_query: str
     explanation: str
     sql_query_result: list | None = None
+    success: bool = True
+    error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "sql_query": self.sql_query,
             "explanation": self.explanation,
             "sql_query_result": self.sql_query_result,
+            "success": self.success,
+            "error": self.error,
         }
 
 
@@ -56,6 +60,16 @@ class SubQueryInfo:
             "confidence_score": self.confidence_score,
             "node_messages": self.node_messages,
         }
+
+
+@dataclass
+class SingleDatasetQueryResult:
+    user_query: str
+    user_friendly_dataset_name: str | None
+    dataset_name: str | None
+    sql_results: list[SqlQueryInfo] | None
+    response_for_non_sql: str | None
+    error: list[dict] | None
 
 
 class QueryInfo(TypedDict, total=False):
