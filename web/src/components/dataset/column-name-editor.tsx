@@ -309,7 +309,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                         onClick={() =>
                           handleEditNameStart(mapping.originalName)
                         }
-                        className="h-7 w-7 rounded-full bg-muted/60 ml-2"
+                        className="h-7 w-7 bg-muted/60 ml-2"
                       >
                         <PencilIcon className="h-3.5 w-3.5" />
                       </Button>
@@ -369,7 +369,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                         onClick={() =>
                           handleEditDataTypeStart(mapping.originalName)
                         }
-                        className="h-7 w-7 rounded-full bg-muted/60 ml-2"
+                        className="h-7 w-7 bg-muted/60 ml-2"
                       >
                         <PencilIcon className="h-3.5 w-3.5" />
                       </Button>
@@ -384,7 +384,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-1.5">
-                                <div className="flex items-center justify-center bg-primary/10 border border-primary/20 rounded-md px-1.5 py-0 h-5 w-5">
+                                <div className="flex items-center justify-center bg-primary/10 border border-primary/20 px-1.5 py-0 h-5 w-5">
                                   <InfoIcon className="h-3 w-3 text-primary" />
                                 </div>
                                 <span className="text-xs line-clamp-1">
@@ -409,7 +409,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                       onClick={() =>
                         handleOpenDescriptionDialog(mapping.originalName)
                       }
-                      className="h-6 w-6 rounded-full bg-muted/60 flex-shrink-0"
+                      className="h-6 w-6 bg-muted/60 flex-shrink-0"
                     >
                       <MessageSquare className="h-3 w-3" />
                     </Button>

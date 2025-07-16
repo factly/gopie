@@ -72,7 +72,7 @@ export function ChatHistory({
         <Button
           variant={variant}
           size="icon"
-          className={`h-9 w-9 rounded-full shadow-sm ${className}`}
+          className={`h-9 w-9 shadow-sm ${className}`}
         >
           <History className="h-5 w-5" />
         </Button>
@@ -131,7 +131,7 @@ export function ChatHistory({
                     <div
                       key={chat.id}
                       className={cn(
-                        "group relative flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer gap-2",
+                        "group relative flex items-center justify-between px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer gap-2",
                         selectedChatId === chat.id && "bg-muted"
                       )}
                       onClick={() =>
@@ -180,7 +180,7 @@ export function ChatHistory({
               disabled={isFetchingNextChats}
             >
               {isFetchingNextChats ? (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="h-3 w-3 animate-spin border-2 border-primary border-t-transparent" />
               ) : (
                 "Load More"
               )}

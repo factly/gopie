@@ -197,7 +197,7 @@ export function DatasetHeader({
       <div className="flex items-start gap-6">
         {/* Left Section - Main Info */}
         <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="bg-primary/10 rounded-lg border p-3 flex-shrink-0">
+          <div className="bg-primary/10 border p-3 flex-shrink-0">
             <FileIcon className="h-6 w-6 text-primary" />
           </div>
 
@@ -250,7 +250,7 @@ export function DatasetHeader({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-full hover:bg-secondary/80 flex-shrink-0"
+                    className="h-7 w-7 hover:bg-secondary/80 flex-shrink-0"
                     onClick={() => setIsEditing(true)}
                   >
                     <PencilIcon className="h-4 w-4" />
@@ -269,7 +269,7 @@ export function DatasetHeader({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       onClick={() => setIsEditing(true)}
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
@@ -315,7 +315,7 @@ export function DatasetHeader({
                         <div className="space-y-3">
                           <h4 className="font-medium text-sm">Statistics</h4>
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-secondary/20 rounded-lg p-3">
+                            <div className="bg-secondary/20 p-3">
                               <div className="text-xs text-muted-foreground mb-1">
                                 Rows
                               </div>
@@ -325,7 +325,7 @@ export function DatasetHeader({
                                 }).format(dataset.row_count || 0)}
                               </div>
                             </div>
-                            <div className="bg-secondary/20 rounded-lg p-3">
+                            <div className="bg-secondary/20 p-3">
                               <div className="text-xs text-muted-foreground mb-1">
                                 Columns
                               </div>
@@ -333,7 +333,7 @@ export function DatasetHeader({
                                 {dataset.columns?.length || 0}
                               </div>
                             </div>
-                            <div className="bg-secondary/20 rounded-lg p-3 col-span-2">
+                            <div className="bg-secondary/20 p-3 col-span-2">
                               <div className="text-xs text-muted-foreground mb-1">
                                 File Size
                               </div>

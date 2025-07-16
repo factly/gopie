@@ -44,14 +44,14 @@ export function SqlResults() {
       <ScrollArea className="flex-1 min-h-0 p-4">
         <div className="flex h-full items-center justify-center">
           {results?.error ? (
-            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{results.error}</p>
               <pre className="mt-2 text-xs text-muted-foreground">
                 {results.query}
               </pre>
             </div>
           ) : results?.data?.length ? (
-            <div className="w-full rounded-lg border">
+            <div className="w-full border">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>

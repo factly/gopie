@@ -142,7 +142,7 @@ export function CustomFileUploader({
       {!selectedFile ? (
         <div
           className={cn(
-            "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer transition-colors",
+            "border-2 border-dashed p-8 flex flex-col items-center justify-center cursor-pointer transition-colors",
             isDragging
               ? "border-primary bg-primary/10"
               : "border-border hover:border-primary/50"
@@ -172,7 +172,7 @@ export function CustomFileUploader({
           </p>
         </div>
       ) : (
-        <div className="border rounded-lg p-4">
+        <div className="border p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <File className="h-8 w-8 text-primary mr-3" />

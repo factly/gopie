@@ -215,7 +215,7 @@ export default function UploadDatasetPage({
         </p>
       </div>
 
-      <div className="bg-card border rounded-lg p-6 mb-8">
+      <div className="bg-card border p-6 mb-8">
         <h2 className="text-xl font-semibold mb-1">Upload Data File</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Drag & drop a file or click to browse. Supports CSV, Parquet, JSON,
@@ -255,7 +255,7 @@ export default function UploadDatasetPage({
         />
       </div>
 
-      <div className="bg-card border rounded-lg p-6 mb-8">
+      <div className="bg-card border p-6 mb-8">
         <h2 className="text-xl font-semibold mb-1 flex items-center">
           <LinkIcon className="h-5 w-5 mr-2" /> Import from URL
         </h2>
@@ -269,7 +269,7 @@ export default function UploadDatasetPage({
         />
       </div>
 
-      <div className="bg-card border rounded-lg p-6">
+      <div className="bg-card border p-6">
         <h2 className="text-xl font-semibold mb-1 flex items-center">
           <Database className="h-5 w-5 mr-2" /> Connect to Database
         </h2>

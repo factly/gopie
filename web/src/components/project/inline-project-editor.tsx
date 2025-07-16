@@ -160,7 +160,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full hover:bg-muted"
+                className="h-8 w-8 hover:bg-muted"
                 title="Edit Project"
                 onClick={() => setIsEditing(true)}
               >
@@ -184,7 +184,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-muted"
+            className="h-8 w-8 hover:bg-muted"
             title="Chat with Project"
             onClick={handleChatWithProject}
           >

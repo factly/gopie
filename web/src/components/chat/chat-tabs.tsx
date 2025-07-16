@@ -69,16 +69,16 @@ export function ChatTabs({
       className="w-full h-full flex flex-col"
     >
       <div className="flex w-full">
-        <TabsList className="w-full h-10 grid grid-cols-2 rounded-none bg-background">
+        <TabsList className="w-full h-10 grid grid-cols-2 bg-background">
           <TabsTrigger
             value="chat"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium px-4 py-2 text-sm transition-all"
           >
             Chat
           </TabsTrigger>
           <TabsTrigger
             value="history"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium px-4 py-2 text-sm transition-all"
           >
             History
           </TabsTrigger>
@@ -104,7 +104,7 @@ export function ChatTabs({
           {isLoadingChats ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                <Skeleton key={i} className="h-14 w-full" />
               ))}
             </div>
           ) : allChats.length > 0 ? (
@@ -141,7 +141,7 @@ export function ChatTabs({
                     <div
                       key={chat.id}
                       className={cn(
-                        "group relative flex flex-col rounded-lg px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
+                        "group relative flex flex-col px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
                         selectedChatId === chat.id &&
                           "bg-muted/80 border border-border/10"
                       )}
@@ -195,7 +195,7 @@ export function ChatTabs({
                 disabled={isFetchingNextChats}
               >
                 {isFetchingNextChats ? (
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-1" />
+                  <span className="h-3 w-3 animate-spin border-2 border-primary border-t-transparent mr-1" />
                 ) : (
                   "Load More"
                 )}

@@ -219,7 +219,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-[200px] rounded-lg" />
+              <Skeleton key={i} className="h-[200px]" />
             ))}
           </div>
         </div>
@@ -257,7 +257,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               <Link
                 href="/settings"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
+                className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
               >
                 <SettingsIcon className="h-4 w-4" />
                 <span className="sr-only">Settings</span>
@@ -283,8 +283,8 @@ export default function HomePage() {
             >
               <div className="mb-6">
                 <div className="flex justify-center mb-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/30 backdrop-blur-sm max-w-md">
-                    <div className="bg-muted text-muted-foreground text-xs font-medium rounded-full px-1.5 py-0.5">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
+                    <div className="bg-muted text-muted-foreground text-xs font-medium px-1.5 py-0.5">
                       NEW
                     </div>
                     <span className="text-sm text-muted-foreground">
@@ -319,7 +319,7 @@ export default function HomePage() {
               </div>
 
               <div
-                className="rounded-xl bg-card dark:bg-card/90 border border-border shadow-lg 
+                className="bg-card dark:bg-card/90 border border-border shadow-lg 
                 ring-[1.5px] ring-foreground/10 
                 hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
                 focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
@@ -331,7 +331,7 @@ export default function HomePage() {
                       selectedContexts={selectedContexts}
                       onSelectContext={handleSelectContext}
                       onRemoveContext={handleRemoveContext}
-                      triggerClassName="flex items-center justify-center h-9 w-9 rounded-full bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      triggerClassName="flex items-center justify-center h-9 w-9 bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
                     />
                   </div>
                   <MentionInput
@@ -392,7 +392,7 @@ export default function HomePage() {
                   animate={{ opacity: 1 }}
                   className="col-span-full flex flex-col items-center justify-center py-12"
                 >
-                  <div className="rounded-full bg-muted p-4 mb-4">
+                  <div className="bg-muted p-4 mb-4">
                     <FolderIcon className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-medium text-foreground mb-2">

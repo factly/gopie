@@ -89,7 +89,7 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-2 rounded-md border bg-background shadow-sm ${"px-3 py-2"} text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring`}
+        className={`inline-flex items-center gap-2 border bg-background shadow-sm ${"px-3 py-2"} text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring`}
       >
         <Search className="h-4 w-4" />
         <>

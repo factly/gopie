@@ -182,7 +182,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
         >
           <div
             className={cn(
-              "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-bl-3xl",
+              "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5",
               "transition-all duration-300 ease-in-out",
               isHovered ? "opacity-100" : "opacity-50"
             )}
@@ -210,7 +210,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 rounded-full relative z-10"
+                    className="h-8 w-8 p-0 relative z-10"
                     onClick={handleChatClick}
                   >
                     <MessageSquare className="h-4 w-4" />

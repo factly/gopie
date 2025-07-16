@@ -64,7 +64,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
         <h3 className="text-lg font-medium">Results</h3>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex items-center border rounded-md shadow-sm">
+            <div className="flex items-center border shadow-sm">
               <Button
                 variant={viewMode === "table" ? "secondary" : "ghost"}
                 size="sm"
@@ -212,7 +212,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
           )}
         </>
       ) : (
-        <div className="h-[600px] border rounded-lg overflow-hidden">
+        <div className="h-[600px] border overflow-hidden">
           <SqlPreview
             value={JSON.stringify(results, null, 2)}
             language="json"

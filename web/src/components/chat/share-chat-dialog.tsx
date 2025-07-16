@@ -143,7 +143,7 @@ export function ShareChatDialog({
           </div>
 
           {selectedVisibility === "public" && (
-            <div className="p-3 bg-muted/50 rounded-lg border">
+            <div className="p-3 bg-muted/50 border">
               <div className="flex items-center gap-2 text-sm">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Public Link</span>

@@ -719,7 +719,7 @@ export function UrlUploader({
           )}
         </div>
       ) : downloadedFile && !isUploading ? (
-        <div className="border rounded-lg p-4">
+        <div className="border p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
@@ -760,7 +760,7 @@ export function UrlUploader({
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg p-4">
+        <div className="border p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Download className="h-8 w-8 text-primary mr-3" />

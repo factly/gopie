@@ -48,7 +48,7 @@ export function UserDropdown() {
 
   if (isLoading) {
     return (
-      <Button variant="ghost" size="sm" className="h-8 w-8 rounded-full">
+      <Button variant="ghost" size="sm" className="h-8 w-8">
         <Avatar className="h-8 w-8">
           <AvatarFallback>...</AvatarFallback>
         </Avatar>
@@ -70,7 +70,7 @@ export function UserDropdown() {
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-8 w-8 rounded-full"
+          className="relative h-8 w-8"
         >
           <Avatar className="h-8 w-8">
             <AvatarImage

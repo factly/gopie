@@ -152,7 +152,7 @@ export function DatasetCard({
       >
         <div
           className={cn(
-            "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-bl-3xl",
+            "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5",
             "transition-all duration-300 ease-in-out",
             isHovered ? "opacity-100" : "opacity-50"
           )}
@@ -185,7 +185,7 @@ export function DatasetCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 rounded-full relative z-10"
+                className="h-8 w-8 p-0 relative z-10"
                 onClick={handleChatClick}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -220,7 +220,7 @@ export function DatasetCard({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={preventLinkNavigation}
                         >
                           <MoreHorizontal className="h-3 w-3" />

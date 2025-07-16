@@ -248,7 +248,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                 <div
                   key={chat.id}
                   className={cn(
-                    "group relative flex flex-col rounded-lg px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
+                    "group relative flex flex-col px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
                     selectedChatId === chat.id &&
                       "bg-muted/80 border border-border/10"
                   )}
@@ -350,7 +350,7 @@ const ChatInput = React.memo(
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
-            triggerClassName="h-10 w-10 rounded-full bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+            triggerClassName="h-10 w-10 bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
             lockableContextIds={lockableContextIds}
           />
           <MentionInput
@@ -432,7 +432,7 @@ const ChatView = React.memo(
               >
                 {isFetchingNextPage ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent mr-2" />
                     Loading...
                   </>
                 ) : (

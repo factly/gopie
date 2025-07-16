@@ -220,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 mass: 0.8,
                 duration: 0.25,
               }}
-              className="fixed left-2 top-2 bottom-2 z-40 w-64 bg-sidebar border shadow-2xl rounded-xl overflow-hidden"
+              className="fixed left-2 top-2 bottom-2 z-40 w-64 bg-sidebar border shadow-2xl overflow-hidden"
               onMouseEnter={() => {
                 if (timeoutRef.current) {
                   clearTimeout(timeoutRef.current);

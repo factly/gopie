@@ -74,7 +74,7 @@ export default function ProjectPage({
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Skeleton className="h-[32px] w-[100px]" /> {/* Datasets text */}
-              <Skeleton className="h-[22px] w-[30px] rounded-full" />{" "}
+              <Skeleton className="h-[22px] w-[30px]" />{" "}
               {/* Count badge */}
             </div>
             <Skeleton className="h-9 w-[135px]" /> {/* Upload button */}
@@ -96,7 +96,7 @@ export default function ProjectPage({
   if (error) {
     return (
       <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+        <div className="border border-destructive/50 bg-destructive/5 p-4">
           <h2 className="text-lg font-semibold text-destructive">Error</h2>
           <p className="text-sm text-destructive/80">{error.message}</p>
         </div>
@@ -130,7 +130,7 @@ export default function ProjectPage({
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-16 space-y-4 border rounded-lg bg-muted/50"
+            className="flex flex-col items-center justify-center py-16 space-y-4 border bg-muted/50"
           >
             <TableIcon className="h-8 w-8 text-muted-foreground" />
             <p className="text-base text-muted-foreground">

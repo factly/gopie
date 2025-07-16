@@ -167,7 +167,7 @@ export function ContextPicker({
         >
           <AtSign className="h-4 w-4" />
           {selectedContexts.length > 0 && (
-            <div className="absolute top-0 right-0 h-2 w-2 bg-primary rounded-full" />
+            <div className="absolute top-0 right-0 h-2 w-2 bg-primary" />
           )}
         </Button>
       </PopoverTrigger>

@@ -230,7 +230,7 @@ export default function RestApiPage({
                 {filters.map((filter, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 bg-muted/50 p-2 rounded-md text-sm"
+                    className="flex items-center gap-2 bg-muted/50 p-2 text-sm"
                   >
                     <code>{filter.column}</code>
                     <code>{filter.operator || "="}</code>
@@ -315,7 +315,7 @@ export default function RestApiPage({
 
         {/* Right Panel - Output */}
         <div className="flex-1">
-          <div className="bg-muted/50 p-4 rounded-lg mb-4">
+          <div className="bg-muted/50 p-4 mb-4">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium">API URL</div>
               <DropdownMenu>
