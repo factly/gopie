@@ -76,12 +76,12 @@ func (service *DatasetService) GetByTableName(tableName string, orgID string) (*
 	return service.datasetRepo.GetByTableName(context.Background(), tableName, orgID)
 }
 
-func (service *DatasetService) List(projectID string, limit, offset int) (*models.PaginationView[*models.Dataset], error) {
+func (service *DatasetService) List(projectID string, limit, page int) (*models.PaginationView[*models.Dataset], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
-	pagination.Offset = offset
+	pagination.Offset = (page - 1) * limit
 	return service.datasetRepo.List(context.Background(), projectID, pagination)
 }
 
