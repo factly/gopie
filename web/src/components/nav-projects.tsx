@@ -7,6 +7,7 @@ import {
   CodeIcon,
   NetworkIcon,
   ChevronDown,
+  ArrowLeftRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -90,7 +91,7 @@ export function NavProjects() {
                   size="sm"
                   className="h-5 px-2 text-xs flex items-center gap-1"
                 >
-                  <span>Switch</span>
+                  <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
@@ -157,7 +158,7 @@ export function NavProjects() {
                   size="sm"
                   className="h-5 px-2 text-xs flex items-center gap-1"
                 >
-                  <span>Switch</span>
+                  <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
