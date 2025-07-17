@@ -3,6 +3,7 @@ import { ZitadelClient } from "@/lib/auth/zitadel-client";
 import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   try {
     const searchParams = request.nextUrl.searchParams;
     const idpIntentId = searchParams.get("id");
@@ -12,12 +13,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       const failureUrl =
         searchParams.get("state") || "/auth/login?error=oauth_failed";
-      return NextResponse.redirect(new URL(failureUrl, request.url));
+      return NextResponse.redirect(new URL(failureUrl, baseUrl));
     }
 
     if (!idpIntentId || !idpIntentToken) {
       return NextResponse.redirect(
-        new URL("/auth/login?error=missing_oauth_params", request.url)
+        new URL("/auth/login?error=missing_oauth_params", baseUrl)
       );
     }
 
@@ -116,11 +117,11 @@ export async function GET(request: NextRequest) {
 
     // Redirect to dashboard or original destination
     const returnUrl = searchParams.get("returnUrl") || "/";
-    return NextResponse.redirect(new URL(returnUrl, request.url));
+    return NextResponse.redirect(new URL(returnUrl, baseUrl));
   } catch (error) {
     console.error("OAuth callback error:", error);
     return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_callback_failed", request.url)
+      new URL("/auth/login?error=oauth_callback_failed", baseUrl)
     );
   }
 }

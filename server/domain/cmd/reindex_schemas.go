@@ -101,15 +101,21 @@ var reindexSchemasCmd = &cobra.Command{
 			// Fetch datasets in batches and send them directly to workers
 			datasetsLoaded := 0
 			limit := 10
-			offset := 0
+			page := 1
+
 			for {
-				datasets, err := datasetService.List(project.ID, limit, offset)
+				datasets, err := datasetService.List(project.ID, limit, page)
 				if err != nil {
-					appLogger.Error("failed to list datasets for project", zap.String("project_id", project.ID), zap.Error(err))
+					appLogger.Error("failed to list datasets for project",
+						zap.String("project_id", project.ID),
+						zap.Int("page", page),
+						zap.Error(err))
 					break
 				}
 
-				appLogger.Info("loaded datasets Successfully", zap.Int("length", len(datasets.Results)))
+				appLogger.Info("loaded datasets successfully",
+					zap.Int("length", len(datasets.Results)),
+					zap.Int("page", page))
 
 				batchSize := len(datasets.Results)
 				if batchSize == 0 {
@@ -122,7 +128,7 @@ var reindexSchemasCmd = &cobra.Command{
 					jobs <- dataset
 				}
 
-				offset += limit
+				page++
 			}
 
 			appLogger.Info("Dispatched datasets to workers", zap.Int("datasetsLoaded", datasetsLoaded), zap.String("projectID", project.ID))
