@@ -1,0 +1,35 @@
+{{- if .Values.server.reIndexingJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "server.name" . }}-re-indexing-job
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{- include "server.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.server.reIndexingJob.backoffLimit | default 1 }}
+  ttlSecondsAfterFinished: {{ .Values.server.reIndexingJob.ttlSecondsAfterFinished | default 3600 }}
+  template:
+    metadata:
+      labels:
+        {{- include "server.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: re-indexing
+          image: "{{ .Values.server.reIndexingJob.image.repository }}:{{ .Values.server.reIndexingJob.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.reIndexingJob.image.pullPolicy | default "IfNotPresent" }}
+          command: {{- toYaml .Values.server.reIndexingJob.command | nindent 12 }}
+          args: {{- toYaml .Values.server.reIndexingJob.args | nindent 12 }}
+          env:
+            {{- toYaml .Values.server.reIndexingJob.env | nindent 12 }}
+          volumeMounts:
+            {{- range .Values.server.reIndexingJob.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              subPath: {{ .subPath | default "" }}
+              readOnly: {{ .readOnly | default false }}
+            {{- end }}
+      volumes:
+        {{- toYaml .Values.server.reIndexingJob.volumes | nindent 8 }}
+{{- end }}

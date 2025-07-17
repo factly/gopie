@@ -1,0 +1,18 @@
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "web.name" . }}
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{- include "web.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.web.service.type }}
+  ports:
+    - port: {{ .Values.web.service.portNumber }}
+      targetPort: {{ .Values.web.service.portName }}
+      protocol: TCP
+      name: {{ .Values.web.service.portName }}
+  selector:
+    {{- include "web.selectorLabels" . | nindent 4 }}
+{{- end }}

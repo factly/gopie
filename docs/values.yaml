@@ -1,0 +1,439 @@
+# Default values for gopie.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ""  # Docker image repository for the main application
+  pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
+  tag: ""  # Image tag to use; defaults to chart appVersion if empty
+
+imagePullSecrets: []  # List of image pull secrets for private registries
+nameOverride: ""  # Override the name of the chart
+fullnameOverride: "gopie"  # Override the full name of the chart resources
+
+## gopie main server deployment configuration
+server:
+  name: server  # Name of the server deployment
+  replicaCount: 1  # Number of server replicas to run
+  extraLabels: {}  # Extra labels to add to deployment resources
+  extraPodLabels: {}  # Extra labels to add to pods
+  annotations: {}  # Annotations for deployment resources
+  Podannotations: {}  # Annotations for pods
+
+  env: []  # Environment variables for the container
+    # Example:
+    # - name: GOPIE_API_SERVER_HOST
+    #   value: "localhost"
+
+  initContainers:  # List of init containers to run before the app container
+  - name: gopie-migrate  # Example init container for DB migration
+    image: ""  # Image for the init container
+    env: []  # Environment variables for the init container
+
+  serviceAccount:
+    create: false  # Whether to create a new service account
+    automount: true  # Auto-mount API credentials for the service account
+    annotations: {}  # Annotations for the service account
+    name: ""  # Existing service account name to use
+
+  podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
+    # Example:
+    # fsGroup: 2000
+
+  securityContext: {}  # Container-level security context (e.g., runAsUser)
+    # Example:
+    # runAsUser: 1000
+
+  service:
+    portName: http  # Name of the service port
+    type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
+    portNumber: 8000  # Service port number
+
+  resources:  # Pod resource requests and limits
+    limits:
+      cpu: 200m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+
+  autoscaling:
+    enabled: false  # Enable Horizontal Pod Autoscaler
+    minReplicas: 5  # Minimum number of replicas if autoscaling is enabled
+    maxReplicas: 20  # Maximum number of replicas
+    targetCPUUtilizationPercentage: 80  # Target average CPU usage
+    targetMemoryUtilizationPercentage: 80  # Target average Memory usage
+
+  # Uncomment and configure liveness/readiness probes if needed
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+  # readinessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+
+  nodeSelector: {}  # Node selector for scheduling the pods
+
+  tolerations: []  # Tolerations for scheduling onto nodes with taints
+
+  affinity: {}  # Pod affinity/anti-affinity rules
+
+  extraVolumeMounts: []  # Additional volume mounts for the container
+    # Example:
+    # - name: zitadel-key
+    #   mountPath: ./home/gopie/zitadel_key.json
+    #   subPath: zitadel_key.json
+
+  extraVolumes: []  # Additional volumes for the pod
+    # Example:
+    # - name: zitadel-key
+    #   secret:
+    #     secretName: zitadel-key
+
+  persistence:  # Persistent volume claim configuration
+    type: pvc  # Type of persistence: pvc or hostPath
+    enabled: true  # Enable persistence
+    storageClassName: standard  # Storage class to use
+    accessModes:
+      - ReadWriteOnce  # Access mode for the PVC
+    size: 10Gi  # Size of the persistent volume
+    annotations:
+      helm.sh/resource-policy: "keep"  # Annotation to keep PVC on deletion
+    finalizers:
+      - kubernetes.io/pvc-protection  # PVC finalizers
+    # selectorLabels: {}  # Selector labels to bind to existing PVs
+    # subPath: ""  # Sub-path within the PV
+    # existingClaim:  # Use an existing PVC instead of creating one
+    extraPvcLabels: {}  # Extra labels for the PVC
+
+    inMemory:  # Optional in-memory storage (EmptyDir)
+      enabled: false  # Enable in-memory storage
+      # sizeLimit: 300Mi  # Limit for EmptyDir size (optional)
+
+  reIndexingJob:  # Re-indexing job configuration
+    enabled: true  # Enable the re-indexing job
+    image:
+      repository: ""  # Docker image repository for re-indexing job
+      tag: ""  # Image tag for the re-indexing job
+    env: []  # Environment variables for the re-indexing job
+
+    volumeMounts: []  # Additional volume mounts for the re-indexing job
+    volumes: []  # Additional volumes for the re-indexing job
+
+
+web:
+  # Container image configuration for the web component
+  image:
+    repository: ""  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
+    pullPolicy: IfNotPresent  # Image pull policy (Always, IfNotPresent, Never)
+    tag: ""  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
+
+  replicaCount: 1  # Number of desired web pod replicas
+  name: web  # Name identifier for the web deployment
+
+  imagePullSecrets: []  # List of image pull secrets for private registries
+  extraLabels: {}  # Additional labels to add to the Deployment
+  extraPodLabels: {}  # Additional labels to add to the web pods
+  annotations: {}  # Annotations to add to the Deployment
+  Podannotations: {}  # Annotations to add to the pods
+
+  env: []
+    # Define environment variables for the container
+    # Example:
+    # - name: NEXT_PUBLIC_ENABLE_AUTH
+    #   value: "false"
+
+  serviceAccount:
+    create: false  # Whether to create a new Kubernetes service account
+    automount: true  # Auto-mount the service account token in the pod
+    annotations: {}  # Annotations for the service account
+    name: ""  # Name of an existing service account to use
+
+  podSecurityContext: {}
+    # Security context for the entire pod
+    # Example:
+    # fsGroup: 2000
+
+  securityContext: {}
+    # Container-level security context
+    # Example:
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  service:
+    portName: http  # Name of the service port
+    type: ClusterIP  # Kubernetes Service type (ClusterIP, NodePort, LoadBalancer)
+    portNumber: 3000  # Port the container listens on
+
+  resources:
+    # Resource requests and limits for the web container
+    limits:
+      cpu: 1000m
+      memory: 1000Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Probes to check container health
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+  # readinessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+
+  autoscaling:
+    enabled: false  # Enable horizontal pod autoscaling
+    minReplicas: 1  # Minimum number of replicas if autoscaling is enabled
+    maxReplicas: 10  # Maximum number of replicas if autoscaling is enabled
+    targetCPUUtilizationPercentage: 80  # Target average CPU utilization
+    targetMemoryUtilizationPercentage: 80  # Target average Memory utilization
+
+  nodeSelector: {}  # Node selector for scheduling pods to specific nodes
+
+  tolerations: []  # Node tolerations for scheduling on tainted nodes
+
+  affinity: {}  # Affinity rules for pod scheduling
+
+  extraVolumeMounts: []
+    # Extra volume mounts for the pod
+    # Example:
+    # - name: extra-volume-0
+    #   mountPath: /mnt/volume0
+    #   readOnly: true
+
+  extraVolumes: []
+    # Additional volumes for the pod
+    # Example:
+    # - name: extra-volume-0
+    #   existingClaim: volume-claim
+    # - name: extra-volume-1
+    #   hostPath:
+    #     path: /usr/shared/
+    #     type: ""
+
+chatserver:
+  name: chatserver  # Name identifier for the chatserver deployment
+
+  replicaCount: 1  # Number of chatserver pod replicas
+
+  image:
+    repository: ""  # Docker image repository for the chatserver
+    pullPolicy: IfNotPresent  # Image pull policy
+    tag: ""  # Image tag to use
+
+  imagePullSecrets: []  # Image pull secrets for private registries
+  extraLabels: {}  # Additional labels for the Deployment
+  extraPodLabels: {}  # Additional labels for pods
+  annotations: {}  # Annotations for the Deployment
+  Podannotations: {}  # Annotations for pods
+
+  env: []
+    # Environment variables for the chatserver
+    # Example:
+    # - name: GOPIE_API_ENDPOINT
+    #   value: "GOPIE_URL"
+    # - name: E2B_API_KEY
+    #   value: ""
+
+  serviceAccount:
+    create: false  # Whether to create a new service account
+    automount: true  # Auto-mount the service account token in the pod
+    annotations: {}  # Annotations for the service account
+    name: ""  # Existing service account name
+
+  podSecurityContext: {}
+    # Pod-level security context
+    # fsGroup: 2000
+
+  securityContext: {}
+    # Container-level security context
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  service:
+    portName: http  # Service port name
+    type: ClusterIP  # Service type
+    portNumber: 8000  # Port the container listens on
+
+  resources:
+    # Resource requests and limits for the chatserver container
+    limits:
+      cpu: 1000m
+      memory: 1000Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+  # readinessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+
+  autoscaling:
+    enabled: false  # Enable autoscaling for the chatserver
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}  # Node selector rules
+
+  tolerations: []  # Node tolerations
+
+  affinity: {}  # Affinity rules
+
+  extraVolumeMounts: []
+    # Additional volume mounts
+    # - name: extra-volume-0
+    #   mountPath: /mnt/volume0
+    #   readOnly: true
+
+  extraVolumes: []
+    # Additional volumes
+    # - name: extra-volume-0
+    #   existingClaim: volume-claim
+    # - name: extra-volume-1
+    #   hostPath:
+    #     path: /usr/shared/
+    #     type: ""
+
+
+postgresql:
+  enabled: true  # Enable or disable the bundled PostgreSQL chart
+  auth:
+    username: default  # Database username for the PostgreSQL instance
+    database: gopie     # Name of the default database to create
+
+minio:
+  enabled: true  # Enable or disable the bundled MinIO chart
+  defaultBuckets: "gopie"  # Comma-separated list of default buckets to create in MinIO
+
+companion:
+  enabled: true  # Enable or disable the Companion service
+  env: []
+    # Environment variables for Companion service
+    # - name: COMPANION_PROTOCOL  # Protocol to use (http/https)
+    #   value: https
+    # - name: COMPANION_PORT      # Port number for Companion server
+    #   value: "3020"
+    # - name: COMPANION_DATADIR   # Data directory for Companion
+    #   value: /
+    # - name: COMPANION_DOMAIN    # Public domain for Companion
+    #   value: companion-dega.factly.in
+    # - name: COMPANION_SELF_ENDPOINT  # Self endpoint URL for Companion
+    #   value: companion-dega.factly.in
+    # - name: COMPANION_AWS_BUCKET  # Target AWS bucket name for Companion uploads
+    #   value: dega.factly.in
+    # - name: COMPANION_AWS_ENDPOINT  # Endpoint URL for AWS/S3 compatible storage
+    #   value: https://storage.googleapis.com
+    # - name: COMPANION_AWS_KEY  # AWS access key, read from Kubernetes Secret
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: companion
+    #       key: COMPANION_AWS_KEY
+    # - name: COMPANION_AWS_SECRET  # AWS secret key, read from Kubernetes Secret
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: companion
+    #       key: COMPANION_AWS_SECRET
+    # - name: COMPANION_SECRET  # Companion internal secret, read from Kubernetes Secret
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: companion
+    #       key: COMPANION_SECRET
+    # - name: COMPANION_GOOGLE_KEY  # Google API key, read from Kubernetes Secret
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: companion
+    #       key: COMPANION_GOOGLE_KEY
+    # - name: COMPANION_GOOGLE_SECRET  # Google API secret, read from Kubernetes Secret
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: companion
+    #       key: COMPANION_GOOGLE_SECRET    
+
+  ingress:
+    enabled: false  # Enable or disable Ingress for Companion
+
+qdrant:
+  enabled: true  # Enable or disable the Qdrant vector database chart
+
+zitadel:
+  enabled: true  # Enable or disable the ZITADEL identity provider chart
+  zitadel:
+    masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
+    configmapConfig:
+      ExternalSecure: true  # Enable HTTPS for external access
+      ExternalPort:         # External port for ZITADEL (optional)
+      ExternalDomain: login.degacms.com  # Public domain for ZITADEL
+      TLS:
+        Enabled: false  # Enable TLS (handled by ingress or external proxy)
+      Database:
+        Postgres:
+          Host: postgres-host  # PostgreSQL host for ZITADEL database
+          Port: 5432           # PostgreSQL port
+          Database: zitadel    # Database name
+          MaxOpenConns: 20     # Maximum open DB connections
+          MaxIdleConns: 10     # Maximum idle DB connections
+          MaxConnLifetime: 30m # Max connection lifetime
+          MaxConnIdleTime: 5m  # Max idle time for DB connections
+          User:
+            Username: ""       # DB username
+            Password: ""       # DB password
+            SSL:
+              Mode: disable    # SSL mode for DB connection
+          Admin:
+            Username: ""       # Admin DB username
+            Password: ""       # Admin DB password
+            SSL:
+              Mode: disable    # SSL mode for admin DB connection
+  
+      DefaultInstance:
+        LoginPolicy:
+          DefaultRedirectURI:   # Optional: redirect URL after login
+
+  env: []
+    # Additional ZITADEL environment variables
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
+    #   value: admin
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
+    #   value: admin
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
+    #   value: admin@domain.com
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
+    #   value: "true"
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
+    #   value: Password1!
+
+  ingress:
+    enabled: true  # Enable or disable Ingress for ZITADEL
+    className: "nginx"  # Ingress class to use
+    annotations:
+      kubernetes.io/ingress.class: nginx  # Ingress controller annotation
+      cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
+    hosts:
+      - host: ""  # Hostname for ZITADEL Ingress
+        paths:
+          - path: /  # Path to route to ZITADEL
+            pathType: Prefix
+    tls:
+      - secretName: ""  # Secret name for TLS cert
+        hosts:
+          - ""          # Hosts covered by the TLS cert
