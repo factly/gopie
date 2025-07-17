@@ -286,22 +286,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </Link>
                         </SidebarMenuButton>
                         <div className="flex items-center space-x-10">
-                          <SidebarMenuButton
-                            size="sm"
-                            asChild
-                            className={
-                              pathname === "/chat"
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : ""
-                            }
-                          >
-                            <Link
-                              href="/chat"
-                              className="flex items-center justify-center"
-                            >
-                              <MessageSquareIcon className="h-4 w-4" />
-                            </Link>
-                          </SidebarMenuButton>
                           <ThemeToggle />
                         </div>
                       </div>
@@ -309,10 +293,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenu>
 
                   {!isSettingsPage && (
-                    <CommandSearch
-                      projectId={projectId}
-                      onNavigate={() => {}}
-                    />
+                    <>
+                      <CommandSearch
+                        projectId={projectId}
+                        onNavigate={() => {}}
+                      />
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            className={
+                              pathname === "/chat"
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                : ""
+                            }
+                          >
+                            <Link href="/chat" className="flex items-center gap-2">
+                              <MessageSquareIcon className="h-4 w-4" />
+                              <span>New chat</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      </SidebarMenu>
+                    </>
                   )}
                 </SidebarHeader>
                 <SidebarContent className="flex-1">
@@ -363,22 +366,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </Link>
                 </SidebarMenuButton>
                 <div className="flex items-center space-x-10">
-                  <SidebarMenuButton
-                    size="sm"
-                    asChild
-                    className={
-                      pathname === "/chat"
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : ""
-                    }
-                  >
-                    <Link
-                      href="/chat"
-                      className="flex items-center justify-center"
-                    >
-                      <MessageSquareIcon className="h-4 w-4" />
-                    </Link>
-                  </SidebarMenuButton>
                   <ThemeToggle />
                 </div>
               </div>
@@ -386,7 +373,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
 
           {!isSettingsPage && (
-            <CommandSearch projectId={projectId} onNavigate={() => {}} />
+            <>
+              <CommandSearch projectId={projectId} onNavigate={() => {}} />
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={
+                      pathname === "/chat"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : ""
+                    }
+                  >
+                    <Link href="/chat" className="flex items-center gap-2">
+                      <MessageSquareIcon className="h-4 w-4" />
+                      <span>New chat</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </>
           )}
         </SidebarHeader>
         <SidebarContent>
