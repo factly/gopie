@@ -221,7 +221,7 @@ export function NavProjects() {
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}/api`}>
                     <NetworkIcon className="h-4 w-4" />
-                    <span>Rest API</span>
+                    <span>REST API</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

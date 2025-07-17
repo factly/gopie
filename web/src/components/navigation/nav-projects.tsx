@@ -115,7 +115,7 @@ export function NavProjects() {
             isActive: isActive(`/${projectId}/${datasetId}/data`),
           },
           {
-            title: "Rest API",
+            title: "REST API",
             url: `/${projectId}/${datasetId}/api`,
             icon: NetworkIcon,
             isActive: isActive(`/${projectId}/${datasetId}/api`),
