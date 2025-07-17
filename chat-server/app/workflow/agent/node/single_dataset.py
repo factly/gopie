@@ -8,6 +8,7 @@ from app.workflow.graph.single_dataset_graph.types import (
 )
 from app.models.query import QueryResult, SingleDatasetQueryResult
 
+from app.models.query import SingleDatasetQueryResult
 from ..types import AgentState, Dataset
 
 
