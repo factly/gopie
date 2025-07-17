@@ -46,13 +46,22 @@ CONFIDENCE SCORING (be precise):
 - 0.4-0.6: Medium confidence - some issues, improvements recommended
 - 0.0-0.3: Low confidence - major issues, significant improvements needed
 
+RECOMMENDATION FIELD (choose the most appropriate):
+- If you are validating a **single_dataset** result, only use:
+    - "pass_on_results": Results are sufficient to answer the user's question.
+    - "rerun_query": Minor issues detected; retrying the query may help.
+- If you are validating a **multi-dataset** result, you may also use:
+    - "replan": The query logic or approach needs to be changed (not just retried).
+    - "reidentify_datasets": The selected datasets are wrong, insufficient, or do not match the user's intent; new datasets should be identified.
+    - "route_response": Results are sufficient to answer the user's question.
+
 RESPONSE FORMAT (JSON only):
 {
     "is_valid": true/false,
     "reasoning": "Clear analysis explaining your decision - what works, what doesn't, and why",
     "confidence": 0.0-1.0,
     "missing_elements": ["specific items missing if invalid"],
-    "recommendation": "respond_to_user" or "rerun_query"
+    "recommendation": "pass_on_results" | "rerun_query" | "replan" | "reidentify_datasets" | "route_response"
 }
 
 KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection."""
@@ -84,4 +93,11 @@ def format_validate_result_input(
 
     formatted_query_result = format_query_result(prev_query_result)
 
-    return {"input": formatted_query_result}
+    if prev_query_result.single_dataset_query_result:
+        heading = "=== VALIDATING SINGLE DATASET RESULT ==="
+    else:
+        heading = "=== VALIDATING MULTI-DATASET RESULT ==="
+
+    input_with_heading = f"{heading}\n\n{formatted_query_result}"
+
+    return {"input": input_with_heading}

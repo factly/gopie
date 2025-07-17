@@ -8,13 +8,13 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.single_dataset_graph.types import (
+from app.workflow.graph.multi_dataset_graph.types import (
     State,
     ValidationResult,
 )
 
 
-RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
+RECOMMENDATION_LIST = ["route_response", "replan", "reidentify_datasets"]
 
 
 @configure_node(
@@ -41,7 +41,10 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         if validation_result["recommendation"] not in RECOMMENDATION_LIST:
             raise ValueError(f"Invalid recommendation: {validation_result['recommendation']}")
 
-        if validation_result["recommendation"] == "rerun_query":
+        if (
+            validation_result["recommendation"] == "reidentify_datasets"
+            or validation_result["recommendation"] == "replan"
+        ):
             retry_count += 1
 
         return {
@@ -76,9 +79,9 @@ async def route_result_validation(state: State) -> str:
         or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
         or isinstance(last_message, ErrorMessage)
     ):
-        return "pass_on_results"
+        return "route_response"
 
     if recommendation in RECOMMENDATION_LIST:
         return recommendation
 
-    return "pass_on_results"
+    return "route_response"

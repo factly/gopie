@@ -58,3 +58,11 @@ class ConfigSchema(TypedDict):
     trace_id: str
     chat_history: list[BaseMessage]
     user: str
+
+
+class ValidationResult(TypedDict):
+    is_valid: bool
+    reasoning: str
+    recommendation: str
+    confidence: float
+    missing_elements: list[str]

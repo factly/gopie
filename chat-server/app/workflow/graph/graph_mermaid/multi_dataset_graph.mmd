@@ -12,6 +12,7 @@ graph TD;
 	execute_query(execute_query)
 	analyze_dataset(analyze_dataset)
 	stream_updates(stream_updates)
+	validate_result(validate_result)
 	tools(tools)
 	route_response(route_response)
 	pass_on_results(pass_on_results)
@@ -21,9 +22,7 @@ graph TD;
 	analyze_query -.-> identify_datasets;
 	analyze_query -. &nbsp;basic_conversation&nbsp; .-> route_response;
 	analyze_query -.-> tools;
-	execute_query -. &nbsp;reidentify_datasets&nbsp; .-> identify_datasets;
-	execute_query -. &nbsp;replan&nbsp; .-> plan_query;
-	execute_query -.-> route_response;
+	execute_query --> validate_result;
 	generate_subqueries --> analyze_query;
 	identify_datasets -.-> analyze_dataset;
 	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
@@ -33,6 +32,9 @@ graph TD;
 	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;
 	stream_updates -. &nbsp;next_sub_query&nbsp; .-> analyze_query;
 	tools --> analyze_query;
+	validate_result -. &nbsp;reidentify_datasets&nbsp; .-> identify_datasets;
+	validate_result -. &nbsp;replan&nbsp; .-> plan_query;
+	validate_result -.-> route_response;
 	pass_on_results --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
