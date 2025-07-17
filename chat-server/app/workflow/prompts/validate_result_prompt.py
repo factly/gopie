@@ -4,12 +4,8 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
-from app.workflow.graph.single_dataset_graph.types import (
-    SingleDatasetQueryResult,
-)
-from app.workflow.prompts.formatters.single_query_result import (
-    format_single_query_result,
-)
+from app.models.query import QueryResult
+from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 
 def create_validate_result_prompt(
@@ -80,12 +76,12 @@ KEY PRINCIPLE: Focus on whether the user can get meaningful value from these res
 
 
 def format_validate_result_input(
-    prev_query_result: SingleDatasetQueryResult | None = None,
+    prev_query_result: QueryResult | None = None,
     **kwargs,
 ) -> dict:
     if not prev_query_result:
         return {"input": "❌ No query result provided for validation"}
 
-    formatted_query_result = format_single_query_result(prev_query_result)
+    formatted_query_result = format_query_result(prev_query_result)
 
     return {"input": formatted_query_result}

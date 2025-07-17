@@ -41,7 +41,6 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         return {
             "retry_count": retry_count,
             "validation_result": validation_result,
-            "query_result": query_result,
             "messages": [IntermediateStep.from_json(parsed_response)],
         }
 

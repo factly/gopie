@@ -28,7 +28,6 @@ from .process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
 )
-from .response_prompt import format_response_input
 from .route_query_replan_prompt import create_route_query_replan_prompt
 from .stream_updates_prompt import (
     create_execution_analysis_prompt,
@@ -70,12 +69,10 @@ class PromptSelector:
             "analyze_query": create_analyze_query_prompt,
             "generate_subqueries": create_generate_subqueries_prompt,
             "assess_query_complexity": create_assess_query_complexity_prompt,
-            # "generate_result": create_generate_result_prompt,
             "stream_updates": create_stream_update_prompt,
             "execution_analysis": create_execution_analysis_prompt,
             "process_query": create_process_query_prompt,
             "generate_result": create_result_generation_prompt,
-            # "response": create_response_prompt,
             "check_visualization": create_check_visualization_prompt,
             "route_query_replan": create_route_query_replan_prompt,
             "process_context": create_process_context_prompt,
@@ -90,7 +87,6 @@ class PromptSelector:
             "identify_datasets": format_identify_datasets_input,
             "plan_query": format_plan_query_input,
             "process_query": format_process_query_input,
-            "response": format_response_input,
             "plan_sql_query_tool": format_sql_planning_input,
             "validate_result": format_validate_result_input,
         }

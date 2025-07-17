@@ -4,14 +4,10 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-from app.workflow.graph.single_dataset_graph.types import (
-    SingleDatasetQueryResult,
-    ValidationResult,
-)
-from app.workflow.prompts.formatters.single_query_result import (
-    format_single_query_result,
-)
+from app.workflow.graph.single_dataset_graph.types import ValidationResult
+from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 
 def create_process_query_prompt(
@@ -79,7 +75,7 @@ def format_process_query_input(
     dataset_name: str,
     dataset_schema: DatasetSchema,
     rows_csv: str,
-    prev_query_result: SingleDatasetQueryResult | None = None,
+    prev_query_result: QueryResult | None = None,
     validation_result: ValidationResult | None = None,
     **kwargs,
 ) -> dict:
@@ -94,7 +90,7 @@ def format_process_query_input(
 {rows_csv}"""
 
     if prev_query_result:
-        formatted_prev_result = format_single_query_result(prev_query_result)
+        formatted_prev_result = format_query_result(prev_query_result)
         input_str += f"\n\n🔄 PREVIOUS QUERY CONTEXT:\n{formatted_prev_result}"
 
     if validation_result:

@@ -6,9 +6,7 @@ from app.workflow.graph.single_dataset_graph.types import (
     OutputState as SingleDatasetOutputState,
     InputState,
 )
-from app.workflow.graph.single_dataset_graph.types import (
-    SingleDatasetQueryResult,
-)
+from app.models.query import QueryResult, SingleDatasetQueryResult
 
 from ..types import AgentState, Dataset
 
@@ -24,18 +22,20 @@ def transform_output_state(
 ) -> AgentState | dict:
     datasets = []
     dataset_count = 0
-    query_result: SingleDatasetQueryResult | None = output_state.get("query_result")
+    query_result: QueryResult = output_state.get("query_result")
 
-    if query_result is not None:
-        sql_queries = query_result.get("sql_queries")
-        if sql_queries is not None:
-            for sql_query in sql_queries:
-                if not sql_query["result"]:
+    result: SingleDatasetQueryResult | None = query_result.single_dataset_query_result
+
+    if result is not None:
+        sql_results = result.sql_results
+        if sql_results is not None:
+            for sql_query_info in sql_results:
+                if not sql_query_info.sql_query_result:
                     continue
                 description = f"Dataset {dataset_count}\n\n"
-                description += f"Query: {sql_query['sql_query']}\n\n"
-                description += f"Explanation: {sql_query['explanation']}\n\n"
-                data = list_of_dict_to_list_of_lists(sql_query["result"])
+                description += f"Query: {sql_query_info.sql_query}\n\n"
+                description += f"Explanation: {sql_query_info.explanation}\n\n"
+                data = list_of_dict_to_list_of_lists(sql_query_info.sql_query_result)
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
 

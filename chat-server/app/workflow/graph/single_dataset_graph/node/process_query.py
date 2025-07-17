@@ -61,15 +61,16 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
     query_result = QueryResult(
         original_user_query=user_query,
-        single_dataset_query_result=SingleDatasetQueryResult(
-            user_friendly_dataset_name=None,
-            dataset_name=None,
-            sql_results=None,
-            response_for_non_sql=None,
-            error=None,
-        ),
         execution_time=0,
         timestamp=datetime.now(),
+    )
+
+    query_result.single_dataset_query_result = SingleDatasetQueryResult(
+        user_friendly_dataset_name=None,
+        dataset_name=None,
+        sql_results=None,
+        response_for_non_sql=None,
+        error=None,
     )
 
     try:
@@ -110,11 +111,10 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         explanations = parsed_response.get("explanations", [])
         response_for_non_sql = parsed_response.get("response_for_non_sql", "")
 
-        if query_result.single_dataset_query_result is not None:
-            query_result.single_dataset_query_result.user_friendly_dataset_name = (
-                user_provided_dataset_name
-            )
-            query_result.single_dataset_query_result.dataset_name = dataset_name
+        query_result.single_dataset_query_result.user_friendly_dataset_name = (
+            user_provided_dataset_name
+        )
+        query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
             await adispatch_custom_event(
@@ -152,8 +152,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                         )
                     )
 
-            if query_result.single_dataset_query_result is not None:
-                query_result.single_dataset_query_result.sql_results = sql_results
+            query_result.single_dataset_query_result.sql_results = sql_results
 
             return {
                 "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
@@ -161,8 +160,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             }
 
         else:
-            if query_result.single_dataset_query_result is not None:
-                query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
+            query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
 
             return {
                 "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
@@ -171,8 +169,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
     except Exception as e:
         error_message = f"Error processing query: {str(e)}"
-        if query_result.single_dataset_query_result is not None:
-            query_result.single_dataset_query_result.error = error_message
+        query_result.single_dataset_query_result.error = error_message
 
         return {
             "messages": [
