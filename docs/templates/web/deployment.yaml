@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "web.name" . }}
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{ include "web.labels" . | nindent 4 }}
+  annotations:
+    {{ include "web.annotations" . | nindent 4 }}
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{ include "web.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "web.PodLabels" . | nindent 8 }}
+      annotations:
+        {{ include "web.PodAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "web.pod" . | nindent 6 }}

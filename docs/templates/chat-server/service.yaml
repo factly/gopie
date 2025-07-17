@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chatserver.name" . }}
+  namespace: {{ include "chatserver.namespace" . }}
+  labels:
+    {{- include "chatserver.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.chatserver.service.type }}
+  ports:
+    - port: {{ .Values.chatserver.service.portNumber }}
+      targetPort: {{ .Values.chatserver.service.portName }}
+      protocol: TCP
+      name: {{ .Values.chatserver.service.portName }}
+  selector:
+    {{- include "chatserver.selectorLabels" . | nindent 4 }}
