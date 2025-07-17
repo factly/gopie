@@ -1,14 +1,13 @@
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
+from app.models.query import QueryResult, SingleDatasetQueryResult
 from app.workflow.graph.single_dataset_graph.graph import single_dataset_graph
+from app.workflow.graph.single_dataset_graph.types import InputState
 from app.workflow.graph.single_dataset_graph.types import (
     OutputState as SingleDatasetOutputState,
-    InputState,
 )
-from app.models.query import QueryResult, SingleDatasetQueryResult
 
-from app.models.query import SingleDatasetQueryResult
 from ..types import AgentState, Dataset
 
 
