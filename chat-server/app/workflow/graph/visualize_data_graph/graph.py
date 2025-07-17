@@ -8,6 +8,7 @@ from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
+from app.models.message import ErrorMessage
 
 from .types import AgentState, InputState, OutputState
 from .utils import (
@@ -23,36 +24,35 @@ async def pre_model_hook(state: AgentState, config: RunnableConfig):
     messages = []
     output = {}
     existing_sandbox = state.get("sandbox")
-    if existing_sandbox:
-        await update_sandbox_timeout(existing_sandbox)
-    else:
-        sbx = await get_sandbox()
-        output["sandbox"] = sbx
-        csv_paths = await upload_csv_files(sbx, state["datasets"])
-    if not state.get("is_input_prepared"):
-        await adispatch_custom_event(
-            "gopie-agent", {"content": "Preparing visualization ..."}
-        )
+    try:
+        if existing_sandbox:
+            await update_sandbox_timeout(existing_sandbox)
+        else:
+            sbx = await get_sandbox()
+            output["sandbox"] = sbx
+            csv_paths = await upload_csv_files(sbx, state["datasets"])
+        if not state.get("is_input_prepared"):
+            await adispatch_custom_event("gopie-agent", {"content": "Preparing visualization ..."})
 
-        messages = get_prompt(
-            "visualize_data",
-            user_query=state["user_query"],
-            datasets=state["datasets"],
-            csv_paths=csv_paths,
-        )
+            messages = get_prompt(
+                "visualize_data",
+                user_query=state["user_query"],
+                datasets=state["datasets"],
+                csv_paths=csv_paths,
+            )
 
-        output["is_input_prepared"] = True
-    output["messages"] = messages
-    return output
+            output["is_input_prepared"] = True
+        output["messages"] = messages
+        return output
+    except ValueError as e:
+        return {"messages": [ErrorMessage(content=str(e))]}
 
 
 tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
 
 
 async def call_model(state: AgentState, config: RunnableConfig):
-    llm = get_model_provider(config).get_llm_for_node(
-        "visualize_data", tool_names
-    )
+    llm = get_model_provider(config).get_llm_for_node("visualize_data", tool_names)
     response = await llm.ainvoke(state["messages"])
     return {"messages": [response]}
 
@@ -63,9 +63,7 @@ async def respond(state: AgentState):
     visualization_result_data = await get_visualization_result_data(
         state["sandbox"], response["visualization_result_paths"]
     )
-    s3_paths = await upload_visualization_result_data(
-        visualization_result_data
-    )
+    s3_paths = await upload_visualization_result_data(visualization_result_data)
     tool_message = {
         "type": "tool",
         "content": "Here is your visualization result",
@@ -87,10 +85,7 @@ async def respond(state: AgentState):
 def should_continue(state: AgentState):
     messages = state["messages"]
     last_message = messages[-1]
-    if (
-        len(last_message.tool_calls) == 1
-        and last_message.tool_calls[0]["name"] == "result_paths"
-    ):
+    if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
         return "respond"
     else:
         return "continue"

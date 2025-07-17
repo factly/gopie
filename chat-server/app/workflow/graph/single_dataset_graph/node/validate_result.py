@@ -8,10 +8,8 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.single_dataset_graph.types import (
-    State,
-    ValidationResult,
-)
+from app.workflow.graph.single_dataset_graph.types import State
+from app.models.query import ValidationResult
 
 
 RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]

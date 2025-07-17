@@ -36,9 +36,9 @@ def datasets_to_csv(datasets: list[Dataset]):
 
 @traceable(run_type="chain", name="get_sandbox")
 async def get_sandbox():
-    sbx = await AsyncSandbox.create(
-        timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY
-    )
+    if not settings.E2B_API_KEY:
+        raise ValueError("E2B API key is not set. Please set up E2B to enable visualizations.")
+    sbx = await AsyncSandbox.create(timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY)
     _ = await sbx.commands.run("pip install altair")
     return sbx
 
@@ -49,9 +49,7 @@ async def update_sandbox_timeout(sandbox: AsyncSandbox):
 
 
 @traceable(run_type="chain", name="upload_csv_files")
-async def upload_csv_files(
-    sandbox: AsyncSandbox, datasets: list[Dataset]
-) -> list[str]:
+async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset]) -> list[str]:
     csv_files = datasets_to_csv(datasets)
     tasks = []
     for file_name, csv_data in csv_files:
@@ -75,9 +73,7 @@ async def run_python_code(
 
 
 @traceable(run_type="chain", name="get_visualization_result_data")
-async def get_visualization_result_data(
-    sandbox: AsyncSandbox, file_names: list[str]
-) -> list[str]:
+async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[str]) -> list[str]:
     tasks = []
     for file_name in file_names:
         tasks.append(sandbox.files.read(file_name))
@@ -102,9 +98,7 @@ async def upload_visualization_result_data(data: list[str]) -> list[str]:
     s3_host = settings.S3_HOST
 
     if not all([access_key_id, secret_access_key, bucket_name]):
-        raise ValueError(
-            "AWS credentials or bucket name not set in environment variables"
-        )
+        raise ValueError("AWS credentials or bucket name not set in environment variables")
 
     session = aioboto3.Session()
     s3_paths = []

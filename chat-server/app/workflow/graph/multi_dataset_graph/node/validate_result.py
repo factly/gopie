@@ -69,7 +69,7 @@ async def route_result_validation(state: State) -> str:
     retry_count = state.get("retry_count", 0)
 
     if not validation_result:
-        return "pass_on_results"
+        return "route_response"
 
     is_valid = validation_result["is_valid"]
     recommendation = validation_result["recommendation"]

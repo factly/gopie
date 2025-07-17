@@ -6,7 +6,7 @@ from langchain_core.prompts import (
 
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-from app.workflow.graph.single_dataset_graph.types import ValidationResult
+from app.models.query import ValidationResult
 from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 

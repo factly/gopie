@@ -17,9 +17,14 @@ def create_validate_result_prompt(
     system_content = """You are an expert query result validator. Your task is to analyze query results and determine if they adequately answer the user's original question.
 
 WHAT YOU'LL RECEIVE:
+- Query type (single_dataset or multi_dataset)
 - Original user query
 - Query results (successful SQL queries, failed queries, errors, non-SQL responses)
 - Dataset context
+
+NOTE:
+    Visualization is not processed by this agent, it is processed by another agent.
+    So, don't focuse on visualization not being present in the results.
 
 YOUR VALIDATION PROCESS:
 1. Compare the user's intent with what the results actually provide
@@ -50,7 +55,7 @@ RECOMMENDATION FIELD (choose the most appropriate):
 - If you are validating a **single_dataset** result, only use:
     - "pass_on_results": Results are sufficient to answer the user's question.
     - "rerun_query": Minor issues detected; retrying the query may help.
-- If you are validating a **multi-dataset** result, you may also use:
+- If you are validating a **multi-dataset** result, you only use the following recommendations:
     - "replan": The query logic or approach needs to be changed (not just retried).
     - "reidentify_datasets": The selected datasets are wrong, insufficient, or do not match the user's intent; new datasets should be identified.
     - "route_response": Results are sufficient to answer the user's question.

@@ -27,6 +27,14 @@ class ToolUsedResult(TypedDict):
     name: str | None
 
 
+class ValidationResult(TypedDict):
+    is_valid: bool
+    reasoning: str
+    recommendation: str
+    confidence: float
+    missing_elements: list[str]
+
+
 @dataclass
 class SubQueryInfo:
     """
