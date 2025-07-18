@@ -159,37 +159,41 @@ export function DatasetCard({
         />
 
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
+          {/* Title section with right padding for chat icon */}
+          <div className="flex items-start justify-between pr-[60px] mb-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {/* <div className="flex-shrink-0 w-10 h-10  bg-primary/10 text-primary flex items-center justify-center font-medium select-none">
                 {getInitialAvatar(dataset.alias || dataset.name)}
               </div> */}
-              <div>
-                <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors break-words">
                   {dataset.alias || dataset.name}
                 </CardTitle>
-                <div className="h-[40px]">
-                  {dataset.description ? (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                      {dataset.description}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground opacity-0 mt-1">
-                      &nbsp;
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-0 right-0 h-[50px] w-[50px] p-0 z-10"
-              onClick={handleChatClick}
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
           </div>
+          
+          {/* Description section using full width */}
+          <div className="h-[40px]">
+            {dataset.description ? (
+              <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                {dataset.description}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground opacity-0">
+                &nbsp;
+              </p>
+            )}
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-0 right-0 h-[50px] w-[50px] p-0 z-10"
+            onClick={handleChatClick}
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="mt-2 pt-3 border-t border-border/30">
