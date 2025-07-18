@@ -15,7 +15,6 @@ const createDataset = `-- name: CreateDataset :one
 insert into datasets (
     name,
     description,
-    format,
     row_count,
     size,
     file_path,
@@ -24,14 +23,13 @@ insert into datasets (
     created_by,
     updated_by,
     org_id
-) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-returning id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
 `
 
 type CreateDatasetParams struct {
 	Name        string
 	Description pgtype.Text
-	Format      string
 	RowCount    pgtype.Int4
 	Size        pgtype.Int8
 	FilePath    string
@@ -46,7 +44,6 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 	row := q.db.QueryRow(ctx, createDataset,
 		arg.Name,
 		arg.Description,
-		arg.Format,
 		arg.RowCount,
 		arg.Size,
 		arg.FilePath,
@@ -61,7 +58,6 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
@@ -91,7 +87,7 @@ func (q *Queries) DeleteDataset(ctx context.Context, arg DeleteDatasetParams) er
 }
 
 const getDataset = `-- name: GetDataset :one
-select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1 and org_id = $2
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1 and org_id = $2
 `
 
 type GetDatasetParams struct {
@@ -106,7 +102,6 @@ func (q *Queries) GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
@@ -122,7 +117,7 @@ func (q *Queries) GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset
 }
 
 const getDatasetByID = `-- name: GetDatasetByID :one
-select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1
 `
 
 func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error) {
@@ -132,7 +127,6 @@ func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
@@ -148,7 +142,7 @@ func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error
 }
 
 const getDatasetByName = `-- name: GetDatasetByName :one
-select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where name = $1 and org_id = $2
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where name = $1 and org_id = $2
 `
 
 type GetDatasetByNameParams struct {
@@ -163,7 +157,6 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,
@@ -179,7 +172,7 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 }
 
 const listAllDatasets = `-- name: ListAllDatasets :many
-select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
 `
 
 func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
@@ -195,7 +188,6 @@ func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
 			&i.ID,
 			&i.Name,
 			&i.Description,
-			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
@@ -218,14 +210,14 @@ func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
 }
 
 const searchDatasets = `-- name: SearchDatasets :many
-select id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
-where 
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
+where
     org_id = $1 and
     (name ilike concat('%', $2, '%') or
     description ilike concat('%', $2, '%') or
     alias ilike concat('%', $2, '%'))
-order by 
-    case 
+order by
+    case
         when alias ilike concat($2, '%') then 1
         when name ilike concat($2, '%') then 2
         when name ilike concat('%', $2, '%') then 3
@@ -260,7 +252,6 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 			&i.ID,
 			&i.Name,
 			&i.Description,
-			&i.Format,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RowCount,
@@ -284,22 +275,20 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 
 const updateDataset = `-- name: UpdateDataset :one
 update datasets
-set 
+set
     description = coalesce($1, description),
-    format = coalesce($2, format),
-    row_count = coalesce($3, row_count),
-    size = coalesce($4, size),
-    file_path = coalesce($5, file_path),
-    columns = coalesce($6, columns),
-    alias = coalesce($7, alias),
-    updated_by = coalesce($8, updated_by)
-where id = $9 and org_id = $10
-returning id, name, description, format, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
+    row_count = coalesce($2, row_count),
+    size = coalesce($3, size),
+    file_path = coalesce($4, file_path),
+    columns = coalesce($5, columns),
+    alias = coalesce($6, alias),
+    updated_by = coalesce($7, updated_by)
+where id = $8 and org_id = $9
+returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
 `
 
 type UpdateDatasetParams struct {
 	Description pgtype.Text
-	Format      string
 	RowCount    pgtype.Int4
 	Size        pgtype.Int8
 	FilePath    string
@@ -313,7 +302,6 @@ type UpdateDatasetParams struct {
 func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error) {
 	row := q.db.QueryRow(ctx, updateDataset,
 		arg.Description,
-		arg.Format,
 		arg.RowCount,
 		arg.Size,
 		arg.FilePath,
@@ -328,7 +316,6 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Format,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RowCount,

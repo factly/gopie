@@ -87,7 +87,6 @@ type Dataset struct {
 	ID          string
 	Name        string
 	Description pgtype.Text
-	Format      string
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	RowCount    pgtype.Int4
