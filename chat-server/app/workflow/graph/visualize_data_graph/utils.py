@@ -102,7 +102,7 @@ async def upload_visualization_result_data(data: list[str]) -> list[str]:
 
     session = aioboto3.Session()
     s3_paths = []
-    async with session.client(
+    async with session.client(  # type: ignore
         "s3",
         endpoint_url=s3_host,
         region_name=region,

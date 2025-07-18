@@ -1,4 +1,5 @@
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
@@ -58,7 +59,11 @@ async def call_model(state: AgentState, config: RunnableConfig):
 
 
 async def respond(state: AgentState):
-    tool_call = state["messages"][-1].tool_calls[0]
+    last_message = state["messages"][-1]
+    if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
+        raise ValueError("No tool calls found in the last message")
+
+    tool_call = last_message.tool_calls[0]
     response = tool_call["args"]
     visualization_result_data = await get_visualization_result_data(
         state["sandbox"], response["visualization_result_paths"]
@@ -69,7 +74,10 @@ async def respond(state: AgentState):
         "content": "Here is your visualization result",
         "tool_call_id": tool_call["id"],
     }
-    await state["sandbox"].kill()
+
+    sandbox = state.get("sandbox")
+    if sandbox is not None:
+        await sandbox.kill()
 
     await adispatch_custom_event(
         "gopie-agent",
@@ -80,22 +88,19 @@ async def respond(state: AgentState):
         },
     )
     return {"messages": [tool_message], "s3_paths": s3_paths}
-
-
 def should_continue(state: AgentState):
-    messages = state["messages"]
-    last_message = messages[-1]
-    if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
-        return "respond"
-    else:
-        return "continue"
+    last_message = state["messages"][-1]
+    if isinstance(last_message, AIMessage) and last_message.tool_calls:
+        if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
+            return "respond"
+    return "continue"
 
 
 workflow = StateGraph(
     state_schema=AgentState,
     config_schema=ConfigSchema,
-    input=InputState,
-    output=OutputState,
+    input_schema=InputState,
+    output_schema=OutputState,
 )
 workflow.add_node("agent", call_model)
 workflow.add_node("pre_model_hook", pre_model_hook)

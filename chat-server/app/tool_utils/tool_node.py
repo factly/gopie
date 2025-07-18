@@ -1,6 +1,6 @@
 from typing import Literal
 
-from langchain_core.messages import ToolCall, ToolMessage
+from langchain_core.messages import ToolCall, ToolMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables.config import merge_configs
 from langgraph.prebuilt import ToolNode
@@ -60,6 +60,6 @@ class ModifiedToolNode(ToolNode):
 
 
 def has_tool_calls(message):
-    if hasattr(message, "tool_calls") and message.tool_calls:
+    if isinstance(message, AIMessage) and hasattr(message, "tool_calls") and message.tool_calls:
         return True
     return False
