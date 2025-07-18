@@ -15,6 +15,7 @@ import {
   FolderIcon,
   InfoIcon,
   UserIcon,
+  CodeIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -423,6 +424,16 @@ export function DatasetHeader({
                           title="Query Dataset"
                         >
                           <DatabaseIcon className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/api`}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-secondary/80"
+                          title="API Playground"
+                        >
+                          <CodeIcon className="h-5 w-5" />
                         </Button>
                       </Link>
                     </div>
