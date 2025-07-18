@@ -180,9 +180,21 @@ export function DatasetHeader({
   return (
     <div className="space-y-6">
       {/* Main Header */}
-      <div className="flex items-start gap-6">
+      <div className="flex items-start gap-6 relative">
+        <div className="absolute -top-8 -right-8 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 ease-in-out opacity-100" />
+        {/* Chat Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute -top-8 -right-8 h-[50px] w-[50px] p-0 z-10"
+          title="Chat with Dataset"
+          onClick={handleChatClick}
+        >
+          <MessageSquareIcon className="h-4 w-4" />
+        </Button>
+        
         {/* Left Section - Main Info */}
-        <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="flex items-start gap-4 flex-1 min-w-0 pr-[60px]">
           <div className="flex-1 min-w-0 space-y-3">
             {/* Title and Badge */}
             {isEditing ? (
@@ -402,15 +414,6 @@ export function DatasetHeader({
                         title="Download Dataset"
                       >
                         <DownloadIcon className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-secondary/80"
-                        title="Chat with Dataset"
-                        onClick={handleChatClick}
-                      >
-                        <MessageSquareIcon className="h-5 w-5" />
                       </Button>
                       <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
                         <Button
