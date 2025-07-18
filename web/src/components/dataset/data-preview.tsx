@@ -301,9 +301,6 @@ export function DataPreview(props: { datasetId: string }) {
         className="flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Data Preview
-          </h2>
           <div className="flex items-center border shadow-sm">
             <Button
               variant={viewMode === "table" ? "secondary" : "ghost"}
