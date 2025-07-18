@@ -333,7 +333,7 @@ export default function HomePage() {
                     onChange={setInputValue}
                     onSubmit={handleSendMessage}
                     disabled={isSending}
-                    placeholder="Choose a project or dataset & ask anything..."
+                    placeholder="Choose a project or dataset & ask questions about your data..."
                     selectedContexts={selectedContexts}
                     onSelectContext={handleSelectContext}
                     onRemoveContext={handleRemoveContext}
