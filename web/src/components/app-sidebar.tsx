@@ -268,9 +268,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                           <Link
                             href="/"
-                            className="flex items-center justify-center"
+                            className="flex items-center justify-start"
                           >
-                            <div className="flex items-center justify-center">
+                            <div className="flex items-center justify-start">
                               <Image
                                 src={
                                   theme === "dark"
@@ -278,9 +278,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     : "/GoPie_Logo.svg"
                                 }
                                 alt="GoPie"
-                                width={80}
-                                height={40}
-                                className="h-8"
+                                width={100}
+                                height={50}
+                                className="h-10"
                               />
                             </div>
                           </Link>
@@ -349,8 +349,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <div className="flex items-center justify-between w-full">
                 <SidebarMenuButton size="lg" asChild className="p-0 h-8">
-                  <Link href="/" className="flex items-center justify-center">
-                    <div className="flex items-center justify-center">
+                  <Link href="/" className="flex items-center justify-start">
+                    <div className="flex items-center justify-start">
                       <Image
                         src={
                           theme === "dark"
@@ -358,9 +358,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             : "/GoPie_Logo.svg"
                         }
                         alt="GoPie"
-                        width={80}
-                        height={40}
-                        className="h-8"
+                        width={100}
+                        height={50}
+                        className="h-10"
                       />
                     </div>
                   </Link>
