@@ -228,7 +228,7 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
-		return nil, fmt.Errorf("data query failed: %w", rowsResult.err)
+		return nil, err
 	}
 
 	return &queryResult{
@@ -299,8 +299,10 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	result, err := d.getResultsWithCount(countSql, sql)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
-		// "total": result.Count,
 		"data": result.Rows,
 	}, nil
 }
