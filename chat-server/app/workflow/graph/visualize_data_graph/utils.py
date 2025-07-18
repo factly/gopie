@@ -36,6 +36,15 @@ def datasets_to_csv(datasets: list[Dataset]):
 
 @traceable(run_type="chain", name="get_sandbox")
 async def get_sandbox():
+    """
+    Asynchronously creates and returns a sandboxed Python environment preconfigured for data visualization.
+    
+    Raises:
+        ValueError: If the E2B API key is not set in the configuration.
+    
+    Returns:
+        AsyncSandbox: An instance with the specified timeout and the 'altair' package installed.
+    """
     if not settings.E2B_API_KEY:
         raise ValueError("E2B API key is not set. Please set up E2B to enable visualizations.")
     sbx = await AsyncSandbox.create(timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY)
@@ -50,6 +59,15 @@ async def update_sandbox_timeout(sandbox: AsyncSandbox):
 
 @traceable(run_type="chain", name="upload_csv_files")
 async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset]) -> list[str]:
+    """
+    Asynchronously writes dataset contents as CSV files to the sandbox file system.
+    
+    Parameters:
+    	datasets (list[Dataset]): List of datasets whose data will be converted to CSV and uploaded.
+    
+    Returns:
+    	list[str]: List of file names corresponding to the uploaded CSV files.
+    """
     csv_files = datasets_to_csv(datasets)
     tasks = []
     for file_name, csv_data in csv_files:
@@ -74,6 +92,15 @@ async def run_python_code(
 
 @traceable(run_type="chain", name="get_visualization_result_data")
 async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[str]) -> list[str]:
+    """
+    Asynchronously reads the contents of multiple files from the sandbox environment.
+    
+    Parameters:
+        file_names (list[str]): List of file names to read from the sandbox.
+    
+    Returns:
+        list[str]: Contents of the files, in the same order as the provided file names.
+    """
     tasks = []
     for file_name in file_names:
         tasks.append(sandbox.files.read(file_name))
@@ -82,13 +109,16 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
 
 @traceable(run_type="chain", name="upload_visualization_result_data")
 async def upload_visualization_result_data(data: list[str]) -> list[str]:
-    """Upload visualization data to S3 and return the S3 paths.
-
-    Args:
-        data: A list of string data to upload to S3
-
+    """
+    Asynchronously uploads a list of visualization data strings to S3 storage and returns their public URLs.
+    
+    Each data item is saved as a uniquely named JSON file under the "visualizations" prefix. Raises a ValueError if required AWS credentials or bucket name are missing.
+    
+    Parameters:
+        data (list[str]): List of string data items to upload.
+    
     Returns:
-        A list of S3 paths where the data was uploaded
+        list[str]: URLs of the uploaded files in S3 storage.
     """
 
     access_key_id = settings.S3_ACCESS_KEY

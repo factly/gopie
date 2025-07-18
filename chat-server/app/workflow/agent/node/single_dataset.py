@@ -20,6 +20,11 @@ def list_of_dict_to_list_of_lists(list_of_dict: list[dict]) -> list[list]:
 def transform_output_state(
     output_state: SingleDatasetOutputState,
 ) -> AgentState | dict:
+    """
+    Processes the output state from a single dataset agent workflow and formats the query results for downstream consumption.
+    
+    Extracts the query result and, if available, iterates over SQL query results to construct a list of datasets with descriptions and tabular data. Returns a dictionary containing the original query result, the list of datasets, and a default AI message.
+    """
     datasets = []
     dataset_count = 0
     query_result: QueryResult = output_state.get("query_result")
@@ -48,6 +53,16 @@ def transform_output_state(
 
 
 async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:
+    """
+    Asynchronously invokes the single dataset agent workflow with the provided state and configuration, returning the processed output as a dictionary.
+    
+    Parameters:
+        state (AgentState): The current agent state containing messages, dataset IDs, and user query.
+        config (RunnableConfig): Configuration for the workflow execution.
+    
+    Returns:
+        dict: The transformed output state containing query results and related dataset information.
+    """
     dataset_ids = state.get("dataset_ids", [])
     dataset_id = dataset_ids[0] if dataset_ids else None
     user_query = state.get("user_query", "") or ""

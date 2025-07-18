@@ -17,18 +17,13 @@ async def stream_graph_updates(
     project_ids: list[str] | None = None,
 ):
     """
-    Stream graph updates for user input with event tracking.
-
-    Args:
-        messages: A list of messages in the conversation
-        dataset_ids: Specific dataset IDs to use for the query
-        project_ids: Specific project IDs to use for the query
-        chat_id: Unique identifier for the chat session
-        trace_id: Optional trace ID for tracking
-        user: User identifier
-
+    Asynchronously streams graph-based agent updates in response to user messages, yielding event data suitable for Server-Sent Events (SSE).
+    
+    Raises:
+        ValueError: If neither dataset_ids nor project_ids are provided.
+    
     Yields:
-        str: JSON-formatted event data for streaming in SSE format
+        EventChunkData: Structured event data containing graph update information for the client.
     """
     if project_ids is None and dataset_ids is None:
         raise ValueError("At least one dataset or project ID must be provided")

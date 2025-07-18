@@ -2,6 +2,17 @@ from app.models.query import QueryResult, SingleDatasetQueryResult
 
 
 def format_query_result(query_result: QueryResult) -> str:
+    """
+    Format a comprehensive query result into a detailed, human-readable multi-line string.
+    
+    The output includes the original user query, execution time, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, type, tables used, executed SQL queries (including their explanations and results), tool results, error messages, confidence scores (if not default), and any additional context messages. If no subqueries are present, the output notes this explicitly.
+    
+    Parameters:
+        query_result (QueryResult): The query result object to format.
+    
+    Returns:
+        str: A structured string summarizing the query result, including subqueries and their details.
+    """
     user_query = query_result.original_user_query
 
     input_parts = [
@@ -71,6 +82,14 @@ def format_query_result(query_result: QueryResult) -> str:
 
 
 def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) -> str:
+    """
+    Format the results of a single dataset query into a structured, human-readable string.
+    
+    Includes dataset names, error messages, non-SQL responses, and details for both successful and failed SQL queries, such as explanations, SQL statements, data previews, and error messages.
+    
+    Returns:
+        str: A formatted summary of the single dataset query result.
+    """
     user_friendly_dataset_name = single_result.user_friendly_dataset_name or "Unknown"
     dataset_name = single_result.dataset_name or "Unknown"
     sql_results = single_result.sql_results

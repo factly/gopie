@@ -60,6 +60,12 @@ class ModifiedToolNode(ToolNode):
 
 
 def has_tool_calls(message):
+    """
+    Determine whether the given message is an AIMessage instance with non-empty tool calls.
+    
+    Returns:
+        bool: True if the message is an AIMessage and its 'tool_calls' attribute is non-empty; otherwise, False.
+    """
     if isinstance(message, AIMessage) and hasattr(message, "tool_calls") and message.tool_calls:
         return True
     return False

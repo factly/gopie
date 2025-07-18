@@ -6,6 +6,20 @@ from langchain_core.prompts import (
 
 
 def create_route_query_replan_prompt(**kwargs) -> list | ChatPromptTemplate:
+    """
+    Generate a prompt for analyzing SQL query execution errors and determining the next action in query processing.
+    
+    Depending on the `prompt_template` argument, returns either a `ChatPromptTemplate` object or a list of message objects. The prompt instructs an agent to analyze error context and select one of three actions—`"reidentify_datasets"`, `"replan"`, or `"route_response"`—with a required JSON-formatted response including detailed reasoning.
+    
+    Parameters:
+        last_message_content (str or list, optional): The content of the most recent error or message encountered during query execution.
+        subquery_errors (optional): Previous error messages related to subqueries; if not provided, defaults to "No previous errors".
+        node_messages (dict, optional): Contextual messages from node execution.
+        prompt_template (bool, optional): If True, returns a `ChatPromptTemplate`; otherwise, returns a list of message objects.
+    
+    Returns:
+        list | ChatPromptTemplate: The constructed prompt as either a template object or a list of message objects, ready for use with a language model.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     last_message_content = kwargs.get("last_message_content", "")
     subquery_errors = kwargs.get("subquery_errors", None)

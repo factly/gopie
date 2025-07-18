@@ -22,6 +22,11 @@ from .utils import (
 
 
 async def pre_model_hook(state: AgentState, config: RunnableConfig):
+    """
+    Prepares the environment and prompt messages for the data visualization agent before invoking the language model.
+    
+    If a sandbox already exists, its timeout is updated; otherwise, a new sandbox is created and CSV files from the datasets are uploaded. If input preparation has not yet occurred, a custom event is dispatched, prompt messages are generated using the user query and datasets, and the input is marked as prepared. Returns an updated state dictionary containing prompt messages and sandbox information. If a `ValueError` occurs, returns an error message.
+    """
     messages = []
     output = {}
     existing_sandbox = state.get("sandbox")
@@ -53,12 +58,27 @@ tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
 
 
 async def call_model(state: AgentState, config: RunnableConfig):
+    """
+    Invokes the language model for the "visualize_data" node using the current message history.
+    
+    Returns:
+        dict: A dictionary containing the model's response message under the "messages" key.
+    """
     llm = get_model_provider(config).get_llm_for_node("visualize_data", tool_names)
     response = await llm.ainvoke(state["messages"])
     return {"messages": [response]}
 
 
 async def respond(state: AgentState):
+    """
+    Processes the AI tool call to retrieve, upload, and return visualization results.
+    
+    Raises:
+        ValueError: If the last message is not an AIMessage with tool calls.
+    
+    Returns:
+        dict: Contains a tool message indicating visualization completion and the S3 paths of the uploaded results.
+    """
     last_message = state["messages"][-1]
     if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
         raise ValueError("No tool calls found in the last message")
@@ -89,6 +109,12 @@ async def respond(state: AgentState):
     )
     return {"messages": [tool_message], "s3_paths": s3_paths}
 def should_continue(state: AgentState):
+    """
+    Determines the next workflow step based on the last AI message and its tool calls.
+    
+    Returns:
+        str: "respond" if the last AI message contains exactly one tool call named "result_paths"; otherwise, "continue".
+    """
     last_message = state["messages"][-1]
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
