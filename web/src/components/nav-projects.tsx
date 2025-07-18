@@ -79,7 +79,7 @@ export function NavProjects() {
     <>
       {/* Projects Navigation */}
       <SidebarGroup>
-        <SidebarGroupLabel className="flex items-center justify-between">
+        <SidebarGroupLabel className="flex items-center justify-between pl-2 pr-0">
           <span className="truncate font-medium">
             {project?.name || "Select Project"}
           </span>
@@ -89,7 +89,7 @@ export function NavProjects() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 px-2 text-xs flex items-center gap-1"
+                  className="h-5 p-0 text-xs flex items-center gap-1"
                 >
                   <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
@@ -145,7 +145,7 @@ export function NavProjects() {
       {/* Datasets Navigation */}
       {datasetId && datasets?.results && (
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
+          <SidebarGroupLabel className="flex items-center justify-between pl-2 pr-0">
             <span className="truncate font-medium">
               {datasets.results.find((d) => d.id === datasetId)?.alias ||
                 datasets.results.find((d) => d.id === datasetId)?.name ||
@@ -156,7 +156,7 @@ export function NavProjects() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 px-2 text-xs flex items-center gap-1"
+                  className="h-5 p-0 text-xs flex items-center gap-1"
                 >
                   <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
