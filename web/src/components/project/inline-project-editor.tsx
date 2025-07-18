@@ -170,7 +170,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
 
             <div className="min-h-[40px]">
               {project.description ? (
-                <p className="text-base text-muted-foreground/90 max-w-[800px] line-clamp-2">
+                <p className="text-base text-muted-foreground/90 line-clamp-2">
                   {project.description}
                 </p>
               ) : (
