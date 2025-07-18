@@ -38,6 +38,7 @@ interface ContextPickerProps {
   currentProjectId?: string;
   triggerClassName?: string;
   lockableContextIds?: string[]; // Array of context IDs that cannot be removed
+  shouldFlash?: boolean; // Whether the trigger button should flash
 }
 
 export function ContextPicker({
@@ -46,6 +47,7 @@ export function ContextPicker({
   onRemoveContext,
   triggerClassName,
   lockableContextIds = [], // Default to empty array
+  shouldFlash = false,
 }: ContextPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [allDatasets, setAllDatasets] = useState<

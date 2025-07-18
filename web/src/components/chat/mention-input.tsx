@@ -52,6 +52,8 @@ interface MentionInputProps {
   stopMessageStream?: () => void;
   lockableContextIds?: string[]; // Array of context IDs that cannot be removed
   hasContext?: boolean; // Whether any context is selected
+  onFocus?: () => void; // Callback when input is focused
+  onBlur?: () => void; // Callback when input loses focus
 }
 
 export function MentionInput({
@@ -71,6 +73,8 @@ export function MentionInput({
   stopMessageStream = () => {},
   lockableContextIds,
   hasContext,
+  onFocus,
+  onBlur,
 }: MentionInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -455,7 +459,13 @@ export function MentionInput({
               value={value}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              onFocus={() => setTimeout(() => autoResizeTextarea(), 0)}
+              onFocus={() => {
+                setTimeout(() => autoResizeTextarea(), 0);
+                onFocus?.();
+              }}
+              onBlur={() => {
+                onBlur?.();
+              }}
               disabled={disabled}
               rows={1}
               style={{

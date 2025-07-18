@@ -45,11 +45,14 @@ export default function HomePage() {
   const [inputValue, setInputValue] = useState("");
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const createChat = useCreateChat();
   const { selectChat } = useChatStore();
 
   const handleSelectContext = (context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
+    // Stop flashing when context is selected
+    setIsInputFocused(false);
   };
 
   const handleRemoveContext = (contextId: string) => {
@@ -325,7 +328,12 @@ export default function HomePage() {
                       selectedContexts={selectedContexts}
                       onSelectContext={handleSelectContext}
                       onRemoveContext={handleRemoveContext}
-                      triggerClassName="flex items-center justify-center h-9 w-9 bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
+                        isInputFocused && selectedContexts.length === 0
+                          ? "animate-slow-pulse bg-muted/90"
+                          : "bg-muted/70"
+                      }`}
+                      shouldFlash={isInputFocused && selectedContexts.length === 0}
                     />
                   </div>
                   <MentionInput
@@ -341,6 +349,8 @@ export default function HomePage() {
                     showSendButton={true}
                     isSending={isSending}
                     hasContext={selectedContexts.length > 0}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                 </div>
               </div>
