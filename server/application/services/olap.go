@@ -40,7 +40,6 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	err := d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames)
 	return &models.UploadDatasetResult{
 		FilePath:  s3Path,
-		Format:    format,
 		Size:      0,
 		TableName: tableName,
 	}, err
@@ -72,7 +71,6 @@ func (d *OlapService) IngestFile(ctx context.Context, filepath string, name stri
 	res := models.UploadDatasetResult{
 		FilePath:  filepath,
 		TableName: tableName,
-		Format:    format,
 		Size:      int(size),
 	}
 

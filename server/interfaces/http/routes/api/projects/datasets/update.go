@@ -73,7 +73,6 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		Alias:       body.Alias,
 		UpdatedBy:   body.UpdatedBy,
 		Columns:     existingDataset.Columns,
-		Format:      existingDataset.Format,
 		FilePath:    existingDataset.FilePath,
 		RowCount:    existingDataset.RowCount,
 		Size:        existingDataset.Size,

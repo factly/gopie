@@ -182,7 +182,6 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		Description: body.Description,
 		ProjectID:   project.ID,
 		Columns:     columns,
-		Format:      body.Driver,
 		RowCount:    count,
 		Alias:       body.Alias,
 		CreatedBy:   body.CreatedBy,

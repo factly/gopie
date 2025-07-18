@@ -137,7 +137,6 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	// update dataset entry for successful upload
 	dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
 		Description: body.Description,
-		Format:      res.Format,
 		FilePath:    filePath,
 		RowCount:    int(count),
 		Size:        res.Size,
