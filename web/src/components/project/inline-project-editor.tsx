@@ -149,48 +149,48 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-b from-background to-muted/30 border shadow-sm">
+    <Card className="bg-gradient-to-b from-background to-muted/30 border shadow-sm relative">
+      <div className="absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 ease-in-out opacity-100" />
+      
       <CardContent className="p-6">
-        <div className="flex justify-between items-start">
-          <div className="space-y-3 flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                {project.name}
-              </h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-muted"
-                title="Edit Project"
-                onClick={() => setIsEditing(true)}
-              >
-                <PencilIcon className="size-4" />
-              </Button>
-            </div>
-
-            <div className="min-h-[40px]">
-              {project.description ? (
-                <p className="text-base text-muted-foreground/90 line-clamp-2">
-                  {project.description}
-                </p>
-              ) : (
-                <p className="text-base text-muted-foreground/90 opacity-0">
-                  &nbsp;
-                </p>
-              )}
-            </div>
+        <div className="space-y-3 pr-[60px]">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {project.name}
+            </h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-muted"
+              title="Edit Project"
+              onClick={() => setIsEditing(true)}
+            >
+              <PencilIcon className="size-4" />
+            </Button>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:bg-muted"
-            title="Chat with Project"
-            onClick={handleChatWithProject}
-          >
-            <MessageSquare className="size-4" />
-          </Button>
+          <div className="min-h-[40px]">
+            {project.description ? (
+              <p className="text-base text-muted-foreground/90 line-clamp-2">
+                {project.description}
+              </p>
+            ) : (
+              <p className="text-base text-muted-foreground/90 opacity-0">
+                &nbsp;
+              </p>
+            )}
+          </div>
         </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-0 right-0 h-[50px] w-[50px] p-0 z-10"
+          title="Chat with Project"
+          onClick={handleChatWithProject}
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Button>
 
         <Separator className="my-4" />
 
