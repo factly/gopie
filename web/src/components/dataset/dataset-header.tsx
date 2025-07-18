@@ -179,54 +179,6 @@ export function DatasetHeader({
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb with Action Buttons */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link
-            href={`/projects/${projectId}`}
-            className="hover:text-primary transition-colors flex items-center gap-1"
-          >
-            <FolderIcon className="h-4 w-4" />
-            Datasets
-          </Link>
-          <ChevronRightIcon className="h-4 w-4" />
-          <span className="text-muted-foreground truncate">{dataset.name}</span>
-        </div>
-        
-        {/* Action Buttons */}
-        {!isEditing && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Download Dataset"
-            >
-              <DownloadIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Chat with Dataset"
-              onClick={handleChatClick}
-            >
-              <MessageSquareIcon className="h-5 w-5" />
-            </Button>
-            <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 hover:bg-secondary/80"
-                title="Query Dataset"
-              >
-                <DatabaseIcon className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-
       {/* Main Header */}
       <div className="flex items-start gap-6">
         {/* Left Section - Main Info */}
@@ -305,34 +257,35 @@ export function DatasetHeader({
                 </div>
 
                 {/* Quick Stats */}
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <TableIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {new Intl.NumberFormat("en", {
-                        notation: "compact",
-                      }).format(dataset.row_count || 0)}
-                    </span>
-                    <span className="text-muted-foreground">rows</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
-                    <span className="font-medium">
-                      {dataset.columns?.length || 0}
-                    </span>
-                    <span className="text-muted-foreground">columns</span>
-                  </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-muted-foreground hover:text-foreground"
-                      >
-                        <InfoIcon className="h-4 w-4 mr-1" />
-                        More details
-                      </Button>
-                    </DialogTrigger>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <TableIcon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {new Intl.NumberFormat("en", {
+                          notation: "compact",
+                        }).format(dataset.row_count || 0)}
+                      </span>
+                      <span className="text-muted-foreground">rows</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
+                      <span className="font-medium">
+                        {dataset.columns?.length || 0}
+                      </span>
+                      <span className="text-muted-foreground">columns</span>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-muted-foreground hover:text-foreground"
+                        >
+                          <InfoIcon className="h-4 w-4 mr-1" />
+                          More details
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent className="max-w-md">
                       <DialogHeader>
                         <DialogTitle>Dataset Details</DialogTitle>
@@ -437,6 +390,40 @@ export function DatasetHeader({
                       </div>
                     </DialogContent>
                   </Dialog>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  {!isEditing && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 hover:bg-secondary/80"
+                        title="Download Dataset"
+                      >
+                        <DownloadIcon className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 hover:bg-secondary/80"
+                        title="Chat with Dataset"
+                        onClick={handleChatClick}
+                      >
+                        <MessageSquareIcon className="h-5 w-5" />
+                      </Button>
+                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-secondary/80"
+                          title="Query Dataset"
+                        >
+                          <DatabaseIcon className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
