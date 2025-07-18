@@ -115,6 +115,7 @@ type UpdateDatasetParams struct {
 	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
 	Alias string `json:"alias" example:"sales_data_alias"`
+	OrgID string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // FailedDatasetUpload represents a failed dataset upload

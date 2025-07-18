@@ -12,8 +12,6 @@ import (
 type updateDatasetParams struct {
 	Description string `json:"description,omitempty"`
 	Alias       string `json:"alias,omitempty"`
-	UpdatedBy   string `json:"updated_by" validate:"required"`
-	ProjectID   string `json:"project_id" validate:"required,uuid"`
 }
 
 // @Summary Update dataset
@@ -31,6 +29,8 @@ type updateDatasetParams struct {
 // @Router /v1/api/projects/{projectID}/datasets/{datasetID} [put]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
+	projectID := ctx.Params("projectID")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
 	var body updateDatasetParams
@@ -71,11 +71,12 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	dataset, err := h.datasetsSvc.Update(datasetID, &models.UpdateDatasetParams{
 		Description: body.Description,
 		Alias:       body.Alias,
-		UpdatedBy:   body.UpdatedBy,
+		UpdatedBy:   userID,
 		Columns:     existingDataset.Columns,
 		FilePath:    existingDataset.FilePath,
 		RowCount:    existingDataset.RowCount,
 		Size:        existingDataset.Size,
+		OrgID:       orgID,
 	})
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -87,8 +88,16 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 
 	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
 		DatasetID: dataset.ID,
-		ProjectID: body.ProjectID,
+		ProjectID: projectID,
 	})
+
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error uploading schema",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
 
 	return ctx.JSON(map[string]*models.Dataset{
 		"data": dataset,

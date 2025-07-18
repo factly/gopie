@@ -257,9 +257,8 @@ update projects
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by),
-    org_id = coalesce($4, org_id)
-where id = $5 and org_id = $6
+    updated_by = coalesce($3, updated_by)
+where id = $4 and org_id = $5
 returning id, name, org_id, description, created_at, updated_at, created_by, updated_by
 `
 
@@ -267,9 +266,8 @@ type UpdateProjectParams struct {
 	Name        string
 	Description pgtype.Text
 	UpdatedBy   pgtype.Text
-	OrgID       pgtype.Text
 	ID          string
-	OrgID_2     pgtype.Text
+	OrgID       pgtype.Text
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -277,9 +275,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.Name,
 		arg.Description,
 		arg.UpdatedBy,
-		arg.OrgID,
 		arg.ID,
-		arg.OrgID_2,
+		arg.OrgID,
 	)
 	var i Project
 	err := row.Scan(
