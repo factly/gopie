@@ -25,19 +25,6 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-muted/50">
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium">Results</h3>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
 
       <Tabs defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
         <TabsList className="grid w-full grid-cols-2 rounded-none bg-background border-b">
