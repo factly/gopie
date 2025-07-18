@@ -529,10 +529,9 @@ export function ChatMessage({
       <div
         className={cn(
           "flex flex-col items-start gap-2 px-4 py-3",
-          "w-fit max-w-[90%] min-w-0",
           styleRole === "user"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "bg-muted shadow-sm border border-border/10"
+            ? "w-fit max-w-[90%] min-w-0 bg-primary text-primary-foreground shadow-sm"
+            : "w-full min-w-0 bg-muted shadow-sm border border-border/10"
         )}
         id={`message-${id}`}
         data-message-role={role}
