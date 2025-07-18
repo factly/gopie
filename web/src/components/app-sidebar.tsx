@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  MessageSquareIcon,
+  MessageSquarePlus,
   LifeBuoy,
   Send,
   KeyIcon,
@@ -386,7 +386,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     }
                   >
                     <Link href="/chat" className="flex items-center gap-2">
-                      <MessageSquareIcon className="h-4 w-4" />
+                      <MessageSquarePlus className="h-4 w-4" />
+                      
                       <span>New chat</span>
                     </Link>
                   </SidebarMenuButton>
