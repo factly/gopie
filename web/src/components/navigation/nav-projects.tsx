@@ -109,13 +109,13 @@ export function NavProjects() {
           //   isActive: isActive(`/${projectId}/${datasetId}/chat`),
           // },
           {
-            title: "Query",
+            title: "SQL Playground",
             url: `/${projectId}/${datasetId}/data`,
             icon: CodeIcon,
             isActive: isActive(`/${projectId}/${datasetId}/data`),
           },
           {
-            title: "REST API",
+            title: "API Playground",
             url: `/${projectId}/${datasetId}/api`,
             icon: NetworkIcon,
             isActive: isActive(`/${projectId}/${datasetId}/api`),

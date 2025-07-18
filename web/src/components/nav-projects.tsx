@@ -1,11 +1,9 @@
 "use client";
 
 import {
-  // DatabaseIcon,
+  DatabaseIcon,
   TableIcon,
-  // MessageSquareIcon,
   CodeIcon,
-  NetworkIcon,
   ChevronDown,
   ArrowLeftRight,
 } from "lucide-react";
@@ -210,8 +208,8 @@ export function NavProjects() {
                   isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/data`)}
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}/data`}>
-                    <CodeIcon className="h-4 w-4" />
-                    <span>Query</span>
+                    <DatabaseIcon className="h-4 w-4" />
+                    <span>SQL Playground</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -221,8 +219,8 @@ export function NavProjects() {
                   isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/api`)}
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}/api`}>
-                    <NetworkIcon className="h-4 w-4" />
-                    <span>REST API</span>
+                    <CodeIcon className="h-4 w-4" />
+                    <span>API Playground</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
