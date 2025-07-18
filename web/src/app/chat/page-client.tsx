@@ -37,6 +37,11 @@ import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { ReadOnlyMessage } from "@/components/chat/read-only-message";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1091,56 +1096,40 @@ function ChatPageClient() {
                     History
                   </TabsTrigger>
                 </TabsList>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mr-2"
-                  onClick={() => {
-                    selectChatForDataset(null, null, null);
-                    setLinkedDatasetId(null);
-                    setActiveTab("chat");
-                    setSelectedContexts([]);
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => {
+                        selectChatForDataset(null, null, null);
+                        setLinkedDatasetId(null);
+                        setActiveTab("chat");
+                        setSelectedContexts([]);
 
-                    // Clear URL parameters when starting a new chat
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.delete("chatId");
-                    params.delete("initialMessage");
-                    params.delete("contextData");
-                    router.replace(`/chat?${params.toString()}`);
-                  }}
-                >
-                  <MessageSquarePlus className="h-4 w-4 mr-1" />
-                  New Chat
-                </Button>
+                        // Clear URL parameters when starting a new chat
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("chatId");
+                        params.delete("initialMessage");
+                        params.delete("contextData");
+                        router.replace(`/chat?${params.toString()}`);
+                      }}
+                    >
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Chat</p>
+                  </TooltipContent>
+                </Tooltip>
                 {selectedChatId && (
                   <ShareChatDialog
                     chatId={selectedChatId}
                     currentVisibility={chatDetails?.visibility || "private"}
                   />
                 )}
-                {hasResults && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mr-2"
-                    onClick={() => {
-                      if (isResultsPanelOpen) {
-                        setIsOpen(false);
-                        setVisualizationOpen(false);
-                      } else {
-                        if (results?.data?.length || results?.error) {
-                          setIsOpen(true);
-                        }
-                        if (visualizationPaths.length > 0) {
-                          setVisualizationOpen(true);
-                        }
-                      }
-                    }}
-                  >
-                    <Table2 className="h-4 w-4 mr-1" />
-                    Results
-                  </Button>
-                )}
+
               </div>
 
               <TabsContent
