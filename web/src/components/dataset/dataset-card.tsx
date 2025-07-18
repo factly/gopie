@@ -3,8 +3,8 @@ import {
   MoreHorizontal,
   Trash,
   Calendar,
-  Database,
   MessageSquare,
+  TableIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,52 +36,7 @@ interface DatasetCardProps {
   onDelete?: (datasetId: string) => Promise<void>;
 }
 
-// Helper function to determine dataset source
-function getDatasetSource(dataset: Dataset): string {
-  // Check if dataset was sourced from database
-  if (
-    dataset.description?.includes("Dataset sourced from database via GoPie Web")
-  ) {
-    // Try to determine specific database from description or file path
-    if (
-      dataset.description.toLowerCase().includes("postgres") ||
-      dataset.file_path?.toLowerCase().includes("postgres")
-    ) {
-      return "PostgreSQL";
-    }
-    if (
-      dataset.description.toLowerCase().includes("mysql") ||
-      dataset.file_path?.toLowerCase().includes("mysql")
-    ) {
-      return "MySQL";
-    }
-    // Generic database if we can't determine specific type
-    return "Database";
-  }
 
-  // Check if it's a file upload (S3 path)
-  if (dataset.file_path?.startsWith("s3:/")) {
-    // Return the actual file format
-    const format = dataset.format?.toLowerCase();
-    switch (format) {
-      case "csv":
-        return "CSV";
-      case "parquet":
-        return "Parquet";
-      case "json":
-        return "JSON";
-      case "excel":
-        return "Excel";
-      case "duckdb":
-        return "DuckDB";
-      default:
-        return dataset.format || "File";
-    }
-  }
-
-  // Fallback to format if we can't determine source
-  return dataset.format || "Unknown";
-}
 
 export function DatasetCard({
   dataset,
@@ -200,8 +155,12 @@ export function DatasetCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Database className="h-3.5 w-3.5" />
-                  <span>{getDatasetSource(dataset)}</span>
+                  <TableIcon className="h-3.5 w-3.5" />
+                  <span className="font-medium">
+                    {new Intl.NumberFormat("en", {
+                      notation: "compact",
+                    }).format(dataset.row_count || 0)}
+                  </span>
                 </div>
 
                 {dataset.created_at && (
