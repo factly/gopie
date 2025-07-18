@@ -151,13 +151,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	countSql, err := pkg.BuildCountQuery(sql)
-	if err != nil {
-		d.logger.Error("Invalid query", zap.Error(err))
-		return nil, fmt.Errorf("failed to build count query: %w", err)
-	}
-
-	queryResult, err := d.getResultsWithCount(countSql, sql)
+	queryResult, err := d.getResultsWithCount("", sql)
 	if err != nil {
 		d.logger.Error("Query execution failed", zap.Error(err))
 		return nil, err
