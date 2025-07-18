@@ -126,7 +126,7 @@ export default function DatasetPage({
           className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/50 shadow-sm border overflow-hidden"
         >
           <Tabs defaultValue="preview" className="h-full">
-            <div className="px-6 pt-6">
+            <div>
               <TabsList className="w-full max-w-[400px] grid grid-cols-2">
                 <TabsTrigger value="preview" className="flex-1">
                   Data Preview
