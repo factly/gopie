@@ -152,7 +152,7 @@ export function DatasetCard({
       >
         <div
           className={cn(
-            "absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5",
+            "absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5",
             "transition-all duration-300 ease-in-out",
             isHovered ? "opacity-100" : "opacity-50"
           )}
@@ -181,16 +181,14 @@ export function DatasetCard({
                 </div>
               </div>
             </div>
-            <div className="z-10 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 relative z-10"
-                onClick={handleChatClick}
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-0 right-0 h-[50px] w-[50px] p-0 z-10"
+              onClick={handleChatClick}
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
