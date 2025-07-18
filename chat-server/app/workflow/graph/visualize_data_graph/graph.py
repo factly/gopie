@@ -24,7 +24,7 @@ from .utils import (
 async def pre_model_hook(state: AgentState, config: RunnableConfig):
     """
     Prepares the environment and prompt messages for the data visualization agent before invoking the language model.
-    
+
     If a sandbox already exists, its timeout is updated; otherwise, a new sandbox is created and CSV files from the datasets are uploaded. If input preparation has not yet occurred, a custom event is dispatched, prompt messages are generated using the user query and datasets, and the input is marked as prepared. Returns an updated state dictionary containing prompt messages and sandbox information. If a `ValueError` occurs, returns an error message.
     """
     messages = []
@@ -60,7 +60,7 @@ tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
 async def call_model(state: AgentState, config: RunnableConfig):
     """
     Invokes the language model for the "visualize_data" node using the current message history.
-    
+
     Returns:
         dict: A dictionary containing the model's response message under the "messages" key.
     """
@@ -72,10 +72,10 @@ async def call_model(state: AgentState, config: RunnableConfig):
 async def respond(state: AgentState):
     """
     Processes the AI tool call to retrieve, upload, and return visualization results.
-    
+
     Raises:
         ValueError: If the last message is not an AIMessage with tool calls.
-    
+
     Returns:
         dict: Contains a tool message indicating visualization completion and the S3 paths of the uploaded results.
     """
@@ -111,7 +111,7 @@ async def respond(state: AgentState):
 def should_continue(state: AgentState):
     """
     Determines the next workflow step based on the last AI message and its tool calls.
-    
+
     Returns:
         str: "respond" if the last AI message contains exactly one tool call named "result_paths"; otherwise, "continue".
     """

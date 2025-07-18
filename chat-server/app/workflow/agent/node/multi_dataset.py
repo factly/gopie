@@ -20,9 +20,9 @@ def list_of_dict_to_list_of_lists(list_of_dict: list[dict]) -> list[list]:
 def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
     """
     Convert a QueryResult object into a list of Dataset objects, each representing the result of a SQL query with its explanation.
-    
+
     Each Dataset contains tabular data (as a list of lists) and a description combining the SQL query and its explanation. Only SQL queries with results are included.
-    
+
     Returns:
         List of Dataset objects generated from the query result.
     """
@@ -45,7 +45,7 @@ def transform_output_state(
 ) -> dict:
     """
     Convert a multi-dataset agent output state into a standardized response dictionary.
-    
+
     The response includes the original query result, a list of datasets derived from the query result, and a single AI message with a placeholder response.
     """
     query_result = output_state.get("query_result", {})
@@ -61,9 +61,9 @@ def transform_output_state(
 async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:
     """
     Asynchronously processes a multi-dataset agent query and returns the transformed response.
-    
+
     Prepares the input state from the provided agent state and configuration, invokes the multi-dataset graph asynchronously, and transforms the resulting output state into a response dictionary.
-    
+
     Returns:
         dict: The transformed response containing the query result, datasets, and a placeholder AI message.
     """

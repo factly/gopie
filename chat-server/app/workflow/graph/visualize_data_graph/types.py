@@ -9,7 +9,7 @@ from pydantic import BaseModel
 class Dataset(BaseModel):
     data: list[list[Any]]
     description: str
-    csv_path: str | None
+    csv_path: str | None = None
 
 
 class ResultPaths(BaseModel):
