@@ -18,6 +18,12 @@ from app.services.qdrant.schema_vectorization import (
 class TestVectorStore:
     @pytest.fixture
     def mock_document(self):
+        """
+        Provides a sample Document instance with predefined page content and metadata for testing purposes.
+        
+        Returns:
+            Document: A Document object containing test content and metadata fields for project and dataset identification.
+        """
         return Document(
             page_content="test content",
             metadata={
@@ -29,12 +35,23 @@ class TestVectorStore:
 
     @pytest.fixture
     def mock_embeddings(self):
+        """
+        Provides a mock embeddings object with a stubbed `embed_query` method returning a fixed vector.
+        
+        Returns:
+            Mock: An object simulating an embeddings interface for testing purposes.
+        """
         embeddings = Mock()
         embeddings.embed_query = Mock(return_value=[0.1, 0.2, 0.3])
         return embeddings
 
     @pytest.mark.asyncio
     async def test_add_document_to_vector_store(self, mock_document):
+        """
+        Test that a document is correctly added to the vector store with the expected document ID and embeddings.
+        
+        Verifies that the vector store and document ID are obtained using the appropriate methods and that the document is added asynchronously with the correct parameters.
+        """
         mock_vector_store = AsyncMock()
 
         with (
@@ -59,6 +76,11 @@ class TestVectorStore:
 
     @pytest.mark.asyncio
     async def test_perform_similarity_search_success(self):
+        """
+        Test that `perform_similarity_search` returns the expected results when the similarity search succeeds.
+        
+        Asserts that the correct number of results is returned and that the vector store's async similarity search method is called with the correct parameters.
+        """
         mock_vector_store = AsyncMock()
         mock_vector_store.asimilarity_search.return_value = [
             Document(page_content="result 1"),
@@ -72,6 +94,9 @@ class TestVectorStore:
 
     @pytest.mark.asyncio
     async def test_perform_similarity_search_with_filter(self):
+        """
+        Test that `perform_similarity_search` returns filtered results and calls the vector store with the correct filter and parameters.
+        """
         mock_vector_store = AsyncMock()
         mock_vector_store.asimilarity_search.return_value = [
             Document(page_content="filtered result")
@@ -89,6 +114,11 @@ class TestVectorStore:
 
     @pytest.mark.asyncio
     async def test_perform_similarity_search_fallback_on_error(self):
+        """
+        Test that similarity search falls back to an unfiltered search if the filtered search raises an exception.
+        
+        Verifies that when the initial similarity search with a filter fails, the function retries without the filter and returns the successful results.
+        """
         mock_vector_store = AsyncMock()
         # First call with filter raises exception, second without filter succeeds
         mock_vector_store.asimilarity_search.side_effect = [
@@ -106,6 +136,9 @@ class TestVectorStore:
 
     @pytest.mark.asyncio
     async def test_perform_similarity_search_raises_on_unfiltered_error(self):
+        """
+        Test that an exception raised during an unfiltered similarity search is properly propagated.
+        """
         mock_vector_store = AsyncMock()
         mock_vector_store.asimilarity_search.side_effect = Exception("Database error")
 
@@ -116,12 +149,23 @@ class TestVectorStore:
 class TestSchemaSearch:
     @pytest.fixture
     def mock_embeddings(self):
+        """
+        Create a mock OpenAIEmbeddings instance with a stubbed embed_query method returning a fixed vector.
+        
+        Returns:
+            OpenAIEmbeddings: A mock embeddings object for testing purposes.
+        """
         embeddings = Mock(spec=OpenAIEmbeddings)
         embeddings.embed_query = Mock(return_value=[0.1, 0.2, 0.3])
         return cast(OpenAIEmbeddings, embeddings)
 
     @pytest.mark.asyncio
     async def test_search_schemas_success(self, mock_embeddings):
+        """
+        Test that `search_schemas` returns a list of schema objects when similarity search finds matching documents.
+        
+        Verifies that the function correctly processes multiple documents with required metadata fields and returns schema objects with expected names.
+        """
         mock_documents = [
             Document(
                 page_content="schema1",
@@ -165,6 +209,11 @@ class TestSchemaSearch:
 
     @pytest.mark.asyncio
     async def test_search_schemas_with_filters(self, mock_embeddings):
+        """
+        Test that `search_schemas` returns schemas filtered by project and dataset IDs.
+        
+        Verifies that the function returns only schemas matching the specified filters and that the schema's name matches the expected value.
+        """
         mock_document = Document(
             page_content="filtered schema",
             metadata={
@@ -199,6 +248,9 @@ class TestSchemaSearch:
 
     @pytest.mark.asyncio
     async def test_search_schemas_handles_exceptions(self, mock_embeddings):
+        """
+        Test that search_schemas returns an empty list when an exception occurs during similarity search.
+        """
         with (
             patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
             patch(
@@ -214,6 +266,9 @@ class TestSchemaSearch:
 
     @pytest.mark.asyncio
     async def test_search_schemas_empty_results(self, mock_embeddings):
+        """
+        Test that `search_schemas` returns an empty list when the similarity search yields no results.
+        """
         with (
             patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
             patch(
@@ -232,6 +287,11 @@ class TestSchemaVectorization:
     @pytest.mark.asyncio
     async def test_store_schema_in_qdrant_success(self):
         # Create mock data with proper typing for SQL_RESPONSE_TYPE
+        """
+        Test that storing a schema in Qdrant succeeds when all dependent operations complete without error.
+        
+        This test verifies that the schema creation, column description generation, schema formatting, and document addition functions are called as expected, and that the overall operation returns True.
+        """
         dataset_summary = Mock()
         sample_data: list[dict[str, Union[str, int, float, None]]] = [
             {"col1": "value1", "col2": 42, "col3": 3.14, "col4": None}
@@ -281,6 +341,9 @@ class TestSchemaVectorization:
 
     @pytest.mark.asyncio
     async def test_store_schema_in_qdrant_failure(self):
+        """
+        Test that `store_schema_in_qdrant` returns False when an exception occurs during schema creation.
+        """
         dataset_summary = Mock()
         sample_data: list[dict[str, Union[str, int, float, None]]] = [
             {"col1": "value1", "col2": 42}
@@ -301,6 +364,11 @@ class TestSchemaVectorization:
 
     @pytest.mark.asyncio
     async def test_delete_schema_from_qdrant_success(self):
+        """
+        Test that deleting a schema from Qdrant succeeds and returns True.
+        
+        Verifies that the async client's delete method is called and the function returns True when deletion is successful.
+        """
         with (
             patch(
                 "app.services.qdrant.schema_vectorization.QdrantSetup"
@@ -319,6 +387,9 @@ class TestSchemaVectorization:
 
     @pytest.mark.asyncio
     async def test_delete_schema_from_qdrant_failure(self):
+        """
+        Test that `delete_schema_from_qdrant` returns False when an exception occurs during schema deletion.
+        """
         with (
             patch(
                 "app.services.qdrant.schema_vectorization.QdrantSetup"

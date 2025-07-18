@@ -8,6 +8,22 @@ from langchain_core.prompts import (
 def create_analyze_query_prompt(
     **kwargs,
 ) -> list | ChatPromptTemplate:
+    """
+    Generate a prompt for classifying a user query as either "data_query" or "conversational" based on detailed guidelines and context.
+    
+    Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of message objects ready for use in a chat-based classification system. The prompt incorporates the user query, previous tool results, tool call count, dataset IDs, and project IDs, and provides comprehensive instructions for accurate query classification.
+     
+    Parameters:
+        prompt_template (bool, optional): If True, returns a `ChatPromptTemplate` object; otherwise, returns a list of message objects.
+        user_query (str, optional): The user's input query to be classified.
+        tool_results (str, optional): Results from previous tool calls, if any.
+        tool_call_count (int, optional): Number of tool calls made so far.
+        dataset_ids (list, optional): List of dataset identifiers relevant to the query.
+        project_ids (list, optional): List of project identifiers relevant to the query.
+    
+    Returns:
+        list | ChatPromptTemplate: A list of message objects or a `ChatPromptTemplate` for use in a chat or classification workflow.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     user_query = kwargs.get("user_query", "")
     tool_results = kwargs.get("tool_results", "")

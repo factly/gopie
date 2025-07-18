@@ -6,6 +6,20 @@ from langchain_core.prompts import (
 
 
 def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
+    """
+    Generate a prompt for summarizing the outcome of a subquery execution in user-friendly language.
+    
+    Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of formatted `SystemMessage` and `HumanMessage` objects for immediate use. The prompt guides the AI to produce concise, actionable updates about subquery results, handling cases of success, failure, or truncated data, and explicitly instructs avoidance of technical jargon or error exposure.
+     
+    Parameters:
+        prompt_template (bool, optional): If True, returns a prompt template for dynamic use; otherwise, returns formatted messages.
+        original_user_query (str, optional): The user's original query for context.
+        subquery_result (str, optional): The result or output of the subquery.
+        subquery_messages (str, optional): Additional messages or context related to the subquery.
+    
+    Returns:
+        list | ChatPromptTemplate: Either a list of message objects or a prompt template, depending on the mode.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     original_user_query = kwargs.get("original_user_query", "")
     subquery_result = kwargs.get("subquery_result", "")

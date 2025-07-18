@@ -152,8 +152,15 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
 
 async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
     """
-    Find values similar to the given value in the column.
-    Uses LIKE matching first, then falls back to trigram similarity if no results found.
+    Search for values in a database column that are similar to the specified value using a case-insensitive substring match.
+    
+    Parameters:
+        value (str): The value to search for similar entries.
+        column_name (str): The name of the column to search within.
+        table_name (str): The name of the table containing the column.
+    
+    Returns:
+        list[str]: A list of up to five distinct values from the column that contain the specified value as a substring, matched case-insensitively.
     """
     similar_values = []
 

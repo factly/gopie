@@ -26,6 +26,9 @@ class TestPortkeyLLMProvider:
         assert provider.metadata == {}
 
     def test_get_headers(self, sample_metadata):
+        """
+        Test that PortkeyLLMProvider.get_headers returns the correct headers and calls createHeaders with expected arguments.
+        """
         with (
             patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.portkey.createHeaders") as mock_create_headers,
@@ -52,6 +55,9 @@ class TestPortkeyLLMProvider:
             assert result == {"Authorization": "Bearer test"}
 
     def test_get_llm_model(self, sample_metadata):
+        """
+        Tests that `PortkeyLLMProvider.get_llm_model` initializes and returns a ChatOpenAI model with the correct parameters, including API key, base URL, headers, model name, and streaming enabled.
+        """
         with (
             patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.portkey.ChatOpenAI") as mock_chat_openai,
@@ -84,6 +90,11 @@ class TestPortkeyLLMProvider:
             assert result == mock_model
 
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
+        """
+        Test that PortkeyLLMProvider.get_llm_model returns the correct model instance with streaming disabled.
+        
+        Verifies that the ChatOpenAI class is called with the expected parameters when requesting a non-streaming model, and that the returned object matches the mocked model.
+        """
         with (
             patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.portkey.ChatOpenAI") as mock_chat_openai,
@@ -116,6 +127,11 @@ class TestPortkeyLLMProvider:
             assert result == mock_model
 
     def test_self_hosted_provider_initialization(self, sample_metadata):
+        """
+        Test that PortkeyLLMProvider initializes correctly with self-hosted configuration and provider API key.
+        
+        Verifies that the provider's user, trace ID, chat ID, self-hosted flag, and provider API key are set as expected when self-hosted settings are provided.
+        """
         with patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings:
             mock_settings.PORTKEY_API_KEY = "test_key"
             mock_settings.PORTKEY_PROVIDER_API_KEY = "provider_key"
@@ -134,6 +150,9 @@ class TestPortkeyLLMProvider:
 
 class TestLiteLLMProvider:
     def test_litellm_provider_initialization(self, sample_metadata):
+        """
+        Tests that LiteLLMProvider initializes with the correct metadata and authorization headers using the provided settings.
+        """
         with patch("app.utils.providers.llm_providers.litellm.settings") as mock_settings:
             mock_settings.LITELLM_MASTER_KEY = "master_key_123"
             mock_settings.LITELLM_KEY_HEADER_NAME = None
@@ -145,6 +164,9 @@ class TestLiteLLMProvider:
             assert provider.headers == {"Authorization": "Bearer master_key_123"}
 
     def test_get_llm_model(self, sample_metadata):
+        """
+        Tests that LiteLLMProvider.get_llm_model initializes and returns a ChatOpenAI model with the correct parameters and metadata.
+        """
         with (
             patch("app.utils.providers.llm_providers.litellm.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.litellm.ChatOpenAI") as mock_chat_openai,
@@ -171,6 +193,9 @@ class TestLiteLLMProvider:
             assert result == mock_model
 
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
+        """
+        Tests that LiteLLMProvider.get_llm_model returns the correct model instance with streaming disabled and passes the expected parameters to ChatOpenAI.
+        """
         with (
             patch("app.utils.providers.llm_providers.litellm.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.litellm.ChatOpenAI") as mock_chat_openai,
@@ -199,11 +224,17 @@ class TestLiteLLMProvider:
 
 class TestOpenRouterLLMProvider:
     def test_openrouter_provider_initialization(self, sample_metadata):
+        """
+        Tests that the OpenRouterLLMProvider initializes with the provided metadata.
+        """
         provider = OpenRouterLLMProvider(sample_metadata)
 
         assert provider.metadata == sample_metadata
 
     def test_get_llm_model(self, sample_metadata):
+        """
+        Tests that `OpenRouterLLMProvider.get_llm_model` initializes a `ChatOpenAI` model with the correct API key, base URL, model name, metadata, and streaming enabled, and returns the resulting model instance.
+        """
         with (
             patch("app.utils.providers.llm_providers.openrouter.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.openrouter.ChatOpenAI") as mock_chat_openai,
@@ -227,6 +258,11 @@ class TestOpenRouterLLMProvider:
             assert result == mock_model
 
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
+        """
+        Test that OpenRouterLLMProvider.get_llm_model returns the correct model instance with streaming disabled.
+        
+        Verifies that the ChatOpenAI class is called with the expected API key, base URL, model name, metadata, and streaming flag set to False, and that the returned model matches the mock.
+        """
         with (
             patch("app.utils.providers.llm_providers.openrouter.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.openrouter.ChatOpenAI") as mock_chat_openai,
@@ -252,11 +288,17 @@ class TestOpenRouterLLMProvider:
 
 class TestCloudflareProvider:
     def test_cloudflare_provider_initialization(self, sample_metadata):
+        """
+        Tests that the CloudflareLLMProvider initializes with the provided metadata.
+        """
         provider = CloudflareLLMProvider(sample_metadata)
 
         assert provider.metadata == sample_metadata
 
     def test_get_llm_model(self, sample_metadata):
+        """
+        Tests that CloudflareLLMProvider's get_llm_model method initializes a ChatOpenAI model with the correct base URL, headers, model name, and streaming enabled, using provided metadata.
+        """
         with (
             patch("app.utils.providers.llm_providers.cloudflare.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.cloudflare.ChatOpenAI") as mock_chat_openai,
@@ -295,11 +337,17 @@ class TestCloudflareProvider:
 
 class TestCustomLLMProvider:
     def test_custom_provider_initialization(self, sample_metadata):
+        """
+        Test that CustomLLMProvider initializes with the provided metadata.
+        """
         provider = CustomLLMProvider(sample_metadata)
 
         assert provider.metadata == sample_metadata
 
     def test_get_llm_model(self, sample_metadata):
+        """
+        Test that CustomLLMProvider.get_llm_model initializes and returns a ChatOpenAI model with the correct parameters using provided metadata.
+        """
         with (
             patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
@@ -327,6 +375,9 @@ class TestCustomLLMProvider:
             assert result == mock_model
 
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
+        """
+        Test that CustomLLMProvider.get_llm_model returns the correct model instance with streaming disabled and passes the expected parameters to ChatOpenAI.
+        """
         with (
             patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,

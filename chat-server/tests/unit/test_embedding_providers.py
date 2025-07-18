@@ -17,6 +17,9 @@ class TestPortkeyEmbeddingProvider:
         assert provider.chat_id == "test_chat_456"
 
     def test_get_headers(self, sample_metadata):
+        """
+        Tests that PortkeyEmbeddingProvider.get_headers() calls createHeaders with the correct arguments and returns the expected headers dictionary.
+        """
         with (
             patch("app.utils.providers.embedding_providers.portkey.settings") as mock_settings,
             patch(
@@ -44,6 +47,11 @@ class TestPortkeyEmbeddingProvider:
             assert result == {"Authorization": "Bearer test"}
 
     def test_get_embeddings_model(self, sample_metadata):
+        """
+        Tests that PortkeyEmbeddingProvider.get_embeddings_model returns an embeddings model instance with the correct parameters.
+        
+        Verifies that the OpenAIEmbeddings class is called with the expected API key, base URL, headers, and model name, and that the returned object matches the mocked embeddings model.
+        """
         with (
             patch("app.utils.providers.embedding_providers.portkey.settings") as mock_settings,
             patch(
@@ -78,6 +86,11 @@ class TestPortkeyEmbeddingProvider:
             assert result == mock_model
 
     def test_self_hosted_provider_initialization(self, sample_metadata):
+        """
+        Tests that PortkeyEmbeddingProvider initializes correctly in a self-hosted configuration.
+        
+        Verifies that the provider extracts user, trace ID, and chat ID from metadata, sets self_hosted to True, and assigns the provider API key from settings.
+        """
         with patch("app.utils.providers.embedding_providers.portkey.settings") as mock_settings:
             mock_settings.PORTKEY_API_KEY = "test_key"
             mock_settings.PORTKEY_EMBEDDING_PROVIDER_API_KEY = "provider_key"
@@ -95,6 +108,9 @@ class TestPortkeyEmbeddingProvider:
 
 class TestLiteLLMEmbeddingProvider:
     def test_litellm_provider_initialization(self, sample_metadata):
+        """
+        Tests that LiteLLMEmbeddingProvider initializes with the provided metadata and sets the correct authorization header using the master key from settings.
+        """
         with patch("app.utils.providers.embedding_providers.litellm.settings") as mock_settings:
             mock_settings.LITELLM_MASTER_KEY = "master_key_123"
             mock_settings.LITELLM_KEY_HEADER_NAME = None
@@ -106,6 +122,9 @@ class TestLiteLLMEmbeddingProvider:
             assert provider.headers == {"Authorization": "Bearer master_key_123"}
 
     def test_get_embeddings_model(self, sample_metadata):
+        """
+        Tests that LiteLLMEmbeddingProvider.get_embeddings_model returns an embeddings model initialized with the correct API key, base URL, headers, and model name using mocked settings and dependencies.
+        """
         with (
             patch("app.utils.providers.embedding_providers.litellm.settings") as mock_settings,
             patch(
@@ -130,6 +149,9 @@ class TestLiteLLMEmbeddingProvider:
 
 class TestOpenAIEmbeddingProvider:
     def test_get_embeddings_model(self, sample_metadata):
+        """
+        Test that OpenAIEmbeddingProvider.get_embeddings_model returns an OpenAIEmbeddings instance with the correct API key and model name.
+        """
         with (
             patch("app.utils.providers.embedding_providers.openai.settings") as mock_settings,
             patch(
@@ -153,6 +175,9 @@ class TestOpenAIEmbeddingProvider:
 
 class TestCustomEmbeddingProvider:
     def test_get_embeddings_model(self, sample_metadata):
+        """
+        Tests that CustomEmbeddingProvider.get_embeddings_model returns an embedding model initialized with the custom API key, base URL, and specified model name.
+        """
         with patch("app.utils.providers.embedding_providers.custom.settings") as mock_settings:
             mock_settings.CUSTOM_EMBEDDING_API_KEY = "custom_key"
             mock_settings.CUSTOM_EMBEDDING_BASE_URL = "https://custom.api"

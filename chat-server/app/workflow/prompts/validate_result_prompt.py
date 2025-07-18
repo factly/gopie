@@ -11,6 +11,11 @@ from app.workflow.prompts.formatters.format_query_result import format_query_res
 def create_validate_result_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
+    """
+    Constructs a prompt for an expert agent to validate query results against a user's original question.
+    
+    Depending on the `prompt_template` argument, returns either a `ChatPromptTemplate` or a list of messages containing detailed validation instructions and the provided input. The prompt guides the agent to assess the adequacy, relevance, and quality of query results, assign a confidence score, and select an appropriate recommendation based on whether the query involved a single or multiple datasets. The agent's response is expected in a structured JSON format.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -93,6 +98,14 @@ def format_validate_result_input(
     prev_query_result: QueryResult | None = None,
     **kwargs,
 ) -> dict:
+    """
+    Prepare the input string for a query result validation prompt, including a heading indicating single or multi-dataset context.
+    
+    If no previous query result is provided, returns a message indicating that validation cannot proceed. Otherwise, formats the query result and prepends a heading specifying whether it is a single or multi-dataset result.
+    
+    Returns:
+        dict: A dictionary with the key "input" containing the formatted prompt input string.
+    """
     if not prev_query_result:
         return {"input": "❌ No query result provided for validation"}
 

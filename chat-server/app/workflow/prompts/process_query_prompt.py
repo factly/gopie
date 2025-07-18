@@ -13,6 +13,16 @@ from app.workflow.prompts.formatters.format_query_result import format_query_res
 def create_process_query_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
+    """
+    Constructs a prompt for a language model to determine whether a user's question requires SQL queries or can be answered from existing context, enforcing strict SQL formatting and response rules.
+    
+    Parameters:
+        prompt_template (bool, optional): If True, returns a ChatPromptTemplate; otherwise, returns a list of BaseMessage objects.
+        input (str, optional): The user's input question to include in the prompt.
+    
+    Returns:
+        list[BaseMessage] | ChatPromptTemplate: The constructed prompt as either a list of messages or a prompt template, depending on the `prompt_template` flag.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -79,6 +89,20 @@ def format_process_query_input(
     validation_result: ValidationResult | None = None,
     **kwargs,
 ) -> dict:
+    """
+    Format user query, dataset information, sample data, and optional previous results and validation into a single prompt string for language model input.
+    
+    Parameters:
+        user_query (str): The user's question to be answered.
+        dataset_name (str): Name of the dataset being queried.
+        dataset_schema (DatasetSchema): Schema object providing a formatted schema string.
+        rows_csv (str): Sample data from the dataset in CSV format.
+        prev_query_result (QueryResult | None): Optional previous query result to include as context.
+        validation_result (ValidationResult | None): Optional validation analysis of the previous query result.
+    
+    Returns:
+        dict: A dictionary with a single key "input" containing the fully formatted prompt string.
+    """
     formatted_schema = dataset_schema.format_for_prompt()
 
     input_str = f"""❓ USER QUERY: {user_query}

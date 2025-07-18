@@ -22,6 +22,14 @@ RECOMMENDATION_LIST = ["route_response", "replan", "reidentify_datasets"]
     progress_message="Validating query result...",
 )
 async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any]:
+    """
+    Validates the query result using a language model and updates the workflow state with the validation outcome.
+    
+    The function sends the previous query result to a language model for validation, parses the response, and checks that the recommendation is valid. If the recommendation is to reidentify datasets or replan, the retry count is incremented. Returns an updated state dictionary with the retry count, validation result, and an intermediate step message. If validation fails, returns the current retry count, a null validation result, and an error message.
+     
+    Returns:
+        dict: Updated workflow state containing the retry count, validation result (or None on error), and a list of messages reflecting the validation outcome.
+    """
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
 
@@ -64,6 +72,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
 
 
 async def route_result_validation(state: State) -> str:
+    """
+    Determine the next workflow routing step based on the validation result, retry count, and last message in the state.
+    
+    Returns:
+        str: The routing decision, which is either a recommendation from the validation result or "route_response" if validation is valid, retry limit is reached, an error occurred, or no valid recommendation is present.
+    """
     last_message = state.get("messages", [])[-1]
     validation_result = state.get("validation_result", None)
     retry_count = state.get("retry_count", 0)

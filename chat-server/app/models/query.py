@@ -12,6 +12,9 @@ class SqlQueryInfo:
     error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Return a dictionary representation of the SqlQueryInfo instance, including the SQL query, explanation, result, success status, and error message.
+        """
         return {
             "sql_query": self.sql_query,
             "explanation": self.explanation,
@@ -57,6 +60,12 @@ class SubQueryInfo:
         self.error_message.append({error_origin_type: error_message})
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Return a dictionary representation of the subquery, including its text, associated SQL queries, metadata, error messages, and node messages.
+        
+        Returns:
+        	A dictionary containing all fields of the subquery, with SQL queries serialized as dictionaries.
+        """
         return {
             "query_text": self.query_text,
             "sql_queries": [query.to_dict() for query in self.sql_queries],
@@ -101,6 +110,9 @@ class QueryResult:
     subqueries: list[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
+        """
+        Initializes the timestamp to the current datetime if it is not already set.
+        """
         if not hasattr(self, "timestamp"):
             self.timestamp = datetime.now()
 

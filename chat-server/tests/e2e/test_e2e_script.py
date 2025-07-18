@@ -27,6 +27,11 @@ url = "http://localhost:8001/api/v1/chat/completions"
 
 
 def setup_model():
+    """
+    Initialize and return a ChatOpenAI model configured with environment-based API credentials and provider.
+    
+    The model uses the "gpt-4o-mini" variant and is set up to communicate with the gateway URL specified by `PORTKEY_GATEWAY_URL`.
+    """
     api_key = os.getenv("PORTKEY_API_KEY")
     provider = os.getenv("PORTKEY_PROVIDER_NAME")
 
@@ -97,6 +102,18 @@ def create_chain():
 
 
 def process_tool_calls(tool_calls):
+    """
+    Extracts tool messages, generated SQL queries, and selected datasets from a list of tool call dictionaries.
+    
+    Parameters:
+        tool_calls (list): List of dictionaries representing tool calls from AI responses.
+    
+    Returns:
+        tuple: A tuple containing three lists:
+            - tool_messages (list): Intermediate messages with role "intermediate".
+            - generated_sql_queries (list): SQL queries extracted from tool calls.
+            - selected_datasets (list): Names or identifiers of datasets referenced in tool calls.
+    """
     tool_messages = []
     generated_sql_queries = []
     selected_datasets = []
@@ -184,6 +201,20 @@ def process_tool_calls(tool_calls):
 async def process_single_test_case(
     query, chain, formatter, server_url=None, test_number=None, total_tests=None
 ):
+    """
+    Asynchronously processes a single test case by sending a query to the conversational AI server, streaming and aggregating the response, extracting relevant tool outputs, and evaluating the result using the provided evaluation chain and formatter.
+    
+    Parameters:
+        query (dict): The test case containing the user query and expected result.
+        chain: The evaluation chain used to assess the AI's response.
+        formatter: Formatter instance for structured terminal output.
+        server_url (str, optional): The server endpoint for chat completions. Defaults to a preset URL if not provided.
+        test_number (int, optional): The index of the current test case.
+        total_tests (int, optional): The total number of test cases in the suite.
+    
+    Returns:
+        dict: A dictionary containing the test query, pass status, evaluation reasoning, used datasets, SQL query count, expected dataset, and expected SQL query count.
+    """
     query_copy = query.copy()
     expected_result = query_copy.get("expected_result", {})
     if "expected_result" in query_copy:
@@ -296,6 +327,15 @@ async def process_single_test_case(
 
 
 def get_test_cases(test_type="all"):
+    """
+    Return test cases based on the specified dataset type.
+    
+    Parameters:
+        test_type (str): Type of test cases to return. Accepts "single" for single-dataset cases, "multi" for multi-dataset cases, or any other value for all cases.
+    
+    Returns:
+        list: A list of test case dictionaries matching the requested type.
+    """
     if test_type == "single":
         return SINGLE_DATASET_TEST_CASES
     elif test_type == "multi":
@@ -305,6 +345,16 @@ def get_test_cases(test_type="all"):
 
 
 async def run_tests(test_type="all", server_url="http://localhost:8001/api/v1/chat/completions"):
+    """
+    Run all test cases of the specified type against the conversational AI server and print formatted results.
+    
+    Parameters:
+        test_type (str): The category of test cases to run ("single", "multi", or "all").
+        server_url (str): The URL of the chat completion API endpoint.
+    
+    Returns:
+        results (list): A list of dictionaries containing the outcome of each test case.
+    """
     start_time = datetime.now()
 
     formatter = TerminalFormatter(use_colors=True)

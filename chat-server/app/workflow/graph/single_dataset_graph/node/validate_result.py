@@ -20,6 +20,14 @@ RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
     progress_message="Validating query result...",
 )
 async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any]:
+    """
+    Validate the query result using a language model and return the validation outcome, updated retry count, and workflow messages.
+    
+    If the language model's recommendation is "rerun_query", the retry count is incremented. If the recommendation is not recognized, an error is raised and an error message is returned in the messages list. On successful validation, returns the parsed validation result and an intermediate step message; on failure, returns `None` for the validation result and an error message.
+     
+    Returns:
+        dict: A dictionary containing the updated `retry_count`, the `validation_result` (or `None` on error), and a list of workflow messages.
+    """
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
 
@@ -59,6 +67,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
 
 
 async def route_result_validation(state: State) -> str:
+    """
+    Determine the next workflow action based on the validation result, retry count, and last message.
+    
+    Returns:
+        str: The recommended action, either "pass_on_results" or "rerun_query", based on validation outcome and workflow state.
+    """
     last_message = state.get("messages", [])[-1]
     validation_result = state.get("validation_result", None)
     retry_count = state.get("retry_count", 0)

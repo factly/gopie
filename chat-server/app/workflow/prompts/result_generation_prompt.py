@@ -9,6 +9,11 @@ from app.workflow.prompts.formatters.format_query_result import format_query_res
 
 
 def create_result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+    """
+    Constructs a prompt for generating a final user-facing response to a query, embedding detailed guidelines for tone, structure, and handling of various query result scenarios.
+    
+    If `prompt_template` is True, returns a `ChatPromptTemplate` with system and human message templates; otherwise, returns a list of message objects with the system message and a human message containing the provided input.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -96,6 +101,14 @@ WHAT TO AVOID:
 
 
 def format_result_generation_input(query_result: QueryResult | None, **kwargs) -> dict:
+    """
+    Prepare the input dictionary for the result generation prompt based on the provided query result.
+    
+    If a `QueryResult` is given, formats it for prompt input; if not, supplies a default message indicating no result is available.
+    
+    Returns:
+        dict: A dictionary with the key "input" containing the formatted input string.
+    """
     input_str = ""
 
     if not query_result:

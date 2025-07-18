@@ -8,14 +8,9 @@ from app.models.query import SqlQueryInfo
 
 async def execute_query(state: State) -> dict:
     """
-    Execute the planned query using the external SQL API
-
-    Args:
-        state: The current state object containing messages and
-               query information
-
-    Returns:
-        Updated state with query results or error messages
+    Executes all planned SQL queries for the current subquery in the workflow state and updates the state with results or error messages.
+    
+    Each SQL query is executed asynchronously, and the outcome (success or failure) is recorded in the state. On completion, the function dispatches a custom event and returns the updated state along with a message summarizing the results. If an error occurs during execution, the error is recorded, the retry count is incremented, and an error message is returned.
     """
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
