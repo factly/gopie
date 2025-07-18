@@ -391,7 +391,7 @@ export default function HomePage() {
               <motion.h1
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-4xl font-bold tracking-tight"
+                className="text-3xl font-bold tracking-tight"
               >
                 Projects
               </motion.h1>
