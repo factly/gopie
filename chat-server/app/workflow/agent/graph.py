@@ -63,7 +63,7 @@ graph_builder.add_edge("process_context", "check_visualization")
 graph_builder.add_edge("check_visualization", "query_router")
 graph_builder.add_edge("validate_input", "query_router")
 graph_builder.add_edge("stream_invalid_response", END)
-graph_builder.add_edge("visualization_agent", "generate_result")
+graph_builder.add_edge("visualization_agent", END)
 graph_builder.add_edge("generate_result", END)
 
 agent_graph = graph_builder.compile()

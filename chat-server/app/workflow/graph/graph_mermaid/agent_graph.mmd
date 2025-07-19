@@ -30,9 +30,9 @@ graph TD;
 	supervisor -.-> single_dataset_agent;
 	supervisor -.-> visualization_agent;
 	validate_input --> query_router;
-	visualization_agent --> generate_result;
 	generate_result --> __end__;
 	stream_invalid_response --> __end__;
+	visualization_agent --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
