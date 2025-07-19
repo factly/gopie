@@ -24,7 +24,7 @@ Guidelines:
 - This is a sub-result, so keep it concise
 
 Visualization Result:
-Data paths: {data_paths}
+Data paths: {data}
 Errors (if any): {errors}
 
 User Query: {user_query}
@@ -36,7 +36,7 @@ Provide a brief, natural response about the visualization results:
     user_query = state["user_query"]
 
     formatted_prompt = prompt.format(
-        data_paths=result.data if result.data else "No visualization data generated",
+        data=result.data if result.data else "No visualization data generated",
         errors=result.errors if result.errors else "None",
         user_query=user_query
     )

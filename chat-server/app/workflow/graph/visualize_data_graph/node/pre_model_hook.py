@@ -4,7 +4,8 @@ from app.workflow.events.event_utils import configure_node
 from ...visualize_data_graph.types import State, VisualizationResult
 from langchain_core.runnables import RunnableConfig
 from langchain_core.callbacks.manager import adispatch_custom_event
-
+from app.core.config import settings
+from app.core.log import logger
 
 from app.workflow.graph.visualize_data_graph.utils import get_sandbox, update_sandbox_timeout, upload_csv_files
 
@@ -14,27 +15,34 @@ from app.workflow.graph.visualize_data_graph.utils import get_sandbox, update_sa
 )
 async def pre_model_hook(state: State, config: RunnableConfig):
     """
-    Prepares the environment and prompt messages for the data visualization agent before invoking the language model.
-
-    If a sandbox already exists, its timeout is updated; otherwise, a new sandbox is created and CSV files from the datasets are uploaded. If input preparation has not yet occurred, a custom event is dispatched, prompt messages are generated using the user query and datasets, and the input is marked as prepared. Returns an updated state dictionary containing prompt messages and sandbox information. If a `ValueError` occurs, returns an error message.
+    Prepares the environment and prompt messages for the data visualization agent.
+    Handles tool call counting and initial setup.
     """
-    messages = []
-    output = {}
-    existing_sandbox = state.get("sandbox")
-    datasets = state["datasets"]
     result = state.get("result", VisualizationResult(data=[], errors=[]))
+    tool_call_count = state.get("tool_call_count", 0)
+
+    if tool_call_count > settings.MAX_TOOL_CALL_LIMIT:
+        result.errors.append("Maximum tool call limit reached during visualization generation")
+        return {
+            "messages": [ErrorMessage(content="Tool call limit exceeded")],
+            "result": result,
+        }
 
     try:
+        existing_sandbox = state.get("sandbox")
         if existing_sandbox:
             await update_sandbox_timeout(existing_sandbox)
+            sandbox = existing_sandbox
         else:
-            sbx = await get_sandbox()
-            output["sandbox"] = sbx
-            csv_paths = await upload_csv_files(sbx, state["datasets"])
+            sandbox = await get_sandbox()
+            csv_paths = await upload_csv_files(sandbox, state["datasets"])
+
+        messages = []
         if not state.get("is_input_prepared"):
             await adispatch_custom_event("gopie-agent", {"content": "Preparing visualization ..."})
 
             datasets_csv_info = ""
+            datasets = state["datasets"]
             for idx, (dataset, csv_path) in enumerate(zip(datasets, csv_paths)):
                 datasets_csv_info += f"Dataset {idx + 1}: \n\n"
                 datasets_csv_info += f"Description: {dataset.description}\n\n"
@@ -46,19 +54,37 @@ async def pre_model_hook(state: State, config: RunnableConfig):
                 datasets_csv_info=datasets_csv_info,
             )
 
-            output["is_input_prepared"] = True
-        output["messages"] = messages
-        output["result"] = result  # Ensure result is always set
-        return output
-    except Exception as e:
-        err_msg = f"Error while creating visualisations: {str(e)}"
-        output["messages"] = [ErrorMessage(content=str(e))]
+        return {
+            "messages": messages,
+            "sandbox": sandbox,
+            "result": result,
+            "tool_call_count": tool_call_count,
+            "is_input_prepared": True,
+        }
 
+    except Exception as e:
+        err_msg = f"Error while preparing visualizations: {str(e)}"
         result.errors.append(f"[ERROR] {err_msg}")
+        logger.error(err_msg)
 
         return {
             "messages": [ErrorMessage(content=err_msg)],
-            "sandbox": existing_sandbox,
-            "is_input_prepared": state.get("is_input_prepared", False),
             "result": result,
+            "tool_call_count": tool_call_count,
+            "sandbox": state.get("sandbox"),
+            "is_input_prepared": state.get("is_input_prepared", False),
         }
+
+
+def should_continue_from_pre_model_hook(state: State):
+    """
+    Determines the next step after pre_model_hook.
+
+    Returns:
+        str: "cleanup" if there was an error, otherwise "agent".
+    """
+    if state.get("messages") and len(state["messages"]) > 0:
+        last_message = state["messages"][-1]
+        if isinstance(last_message, ErrorMessage):
+            return "cleanup"
+    return "agent"

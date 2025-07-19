@@ -33,3 +33,4 @@ class State(TypedDict):
     sandbox: AsyncSandbox | None
     is_input_prepared: bool
     s3_paths: list[str]
+    tool_call_count: int

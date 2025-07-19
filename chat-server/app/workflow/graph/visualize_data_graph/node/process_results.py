@@ -42,9 +42,6 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
 
         visualization_results.data = result_data
 
-        if sandbox is not None:
-            await sandbox.kill()
-
         await adispatch_custom_event(
             "gopie-agent",
             {
@@ -53,6 +50,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
                 "values": {"s3_paths": s3_paths},
             },
         )
+
         return {
             "messages": [
                 ToolMessage(
@@ -60,17 +58,17 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
                     tool_call_id=tool_call["id"],
                 )
             ],
-            "results": visualization_results,
+            "result": visualization_results,
             "s3_paths": s3_paths
         }
+
     except Exception as e:
         error_msg = f"Error processing visualization result: {str(e)}"
         visualization_results.errors.append(f"[ERROR] {error_msg}")
 
         return {
-            "messages": [
-                ErrorMessage(content=error_msg)
-            ],
-            "result": visualization_results
+            "messages": [ErrorMessage(content=error_msg)],
+            "result": visualization_results,
+            "s3_paths": []
         }
 

@@ -5,17 +5,20 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
-	agent(agent)
 	pre_model_hook(pre_model_hook)
-	process_result(process_result)
-	respond(respond)
+	agent(agent)
 	tools(tools)
+	process_result(process_result)
+	cleanup(cleanup)
+	respond(respond)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> pre_model_hook;
 	agent -.-> process_result;
 	agent -. &nbsp;continue&nbsp; .-> tools;
-	pre_model_hook --> agent;
-	process_result --> respond;
+	cleanup --> respond;
+	pre_model_hook -.-> agent;
+	pre_model_hook -.-> cleanup;
+	process_result --> cleanup;
 	tools --> pre_model_hook;
 	respond --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
