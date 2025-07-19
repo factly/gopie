@@ -12,68 +12,58 @@ def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
     input_content = kwargs.get("input", "")
 
     system_content = """
-# QUERY TASK
-Given the following natural language query and detailed information
-about multiple datasets, create appropriate SQL query or queries.
+Given the following natural language query and detailed information about multiple datasets, create appropriate SQL query or queries.
+
+CAUTION: If the user is also asking for visualization than just ignore that and don't reply anything in context to the visualization requirements of the user.
 
 # DATABASE COMPATIBILITY REQUIREMENTS
 IMPORTANT:
-- Generated SQL queries MUST be compatible with DuckDB SQL execution
-  engine.
+- Generated SQL queries MUST be compatible with DuckDB SQL execution engine.
 - Avoid PostgreSQL-specific syntax and functions.
 
 # DATASET NAMING GUIDELINES
 IMPORTANT - DATASET NAMING:
-- In your SQL query, you MUST use the dataset_name (table name) provided in the schema
-- This is the actual table name used in the database
-- DO NOT use the user-friendly name in SQL queries
+- In your SQL query, you MUST use the dataset_name (table name) provided in the schema.
+- This is the actual table name used in the database.
+- DO NOT use the user-friendly name in SQL queries.
 
 # CASE SENSITIVITY GUIDELINES
-- When comparing column values (not column names), use LOWER() function
-  for case-insensitive matching
-- Example: WHERE LOWER(column_name) = LOWER('value')
-- Do NOT use LOWER() for column names or table/dataset names
+- When comparing column values (not column names), use LOWER() function for case-insensitive matching.
+- Example: WHERE LOWER(column_name) = LOWER('value').
+- Do NOT use LOWER() for column names or table/dataset names.
 
 # DATASET RELATIONSHIP ASSESSMENT
-1. ANALYZE whether the selected datasets can be related through common
-   fields
-   - Look for matching column names, primary/foreign keys, or semantic relationships
-   - Determine if JOIN operations are possible between datasets
-
+1. ANALYZE whether the selected datasets can be related through common fields:
+   - Look for matching column names, primary/foreign keys, or semantic relationships.
+   - Determine if JOIN operations are possible between datasets.
 2. DECISION POINT:
    a) If datasets ARE RELATED:
-      - Create a SINGLE SQL query using appropriate JOINs
-      - Use the most efficient join type (INNER, LEFT, etc.)
-
+      - Create a SINGLE SQL query using appropriate JOINs.
+      - Use the most efficient join type (INNER, LEFT, etc.).
    b) If datasets are NOT RELATED (no sensible join possible):
-      - Create MULTIPLE independent SQL queries (one per dataset)
-      - Each query should extract the relevant information from its
-        dataset
+      - Create MULTIPLE independent SQL queries (one per dataset).
+      - Each query should extract the relevant information from its dataset.
 
 # QUERY DEVELOPMENT GUIDELINES (IMPORTANT)
-1. Use the EXACT column names as shown in the dataset information
-2. Create a query that directly addresses the user's question
-3. If the user's query refers to a time period that doesn't match the
-   dataset format (e.g., asking for 2018 when dataset uses 2018-19),
-   adapt accordingly
-4. Make sure to handle column names correctly, matching the exact names
-   in the dataset metadata
-5. Use the sample data as reference for the data format and values
+1. Use the EXACT column names as shown in the dataset information.
+2. Create a query that directly addresses the user's question.
+3. If the user's query refers to a time period that doesn't match the dataset format (e.g., asking for 2018 when dataset uses 2018-19), adapt accordingly.
+4. Make sure to handle column names correctly, matching the exact names in the dataset metadata.
+5. Use the sample data as reference for the data format and values.
 6. If the query requires joining multiple datasets, make sure to:
-   - Use appropriate join conditions
-   - Handle potentially conflicting column names
-   - Specify table aliases if needed
-   - Consider the relationship between datasets
-7. For text comparisons, use LOWER() function on both sides to ensure
-   case-insensitive matching
-8. Never use ILIKE, LIKE operator while generating SQL query
+   - Use appropriate join conditions.
+   - Handle potentially conflicting column names.
+   - Specify table aliases if needed.
+   - Consider the relationship between datasets.
+7. For text comparisons, use LOWER() function on both sides to ensure case-insensitive matching.
+8. Never use ILIKE, LIKE operator while generating SQL query.
 
 # SQL FORMATTING REQUIREMENTS
 You must provide a well-formatted version of the SQL query for UI display with:
-   - SQL keywords in UPPERCASE
-   - Each major clause on a new line
-   - Proper indentation for readability
-   - Consistent spacing around operators
+- SQL keywords in UPPERCASE.
+- Each major clause on a new line.
+- Proper indentation for readability.
+- Consistent spacing around operators.
 
 # RESPONSE FORMAT
 Respond in this JSON format:
@@ -89,11 +79,7 @@ Respond in this JSON format:
     ],
     "limitations": "Any limitations or assumptions made when planning the query"
 }
-
-Note: If datasets are related and you only need one query,
-"sql_queries" should contain only one element. If datasets aren't
-related, include multiple queries in the "sql_queries" array, one for
-each dataset needed.
+Note: If datasets are related and you only need one query, "sql_queries" should contain only one element. If datasets aren't related, include multiple queries in the "sql_queries" array, one for each dataset needed.
 """
 
     human_template_str = """

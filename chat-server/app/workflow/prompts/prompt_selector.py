@@ -49,7 +49,6 @@ NodeName = Literal[
     "stream_updates",
     "execution_analysis",
     "process_query",
-    "response",
     "check_visualization",
     "process_context",
     "plan_sql_query_tool",

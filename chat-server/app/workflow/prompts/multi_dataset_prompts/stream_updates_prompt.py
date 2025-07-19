@@ -8,15 +8,15 @@ from langchain_core.prompts import (
 def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
     """
     Generate a prompt for summarizing the outcome of a subquery execution in user-friendly language.
-    
+
     Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of formatted `SystemMessage` and `HumanMessage` objects for immediate use. The prompt guides the AI to produce concise, actionable updates about subquery results, handling cases of success, failure, or truncated data, and explicitly instructs avoidance of technical jargon or error exposure.
-     
+
     Parameters:
         prompt_template (bool, optional): If True, returns a prompt template for dynamic use; otherwise, returns formatted messages.
         original_user_query (str, optional): The user's original query for context.
         subquery_result (str, optional): The result or output of the subquery.
         subquery_messages (str, optional): Additional messages or context related to the subquery.
-    
+
     Returns:
         list | ChatPromptTemplate: Either a list of message objects or a prompt template, depending on the mode.
     """
@@ -52,6 +52,7 @@ INSTRUCTIONS:
 
 5. Keep your response concise (2-3 sentences)
 6. End by stating the next action (continue to next subquery, stopping execution, etc.)
+7. If the query is asking for visualizations, do not mention it as it is out of scope for you to answer. So, don't reply anything related to visualizations.
 
 WHAT TO AVOID:
 - Technical jargon, SQL errors, or system implementation details

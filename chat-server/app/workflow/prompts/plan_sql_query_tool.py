@@ -25,6 +25,7 @@ INSTRUCTIONS:
 4. Plan the SQL query/queries needed to answer the question
 5. Consider joins, aggregations, filters, and ordering as needed
 6. Provide clear reasoning for your approach
+7. If the user is also asking for visualization than just ignore that and don't reply anything in context to the visualization requirements of the user.
 
 OUTPUT FORMAT (JSON):
 {
