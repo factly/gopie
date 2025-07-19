@@ -10,13 +10,13 @@ def create_validate_input_prompt(
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Generate a prompt for validating user input, returning either a list of message objects or a chat prompt template.
-    
+
     Depending on the `prompt_template` flag in the keyword arguments, returns a `ChatPromptTemplate` for dynamic input or a list of message objects with the provided user input. The prompt instructs the recipient to assess whether the input is malicious and respond with a structured JSON object containing `is_malicious`, `reasoning`, and `response` fields.
-    
+
     Parameters:
         prompt_template (bool, optional): If True, returns a `ChatPromptTemplate` for dynamic input; otherwise, returns a list of message objects.
         user_input (str, optional): The user input to be validated, used when `prompt_template` is False.
-    
+
     Returns:
         list[BaseMessage] | ChatPromptTemplate: A list of message objects or a chat prompt template for input validation.
     """

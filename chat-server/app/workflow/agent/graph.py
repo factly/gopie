@@ -9,7 +9,7 @@ from .node.single_dataset import call_single_dataset_agent
 from .node.stream_invalid_response import stream_invalid_response
 from .node.supervisor import supervisor
 from .node.validate_input import validate_input
-from .node.visualisation import call_visualization_agent, check_visualization, should_visualize
+from .node.visualisation import call_visualization_agent, check_visualization, should_run_visualization
 from .types import AgentState
 
 
@@ -41,20 +41,14 @@ graph_builder.add_conditional_edges(
 
 graph_builder.add_conditional_edges(
     "multi_dataset_agent",
-    should_visualize,
-    {
-        "visualization_agent": "visualization_agent",
-        "generate_result": "generate_result",
-    },
+    should_run_visualization,
+    {"visualization_agent": "visualization_agent"}
 )
 
 graph_builder.add_conditional_edges(
     "single_dataset_agent",
-    should_visualize,
-    {
-        "visualization_agent": "visualization_agent",
-        "generate_result": "generate_result",
-    },
+    should_run_visualization,
+    {"visualization_agent": "visualization_agent"}
 )
 
 graph_builder.add_edge(START, "validate_input")
@@ -62,6 +56,8 @@ graph_builder.add_edge(START, "process_context")
 graph_builder.add_edge("process_context", "check_visualization")
 graph_builder.add_edge("check_visualization", "query_router")
 graph_builder.add_edge("validate_input", "query_router")
+graph_builder.add_edge("multi_dataset_agent", "generate_result")
+graph_builder.add_edge("single_dataset_agent", "generate_result")
 graph_builder.add_edge("stream_invalid_response", END)
 graph_builder.add_edge("visualization_agent", END)
 graph_builder.add_edge("generate_result", END)

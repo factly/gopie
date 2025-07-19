@@ -1,7 +1,7 @@
 from app.models.message import ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.workflow.events.event_utils import configure_node
-from ...visualize_data_graph.types import State
+from ...visualize_data_graph.types import State, VisualizationResult
 from langchain_core.runnables import RunnableConfig
 from langchain_core.callbacks.manager import adispatch_custom_event
 
@@ -22,7 +22,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     output = {}
     existing_sandbox = state.get("sandbox")
     datasets = state["datasets"]
-    result = state["result"]
+    result = state.get("result", VisualizationResult(data=[], errors=[]))
 
     try:
         if existing_sandbox:
@@ -48,6 +48,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
 
             output["is_input_prepared"] = True
         output["messages"] = messages
+        output["result"] = result  # Ensure result is always set
         return output
     except Exception as e:
         err_msg = f"Error while creating visualisations: {str(e)}"
