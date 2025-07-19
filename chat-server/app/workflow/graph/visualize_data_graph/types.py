@@ -12,14 +12,9 @@ class Dataset(BaseModel):
     csv_path: str | None = None
 
 
-class ResultPaths(BaseModel):
-    """
-    Use this to return the paths to the json files created by the agent,\
-    after visualization
-    """
-
-    visualization_result_paths: list[str]
-
+class VisualizationResult(BaseModel):
+    data: list[str]
+    errors: list[str] = []
 
 class InputState(TypedDict):
     user_query: str
@@ -30,10 +25,11 @@ class OutputState(TypedDict):
     s3_paths: list[str]
 
 
-class AgentState(TypedDict):
+class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     datasets: list[Dataset]
     user_query: str
+    result: VisualizationResult
     sandbox: AsyncSandbox | None
     is_input_prepared: bool
     s3_paths: list[str]

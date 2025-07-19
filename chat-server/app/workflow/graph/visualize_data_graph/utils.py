@@ -38,10 +38,10 @@ def datasets_to_csv(datasets: list[Dataset]):
 async def get_sandbox():
     """
     Asynchronously creates and returns a sandboxed Python environment preconfigured for data visualization.
-    
+
     Raises:
         ValueError: If the E2B API key is not set in the configuration.
-    
+
     Returns:
         AsyncSandbox: An instance with the specified timeout and the 'altair' package installed.
     """
@@ -61,10 +61,10 @@ async def update_sandbox_timeout(sandbox: AsyncSandbox):
 async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset]) -> list[str]:
     """
     Asynchronously writes dataset contents as CSV files to the sandbox file system.
-    
+
     Parameters:
     	datasets (list[Dataset]): List of datasets whose data will be converted to CSV and uploaded.
-    
+
     Returns:
     	list[str]: List of file names corresponding to the uploaded CSV files.
     """
@@ -94,10 +94,10 @@ async def run_python_code(
 async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[str]) -> list[str]:
     """
     Asynchronously reads the contents of multiple files from the sandbox environment.
-    
+
     Parameters:
         file_names (list[str]): List of file names to read from the sandbox.
-    
+
     Returns:
         list[str]: Contents of the files, in the same order as the provided file names.
     """
@@ -111,12 +111,12 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
 async def upload_visualization_result_data(data: list[str]) -> list[str]:
     """
     Asynchronously uploads a list of visualization data strings to S3 storage and returns their public URLs.
-    
+
     Each data item is saved as a uniquely named JSON file under the "visualizations" prefix. Raises a ValueError if required AWS credentials or bucket name are missing.
-    
+
     Parameters:
         data (list[str]): List of string data items to upload.
-    
+
     Returns:
         list[str]: URLs of the uploaded files in S3 storage.
     """
