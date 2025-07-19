@@ -16,10 +16,11 @@ from ..types import AgentState
 async def validate_input(state: AgentState, config: RunnableConfig):
     """
     Asynchronously validates the initial user query for malicious content using a language model.
-    
+
     Analyzes the user's input with an LLM and parses the result to determine if the input is malicious, providing reasoning and a user-facing response. Returns a dictionary containing the original query, a boolean flag indicating if the input is invalid, and a list of intermediate step messages.
     """
     user_input = state.get("initial_user_query")
+    user_response = "Request cannot be processed."
 
     try:
         prompt_messages = get_prompt(
