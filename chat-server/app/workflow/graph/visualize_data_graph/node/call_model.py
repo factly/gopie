@@ -1,12 +1,12 @@
 from app.tool_utils.tools import ToolNames
-from ...visualize_data_graph.types import AgentState
+from ...visualize_data_graph.types import State
 from langchain_core.runnables import RunnableConfig
 from app.utils.model_registry.model_provider import get_model_provider
 from langchain_core.messages import AIMessage
 
 tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
 
-async def call_model(state: AgentState, config: RunnableConfig) -> dict:
+async def call_model(state: State, config: RunnableConfig) -> dict:
     """
     Invokes the language model for the "visualize_data" node using the current message history.
 
@@ -18,7 +18,7 @@ async def call_model(state: AgentState, config: RunnableConfig) -> dict:
     return {"messages": [response]}
 
 
-def should_continue(state: AgentState):
+def should_continue(state: State):
     """
     Determines the next workflow step based on the last AI message and its tool calls.
 
@@ -28,5 +28,5 @@ def should_continue(state: AgentState):
     last_message = state["messages"][-1]
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
-            return "respond"
+            return "process_result"
     return "continue"
