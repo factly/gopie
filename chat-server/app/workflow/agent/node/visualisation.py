@@ -7,6 +7,7 @@ from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph.graph import (
     graph as visualize_data_graph,
 )
+from langgraph.graph import END
 
 from ..types import AgentState
 
@@ -58,4 +59,4 @@ async def should_run_visualization(state: AgentState):
     if state.get("needs_visualization", False) and state.get("datasets", []):
         return "visualization_agent"
     else:
-        return None
+        return END

@@ -21,12 +21,12 @@ from app.models.query import QueryResult, SingleDatasetQueryResult, SqlQueryInfo
 def convert_rows_to_csv(rows: list[dict]) -> str:
     """
     Convert a list of dictionaries into a CSV-formatted string with special handling for certain cell values.
-    
+
     Each row in the output CSV includes a "row_num" column as the first field. Cell values are converted as follows: `None` becomes "NULL", empty strings become "EMPTY_STRING", strings containing only whitespace become "WHITESPACE_ONLY", and numeric zeros become "0". Returns an empty string if the input list is empty.
-    
+
     Parameters:
         rows (list[dict]): List of dictionaries representing table rows.
-    
+
     Returns:
         str: CSV-formatted string representing the input rows.
     """
@@ -67,9 +67,9 @@ def convert_rows_to_csv(rows: list[dict]) -> str:
 async def process_query(state: State, config: RunnableConfig) -> dict:
     """
     Processes a user query against a specified dataset, generating and executing SQL queries or providing non-SQL responses using a language model.
-    
+
     This asynchronous function orchestrates the workflow for handling a user query: it retrieves dataset schema and sample data, constructs prompts for a language model, parses the model's response for SQL queries and explanations, executes the queries if present, and compiles the results into a structured response. If no SQL queries are generated, it returns the non-SQL response from the model. Errors encountered during processing are captured and included in the result.
-    
+
     Returns:
         dict: A dictionary containing a list of AIMessage objects with the serialized query result and the structured query result object.
     """
@@ -174,7 +174,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result.single_dataset_query_result.sql_results = sql_results
 
             return {
-                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
+                "messages": [AIMessage(content=json.dumps(query_result.to_dict(), indent=2))],
                 "query_result": query_result,
             }
 
@@ -182,7 +182,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
 
             return {
-                "messages": [AIMessage(content=json.dumps(query_result, indent=2))],
+                "messages": [AIMessage(content=json.dumps(query_result.to_dict(), indent=2))],
                 "query_result": query_result,
             }
 

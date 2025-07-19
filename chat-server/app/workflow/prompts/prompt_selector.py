@@ -23,8 +23,8 @@ from .plan_sql_query_tool import (
     create_sql_planning_prompt,
     format_sql_planning_input,
 )
-from .single_dataset_prompts.process_context_prompt import create_process_context_prompt
-from .process_query_prompt import (
+from .process_context_prompt import create_process_context_prompt
+from .single_dataset_prompts.process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
 )

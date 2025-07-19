@@ -28,6 +28,7 @@ graph_builder.add_node("single_dataset_agent", call_single_dataset_agent)
 graph_builder.add_node("visualization_agent", call_visualization_agent)
 graph_builder.add_node("check_visualization", check_visualization)
 graph_builder.add_node("generate_result", generate_result)
+graph_builder.add_node("post_agent_fork", lambda state: state)
 graph_builder.add_node("query_router", lambda state: state, defer=True)
 
 graph_builder.add_conditional_edges(
@@ -40,15 +41,12 @@ graph_builder.add_conditional_edges(
 )
 
 graph_builder.add_conditional_edges(
-    "multi_dataset_agent",
+    "post_agent_fork",
     should_run_visualization,
-    {"visualization_agent": "visualization_agent"}
-)
-
-graph_builder.add_conditional_edges(
-    "single_dataset_agent",
-    should_run_visualization,
-    {"visualization_agent": "visualization_agent"}
+    {
+        "visualization_agent": "visualization_agent",
+        END: END
+    }
 )
 
 graph_builder.add_edge(START, "validate_input")
@@ -56,8 +54,9 @@ graph_builder.add_edge(START, "process_context")
 graph_builder.add_edge("process_context", "check_visualization")
 graph_builder.add_edge("check_visualization", "query_router")
 graph_builder.add_edge("validate_input", "query_router")
-graph_builder.add_edge("multi_dataset_agent", "generate_result")
-graph_builder.add_edge("single_dataset_agent", "generate_result")
+graph_builder.add_edge("multi_dataset_agent", "post_agent_fork")
+graph_builder.add_edge("single_dataset_agent", "post_agent_fork")
+graph_builder.add_edge("post_agent_fork", "generate_result")
 graph_builder.add_edge("stream_invalid_response", END)
 graph_builder.add_edge("visualization_agent", END)
 graph_builder.add_edge("generate_result", END)

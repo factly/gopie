@@ -14,18 +14,20 @@ graph TD;
 	visualization_agent(visualization_agent)
 	check_visualization(check_visualization)
 	generate_result(generate_result)
+	post_agent_fork(post_agent_fork)
 	query_router(query_router)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> process_context;
 	__start__ --> validate_input;
 	check_visualization --> query_router;
-	multi_dataset_agent --> generate_result;
-	multi_dataset_agent -.-> visualization_agent;
+	multi_dataset_agent --> post_agent_fork;
+	post_agent_fork -.-> __end__;
+	post_agent_fork --> generate_result;
+	post_agent_fork -.-> visualization_agent;
 	process_context --> check_visualization;
 	query_router -. &nbsp;invalid&nbsp; .-> stream_invalid_response;
 	query_router -. &nbsp;valid&nbsp; .-> supervisor;
-	single_dataset_agent --> generate_result;
-	single_dataset_agent -.-> visualization_agent;
+	single_dataset_agent --> post_agent_fork;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
 	supervisor -.-> visualization_agent;
