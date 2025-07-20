@@ -324,7 +324,7 @@ export function ChatMessage({
       }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
-      const allStreamDatasets: string[] = [];
+      const allStreamDatasets = new Set<string>();
       const streamSqlQueries: string[] = [];
       const intermediateMessages: string[] = [];
 
@@ -339,11 +339,9 @@ export function ChatMessage({
         const streamContent = content as StreamEvent[];
         streamContent.forEach((event) => {
           if (event.datasets_used) {
-            event.datasets_used.forEach((dataset) => {
-              if (!allStreamDatasets.includes(dataset)) {
-                allStreamDatasets.push(dataset);
-              }
-            });
+            event.datasets_used.forEach((dataset) =>
+              allStreamDatasets.add(dataset)
+            );
           }
           if (event.generated_sql_query) {
             streamSqlQueries.push(event.generated_sql_query);
@@ -354,7 +352,7 @@ export function ChatMessage({
         });
       }
 
-      setDisplayDatasets(allStreamDatasets);
+      setDisplayDatasets(Array.from(allStreamDatasets));
       setDisplaySqlQueries(streamSqlQueries);
       setDisplayIntermediateMessages(intermediateMessages);
     } else {

@@ -1048,7 +1048,7 @@ function ChatPageClient() {
     <main className="flex flex-col w-full h-screen">
       <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={100} minSize={30}>
+          <ResizablePanel minSize={30}>
             <div className="relative w-full h-full">
               <Tabs
                 value={activeTab}
