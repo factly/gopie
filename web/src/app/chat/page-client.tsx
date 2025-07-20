@@ -69,6 +69,8 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
+  const { resetExecutedQueries, setIsOpen } = useSqlStore();
+  const { clearPaths: clearVisualizationPaths, setIsOpen: setVisualizationOpen } = useVisualizationStore();
 
   const deleteChat = useDeleteChat();
 
@@ -119,6 +121,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setSelectedContexts([]);
     setLinkedDatasetId(null);
 
+    // Clear results when starting a new chat
+    resetExecutedQueries();
+    clearVisualizationPaths();
+    setIsOpen(false);
+    setVisualizationOpen(false);
+
     // Clear URL parameters when starting a new chat
     const params = new URLSearchParams(searchParams.toString());
     params.delete("chatId");
@@ -147,6 +155,11 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
         setLinkedDatasetId(null);
+        // Clear results when deleting the current chat
+        resetExecutedQueries();
+        clearVisualizationPaths();
+        setIsOpen(false);
+        setVisualizationOpen(false);
         await queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId }],
         });
@@ -165,6 +178,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     datasetName?: string,
     projectId?: string
   ) => {
+    // Clear results when selecting a different chat
+    resetExecutedQueries();
+    clearVisualizationPaths();
+    setIsOpen(false);
+    setVisualizationOpen(false);
+
     if (datasetId && datasetName && projectId) {
       setSelectedContexts([
         {
@@ -904,12 +923,17 @@ function ChatPageClient() {
         ) as ContextItem[];
         if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
           setSelectedContexts(parsedContexts);
+          // Clear results when navigating with new context data
+          resetExecutedQueries();
+          clearVisualizationPaths();
+          setIsOpen(false);
+          setVisualizationOpen(false);
         }
       } catch (error) {
         console.error("Failed to parse context data:", error);
       }
     }
-  }, [contextData]);
+  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen]);
 
   useEffect(() => {
     resetExecutedQueries();
@@ -1100,6 +1124,12 @@ function ChatPageClient() {
                     setLinkedDatasetId(null);
                     setActiveTab("chat");
                     setSelectedContexts([]);
+
+                    // Clear results when starting a new chat
+                    resetExecutedQueries();
+                    clearVisualizationPaths();
+                    setIsOpen(false);
+                    setVisualizationOpen(false);
 
                     // Clear URL parameters when starting a new chat
                     const params = new URLSearchParams(searchParams.toString());
