@@ -5,6 +5,7 @@ from langchain_core.prompts import (
 )
 
 from app.models.schema import DatasetSchema
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 
 
 def create_identify_datasets_prompt(
@@ -12,13 +13,13 @@ def create_identify_datasets_prompt(
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Constructs a prompt for selecting relevant datasets and specifying column assumptions based on user queries and dataset schemas.
-    
+
     Depending on the `prompt_template` argument, returns either a `ChatPromptTemplate` for further formatting or a list of `SystemMessage` and `HumanMessage` objects ready for use. The prompt includes detailed instructions for distinguishing between required and semantic searched datasets, guidelines for providing column value assumptions (with strict rules for string vs. non-string columns), and the expected JSON response format for downstream processing.
-    
+
     Parameters:
         prompt_template (bool, optional): If True, returns a `ChatPromptTemplate` object; otherwise, returns formatted message objects.
         input (str, optional): The user input or query to be included in the prompt.
-    
+
     Returns:
         list[BaseMessage] | ChatPromptTemplate: The constructed prompt as either a message list or a prompt template, depending on the `prompt_template` flag.
     """
@@ -106,7 +107,7 @@ IMPORTANT:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

@@ -5,6 +5,7 @@ from langchain_core.prompts import (
 )
 
 from app.models.query import QueryResult
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 
@@ -38,13 +39,13 @@ YOUR VALIDATION PROCESS:
 4. Consider if partial results still provide meaningful insights
 
 VALIDATION DECISION CRITERIA:
-✅ MARK AS VALID when:
+* MARK AS VALID when:
 - Results directly answer the user's question (even if partial)
 - Data is relevant and provides meaningful insights
 - Any failures don't prevent a useful response
 - User can get value from the available information
 
-❌ MARK AS INVALID when:
+* MARK AS INVALID when:
 - Critical queries failed, preventing any useful answer
 - Results don't address the user's actual question
 - Data quality issues make results unreliable
@@ -81,7 +82,7 @@ KEY PRINCIPLE: Focus on whether the user can get meaningful value from these res
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

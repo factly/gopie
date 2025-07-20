@@ -5,6 +5,7 @@ from langchain_core.prompts import (
 )
 
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 
 
 def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
@@ -89,7 +90,7 @@ Note: If datasets are related and you only need one query, "sql_queries" should 
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

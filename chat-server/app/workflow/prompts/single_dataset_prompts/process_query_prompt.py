@@ -7,6 +7,7 @@ from langchain_core.prompts import (
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
 from app.models.query import ValidationResult
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 
@@ -63,7 +64,7 @@ Always respond with valid JSON only."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

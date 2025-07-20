@@ -6,6 +6,8 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+
 
 def create_sql_planning_prompt(
     **kwargs,
@@ -48,7 +50,7 @@ multiple queries are needed, explain the sequence and purpose of each."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
