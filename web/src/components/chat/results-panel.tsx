@@ -27,10 +27,10 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
     <div className="flex h-full min-h-0 flex-col bg-muted/50">
 
       <Tabs defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
-        <TabsList className="h-10 grid w-full grid-cols-2 rounded-none bg-background border-b">
+        <TabsList className="h-10 grid w-full grid-cols-2 rounded-none bg-background">
           <TabsTrigger
             value="sql"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none px-3 py-2 text-sm font-medium transition-all"
             disabled={!hasSqlResults}
           >
             <Database className="h-4 w-4 mr-2" />
@@ -43,7 +43,7 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
           </TabsTrigger>
           <TabsTrigger
             value="visualizations"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none px-3 py-2 text-sm font-medium transition-all"
             disabled={!hasVisualizations}
           >
             <BarChart3 className="h-4 w-4 mr-2" />
