@@ -5,7 +5,7 @@ from langchain_core.runnables import RunnableConfig
 from app.utils.model_registry.model_provider import get_model_provider
 from langchain_core.messages import AIMessage
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_RESULTS_FROM_CSV]
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_PYTHON_CODE_FROM_S3]
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
     """

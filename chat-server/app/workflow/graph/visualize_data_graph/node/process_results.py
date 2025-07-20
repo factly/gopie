@@ -36,9 +36,13 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         response = tool_call["args"]
         sandbox = state.get("sandbox")
         result_path = response["visualization_result_paths"]
+        executed_python_code = state.get("executed_python_code")
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
-        s3_paths = await upload_visualization_result_data(data=result_data)
+        s3_paths = await upload_visualization_result_data(
+            data=result_data, 
+            python_code=executed_python_code
+        )
 
         visualization_results.data = result_data
 

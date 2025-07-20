@@ -36,3 +36,4 @@ class State(TypedDict):
     s3_paths: list[str]
     tool_call_count: int
     prev_csv_paths: list[str] | None
+    executed_python_code: str | None

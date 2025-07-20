@@ -10,6 +10,7 @@ from langgraph.prebuilt import InjectedState
 async def run_python_code(
     code: str,
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
+    executed_python_code: Annotated[str | None, InjectedState("executed_python_code")],
     config: RunnableConfig,
 ):
     """Run python code in a sandbox.
@@ -22,7 +23,11 @@ async def run_python_code(
     """
     execution = await sandbox.run_code(code)
 
-    return {"logs": execution.logs, "error": execution.error}
+    return {
+        "logs": execution.logs,
+        "error": execution.error,
+        "executed_python_code": code
+    }
 
 
 def get_dynamic_tool_text(args: dict) -> str:

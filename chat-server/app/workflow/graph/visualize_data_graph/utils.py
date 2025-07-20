@@ -111,14 +111,18 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
 
 
 @traceable(run_type="chain", name="upload_visualization_result_data")
-async def upload_visualization_result_data(data: list[str]) -> list[str]:
+async def upload_visualization_result_data(data: list[str], python_code: str | None = None) -> list[str]:
     """
     Asynchronously uploads a list of visualization data strings to S3 storage and returns their public URLs.
+    Also uploads the corresponding Python code with the same filename but .py extension.
 
-    Each data item is saved as a uniquely named JSON file under the "visualizations" prefix. Raises a ValueError if required AWS credentials or bucket name are missing.
+    Each data item is saved as a uniquely named JSON file under the "visualizations" prefix.
+    If python_code is provided, it's saved with the same name but .py extension.
+    Raises a ValueError if required AWS credentials or bucket name are missing.
 
     Parameters:
         data (list[str]): List of string data items to upload.
+        python_code (str | None): Python code to save alongside the JSON configs.
 
     Returns:
         list[str]: URLs of the uploaded files in S3 storage.
@@ -147,32 +151,43 @@ async def upload_visualization_result_data(data: list[str]) -> list[str]:
         for item_data in data:
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             unique_id = str(uuid.uuid4())[:8]
-            file_key = f"visualizations/{timestamp}-{unique_id}.json"
-            task = s3_client.put_object(
+            json_file_key = f"visualizations/{timestamp}-{unique_id}.json"
+            json_task = s3_client.put_object(
                 Bucket=bucket_name,
-                Key=file_key,
+                Key=json_file_key,
                 Body=item_data.encode("utf-8"),
             )
-            upload_tasks.append(task)
+            upload_tasks.append(json_task)
+
+            if python_code:
+                py_file_key = f"visualizations/{timestamp}-{unique_id}.py"
+                py_task = s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=py_file_key,
+                    Body=python_code.encode("utf-8"),
+                )
+                upload_tasks.append(py_task)
+
             # s3_path = f"s3://{bucket_name}/{file_key}"
-            s3_path = f"{s3_host}/{bucket_name}/{file_key}"
+            s3_path = f"{s3_host}/{bucket_name}/{json_file_key}"
             s3_paths.append(s3_path)
         await asyncio.gather(*upload_tasks)
     return s3_paths
 
 
-@traceable(run_type="chain", name="get_previous_visualizations_configs")
-async def get_previous_visualizations_configs(prev_csv_paths: list[str]) -> list[dict]:
+
+@traceable(run_type="chain", name="get_python_code_from_paths")
+async def get_python_code_from_paths(json_s3_paths: list[str]) -> list[str]:
     """
-    Downloads and parses previous visualization configurations from S3 storage.
+    Downloads Python code files corresponding to JSON config files from S3 storage.
 
     Parameters:
-        prev_csv_paths (list[str]): List of S3 URLs containing previous visualization configs.
+        json_s3_paths (list[str]): List of S3 URLs for JSON config files.
 
     Returns:
-        list[dict]: List of parsed visualization configurations.
+        list[str]: List of Python code strings. Empty string if code not found for a path.
     """
-    if not prev_csv_paths:
+    if not json_s3_paths:
         return []
 
     access_key_id = settings.S3_ACCESS_KEY
@@ -185,7 +200,7 @@ async def get_previous_visualizations_configs(prev_csv_paths: list[str]) -> list
         raise ValueError("AWS credentials or bucket name not set in environment variables")
 
     session = aioboto3.Session()
-    visualization_configs = []
+    python_codes = []
 
     async with session.client(  # type: ignore
         "s3",
@@ -195,29 +210,26 @@ async def get_previous_visualizations_configs(prev_csv_paths: list[str]) -> list
         aws_secret_access_key=secret_access_key,
     ) as s3_client:
 
-        for csv_path in prev_csv_paths:
+        for json_path in json_s3_paths:
             try:
-                parsed_url = urlparse(csv_path)
+                parsed_url = urlparse(json_path)
                 if parsed_url.netloc == f"{bucket_name}":
-                    key = parsed_url.path.lstrip('/')
+                    json_key = parsed_url.path.lstrip('/')
                 else:
                     path_parts = parsed_url.path.lstrip('/').split('/', 1)
                     if len(path_parts) > 1:
-                        key = path_parts[1]
+                        json_key = path_parts[1]
                     else:
-                        key = path_parts[0]
+                        json_key = path_parts[0]
 
-                response = await s3_client.get_object(Bucket=bucket_name, Key=key)
+                py_key = json_key.replace('.json', '.py')
+
+                response = await s3_client.get_object(Bucket=bucket_name, Key=py_key)
                 content = await response['Body'].read()
-
-                config_data = json.loads(content.decode('utf-8'))
-                visualization_configs.append({
-                    'source_path': csv_path,
-                    'config': config_data
-                })
+                python_codes.append(content.decode('utf-8'))
 
             except Exception as e:
-                logger.warning(f"Failed to download visualization config from {csv_path}: {str(e)}")
-                continue
+                logger.warning(f"Failed to download Python code for {json_path}: {str(e)}")
+                python_codes.append("")
 
-    return visualization_configs
+    return python_codes

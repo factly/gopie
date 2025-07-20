@@ -11,7 +11,7 @@ from .node.cleanup import cleanup_resources
 
 from .types import State, InputState, OutputState
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_RESULTS_FROM_CSV]
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_PYTHON_CODE_FROM_S3]
 
 workflow = StateGraph(
     state_schema=State,
