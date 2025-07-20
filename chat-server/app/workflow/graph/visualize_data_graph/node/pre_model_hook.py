@@ -20,6 +20,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     """
     result = state.get("result", VisualizationResult(data=[], errors=[]))
     tool_call_count = state.get("tool_call_count", 0)
+    prev_csv_paths = state["prev_csv_paths"] or []
 
     if tool_call_count > settings.MAX_TOOL_CALL_LIMIT:
         result.errors.append("Maximum tool call limit reached during visualization generation")
@@ -47,6 +48,9 @@ async def pre_model_hook(state: State, config: RunnableConfig):
                 datasets_csv_info += f"Dataset {idx + 1}: \n\n"
                 datasets_csv_info += f"Description: {dataset.description}\n\n"
                 datasets_csv_info += f"CSV Path: {csv_path}\n\n"
+
+            for idx, csv_path in enumerate(prev_csv_paths):
+                datasets_csv_info += f"Previous CSV Path {idx + 1}: {csv_path}\n\n"
 
             messages = get_prompt(
                 "visualize_data",

@@ -14,9 +14,11 @@ def create_visualize_data_prompt(
 
     system_content = """
 You are an expert data visualization engineer. Use altair to create visualizations, and save them to json.
-Do not create the date, read the data from the csv_path where the data is stored.
+Do not create the data, read the data from the csv_path where the data is stored.
 Use the run_python_code tool to run python code.
-The datasets are already saved in the python sandbox with the specified file names
+The datasets are already saved in the python sandbox with the specified file names.
+
+If prev_csv_paths are provided, first use the get_results_from_csv tool to retrieve previous visualization configurations, then analyze and modify them based on the user's request.
 
 IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the visualization):
 - Add clear, descriptive titles to all visualizations

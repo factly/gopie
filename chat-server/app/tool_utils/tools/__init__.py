@@ -20,6 +20,7 @@ class ToolNames(Enum):
     PLAN_SQL_QUERY = "plan_sql_query"
     RUN_PYTHON_CODE = "run_python_code"
     RESULT_PATHS = "result_paths"
+    GET_RESULTS_FROM_CSV = "get_results_from_csv"
 
 
 def get_tool(

@@ -1,9 +1,11 @@
 import asyncio
 import csv
+import json
 import uuid
 from datetime import datetime
 from io import StringIO
 from typing import Annotated
+from urllib.parse import urlparse
 
 import aioboto3
 from e2b_code_interpreter import AsyncSandbox
@@ -12,6 +14,7 @@ from langgraph.prebuilt import InjectedState
 from langsmith import traceable
 
 from app.core.config import settings
+from app.core.log import logger
 
 from .types import Dataset
 
@@ -156,3 +159,65 @@ async def upload_visualization_result_data(data: list[str]) -> list[str]:
             s3_paths.append(s3_path)
         await asyncio.gather(*upload_tasks)
     return s3_paths
+
+
+@traceable(run_type="chain", name="get_previous_visualizations_configs")
+async def get_previous_visualizations_configs(prev_csv_paths: list[str]) -> list[dict]:
+    """
+    Downloads and parses previous visualization configurations from S3 storage.
+
+    Parameters:
+        prev_csv_paths (list[str]): List of S3 URLs containing previous visualization configs.
+
+    Returns:
+        list[dict]: List of parsed visualization configurations.
+    """
+    if not prev_csv_paths:
+        return []
+
+    access_key_id = settings.S3_ACCESS_KEY
+    secret_access_key = settings.S3_SECRET_KEY
+    region = settings.S3_REGION
+    bucket_name = settings.S3_BUCKET
+    s3_host = settings.S3_HOST
+
+    if not all([access_key_id, secret_access_key, bucket_name]):
+        raise ValueError("AWS credentials or bucket name not set in environment variables")
+
+    session = aioboto3.Session()
+    visualization_configs = []
+
+    async with session.client(  # type: ignore
+        "s3",
+        endpoint_url=s3_host,
+        region_name=region,
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
+    ) as s3_client:
+
+        for csv_path in prev_csv_paths:
+            try:
+                parsed_url = urlparse(csv_path)
+                if parsed_url.netloc == f"{bucket_name}":
+                    key = parsed_url.path.lstrip('/')
+                else:
+                    path_parts = parsed_url.path.lstrip('/').split('/', 1)
+                    if len(path_parts) > 1:
+                        key = path_parts[1]
+                    else:
+                        key = path_parts[0]
+
+                response = await s3_client.get_object(Bucket=bucket_name, Key=key)
+                content = await response['Body'].read()
+
+                config_data = json.loads(content.decode('utf-8'))
+                visualization_configs.append({
+                    'source_path': csv_path,
+                    'config': config_data
+                })
+
+            except Exception as e:
+                logger.warning(f"Failed to download visualization config from {csv_path}: {str(e)}")
+                continue
+
+    return visualization_configs
