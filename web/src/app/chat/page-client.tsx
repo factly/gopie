@@ -1063,11 +1063,12 @@ function ChatPageClient() {
       <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full h-full flex flex-col"
-            >
+            <div className="relative w-full h-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full h-full flex flex-col"
+              >
               <div className="flex w-full items-center border-b">
                 <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
                   <TabsTrigger
@@ -1164,7 +1165,37 @@ function ChatPageClient() {
                   currentUserId={currentUserId}
                 />
               </TabsContent>
-            </Tabs>
+              </Tabs>
+              {activeTab === "chat" && (
+                <div className="absolute bottom-0 left-0 right-0 z-10">
+                  {isCurrentUserOwner || isAuthDisabled ? (
+                    <ChatInput
+                      onStop={handleStop}
+                      isStreaming={isStreaming}
+                      selectedContexts={selectedContexts}
+                      onSelectContext={handleSelectContext}
+                      onRemoveContext={handleRemoveContext}
+                      // isVoiceModeActive={isVoiceModeActive}
+                      // setIsVoiceModeActive={setIsVoiceModeActive}
+                      lockableContextIds={
+                        selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+                      }
+                      hasContext={selectedContexts.length > 0}
+                      input={input}
+                      handleInputChange={handleInputChange}
+                      handleSubmit={handleSubmit}
+                      isLoading={isLoading}
+                    />
+                  ) : selectedChatId ? (
+                    <ReadOnlyMessage
+                      chatOwner={chatDetails?.created_by}
+                      chatVisibility={chatDetails?.visibility}
+                      chatTitle={chatDetails?.title}
+                    />
+                  ) : null}
+                </div>
+              )}
+            </div>
           </ResizablePanel>
           {isResultsPanelOpen && (
             <>
@@ -1184,41 +1215,7 @@ function ChatPageClient() {
           )}
         </ResizablePanelGroup>
       </div>
-      {activeTab === "chat" && (
-        <div
-          className="fixed bottom-0 z-10"
-          style={{
-            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "0rem",
-            right: isResultsPanelOpen ? sqlPanelWidth : 0,
-          }}
-        >
-          {isCurrentUserOwner || isAuthDisabled ? (
-            <ChatInput
-              onStop={handleStop}
-              isStreaming={isStreaming}
-              selectedContexts={selectedContexts}
-              onSelectContext={handleSelectContext}
-              onRemoveContext={handleRemoveContext}
-              // isVoiceModeActive={isVoiceModeActive}
-              // setIsVoiceModeActive={setIsVoiceModeActive}
-              lockableContextIds={
-                selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-              }
-              hasContext={selectedContexts.length > 0}
-              input={input}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-          ) : selectedChatId ? (
-            <ReadOnlyMessage
-              chatOwner={chatDetails?.created_by}
-              chatVisibility={chatDetails?.visibility}
-              chatTitle={chatDetails?.title}
-            />
-          ) : null}
-        </div>
-      )}
+
       {/* {isVoiceModeActive && latestAssistantMessage && (
         <VoiceMode
           isActive={isVoiceModeActive}
