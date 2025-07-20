@@ -19,6 +19,7 @@ class VisualizationResult(BaseModel):
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset]
+    prev_csv_paths: list[str]
 
 
 class OutputState(TypedDict):
@@ -34,3 +35,4 @@ class State(TypedDict):
     is_input_prepared: bool
     s3_paths: list[str]
     tool_call_count: int
+    prev_csv_paths: list[str] | None
