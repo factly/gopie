@@ -29,6 +29,7 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { History, PanelLeft } from "lucide-react";
 import { useChatStore } from "@/lib/stores/chat-store";
 // import { VoiceMode } from "@/components/chat/voice-mode";
 // import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
@@ -207,17 +208,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex items-center justify-between p-2 mb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStartNewChat}
-          className="h-8 px-2 text-xs w-full justify-start"
-        >
-          <MessageSquarePlus className="h-4 w-4 mr-2" />
-          New Chat
-        </Button>
-      </div>
+
 
       {allChats.length > 0 ? (
         <ScrollArea className="flex-1 pr-2">
@@ -272,9 +263,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <ChatVisibilityIndicator visibility={chat.visibility} />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                        {dateString}
-                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -288,10 +276,8 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       </Button>
                     </div>
                   </div>
-                  {/* Note: Since the API doesn't return dataset/project info with chats,
-                      we might need to fetch this information separately or store it differently */}
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    Chat History
+                    {dateString}
                   </div>
                 </div>
               );
@@ -350,7 +336,7 @@ const ChatInput = React.memo(
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
-        <div className="flex items-start gap-2 w-full px-2">
+        <div className="flex items-start gap-2 w-full pr-2">
           <ContextPicker
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
@@ -363,7 +349,7 @@ const ChatInput = React.memo(
             onChange={handleMentionInputChange}
             onSubmit={handleSubmit}
             disabled={isLoading}
-            placeholder="Ask a question..."
+            placeholder="Ask questions about your data..."
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
@@ -1070,7 +1056,21 @@ function ChatPageClient() {
                 className="w-full h-full flex flex-col"
               >
               <div className="flex w-full items-center border-b">
-                <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mr-2 ml-2 p-1 h-10 w-8"
+                  onClick={() => {
+                    if (isMobile) {
+                      setOpenMobile(!isSidebarOpen);
+                    } else {
+                      setOpen(!isSidebarOpen);
+                    }
+                  }}
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </Button>
+                <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
                   <TabsTrigger
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
@@ -1090,13 +1090,22 @@ function ChatPageClient() {
                       </span>
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="history"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
-                  >
-                    History
-                  </TabsTrigger>
                 </TabsList>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`mr-2 ${activeTab === "history" ? "bg-muted border-b-2 border-primary" : ""}`}
+                      onClick={() => setActiveTab("history")}
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>History</p>
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
