@@ -10,7 +10,7 @@ export interface ColumnNameMapping {
 
 interface ColumnNameState {
   projectId: string | null;
-  columnMappings: Record<string, ColumnNameMapping>;
+  columnMappings: Map<string, ColumnNameMapping>;
   setProjectId: (projectId: string) => void;
   setColumnMappings: (originalNames: string[], columnTypes?: string[]) => void;
   updateColumnName: (originalName: string, updatedName: string) => void;
@@ -84,12 +84,12 @@ export const validateDataType = (type: string): boolean => {
 
 export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
   projectId: null,
-  columnMappings: {},
+  columnMappings: new Map<string, ColumnNameMapping>(),
 
   setProjectId: (projectId: string) => set({ projectId }),
 
   setColumnMappings: (originalNames: string[], columnTypes?: string[]) => {
-    const mappings: Record<string, ColumnNameMapping> = {};
+    const mappings = new Map<string, ColumnNameMapping>();
 
     originalNames.forEach((name, index) => {
       const isValid = validateColumnName(name);
@@ -102,7 +102,7 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
         dataType,
         updatedDataType: dataType,
       };
-      mappings[name] = mapping;
+      mappings.set(name, mapping);
     });
 
     set({ columnMappings: mappings });
@@ -110,16 +110,16 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
   updateColumnName: (originalName: string, updatedName: string) => {
     set((state) => {
-      const newMappings = { ...state.columnMappings };
-      const currentMapping = newMappings[originalName];
+      const newMappings = new Map(state.columnMappings);
+      const currentMapping = newMappings.get(originalName);
 
       if (currentMapping) {
         const isValid = validateColumnName(updatedName);
-        newMappings[originalName] = {
+        newMappings.set(originalName, {
           ...currentMapping,
           updatedName,
           isValid,
-        };
+        });
       }
 
       return { columnMappings: newMappings };
@@ -128,25 +128,25 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
   updateColumnDataType: (originalName: string, updatedDataType: string) => {
     set((state) => {
-      const newMappings = { ...state.columnMappings };
-      const currentMapping = newMappings[originalName];
+      const newMappings = new Map(state.columnMappings);
+      const currentMapping = newMappings.get(originalName);
 
       if (currentMapping) {
-        newMappings[originalName] = {
+        newMappings.set(originalName, {
           ...currentMapping,
           updatedDataType,
-        };
+        });
       }
 
       return { columnMappings: newMappings };
     });
   },
 
-  resetColumnMappings: () => set({ columnMappings: {} }),
+  resetColumnMappings: () => set({ columnMappings: new Map() }),
 
   getColumnMappings: () => {
     const result: Record<string, string> = {};
-    Object.values(get().columnMappings).forEach((mapping) => {
+    get().columnMappings.forEach((mapping) => {
       result[mapping.originalName] = mapping.updatedName;
     });
     return result;
@@ -154,7 +154,7 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
   getColumnDataTypes: () => {
     const result: Record<string, string> = {};
-    Object.values(get().columnMappings).forEach((mapping) => {
+    get().columnMappings.forEach((mapping) => {
       if (mapping.updatedDataType) {
         result[mapping.updatedName] = mapping.updatedDataType;
       }
@@ -164,25 +164,25 @@ export const useColumnNameStore = create<ColumnNameState>((set, get) => ({
 
   hasDataTypeChanges: () => {
     const mappings = get().columnMappings;
-    return Object.values(mappings).some(
+    return Array.from(mappings.values()).some(
       (mapping) => mapping.dataType !== mapping.updatedDataType
     );
   },
 
   autoFixAllColumns: () => {
     set((state) => {
-      const newMappings = { ...state.columnMappings };
+      const newMappings = new Map(state.columnMappings);
 
       // Process all column mappings
-      Object.entries(newMappings).forEach(([key, mapping]) => {
+      newMappings.forEach((mapping, key) => {
         // Only fix invalid column names
         if (!mapping.isValid) {
           const fixedName = toSnakeCase(mapping.originalName);
-          newMappings[key] = {
+          newMappings.set(key, {
             ...mapping,
             updatedName: fixedName,
             isValid: true, // Should always be valid after fixing
-          };
+          });
         }
       });
 
