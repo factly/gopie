@@ -27,7 +27,7 @@ export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
     <div className="flex h-full min-h-0 flex-col bg-muted/50">
 
       <Tabs defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 rounded-none bg-background border-b">
+        <TabsList className="h-10 grid w-full grid-cols-2 rounded-none bg-background border-b">
           <TabsTrigger
             value="sql"
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
