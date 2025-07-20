@@ -28,12 +28,6 @@ const nextConfig: NextConfig = {
       },
     });
 
-    // Handle canvas module for Vega visualization (browser-only)
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      canvas: false,
-    };
-
     return config;
   },
 };
