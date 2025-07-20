@@ -15,26 +15,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-// Define route mappings for better breadcrumb labels
-const routeLabels: Record<string, string> = {
-  dashboard: "Dashboard",
-  chat: "Chat",
-  upload: "Upload",
-  schemas: "Schemas",
-  projects: "Projects",
-  datasets: "Datasets",
-  api: "API",
-};
-
-// Helper function to detect if a segment looks like an ID
-function isIdSegment(segment: string): boolean {
-  // Check for UUID-like patterns or long alphanumeric strings
-  return (
-    /^[a-fA-F0-9]{8,}$/.test(segment.replace(/[-\s]/g, "")) ||
-    /^[a-zA-Z0-9]{20,}$/.test(segment)
-  );
-}
-
 function useBreadcrumbData() {
   const params = useParams();
   const projectId = params?.projectId as string;
@@ -58,7 +38,7 @@ function useBreadcrumbData() {
 function generateBreadcrumbs(
   pathname: string,
   projectData?: { id: string; name?: string; title?: string },
-  datasetData?: { id: string; name?: string; title?: string }
+  datasetData?: { id: string; name?: string; title?: string; alias?: string }
 ) {
   // Skip breadcrumbs for home page
   if (pathname === "/") {
