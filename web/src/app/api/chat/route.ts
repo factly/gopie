@@ -149,7 +149,7 @@ export async function POST(req: Request) {
             datasets_used: {
               type: "function",
               parameters: z.object({
-                datasets: z.any(),
+                datasets: z.array(z.string()),
               }),
               execute: async ({ datasets }) => {
                 console.log("🔧 Datasets used executed:", datasets);
