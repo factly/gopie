@@ -203,19 +203,15 @@ export function ChatMessage({
   >([]);
   const [displayVisualizationResults, setDisplayVisualizationResults] =
     useState<string[]>([]);
-  const [expandedQueries, setExpandedQueries] = useState<Set<number>>(
-    new Set()
-  );
+  const [expandedQueries, setExpandedQueries] = useState<number[]>([]);
 
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
       } else {
-        newSet.add(index);
+        return [...prev, index];
       }
-      return newSet;
     });
   };
 
@@ -626,13 +622,13 @@ export function ChatMessage({
                 {displaySqlQueries.map((query, index) => (
                   <Collapsible
                     key={index}
-                    open={expandedQueries.has(index)}
+                    open={expandedQueries.includes(index)}
                     onOpenChange={() => toggleQueryExpansion(index)}
                     className="border border-border bg-card shadow-sm"
                   >
                     <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {expandedQueries.has(index) ? (
+                        {expandedQueries.includes(index) ? (
                           <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         ) : (
                           <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
