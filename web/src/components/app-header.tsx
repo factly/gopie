@@ -80,7 +80,7 @@ function generateBreadcrumbs(
   // Add project breadcrumb if we have a project
   if (projectId && projectData) {
     breadcrumbs.push({
-      label: projectData.name || projectData.title || "Project",
+      label: projectData.name || "Project",
       href: `/projects/${projectId}`,
       isCurrentPage: !datasetId, // Current page if no dataset
     });
@@ -89,7 +89,7 @@ function generateBreadcrumbs(
   // Add dataset breadcrumb if we have a dataset
   if (datasetId && datasetData) {
     breadcrumbs.push({
-      label: datasetData.alias || datasetData.title || datasetData.name || "Dataset",
+      label: datasetData.alias || datasetData.name || "Dataset",
       href: undefined, // No href for current page
       isCurrentPage: true,
     });

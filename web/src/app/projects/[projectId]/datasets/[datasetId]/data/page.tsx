@@ -72,6 +72,7 @@ export default function SqlPage({
     Record<string, unknown>[] | null
   >(null);
   const [isResizing, setIsResizing] = React.useState(false);
+  const [previewRowLimit, setPreviewRowLimit] = React.useState(100);
 
   const {
     transcript,
@@ -87,39 +88,10 @@ export default function SqlPage({
     },
   });
 
-  const [query, setQuery] = React.useState(
-    `SELECT * FROM ${dataset?.name} LIMIT 10`
-  );
+  const [query, setQuery] = React.useState("");
+  const initializedDatasetRef = React.useRef<string | null>(null);
 
-  React.useEffect(() => {
-    setQuery(`SELECT * FROM ${dataset?.name} LIMIT 10`);
-    if (dataset?.name) {
-      handleExecuteSql();
-      // Fetch initial dataset rows for preview
-      fetchDatasetRows();
-    }
-  }, [dataset]);
-
-  const fetchDatasetRows = async () => {
-    if (!dataset?.name) return;
-
-    try {
-      const response = await executeSql.mutateAsync(
-        `SELECT * FROM ${dataset.name} LIMIT 100`
-      );
-      setDatasetRows(response.data);
-    } catch (error) {
-      console.error("Failed to fetch dataset rows:", error);
-    }
-  };
-
-  React.useEffect(() => {
-    if (transcript) {
-      setNaturalQuery(transcript);
-    }
-  }, [transcript]);
-
-  const handleExecuteSql = async () => {
+  const handleExecuteSql = React.useCallback(async () => {
     if (!query.trim()) {
       toast.error("Please enter a SQL query");
       return;
@@ -133,11 +105,74 @@ export default function SqlPage({
       },
       error: (err) => `Failed to execute query: ${err.message}`,
     });
-  };
+  }, [query, executeSql]);
+
+  const fetchDatasetRows = React.useCallback(async () => {
+    if (!dataset?.name) return;
+
+    try {
+      const response = await executeSql.mutateAsync(
+        `SELECT * FROM ${dataset.name} LIMIT ${previewRowLimit}`
+      );
+      setDatasetRows(response.data);
+    } catch (error) {
+      console.error("Failed to fetch dataset rows:", error);
+      toast.error(
+        `Failed to fetch dataset preview: ${(error as Error).message || "Unknown error occurred"}`
+      );
+      setDatasetRows(null);
+    }
+  }, [dataset?.name, executeSql, previewRowLimit]);
+
+  React.useEffect(() => {
+    if (dataset?.name && dataset.name !== initializedDatasetRef.current) {
+      // Mark this dataset as initialized
+      initializedDatasetRef.current = dataset.name;
+      
+      const initialQuery = `SELECT * FROM ${dataset.name} LIMIT 10`;
+      setQuery(initialQuery);
+      
+      // Execute the initial query directly
+      if (initialQuery.trim()) {
+        toast.promise(executeSql.mutateAsync(initialQuery), {
+          loading: "Executing SQL query...",
+          success: (response) => {
+            setResults(response.data);
+            return "Query executed successfully";
+          },
+          error: (err) => `Failed to execute query: ${err.message}`,
+        });
+      }
+      
+      // Fetch initial dataset rows for preview
+      executeSql.mutateAsync(`SELECT * FROM ${dataset.name} LIMIT ${previewRowLimit}`)
+        .then((response) => {
+          setDatasetRows(response.data);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch dataset rows:", error);
+          toast.error(
+            `Failed to fetch dataset preview: ${(error as Error).message || "Unknown error occurred"}`
+          );
+          setDatasetRows(null);
+        });
+    }
+  }, [dataset?.name, executeSql, previewRowLimit]);
+
+  React.useEffect(() => {
+    if (transcript) {
+      setNaturalQuery(transcript);
+    }
+  }, [transcript]);
 
   const handleGenerateAndExecute = async () => {
     if (!naturalQuery.trim()) {
       toast.error("Please enter your question");
+      return;
+    }
+
+    if (!dataset?.name || dataset.name.trim() === "") {
+      toast.error("Dataset name is missing. Please refresh the page and try again.");
       return;
     }
 
@@ -147,7 +182,7 @@ export default function SqlPage({
       toast.loading("Converting to SQL...", { id: promiseId });
       const sqlQuery = await nl2Sql.mutateAsync({
         query: naturalQuery,
-        datasetId: dataset?.name || "",
+        datasetId: dataset.name,
       });
 
       // Set the generated SQL directly in the main editor
@@ -282,6 +317,7 @@ export default function SqlPage({
                               : "hover:shadow-sm"
                           }`}
                           onClick={toggleListening}
+                          aria-label={listening ? "Stop voice input" : "Start voice input"}
                         >
                           {listening ? (
                             <MicOff className="h-4 w-4" />
@@ -436,10 +472,8 @@ export default function SqlPage({
                           variant="outline"
                           className="text-xs"
                         >
-                          {typeof column === "string"
-                            ? column
-                            : column.column_name}
-                          {typeof column === "object" && column.column_type && (
+                          {column.column_name}
+                          {column.column_type && (
                             <span className="text-muted-foreground ml-1">
                               ({column.column_type})
                             </span>
@@ -454,7 +488,7 @@ export default function SqlPage({
                 {datasetRows && datasetRows.length > 0 && (
                   <div className="flex-1 min-h-0 flex flex-col gap-2">
                     <h4 className="text-sm font-medium text-muted-foreground flex-shrink-0">
-                      Sample Data (first 100 rows):
+                      Sample Data (first {previewRowLimit} rows):
                     </h4>
                     <div className="border rounded-md overflow-hidden flex-1 min-h-0">
                       <div className="h-full overflow-auto">
