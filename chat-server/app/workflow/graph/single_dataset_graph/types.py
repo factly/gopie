@@ -1,25 +1,8 @@
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, TypedDict
 
+from app.models.query import QueryResult, ValidationResult
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
-
-
-class SQLQueryResult(TypedDict):
-    sql_query: str
-    explanation: str
-    result: list[dict[str, Any]] | None
-    success: bool
-    error: str | None
-
-
-class SingleDatasetQueryResult(TypedDict, total=False):
-    user_query: str
-    user_friendly_dataset_name: str | None
-    dataset_name: str | None
-    sql_results: list[SQLQueryResult] | None
-    response_for_non_sql: str | None
-    timestamp: str
-    error: str | None
 
 
 class InputState(TypedDict):
@@ -29,19 +12,16 @@ class InputState(TypedDict):
 
 
 class OutputState(TypedDict):
-    query_result: SingleDatasetQueryResult | None
-    response_text: str
+    query_result: QueryResult
 
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     retry_count: int
-    # TODO: create a specific type for validation result
-    validation_result: dict | None
+    validation_result: ValidationResult | None
     dataset_id: str | None
     user_query: str | None
-    query_result: SingleDatasetQueryResult | None
-    response_text: str
+    query_result: QueryResult
 
 
 class ConfigSchema(TypedDict):

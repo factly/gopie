@@ -5,11 +5,24 @@ from langchain_core.prompts import (
 )
 
 from app.models.schema import DatasetSchema
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 
 
 def create_identify_datasets_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
+    """
+    Constructs a prompt for selecting relevant datasets and specifying column assumptions based on user queries and dataset schemas.
+
+    Depending on the `prompt_template` argument, returns either a `ChatPromptTemplate` for further formatting or a list of `SystemMessage` and `HumanMessage` objects ready for use. The prompt includes detailed instructions for distinguishing between required and semantic searched datasets, guidelines for providing column value assumptions (with strict rules for string vs. non-string columns), and the expected JSON response format for downstream processing.
+
+    Parameters:
+        prompt_template (bool, optional): If True, returns a `ChatPromptTemplate` object; otherwise, returns formatted message objects.
+        input (str, optional): The user input or query to be included in the prompt.
+
+    Returns:
+        list[BaseMessage] | ChatPromptTemplate: The constructed prompt as either a message list or a prompt template, depending on the `prompt_template` flag.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -37,6 +50,8 @@ There are TWO types of datasets provided:
 COLUMN ASSUMPTIONS:
 * Provide column assumptions for ALL datasets that will be used (required datasets + selected datasets from semantic search)
 * List ONLY the columns needed for the query
+* IMPORTANT: Only provide value assumptions (exact_values/fuzzy_values) for TEXT/STRING/VARCHAR columns that support fuzzy matching
+* For NON-STRING columns (BIGINT, INTEGER, FLOAT, DATE, TIMESTAMP, BOOLEAN, etc.), include the column in the list but DO NOT provide exact_values or fuzzy_values
 * For string columns ONLY, provide:
     - "exact_values": actual values seen in sample_data that match the query terms
     - "fuzzy_values": search terms or substrings to help match the column values; provide meaningful text values that can be used to match the column values in that dataset, avoiding numeric or unprocessable values
@@ -44,9 +59,11 @@ COLUMN ASSUMPTIONS:
 VALUE GUIDELINES:
 * Provide REAL values (e.g., "finance", "Alice") NOT placeholders
 * Both exact_values and fuzzy_values refer to actual data values, not column names
-* Include ONLY string columns in the values list
+* Include ONLY string/text/varchar columns in the values list
+* DO NOT provide exact_values or fuzzy_values for numeric columns (BIGINT, INTEGER, FLOAT), date columns (DATE, TIMESTAMP), or boolean columns
 * DO NOT include numerical or nonsensical values in fuzzy_values that cannot be used to effectively match data
 * Only use exact_values when completely confident the value exists in sample_data
+* For non-string columns, simply include the column name without any value assumptions to avoid type errors in SQL operations
 
 NODE MESSAGE:
 * Include a brief informative message to pass to subsequent nodes
@@ -65,8 +82,8 @@ FORMAT YOUR RESPONSE AS JSON:
             "columns": [
                 {
                     "name": "column_name",
-                    "exact_values": ["value1", ...],
-                    "fuzzy_values": ["value2", ...]
+                    "exact_values": ["value1", ...],  // Only for string columns
+                    "fuzzy_values": ["value2", ...]   // Only for string columns
                 }
             ]
         }
@@ -80,6 +97,7 @@ IMPORTANT:
 * Always use the dataset "Table SQL Name" field (not "name" field)
 * Only use exact_values when completely confident the value exists
 * Make your node_message informative providing context on all datasets being used
+* For numeric, date, boolean, or other non-string columns: include them in column_assumptions but omit exact_values and fuzzy_values to prevent SQL type errors
 """
 
     human_template_str = """
@@ -89,7 +107,7 @@ IMPORTANT:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

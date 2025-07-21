@@ -6,7 +6,8 @@ This directory contains tests for the GoPie Chat Server, including unit tests an
 
 ### E2E Test Files
 
-- `tests/e2e/test_e2e_script.py`: Tests chat completion functionality with actual API calls
+- `tests/e2e/test_e2e_script.py`: Main pytest test file for chat completion functionality with actual API calls
+- `tests/e2e/test_utils.py`: Utility functions for E2E testing (model setup, API requests, evaluation chains)
 - `tests/e2e/test_upload_schema.py`: Tests schema upload endpoint functionality
 - `tests/e2e/single_dataset_cases.py`: Contains test cases for single dataset queries
 - `tests/e2e/multi_dataset_cases.py`: Contains test cases for multi-dataset queries
@@ -29,6 +30,8 @@ This directory contains tests for the GoPie Chat Server, including unit tests an
 ```bash
 # Run chat completion tests
 python -m tests.e2e.test_e2e_script
+
+pytest tests/e2e/test_e2e_script.py::test_all_cases
 
 # Run schema upload tests
 python -m tests.e2e.test_upload_schema
@@ -75,9 +78,20 @@ cache_dir = "tests/.pytest_cache"
 
 This script performs comprehensive end-to-end testing of the chat completion API:
 
+- **Test Organization**: Uses pytest framework with fixtures for clean test execution
 - **Response Evaluation**: Uses LLM-based evaluation to assess response correctness against expected outcomes
+- **Modular Design**: Imports utility functions from `test_utils.py` for clean separation of concerns
 
 The test uses test cases defined in `single_dataset_cases.py` and `multi_dataset_cases.py` to cover a wide range of query scenarios.
+
+#### `test_utils.py`
+
+Contains utility functions for E2E testing:
+
+- **Model Setup**: Functions for configuring LLM models and evaluation chains
+- **API Communication**: Helper functions for sending chat requests and processing responses
+- **Tool Call Processing**: Functions for handling and validating tool calls in API responses
+- **Result Evaluation**: Functions for evaluating test results using LLM-based assessment
 
 #### `test_upload_schema.py`
 
@@ -172,7 +186,7 @@ GEMINI_VIRTUAL_KEY=your_gemini_virtual_key
 
 2. Run with:
    ```bash
-   python -m tests.e2e.test_e2e_script
+   pytest tests/e2e/test_e2e_script.py
    ```
 
 ### Adding Unit Tests
@@ -183,5 +197,5 @@ GEMINI_VIRTUAL_KEY=your_gemini_virtual_key
 
 3. Run with:
    ```bash
-   pytest tests/unit/your_test_file.py
+   pytest tests/unit
    ```

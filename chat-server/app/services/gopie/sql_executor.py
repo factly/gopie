@@ -13,7 +13,7 @@ from app.utils.graph_utils.result_validation import (
 
 SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
 
-SQL_RESPONSE_TYPE = list[dict[str, Union[str, int, float, None]]]
+SQL_RESPONSE_TYPE = list[dict[str, Union[str, int, float, None]]] | None
 
 
 @traceable(run_type="tool", name="execute_sql")

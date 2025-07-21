@@ -69,7 +69,6 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         tools_names = [
             ToolNames.EXECUTE_SQL_QUERY,
             ToolNames.GET_TABLE_SCHEMA,
-            ToolNames.LIST_DATASETS,
             ToolNames.PLAN_SQL_QUERY,
         ]
 

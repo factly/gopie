@@ -10,14 +10,15 @@ def create_visualize_data_prompt(
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     user_query = kwargs.get("user_query", "")
-    datasets = kwargs.get("datasets", [])
-    csv_paths = kwargs.get("csv_paths", [])
+    datasets_csv_info = kwargs.get("datasets_csv_info", "")
 
-    system_content = """\
+    system_content = """
 You are an expert data visualization engineer. Use altair to create visualizations, and save them to json.
-Do not create the date, read the data from the csv_path where the data is stored.
+Do not create the data, read the data from the csv_path where the data is stored.
 Use the run_python_code tool to run python code.
-The datasets are already saved in the python sandbox with the specified file names
+The datasets are already saved in the python sandbox with the specified file names.
+
+If prev_csv_paths are provided, first use the get_python_code_from_s3 tool to retrieve previous python code which were used to create visualization configurations, then analyze and modify them based on the user's request.
 
 IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the visualization):
 - Add clear, descriptive titles to all visualizations
@@ -55,12 +56,6 @@ The following are the datasets and their descriptions:
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
-
-    datasets_csv_info = ""
-    for idx, (dataset, csv_path) in enumerate(zip(datasets, csv_paths)):
-        datasets_csv_info += f"Dataset {idx + 1}: \n\n"
-        datasets_csv_info += f"Description: {dataset.description}\n\n"
-        datasets_csv_info += f"CSV Path: {csv_path}\n\n"
 
     human_content = human_template_str.format(
         user_query=user_query, datasets_csv_info=datasets_csv_info

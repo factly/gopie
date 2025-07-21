@@ -4,8 +4,24 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+
 
 def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
+    """
+    Generate a prompt for summarizing the outcome of a subquery execution in user-friendly language.
+
+    Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of formatted `SystemMessage` and `HumanMessage` objects for immediate use. The prompt guides the AI to produce concise, actionable updates about subquery results, handling cases of success, failure, or truncated data, and explicitly instructs avoidance of technical jargon or error exposure.
+
+    Parameters:
+        prompt_template (bool, optional): If True, returns a prompt template for dynamic use; otherwise, returns formatted messages.
+        original_user_query (str, optional): The user's original query for context.
+        subquery_result (str, optional): The result or output of the subquery.
+        subquery_messages (str, optional): Additional messages or context related to the subquery.
+
+    Returns:
+        list | ChatPromptTemplate: Either a list of message objects or a prompt template, depending on the mode.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     original_user_query = kwargs.get("original_user_query", "")
     subquery_result = kwargs.get("subquery_result", "")
@@ -18,21 +34,32 @@ INSTRUCTIONS:
 1. First, determine if this subquery was successful or failed by examining
    the data.
 2. If the subquery FAILED:
-   - Explain in simple terms why it failed
-   - Analyze if this failure is critical for the remaining subqueries
+   - Never expose technical errors, stack traces, or system messages
+   - Identify the issue in user-friendly terms (e.g., "couldn't find the requested information", "data not available")
+   - Focus on what this means for the user's query rather than technical details
+   - Analyze if this impacts the ability to answer the overall question
    - Clearly state if execution should continue or stop
-   - Be professional but empathetic about the failure
+   - Remain helpful and solution-oriented
 
 3. If the subquery was SUCCESSFUL:
    - Provide a clear and concise summary of the results
-   - Focus on the actual data retrieved and its relevance to the user's
-     question
+   - Focus on the actual data retrieved and its relevance to the user's question
    - Highlight any interesting patterns or insights
    - Don't describe the execution process, focus on what was found
 
-4. Keep your response concise (2-3 sentences)
-5. End by stating the next action (continue to next subquery, stopping
-   execution, etc.)
+4. If the subquery returned TRUNCATED RESULTS:
+   - Acknowledge that this part returned a large dataset that was limited due to large result sizes
+   - Note that the data is already displayed to the user for analysis
+   - Continue with execution as this is not a failure
+
+5. Keep your response concise (2-3 sentences)
+6. End by stating the next action (continue to next subquery, stopping execution, etc.)
+7. If the query is asking for visualizations, do not mention it as it is out of scope for you to answer. So, don't reply anything related to visualizations.
+
+WHAT TO AVOID:
+- Technical jargon, SQL errors, or system implementation details
+- Exposing errors or execution failures
+- Blame language about system or user mistakes
 
 Your response should be informative, actionable, and user-friendly.
 """
@@ -94,7 +121,7 @@ Message: {last_stream_message_content}
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

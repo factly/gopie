@@ -6,25 +6,34 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	validate_input(validate_input)
+	stream_invalid_response(stream_invalid_response)
 	process_context(process_context)
 	supervisor(supervisor)
 	multi_dataset_agent(multi_dataset_agent)
 	single_dataset_agent(single_dataset_agent)
 	visualization_agent(visualization_agent)
 	check_visualization(check_visualization)
+	generate_result(generate_result)
+	post_agent_fork(post_agent_fork)
+	query_router(query_router)
 	__end__([<p>__end__</p>]):::last
+	__start__ --> process_context;
 	__start__ --> validate_input;
-	check_visualization --> supervisor;
-	multi_dataset_agent -.-> __end__;
-	multi_dataset_agent -.-> visualization_agent;
-	process_context --> supervisor;
-	single_dataset_agent -.-> __end__;
-	single_dataset_agent -.-> visualization_agent;
+	check_visualization --> query_router;
+	multi_dataset_agent --> post_agent_fork;
+	post_agent_fork -.-> __end__;
+	post_agent_fork --> generate_result;
+	post_agent_fork -.-> visualization_agent;
+	process_context --> check_visualization;
+	query_router -. &nbsp;invalid&nbsp; .-> stream_invalid_response;
+	query_router -. &nbsp;valid&nbsp; .-> supervisor;
+	single_dataset_agent --> post_agent_fork;
 	supervisor -.-> multi_dataset_agent;
 	supervisor -.-> single_dataset_agent;
 	supervisor -.-> visualization_agent;
-	validate_input --> check_visualization;
-	validate_input --> process_context;
+	validate_input --> query_router;
+	generate_result --> __end__;
+	stream_invalid_response --> __end__;
 	visualization_agent --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

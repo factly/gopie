@@ -17,7 +17,6 @@ class DatasetDetails(BaseModel):
     name: str
     alias: str
     description: str
-    format: str
     row_count: int
     columns: list[ColumnDetails]
     size: int

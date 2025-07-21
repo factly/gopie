@@ -26,6 +26,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { ChatTabs } from "@/components/chat/chat-tabs";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { VoiceMode } from "@/components/chat/voice-mode";
@@ -61,7 +62,8 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
   >([]);
-  const { isOpen, setIsOpen } = useSqlStore();
+  const { isOpen, setIsOpen, resetExecutedQueries } = useSqlStore();
+  const { clearPaths: clearVisualizationPaths, setIsOpen: setVisualizationOpen } = useVisualizationStore();
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [latestAssistantMessage, setLatestAssistantMessage] = useState<
     string | null
@@ -434,9 +436,14 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    selectChatForDataset(params.datasetId, null, null)
-                  }
+                  onClick={() => {
+                    selectChatForDataset(params.datasetId, null, null);
+                    // Clear results when starting a new chat
+                    resetExecutedQueries();
+                    clearVisualizationPaths();
+                    setIsOpen(false);
+                    setVisualizationOpen(false);
+                  }}
                   className="gap-1.5 h-9 font-medium shadow-sm"
                 >
                   <MessageSquarePlus className="h-3.5 w-3.5" />
