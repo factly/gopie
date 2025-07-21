@@ -18,6 +18,7 @@ NODE_TO_COMPLEXITY = {
     "plan_sql_query_tool": ModelCategory.ADVANCED,
     "generate_col_descriptions": ModelCategory.FAST,
     "validate_result": ModelCategory.BALANCED,
+    "validate_input": ModelCategory.FAST,
 }
 
 COMPLEXITY_TO_MODEL = {

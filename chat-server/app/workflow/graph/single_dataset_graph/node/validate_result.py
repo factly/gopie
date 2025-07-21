@@ -9,6 +9,10 @@ from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
+from app.models.query import ValidationResult
+
+
+RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
 
 
 @configure_node(
@@ -16,6 +20,14 @@ from app.workflow.graph.single_dataset_graph.types import State
     progress_message="Validating query result...",
 )
 async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any]:
+    """
+    Validate the query result using a language model and return the validation outcome, updated retry count, and workflow messages.
+    
+    If the language model's recommendation is "rerun_query", the retry count is incremented. If the recommendation is not recognized, an error is raised and an error message is returned in the messages list. On successful validation, returns the parsed validation result and an intermediate step message; on failure, returns `None` for the validation result and an error message.
+     
+    Returns:
+        dict: A dictionary containing the updated `retry_count`, the `validation_result` (or `None` on error), and a list of workflow messages.
+    """
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
 
@@ -29,16 +41,19 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         llm = get_model_provider(config).get_llm_for_node("validate_result")
         parser = JsonOutputParser()
         response = await llm.ainvoke(prompt_messages)
-        parsed_validation = parser.parse(str(response.content))
+        parsed_response = parser.parse(str(response.content))
+        validation_result = ValidationResult(**parsed_response)
 
-        if parsed_validation.get("recommendation", "") == "rerun_query":
+        if validation_result["recommendation"] not in RECOMMENDATION_LIST:
+            raise ValueError(f"Invalid recommendation: {validation_result['recommendation']}")
+
+        if validation_result["recommendation"] == "rerun_query":
             retry_count += 1
 
         return {
             "retry_count": retry_count,
-            "validation_result": parsed_validation,
-            "query_result": query_result,
-            "messages": [IntermediateStep.from_json(parsed_validation)],
+            "validation_result": validation_result,
+            "messages": [IntermediateStep.from_json(parsed_response)],
         }
 
     except Exception as e:
@@ -46,29 +61,36 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
             "retry_count": retry_count,
             "validation_result": None,
             "messages": [
-                ErrorMessage(content=f"Validation error: {str(e)}. " f"Proceeding with response.")
+                ErrorMessage(content=f"Validation error: {str(e)}. Proceeding with response.")
             ],
         }
 
 
 async def route_result_validation(state: State) -> str:
+    """
+    Determine the next workflow action based on the validation result, retry count, and last message.
+    
+    Returns:
+        str: The recommended action, either "pass_on_results" or "rerun_query", based on validation outcome and workflow state.
+    """
+    last_message = state.get("messages", [])[-1]
     validation_result = state.get("validation_result", None)
     retry_count = state.get("retry_count", 0)
 
     if not validation_result:
-        return "respond_to_user"
+        return "pass_on_results"
 
-    is_valid = validation_result.get("is_valid", True)
-    recommendation = validation_result.get("recommendation", "respond_to_user")
+    is_valid = validation_result["is_valid"]
+    recommendation = validation_result["recommendation"]
 
     if (
         is_valid
         or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
-        or isinstance(validation_result, ErrorMessage)
+        or isinstance(last_message, ErrorMessage)
     ):
-        return "respond_to_user"
+        return "pass_on_results"
 
-    if recommendation == "rerun_query":
-        return "rerun_query"
+    if recommendation in RECOMMENDATION_LIST:
+        return recommendation
 
-    return "respond_to_user"
+    return "pass_on_results"

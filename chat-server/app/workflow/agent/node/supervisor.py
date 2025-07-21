@@ -10,7 +10,9 @@ def supervisor(
     datasets_count = len(dataset_ids) if dataset_ids else 0
     datasets = state.get("datasets", [])
     needs_visualization = state.get("needs_visualization", False)
-    if datasets and needs_visualization:
+    prev_csv_paths = state.get("prev_csv_paths", [])
+
+    if needs_visualization and (datasets or prev_csv_paths):
         return Command(
             goto="visualization_agent",
         )

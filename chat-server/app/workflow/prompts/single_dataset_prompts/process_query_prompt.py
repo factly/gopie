@@ -4,31 +4,36 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-from app.workflow.graph.single_dataset_graph.types import (
-    SingleDatasetQueryResult,
-)
-from app.workflow.prompts.formatters.single_query_result import (
-    format_single_query_result,
-)
+from app.models.query import ValidationResult
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+from app.workflow.prompts.formatters.format_query_result import format_query_result
 
 
 def create_process_query_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
+    """
+    Constructs a prompt for a language model to determine whether a user's question requires SQL queries or can be answered from existing context, enforcing strict SQL formatting and response rules.
+
+    Parameters:
+        prompt_template (bool, optional): If True, returns a ChatPromptTemplate; otherwise, returns a list of BaseMessage objects.
+        input (str, optional): The user's input question to include in the prompt.
+
+    Returns:
+        list[BaseMessage] | ChatPromptTemplate: The constructed prompt as either a list of messages or a prompt template, depending on the `prompt_template` flag.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
     system_content = """
-You are a DuckDB and data expert. Analyze the user's
-question and determine if you need to generate SQL queries to get new data or
-if you can answer using available context.
+You are a DuckDB and data expert. Analyze the user's question and determine if you need to generate SQL queries to get new data or if you can answer using available context.
 
 INSTRUCTIONS:
-1. If the user's question can be answered using the sample data or previous
-   context, generate a response with empty SQL queries and give response for
-   non-sql queries.
-2. If new data analysis is needed, generate appropriate SQL queries
+1. If the user's question can be answered using the sample data or previous context, generate a response with empty SQL queries and provide a response for non-SQL queries.
+2. If new data analysis is needed, generate appropriate SQL queries.
+3. If the user is also asking for visualization than just ignore that and don't reply anything in context to the visualization requirements of the user.
 
 RULES FOR SQL QUERIES (when needed):
 - No semicolon at end of query
@@ -50,7 +55,6 @@ Return a JSON object in one of these formats:
     "explanations": ["<Brief explanation for each query>", ...],
     "response_for_non_sql": "<Brief explanation for non-sql response>"
 }
-
 Always respond with valid JSON only."""
 
     human_template_str = """
@@ -60,7 +64,7 @@ Always respond with valid JSON only."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
@@ -78,10 +82,24 @@ def format_process_query_input(
     dataset_name: str,
     dataset_schema: DatasetSchema,
     rows_csv: str,
-    prev_query_result: SingleDatasetQueryResult | None = None,
-    validation_result: dict | None = None,
+    prev_query_result: QueryResult | None = None,
+    validation_result: ValidationResult | None = None,
     **kwargs,
 ) -> dict:
+    """
+    Format user query, dataset information, sample data, and optional previous results and validation into a single prompt string for language model input.
+
+    Parameters:
+        user_query (str): The user's question to be answered.
+        dataset_name (str): Name of the dataset being queried.
+        dataset_schema (DatasetSchema): Schema object providing a formatted schema string.
+        rows_csv (str): Sample data from the dataset in CSV format.
+        prev_query_result (QueryResult | None): Optional previous query result to include as context.
+        validation_result (ValidationResult | None): Optional validation analysis of the previous query result.
+
+    Returns:
+        dict: A dictionary with a single key "input" containing the fully formatted prompt string.
+    """
     formatted_schema = dataset_schema.format_for_prompt()
 
     input_str = f"""❓ USER QUERY: {user_query}
@@ -93,7 +111,7 @@ def format_process_query_input(
 {rows_csv}"""
 
     if prev_query_result:
-        formatted_prev_result = format_single_query_result(prev_query_result)
+        formatted_prev_result = format_query_result(prev_query_result)
         input_str += f"\n\n🔄 PREVIOUS QUERY CONTEXT:\n{formatted_prev_result}"
 
     if validation_result:
@@ -127,7 +145,7 @@ def format_process_query_input(
 💭 Reasoning: {validation_result['reasoning']}
 ⚠️  The previous query result requires improvements before providing a final response."""
 
-        missing_elements = validation_result.get("missing_elements")
+        missing_elements = validation_result["missing_elements"]
         if missing_elements:
             input_str += f"\n❓ Still Missing: {', '.join(missing_elements)}"
 
