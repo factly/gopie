@@ -35,11 +35,11 @@ func (h *httpHandler) getMetrics(tableName string) (int, []map[string]any, error
 		}
 		count, ok := countResult[0]["count_star()"].(int64)
 		if !ok {
-			h.logger.Error("Invalid count result type", zap.Any("count_result", countResult[0]["count_star()"]))
+			h.logger.Error("invalid count result type", zap.Any("count_result", countResult[0]["count_star()"]))
 			countResChan <- struct {
 				count int64
 				err   error
-			}{0, fmt.Errorf("Invalid count result type")}
+			}{0, fmt.Errorf("invalid count result type")}
 			return
 		}
 		countResChan <- struct {

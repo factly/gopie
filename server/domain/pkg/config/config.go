@@ -302,8 +302,6 @@ func LoadConfig() (*GopieConfig, error) {
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
 
-	fmt.Println("==> ", config.EnableZitadel)
-
 	var err error
 	if config, err = validateConfig(config); err != nil {
 		return nil, err

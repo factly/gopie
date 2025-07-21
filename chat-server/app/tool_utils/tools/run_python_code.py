@@ -2,10 +2,11 @@ from typing import Annotated
 
 from langgraph.types import Command
 from e2b_code_interpreter import AsyncSandbox
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.prebuilt import InjectedState
-from langchain_core.messages import ToolMessage
+
 
 @tool
 async def run_python_code(
@@ -23,21 +24,25 @@ async def run_python_code(
     Return the logs and error if any.
     """
     execution = await sandbox.run_code(code)
-
-    return Command(
-        update={
-            "executed_python_code": code,
-            "messages": [
-                ToolMessage(
-                    content=str({
+    state_update = {
+        "executed_python_code": code,
+        "messages": [
+            ToolMessage(
+                tool_call_id=tool_call_id,
+                content=str(
+                    {
                         "logs": execution.logs,
                         "error": execution.error,
-                    }),
-                    tool_call_id=tool_call_id
+                    }
                 ),
-            ]
-        },
+            )
+        ],
+    }
+
+    return Command(
+        update=state_update,
     )
+
 
 def get_dynamic_tool_text(args: dict) -> str:
     return "Running python code for visualization"

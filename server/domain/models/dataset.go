@@ -13,8 +13,6 @@ type Dataset struct {
 	Alias string `json:"alias" example:"sales_data_alias"`
 	// Description of the dataset
 	Description string `json:"description" example:"Sales data for Q1 2024"`
-	// Format of the dataset (e.g., csv, parquet)
-	Format string `json:"format" example:"csv"`
 	// Number of rows in the dataset
 	RowCount int `json:"row_count" example:"1000"`
 	// Column definitions of the dataset
@@ -70,8 +68,6 @@ type UploadDatasetResult struct {
 	FilePath string `json:"file_path" example:"/data/sales_data.csv"`
 	// Name of the table created for the dataset
 	TableName string `json:"table_name" example:"sales_data_table"`
-	// Format of the uploaded dataset
-	Format string `json:"format" example:"csv"`
 	// Size of the uploaded dataset in bytes
 	Size int `json:"size" example:"1048576"`
 }
@@ -91,8 +87,6 @@ type CreateDatasetParams struct {
 	Description string `json:"description" example:"Sales data for Q1 2024"`
 	// ID of the project this dataset belongs to
 	ProjectID string `json:"project_id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	// Format of the dataset
-	Format string `json:"format" example:"csv"`
 	// File path of the dataset
 	FilePath string `json:"file_path" example:"/data/sales_data.csv"`
 	// Number of rows in the dataset
@@ -109,8 +103,6 @@ type CreateDatasetParams struct {
 type UpdateDatasetParams struct {
 	// Description of the dataset
 	Description string `json:"description" example:"Updated sales data for Q1 2024"`
-	// Format of the dataset
-	Format string `json:"format" example:"csv"`
 	// File path of the dataset
 	FilePath string `json:"file_path" example:"/data/sales_data_updated.csv"`
 	// Number of rows in the dataset
@@ -119,10 +111,11 @@ type UpdateDatasetParams struct {
 	Columns []map[string]any `json:"columns"`
 	// Size of the dataset in bytes
 	Size int `json:"size" example:"1048576"`
-	// UpdatedBy represents the user who last updated the dataset
+	// User ID of the updater
 	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
 	Alias string `json:"alias" example:"sales_data_alias"`
+	OrgID string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // FailedDatasetUpload represents a failed dataset upload

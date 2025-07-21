@@ -42,11 +42,13 @@ async def execute_sql(
         result_data = await response.json()
 
     result = result_data["data"]
+    return result
 
-    is_too_large = is_result_too_large(result)
 
+def truncate_if_too_large(result: SQL_RESPONSE_TYPE) -> SQL_RESPONSE_TYPE:
+    is_too_large, reason = is_result_too_large(result)
+    logger.info(f"Result is too large, reason: {reason}")
     if is_too_large:
         truncated_result = truncate_result_for_llm(result)
         return truncated_result
-
     return result

@@ -360,7 +360,7 @@ func (m *OlapDBDriver) buildReadFunctionSQL(escapedPath, format string) (string,
 
 // renameTableColumns executes ALTER TABLE RENAME COLUMN commands within a transaction.
 func (m *OlapDBDriver) renameTableColumns(tx *sql.Tx, tableName string, alterColumnNames map[string]string, logger *logger.Logger) error {
-	if alterColumnNames == nil || len(alterColumnNames) == 0 {
+	if len(alterColumnNames) == 0 {
 		return nil
 	}
 

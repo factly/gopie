@@ -26,9 +26,8 @@ update projects
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by),
-    org_id = coalesce($4, org_id)
-where id = $5 and org_id = $6
+    updated_by = coalesce($3, updated_by)
+where id = $4 and org_id = $5
 returning *;
 
 -- name: DeleteProject :exec

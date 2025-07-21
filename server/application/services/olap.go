@@ -40,7 +40,6 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	err := d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames)
 	return &models.UploadDatasetResult{
 		FilePath:  s3Path,
-		Format:    format,
 		Size:      0,
 		TableName: tableName,
 	}, err
@@ -72,7 +71,6 @@ func (d *OlapService) IngestFile(ctx context.Context, filepath string, name stri
 	res := models.UploadDatasetResult{
 		FilePath:  filepath,
 		TableName: tableName,
-		Format:    format,
 		Size:      int(size),
 	}
 
@@ -153,13 +151,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	countSql, err := pkg.BuildCountQuery(sql)
-	if err != nil {
-		d.logger.Error("Invalid query", zap.Error(err))
-		return nil, fmt.Errorf("failed to build count query: %w", err)
-	}
-
-	queryResult, err := d.getResultsWithCount(countSql, sql)
+	queryResult, err := d.getResultsWithCount("", sql)
 	if err != nil {
 		d.logger.Error("Query execution failed", zap.Error(err))
 		return nil, err
@@ -230,7 +222,7 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
-		return nil, fmt.Errorf("data query failed: %w", rowsResult.err)
+		return nil, err
 	}
 
 	return &queryResult{
@@ -301,8 +293,15 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	result, err := d.getResultsWithCount(countSql, sql)
+	if err != nil {
+		return nil, err
+	}
+
+	if result == nil {
+		return map[string]any{}, nil
+	}
+
 	return map[string]any{
-		// "total": result.Count,
 		"data": result.Rows,
 	}, nil
 }

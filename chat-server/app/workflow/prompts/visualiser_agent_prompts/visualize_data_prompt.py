@@ -11,14 +11,13 @@ def create_visualize_data_prompt(
     prompt_template = kwargs.get("prompt_template", False)
     user_query = kwargs.get("user_query", "")
     datasets_csv_info = kwargs.get("datasets_csv_info", "")
+    previous_python_code = kwargs.get("previous_python_code", "")
 
     system_content = """
 You are an expert data visualization engineer. Use altair to create visualizations, and save them to json.
 Do not create the data, read the data from the csv_path where the data is stored.
 Use the run_python_code tool to run python code.
 The datasets are already saved in the python sandbox with the specified file names.
-
-If prev_csv_paths are provided, first use the get_python_code_from_s3 tool to retrieve previous python code which were used to create visualization configurations, then analyze and modify them based on the user's request.
 
 IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the visualization):
 - Add clear, descriptive titles to all visualizations
@@ -40,15 +39,16 @@ Follow the steps below to create a visualization:
 5. Use the ResultPaths tool to return the paths to the json files that contain the visualizations.
 
 First start by reasoning about the type of visualization, and all the details about the visualization based on the user query and the datasets.
+
+Always call the result_paths tool at the end to return the paths to the json files that contain the visualizations.
 """
 
     human_template_str = """This is the user query: {user_query}
-
-The following are the datasets and their descriptions:
+    
+The following are the datasets and their descriptions for the present query:
 
 {datasets_csv_info}
 """
-
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
@@ -56,10 +56,20 @@ The following are the datasets and their descriptions:
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
+    previous_python_text = """
+Previous python code - This is the python code that was executed to generate the previous visualization, Please note that the paths to csv files might have changed so use the new paths to csv files.
+```python
+{previous_python_code}
+```
+"""
 
     human_content = human_template_str.format(
-        user_query=user_query, datasets_csv_info=datasets_csv_info
+        user_query=user_query,
+        datasets_csv_info=datasets_csv_info,
+        previous_python_code=previous_python_code,
     )
+    if previous_python_code:
+        human_content += previous_python_text.format(previous_python_code=previous_python_code)
 
     return [
         SystemMessage(content=system_content),

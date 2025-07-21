@@ -16,10 +16,11 @@ class VisualizationResult(BaseModel):
     data: list[str]
     errors: list[str] = []
 
+
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset]
-    prev_csv_paths: list[str]
+    previous_visualization_result_path: str | None = None
 
 
 class OutputState(TypedDict):
@@ -28,6 +29,7 @@ class OutputState(TypedDict):
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
+    previous_visualization_result_path: str | None
     datasets: list[Dataset]
     user_query: str
     result: VisualizationResult
@@ -35,5 +37,4 @@ class State(TypedDict):
     is_input_prepared: bool
     s3_paths: list[str]
     tool_call_count: int
-    prev_csv_paths: list[str] | None
     executed_python_code: str | None

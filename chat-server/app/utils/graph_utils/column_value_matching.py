@@ -1,6 +1,6 @@
 from app.core.log import logger
 from app.models.data import ColumnValueMatching
-from app.services.gopie.sql_executor import execute_sql
+from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
 from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
 
 
@@ -136,8 +136,9 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
         WHERE LOWER({column_name}) = LOWER('{value}')
         """
         result = await execute_sql(query=query)
+        formatted_result = truncate_if_too_large(result)
 
-        if isinstance(result, list) and result:
+        if isinstance(formatted_result, list) and formatted_result:
             logger.debug(f"Exact match found for '{value}' in '{column_name}'")
             return True
     except Exception as e:
@@ -153,12 +154,12 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
 async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
     """
     Search for values in a database column that are similar to the specified value using a case-insensitive substring match.
-    
+
     Parameters:
         value (str): The value to search for similar entries.
         column_name (str): The name of the column to search within.
         table_name (str): The name of the table containing the column.
-    
+
     Returns:
         list[str]: A list of up to five distinct values from the column that contain the specified value as a substring, matched case-insensitively.
     """
@@ -173,9 +174,10 @@ async def find_similar_values(value: str, column_name: str, table_name: str) -> 
         LIMIT 5
         """
         result = await execute_sql(query=query)
+        formatted_result = truncate_if_too_large(result)
 
-        if isinstance(result, list) and result:
-            similar_values = [str(row.get(column_name)) for row in result if row]
+        if isinstance(formatted_result, list) and formatted_result:
+            similar_values = [str(row.get(column_name)) for row in formatted_result if row]
             logger.debug(
                 f"Found {len(similar_values)} ILIKE matches for '{value}' in '{column_name}'"
             )

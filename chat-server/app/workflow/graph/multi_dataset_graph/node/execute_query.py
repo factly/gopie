@@ -1,16 +1,18 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.services.gopie.sql_executor import execute_sql
-from app.workflow.graph.multi_dataset_graph.types import State
 from app.models.query import SqlQueryInfo
+from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
+from app.workflow.graph.multi_dataset_graph.types import State
 
 
 async def execute_query(state: State) -> dict:
     """
     Executes all planned SQL queries for the current subquery in the workflow state and updates the state with results or error messages.
-    
-    Each SQL query is executed asynchronously, and the outcome (success or failure) is recorded in the state. On completion, the function dispatches a custom event and returns the updated state along with a message summarizing the results. If an error occurs during execution, the error is recorded, the retry count is incremented, and an error message is returned.
+
+    Each SQL query is executed asynchronously, and the outcome (success or failure) is recorded in the state.
+    On completion, the function dispatches a custom event and returns the updated state along with a message summarizing the results.
+    If an error occurs during execution, the error is recorded, the retry count is incremented, and an error message is returned.
     """
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
@@ -25,11 +27,12 @@ async def execute_query(state: State) -> dict:
         for query_info in sql_queries:
             try:
                 result_data = await execute_sql(query=query_info.sql_query)
+                formatted_result_data = truncate_if_too_large(result_data)
                 sql_results.append(
                     SqlQueryInfo(
                         sql_query=query_info.sql_query,
                         explanation=query_info.explanation,
-                        sql_query_result=result_data,
+                        sql_query_result=formatted_result_data,
                         success=True,
                         error=None,
                     )
