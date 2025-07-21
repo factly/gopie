@@ -1,15 +1,18 @@
+from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
+
+from app.core.constants import VISUALIZATION_RESULT
 from app.models.message import ErrorMessage
 from app.workflow.events.event_utils import configure_node
-from ..types import State
-from langchain_core.runnables import RunnableConfig
-from langchain_core.messages import AIMessage
 from app.workflow.graph.visualize_data_graph.utils import (
+    add_context_to_python_code,
     get_visualization_result_data,
     upload_visualization_result_data,
 )
-from langchain_core.callbacks import adispatch_custom_event
-from app.core.constants import VISUALIZATION_RESULT
-from langchain_core.messages import ToolMessage
+
+from ..types import State
+
 
 @configure_node(
     role="intermediate",
@@ -27,6 +30,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
     """
     last_message = state["messages"][-1]
     visualization_results = state["result"]
+    datasets = state["datasets"]
 
     try:
         if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
@@ -39,9 +43,9 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         executed_python_code = state.get("executed_python_code")
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
+        python_code_with_context = await add_context_to_python_code(executed_python_code, datasets)
         s3_paths = await upload_visualization_result_data(
-            data=result_data, 
-            python_code=executed_python_code
+            data=result_data, python_code=python_code_with_context
         )
 
         visualization_results.data = result_data
@@ -63,7 +67,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
                 )
             ],
             "result": visualization_results,
-            "s3_paths": s3_paths
+            "s3_paths": s3_paths,
         }
 
     except Exception as e:
@@ -73,6 +77,5 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         return {
             "messages": [ErrorMessage(content=error_msg)],
             "result": visualization_results,
-            "s3_paths": []
+            "s3_paths": [],
         }
-

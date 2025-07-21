@@ -9,20 +9,29 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.constants import SQL_QUERIES_GENERATED
-from app.services.gopie.sql_executor import execute_sql
+from app.models.query import (
+    QueryResult,
+    SingleDatasetQueryResult,
+    SqlQueryInfo,
+)
+from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
-from app.models.query import QueryResult, SingleDatasetQueryResult, SqlQueryInfo
 
 
 def convert_rows_to_csv(rows: list[dict]) -> str:
     """
     Convert a list of dictionaries into a CSV-formatted string with special handling for certain cell values.
 
-    Each row in the output CSV includes a "row_num" column as the first field. Cell values are converted as follows: `None` becomes "NULL", empty strings become "EMPTY_STRING", strings containing only whitespace become "WHITESPACE_ONLY", and numeric zeros become "0". Returns an empty string if the input list is empty.
+    Each row in the output CSV includes a "row_num" column as the first field.
+    Cell values are converted as follows: `None` becomes "NULL",
+    empty strings become "EMPTY_STRING",
+    strings containing only whitespace become "WHITESPACE_ONLY",
+    and numeric zeros become "0".
+    Returns an empty string if the input list is empty.
 
     Parameters:
         rows (list[dict]): List of dictionaries representing table rows.
@@ -68,7 +77,12 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
     """
     Processes a user query against a specified dataset, generating and executing SQL queries or providing non-SQL responses using a language model.
 
-    This asynchronous function orchestrates the workflow for handling a user query: it retrieves dataset schema and sample data, constructs prompts for a language model, parses the model's response for SQL queries and explanations, executes the queries if present, and compiles the results into a structured response. If no SQL queries are generated, it returns the non-SQL response from the model. Errors encountered during processing are captured and included in the result.
+    This asynchronous function orchestrates the workflow for handling a user query:
+    it retrieves dataset schema and sample data, constructs prompts for a language model,
+    parses the model's response for SQL queries and explanations,
+    executes the queries if present, and compiles the results into a structured response.
+    If no SQL queries are generated, it returns the non-SQL response from the model.
+    Errors encountered during processing are captured and included in the result.
 
     Returns:
         dict: A dictionary containing a list of AIMessage objects with the serialized query result and the structured query result object.
@@ -105,8 +119,9 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
         sample_data = await execute_sql(query=sample_data_query)
+        formatted_sample_data = truncate_if_too_large(sample_data)
 
-        rows_csv = convert_rows_to_csv(sample_data)  # type: ignore
+        rows_csv = convert_rows_to_csv(formatted_sample_data)  # type: ignore
 
         prompt_messages = get_prompt(
             "process_query",
@@ -150,11 +165,12 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             for q, exp in zip(sql_queries, explanations):
                 try:
                     result_data = await execute_sql(query=q)
+                    formatted_result_data = truncate_if_too_large(result_data)
                     sql_results.append(
                         SqlQueryInfo(
                             sql_query=q,
                             explanation=exp,
-                            sql_query_result=result_data,
+                            sql_query_result=formatted_result_data,
                             success=True,
                             error=None,
                         )

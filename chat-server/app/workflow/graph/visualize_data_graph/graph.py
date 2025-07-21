@@ -3,15 +3,18 @@ from langgraph.graph import END, StateGraph
 from app.models.schema import ConfigSchema
 from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
-from .node.respond import respond
+
 from .node.call_model import call_model, should_continue
-from .node.pre_model_hook import pre_model_hook, should_continue_from_pre_model_hook
-from .node.process_results import process_visualization_result
 from .node.cleanup import cleanup_resources
+from .node.pre_model_hook import (
+    pre_model_hook,
+    should_continue_from_pre_model_hook,
+)
+from .node.process_results import process_visualization_result
+from .node.respond import respond
+from .types import InputState, OutputState, State
 
-from .types import State, InputState, OutputState
-
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_PYTHON_CODE_FROM_S3]
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
 
 workflow = StateGraph(
     state_schema=State,

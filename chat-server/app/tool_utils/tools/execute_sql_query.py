@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 
-from app.services.gopie.sql_executor import execute_sql
+from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
 
 
 @tool
@@ -24,6 +24,7 @@ async def execute_sql_query(
         results = []
         for query in queries:
             result = await execute_sql(query=query)
+            result = truncate_if_too_large(result)
             results.append(result)
         return results
     except Exception as e:

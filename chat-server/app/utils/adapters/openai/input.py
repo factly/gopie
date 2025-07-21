@@ -1,3 +1,4 @@
+from langchain_community.adapters.openai import convert_openai_messages
 from openai.types.chat.completion_create_params import (
     CompletionCreateParamsNonStreaming as RequestNonStreaming,
 )
@@ -5,7 +6,7 @@ from openai.types.chat.completion_create_params import (
     CompletionCreateParamsStreaming as RequestStreaming,
 )
 
-from app.models.router import Message, QueryRequest
+from app.models.router import QueryRequest
 
 
 def from_openai_format(
@@ -22,13 +23,7 @@ def from_openai_format(
         QueryRequest: Internal request format
     """
     # Convert messages from OpenAI format to internal format
-    messages = [
-        Message(
-            role=message.get("role"),
-            content=str(message.get("content", "")),
-        )
-        for message in request.get("messages")
-    ]
+    messages = convert_openai_messages(request.get("messages", []))
 
     project_ids: list[str] = []
     dataset_ids: list[str] = []

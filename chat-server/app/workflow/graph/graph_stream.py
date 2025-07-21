@@ -1,15 +1,15 @@
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
 from app.models.chat import EventChunkData, Role
-from app.models.router import Message
+from app.utils.graph_utils.extract_user_input import extract_user_input
 from app.workflow.agent.graph import agent_graph
 from app.workflow.events.handle_events_stream import EventStreamHandler
-from app.utils.graph_utils.extract_user_input import extract_user_input
 
 
 async def stream_graph_updates(
-    messages: list[Message],
+    messages: list[BaseMessage],
     user: str,
     trace_id: str,
     chat_id: str,
@@ -18,21 +18,20 @@ async def stream_graph_updates(
 ):
     """
     Asynchronously streams graph-based agent updates in response to user messages, yielding event data suitable for Server-Sent Events (SSE).
-    
+
     Raises:
         ValueError: If neither dataset_ids nor project_ids are provided.
-    
+
     Yields:
         EventChunkData: Structured event data containing graph update information for the client.
     """
     if project_ids is None and dataset_ids is None:
         raise ValueError("At least one dataset or project ID must be provided")
 
-    chat_history = [message.model_dump() for message in messages[:-1]]
     user_input = extract_user_input(messages)
 
     input_state = {
-        "messages": [message.model_dump() for message in messages],
+        "messages": messages,
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
         "initial_user_query": user_input,
@@ -47,7 +46,7 @@ async def stream_graph_updates(
     config = RunnableConfig(
         configurable={
             "metadata": metadata,
-            "chat_history": chat_history,
+            "chat_history": messages[:-1],
         },
     )
 

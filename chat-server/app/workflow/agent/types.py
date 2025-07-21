@@ -25,4 +25,3 @@ class AgentState(TypedDict):
     datasets: list[Dataset] | None
     invalid_input: bool | None
     query_result: QueryResult | None
-    prev_csv_paths: list[str] | None

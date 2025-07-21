@@ -1,11 +1,13 @@
+from langchain_core.runnables import RunnableConfig
+
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
-from ...visualize_data_graph.types import State
-from langchain_core.runnables import RunnableConfig
 from app.utils.model_registry.model_provider import get_model_provider
-from langchain_core.messages import AIMessage
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_PYTHON_CODE_FROM_S3]
+from ...visualize_data_graph.types import State
+
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
+
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
     """
@@ -24,12 +26,11 @@ def should_continue(state: State):
         str: "process_result" if result_paths tool is called, otherwise "continue" to tools.
     """
     last_message = state["messages"][-1]
+    is_final_result = (
+        len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths"
+    )
 
-    if isinstance(last_message, AIMessage) and last_message.tool_calls:
-        if len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths":
-            return "process_result"
-
-    if has_tool_calls(last_message):
-        return "continue"
-    else:
+    if has_tool_calls(last_message) and is_final_result:
         return "process_result"
+    else:
+        return "continue"

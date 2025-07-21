@@ -1,3 +1,4 @@
+from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 
@@ -11,13 +12,8 @@ class UploadSchemaRequest(BaseModel):
     dataset_id: str
 
 
-class Message(BaseModel):
-    role: str
-    content: str
-
-
 class QueryRequest(BaseModel):
-    messages: list[Message]
+    messages: list[BaseMessage]
     project_ids: list[str] | None = None
     dataset_ids: list[str] | None = None
     user: str | None = None
