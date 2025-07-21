@@ -13,7 +13,8 @@ class SqlQueryInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """
-        Return a dictionary representation of the SqlQueryInfo instance, including the SQL query, explanation, result, success status, and error message.
+        Return a dictionary representation of the SqlQueryInfo instance, including the SQL query,
+        explanation, result, success status, and error message.
         """
         return {
             "sql_query": self.sql_query,
@@ -61,10 +62,11 @@ class SubQueryInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """
-        Return a dictionary representation of the subquery, including its text, associated SQL queries, metadata, error messages, and node messages.
+        Return a dictionary representation of the subquery, including its text, associated SQL queries,
+        metadata, error messages, and node messages.
 
         Returns:
-        	A dictionary containing all fields of the subquery, with SQL queries serialized as dictionaries.
+            A dictionary containing all fields of the subquery, with SQL queries serialized as dictionaries.
         """
         return {
             "query_text": self.query_text,
@@ -91,7 +93,9 @@ class SingleDatasetQueryResult:
         return {
             "user_friendly_dataset_name": self.user_friendly_dataset_name,
             "dataset_name": self.dataset_name,
-            "sql_results": [result.to_dict() for result in self.sql_results] if self.sql_results else None,
+            "sql_results": (
+                [result.to_dict() for result in self.sql_results] if self.sql_results else None
+            ),
             "response_for_non_sql": self.response_for_non_sql,
             "error": self.error,
         }
@@ -157,7 +161,11 @@ class QueryResult:
             "original_user_query": self.original_user_query,
             "execution_time": self.execution_time,
             "timestamp": self.timestamp.isoformat(),
-            "single_dataset_query_result": self.single_dataset_query_result.to_dict() if self.single_dataset_query_result else None,
+            "single_dataset_query_result": (
+                self.single_dataset_query_result.to_dict()
+                if self.single_dataset_query_result
+                else None
+            ),
             "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
 

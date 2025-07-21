@@ -8,13 +8,14 @@ def extract_user_input(messages: list[BaseMessage]) -> str:
     Raises an exception if the last message is not from a user or if its content is empty.
 
     Parameters:
-        messages (list[BaseMessage]): List of BaseMessage objects, where the last message is expected to be from a user.
+        messages (list[BaseMessage]): List of BaseMessage objects, where the last message is
+        expected to be from a user.
 
     Returns:
         str: The content of the last user message.
     """
     if isinstance(messages[-1], HumanMessage):
-        user_input = messages[-1].content
+        user_input = str(messages[-1].content)
     else:
         raise Exception("Last Message must be a user message")
 

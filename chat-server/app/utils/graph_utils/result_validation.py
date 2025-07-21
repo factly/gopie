@@ -8,8 +8,9 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
     Determine if a SQL query result exceeds size limits for LLM processing.
 
     Returns:
-        A tuple where the first element is True if the result is too large (based on record count, JSON size, or column count),
-        and the second element is a string explaining the reason. If the result is acceptable or an error occurs, returns (False, "").
+        A tuple where the first element is True if the result is too large (based on record count,
+        JSON size, or column count), and the second element is a string explaining the reason.
+        If the result is acceptable or an error occurs, returns (False, "").
     """
     try:
         if len(result) > 200:

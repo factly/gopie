@@ -25,8 +25,11 @@ async def create(
 ):
     """
     Handle chat completion requests, supporting both streaming and non-streaming responses.
-    
-    Accepts a chat completion request in OpenAI-compatible format, validates required identifiers, and processes the request using an output adapter. Returns either a streaming response for real-time updates or a standard response with the generated chat completion, depending on the request parameters. Returns an error response if neither project nor dataset IDs are provided.
+
+    Accepts a chat completion request in OpenAI-compatible format, validates required identifiers,
+    and processes the request using an output adapter. Returns either a streaming response for
+    real-time updates or a standard response with the generated chat completion, depending on the request parameters.
+    Returns an error response if neither project nor dataset IDs are provided.
     """
     request = from_openai_format(openai_format_request)
     trace_id = request.trace_id or uuid.uuid4().hex

@@ -14,7 +14,7 @@ from app.models.query import (
     SingleDatasetQueryResult,
     SqlQueryInfo,
 )
-from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
+from app.services.gopie.sql_executor import execute_sql_with_limit
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
@@ -118,10 +118,9 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         user_provided_dataset_name = dataset_schema.name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
-        sample_data = await execute_sql(query=sample_data_query)
-        formatted_sample_data = truncate_if_too_large(sample_data)
+        sample_data = await execute_sql_with_limit(query=sample_data_query)
 
-        rows_csv = convert_rows_to_csv(formatted_sample_data)  # type: ignore
+        rows_csv = convert_rows_to_csv(sample_data)  # type: ignore
 
         prompt_messages = get_prompt(
             "process_query",
@@ -164,13 +163,12 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
             for q, exp in zip(sql_queries, explanations):
                 try:
-                    result_data = await execute_sql(query=q)
-                    formatted_result_data = truncate_if_too_large(result_data)
+                    result_data = await execute_sql_with_limit(query=q)
                     sql_results.append(
                         SqlQueryInfo(
                             sql_query=q,
                             explanation=exp,
-                            sql_query_result=formatted_result_data,
+                            sql_query_result=result_data,
                             success=True,
                             error=None,
                         )

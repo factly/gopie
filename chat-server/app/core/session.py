@@ -8,9 +8,7 @@ class SingletonAiohttp:
     def get_aiohttp_client(cls) -> aiohttp.ClientSession:
         if cls.aiohttp_client is None:
             connector = aiohttp.TCPConnector(limit_per_host=100)
-            cls.aiohttp_client = aiohttp.ClientSession(
-                connector=connector, trust_env=True
-            )
+            cls.aiohttp_client = aiohttp.ClientSession(connector=connector, trust_env=True)
 
         return cls.aiohttp_client
 

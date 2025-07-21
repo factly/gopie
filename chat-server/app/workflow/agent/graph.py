@@ -9,7 +9,11 @@ from .node.single_dataset import call_single_dataset_agent
 from .node.stream_invalid_response import stream_invalid_response
 from .node.supervisor import supervisor
 from .node.validate_input import validate_input
-from .node.visualisation import call_visualization_agent, check_visualization, should_run_visualization
+from .node.visualisation import (
+    call_visualization_agent,
+    check_visualization,
+    should_run_visualization,
+)
 from .types import AgentState
 
 
@@ -43,10 +47,7 @@ graph_builder.add_conditional_edges(
 graph_builder.add_conditional_edges(
     "post_agent_fork",
     should_run_visualization,
-    {
-        "visualization_agent": "visualization_agent",
-        END: END
-    }
+    {"visualization_agent": "visualization_agent", END: END},
 )
 
 graph_builder.add_edge(START, "validate_input")

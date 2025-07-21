@@ -22,8 +22,15 @@ def from_openai_format(
     Returns:
         QueryRequest: Internal request format
     """
-    # Convert messages from OpenAI format to internal format
-    messages = convert_openai_messages(request.get("messages", []))
+
+    raw_messages = request.get("messages", [])
+    messages_dict = []
+    for msg in raw_messages:
+        if isinstance(msg, dict):
+            messages_dict.append(msg)
+        else:
+            messages_dict.append(msg.model_dump() if hasattr(msg, "model_dump") else dict(msg))
+    messages = convert_openai_messages(messages_dict)
 
     project_ids: list[str] = []
     dataset_ids: list[str] = []

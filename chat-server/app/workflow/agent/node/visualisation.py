@@ -50,7 +50,7 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
         "prev_csv_paths": state.get("prev_csv_paths", []),
     }
 
-    _ = await visualize_data_graph.ainvoke(input_state, config=config) # type: ignore
+    _ = await visualize_data_graph.ainvoke(input_state, config=config)  # type: ignore
 
 
 async def should_run_visualization(state: AgentState):

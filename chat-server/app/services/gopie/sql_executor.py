@@ -17,9 +17,7 @@ SQL_RESPONSE_TYPE = list[dict[str, Union[str, int, float, None]]] | None
 
 
 @traceable(run_type="tool", name="execute_sql")
-async def execute_sql(
-    query: str,
-) -> SQL_RESPONSE_TYPE:
+async def execute_sql(query: str) -> SQL_RESPONSE_TYPE:
     """
     Execute a SQL query against the SQL API
 
@@ -45,7 +43,18 @@ async def execute_sql(
     return result
 
 
+async def execute_sql_with_limit(query: str) -> SQL_RESPONSE_TYPE:
+    """
+    Execute a SQL query with a limit against the SQL API
+    """
+    result = await execute_sql(query=query)
+    return truncate_if_too_large(result)
+
+
 def truncate_if_too_large(result: SQL_RESPONSE_TYPE) -> SQL_RESPONSE_TYPE:
+    if result is None:
+        return result
+
     is_too_large, reason = is_result_too_large(result)
     logger.info(f"Result is too large, reason: {reason}")
     if is_too_large:

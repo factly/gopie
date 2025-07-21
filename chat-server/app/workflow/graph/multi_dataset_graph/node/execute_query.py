@@ -2,7 +2,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
-from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
+from app.services.gopie.sql_executor import execute_sql_with_limit
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -26,13 +26,12 @@ async def execute_query(state: State) -> dict:
 
         for query_info in sql_queries:
             try:
-                result_data = await execute_sql(query=query_info.sql_query)
-                formatted_result_data = truncate_if_too_large(result_data)
+                result_data = await execute_sql_with_limit(query=query_info.sql_query)
                 sql_results.append(
                     SqlQueryInfo(
                         sql_query=query_info.sql_query,
                         explanation=query_info.explanation,
-                        sql_query_result=formatted_result_data,
+                        sql_query_result=result_data,
                         success=True,
                         error=None,
                     )

@@ -14,8 +14,10 @@ from app.workflow.agent.types import AgentState
 async def generate_result(state: AgentState, config: RunnableConfig) -> dict:
     """
     Asynchronously generates an AI response based on the provided query result.
-    
-    The function retrieves the query result from the agent state, constructs a prompt, and invokes a language model to generate a response. The result is returned as a dictionary containing a list with a single AI message.
+
+    The function retrieves the query result from the agent state, constructs a prompt, and invokes a
+    language model to generate a response. The result is returned as a dictionary containing a list
+    with a single AI message.
     """
 
     query_result = state["query_result"]
