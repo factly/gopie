@@ -78,7 +78,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   
   // Dataset creation form state
   const [datasetName, setDatasetName] = useState<string>("");
-  const [datasetDescription, setDatasetDescription] = useState<string>("Uploaded from GoPie Web");
+  const [datasetDescription, setDatasetDescription] = useState<string>("");
   
   // Database dialog state
   const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
@@ -250,7 +250,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
       // Use form data for dataset name and description
       const finalDatasetName = datasetName.trim();
-      const finalDatasetDescription = datasetDescription.trim() || `Uploaded from GoPie Web (${formatDisplay})`;
+      const finalDatasetDescription = datasetDescription.trim();
       const alter_column_names = getColumnMappings();
       const column_descriptions = getColumnDescriptions();
 
@@ -573,38 +573,21 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="dataset-description">Description</Label>
+                  <Label htmlFor="dataset-description">Description *</Label>
                   <Textarea
                     id="dataset-description"
-                    placeholder="Enter dataset description (optional)"
+                    placeholder="Enter dataset description"
                     value={datasetDescription}
                     onChange={(e) => setDatasetDescription(e.target.value)}
                     rows={3}
+                    className={datasetDescription.length < 10 ? "border-red-300" : ""}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Description must be at least 10 characters
-                  </p>
+                  {datasetDescription.length < 10 && (
+                    <p className="text-sm text-red-600">Description must be at least 10 characters</p>
+                  )}
                 </div>
               </div>
-              
-              {/* Dataset Summary */}
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="text-lg font-semibold mb-4">Dataset Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div><strong>File:</strong> {uploadedFile?.name || 'N/A'}</div>
-                    <div><strong>Format:</strong> {validationResult?.format?.toUpperCase() || 'N/A'}</div>
-                    <div><strong>Columns:</strong> {validationResult?.columnNames?.length || 0}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div><strong>Total Rows:</strong> {validationResult?.previewRowCount || 'N/A'}</div>
-                    {validationResult?.rejectedRows && validationResult.rejectedRows.length > 0 && (
-                      <div><strong>Skipped Rows:</strong> {validationResult.rejectedRows.length}</div>
-                    )}
-                    <div><strong>Status:</strong> <span className="text-green-600">Ready to Create</span></div>
-                  </div>
-                </div>
-              </div>
+
             </div>
           </div>
         )}
