@@ -6,6 +6,9 @@ import { UppyFile, Meta } from "@uppy/core";
 import { toast } from "sonner";
 import { ArrowLeft, AlertCircle, Database, Loader2, LinkIcon, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Stepper, StepperContent, StepperActions, Step } from "@/components/ui/stepper";
@@ -72,6 +75,10 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   const [uploadedFile, setUploadedFile] = useState<UppyFile<Meta, Record<string, never>> | null>(null);
   const [uploadResponse, setUploadResponse] = useState<unknown>(null);
   const [createdDataset, setCreatedDataset] = useState<any>(null);
+  
+  // Dataset creation form state
+  const [datasetName, setDatasetName] = useState<string>("");
+  const [datasetDescription, setDatasetDescription] = useState<string>("Uploaded from GoPie Web");
   
   // Database dialog state
   const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
@@ -175,14 +182,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
       const uploadURL = (uploadResponse as { uploadURL?: string })?.uploadURL;
       const s3Url = uploadURL ? `s3:/${new URL(uploadURL).pathname}` : "";
-      const datasetName =
-        uploadedFile.meta.datasetName?.toString() ||
-        uploadedFile.meta.alias?.toString() ||
-        (uploadedFile.name || "dataset").replace(
-          /\.(csv|parquet|json|xlsx|duckdb|db|ddb)$/,
-          ""
-        );
-
+      
       // Get file format from metadata or detect from filename
       const fileFormat = uploadedFile.meta.fileFormat?.toString() || "file";
       const formatDisplay =
@@ -198,18 +198,18 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
           ? "DuckDB"
           : "file";
 
-      const datasetDescription =
-        uploadedFile.meta.description?.toString() ||
-        `Uploaded from GoPie Web (${formatDisplay})`;
+      // Use form data for dataset name and description
+      const finalDatasetName = datasetName.trim();
+      const finalDatasetDescription = datasetDescription.trim() || `Uploaded from GoPie Web (${formatDisplay})`;
       const alter_column_names = getColumnMappings();
       const column_descriptions = getColumnDescriptions();
 
       const res = await sourceDataset.mutateAsync({
         datasetUrl: s3Url,
         projectId,
-        alias: datasetName,
+        alias: finalDatasetName,
         createdBy: "system",
-        description: datasetDescription,
+        description: finalDatasetDescription,
         alter_column_names: alter_column_names,
         column_descriptions: column_descriptions,
       });
@@ -227,13 +227,12 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       });
 
       toast.success(
-        `Dataset ${res.data.dataset.alias} (${formatDisplay}) uploaded successfully`
+        `Dataset ${res.data.dataset.alias} (${formatDisplay}) created successfully`
       );
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
 
-      // Move to confirmation step
-      setCurrentStep(4);
+      // Dataset created successfully - stay in Step 4 but show success message
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -271,12 +270,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
   const handleNext = () => {
     if (currentStep < WIZARD_STEPS.length) {
-      if (currentStep === 3) {
-        // Create dataset when moving from step 3 to 4
-        handleCreateDataset();
-      } else {
-        setCurrentStep(currentStep + 1);
-      }
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -481,7 +475,68 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
+        {/* Step 4: Dataset Details */}
+        {currentStep === 4 && !createdDataset && (
+          <div className="space-y-6">
+            <div className="bg-card border p-6">
+              <h2 className="text-xl font-semibold mb-4">Dataset Details</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Provide a name and description for your dataset before creating it.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dataset-name">Dataset Name *</Label>
+                  <Input
+                    id="dataset-name"
+                    placeholder="Enter dataset name"
+                    value={datasetName}
+                    onChange={(e) => setDatasetName(e.target.value)}
+                    className={!datasetName.trim() ? "border-red-300" : ""}
+                  />
+                  {!datasetName.trim() && (
+                    <p className="text-sm text-red-600">Dataset name is required</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="dataset-description">Description</Label>
+                  <Textarea
+                    id="dataset-description"
+                    placeholder="Enter dataset description (optional)"
+                    value={datasetDescription}
+                    onChange={(e) => setDatasetDescription(e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Description must be at least 10 characters
+                  </p>
+                </div>
+              </div>
+              
+              {/* Dataset Summary */}
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="text-lg font-semibold mb-4">Dataset Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div><strong>File:</strong> {uploadedFile?.name || 'N/A'}</div>
+                    <div><strong>Format:</strong> {validationResult?.format?.toUpperCase() || 'N/A'}</div>
+                    <div><strong>Columns:</strong> {validationResult?.columnNames?.length || 0}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <div><strong>Total Rows:</strong> {validationResult?.previewRowCount || 'N/A'}</div>
+                    {validationResult?.rejectedRows && validationResult.rejectedRows.length > 0 && (
+                      <div><strong>Skipped Rows:</strong> {validationResult.rejectedRows.length}</div>
+                    )}
+                    <div><strong>Status:</strong> <span className="text-green-600">Ready to Create</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Step 4: Success Message (after dataset creation) */}
         {currentStep === 4 && createdDataset && (
           <div className="space-y-6">
             <div className="bg-card border p-6">
@@ -554,6 +609,14 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               onClick={handleNext}
               disabled={!canProceedFromStep3}
             >
+              Next
+            </Button>
+          )}
+          {currentStep === 4 && !createdDataset && (
+            <Button 
+              onClick={handleCreateDataset}
+              disabled={!datasetName.trim() || datasetDescription.length < 10 || isProcessing}
+            >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -564,7 +627,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               )}
             </Button>
           )}
-          {currentStep === 4 && (
+          {currentStep === 4 && createdDataset && (
             <Button onClick={handleFinish}>
               View Dataset
             </Button>
