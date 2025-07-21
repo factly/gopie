@@ -132,7 +132,7 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
 
 @traceable(run_type="chain", name="add_context_to_python_code")
 async def add_context_to_python_code(python_code: str, datasets: list[Dataset]) -> str:
-    formatted_dataset_info = format_dataset_info(datasets)
+    formatted_dataset_info = format_dataset_info(datasets=datasets, csv_paths=[])
     # Convert dataset info str to comment
     formatted_dataset_info = formatted_dataset_info.replace("\n", "\n# ")
     # Add dataset info as a comment at the top of the python code

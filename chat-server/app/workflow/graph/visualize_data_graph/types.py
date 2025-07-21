@@ -20,7 +20,7 @@ class VisualizationResult(BaseModel):
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset]
-    previous_visualization_result_path: str | None = None
+    previous_visualization_result_path: str | None
 
 
 class OutputState(TypedDict):

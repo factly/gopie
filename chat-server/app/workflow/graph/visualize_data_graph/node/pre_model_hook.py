@@ -28,6 +28,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     Prepares the environment and prompt messages for the data visualization agent.
     Handles tool call counting and initial setup.
     """
+
     result = state.get("result", VisualizationResult(data=[], errors=[]))
     tool_call_count = state.get("tool_call_count", 0)
 
@@ -41,20 +42,20 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     try:
         existing_sandbox = state.get("sandbox")
         if existing_sandbox:
-            await update_sandbox_timeout(existing_sandbox)
+            await update_sandbox_timeout(sandbox=existing_sandbox)
             sandbox = existing_sandbox
         else:
             sandbox = await get_sandbox()
-            csv_paths = await upload_csv_files(sandbox, state["datasets"])
+            csv_paths = await upload_csv_files(sandbox=sandbox, datasets=state["datasets"])
 
         messages = []
         if not state.get("is_input_prepared"):
             await adispatch_custom_event("gopie-agent", {"content": "Preparing visualization ..."})
 
-            datasets_csv_info = format_dataset_info(state["datasets"], csv_paths)
+            datasets_csv_info = format_dataset_info(datasets=state["datasets"], csv_paths=csv_paths)
             if state.get("previous_visualization_result_path"):
                 previous_python_code = await get_python_code_from_viz(
-                    state["previous_visualization_result_path"]
+                    viz_path=state["previous_visualization_result_path"]
                 )
 
             messages = get_prompt(

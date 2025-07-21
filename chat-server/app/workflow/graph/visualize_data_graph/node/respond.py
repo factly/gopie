@@ -3,6 +3,7 @@ from app.workflow.events.event_utils import configure_node
 from ...visualize_data_graph.types import State
 from langchain_core.runnables import RunnableConfig
 
+
 @configure_node(
     role="ai",
     progress_message="",
@@ -24,7 +25,7 @@ Guidelines:
 - This is a sub-result, so keep it concise
 
 Visualization Result:
-Data paths: {data}
+Data: {data}
 Errors (if any): {errors}
 
 User Query: {user_query}
@@ -38,7 +39,7 @@ Provide a brief, natural response about the visualization results:
     formatted_prompt = prompt.format(
         data=result.data if result.data else "No visualization data generated",
         errors=result.errors if result.errors else "None",
-        user_query=user_query
+        user_query=user_query,
     )
 
     response = await llm.ainvoke(formatted_prompt)

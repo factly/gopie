@@ -4,7 +4,6 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from .multi_dataset_prompts.analyze_query_prompt import create_analyze_query_prompt
-from .visualiser_agent_prompts.check_visualization_prompt import create_check_visualization_prompt
 from .result_generation_prompt import create_result_generation_prompt
 from .result_generation_prompt import format_result_generation_input
 from .multi_dataset_prompts.generate_subqueries_prompt import (
@@ -49,7 +48,6 @@ NodeName = Literal[
     "stream_updates",
     "execution_analysis",
     "process_query",
-    "check_visualization",
     "process_context",
     "plan_sql_query_tool",
     "validate_input",
@@ -75,7 +73,6 @@ class PromptSelector:
             "execution_analysis": create_execution_analysis_prompt,
             "process_query": create_process_query_prompt,
             "generate_result": create_result_generation_prompt,
-            "check_visualization": create_check_visualization_prompt,
             "process_context": create_process_context_prompt,
             "plan_sql_query_tool": create_sql_planning_prompt,
             "validate_input": create_validate_input_prompt,

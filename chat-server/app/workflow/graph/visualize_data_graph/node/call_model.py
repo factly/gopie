@@ -1,4 +1,5 @@
 from langchain_core.runnables import RunnableConfig
+from langchain_core.messages import AIMessage
 
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
@@ -26,6 +27,10 @@ def should_continue(state: State):
         str: "process_result" if result_paths tool is called, otherwise "continue" to tools.
     """
     last_message = state["messages"][-1]
+
+    if not isinstance(last_message, AIMessage):
+        return "continue"
+
     is_final_result = (
         len(last_message.tool_calls) == 1 and last_message.tool_calls[0]["name"] == "result_paths"
     )

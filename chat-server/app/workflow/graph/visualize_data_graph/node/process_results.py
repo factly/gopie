@@ -43,7 +43,9 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         executed_python_code = state["executed_python_code"]
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
-        python_code_with_context = await add_context_to_python_code(executed_python_code, datasets)
+        python_code_with_context = await add_context_to_python_code(
+            python_code=executed_python_code, datasets=datasets
+        )
         s3_paths = await upload_visualization_result_data(
             data=result_data, python_code=python_code_with_context
         )
