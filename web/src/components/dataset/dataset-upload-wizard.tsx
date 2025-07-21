@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { UppyFile, Meta } from "@uppy/core";
 import { toast } from "sonner";
 import { ArrowLeft, AlertCircle, Database, Loader2, LinkIcon, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Stepper, StepperContent, StepperActions, Step } from "@/components/ui/stepper";
-import { CsvValidationUppy } from "@/components/dataset/csv-validation-uppy";
+import { CsvValidationUppy, FileValidationUppyRef } from "@/components/dataset/csv-validation-uppy";
 import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
 import { UrlUploader } from "@/components/dataset/url-uploader";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
@@ -83,6 +83,9 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   // Database dialog state
   const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<"postgres" | "mysql" | null>(null);
+  
+  // Ref for CSV validation component to trigger upload
+  const csvValidationRef = useRef<FileValidationUppyRef>(null);
 
   const sourceDataset = useSourceDataset();
   const generateDescriptions = useGenerateColumnDescriptions();
@@ -171,8 +174,13 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   }, []);
 
   const handleCreateDataset = async () => {
-    if (!uploadedFile || !uploadResponse) {
+    if (!uploadedFile || !validationResult) {
       toast.error("No file data available");
+      return;
+    }
+
+    if (!csvValidationRef.current) {
+      toast.error("Upload component not ready. Please try again.");
       return;
     }
 
@@ -180,8 +188,49 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       setUploadError(null);
       setIsProcessing(true);
 
-      const uploadURL = (uploadResponse as { uploadURL?: string })?.uploadURL;
-      const s3Url = uploadURL ? `s3:/${new URL(uploadURL).pathname}` : "";
+      console.log('Starting dataset creation process...');
+      console.log('Dataset name:', datasetName);
+      console.log('Dataset description:', datasetDescription);
+      
+      // Step 1: Trigger the actual file upload to S3 first
+      console.log('Triggering file upload to S3...');
+      await csvValidationRef.current.triggerUpload(datasetName.trim(), datasetDescription.trim());
+      
+      // The upload success will be handled by the existing callback system
+      // which should update the uploadResponse with the S3 URL
+      // We need to wait a moment for the callback to be processed
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Upload completed, checking for S3 URL...');
+      console.log('Current uploadResponse:', uploadResponse);
+      
+      // Step 2: Extract S3 URL from the upload response
+      let uploadURL: string | undefined;
+      if (uploadResponse && typeof uploadResponse === 'object') {
+        const response = uploadResponse as any;
+        uploadURL = response.uploadURL || response.url || response.body?.uploadURL || response.body?.url;
+      }
+      
+      console.log('Extracted uploadURL:', uploadURL);
+      
+      if (!uploadURL) {
+        throw new Error(
+          'File upload completed but S3 URL not found in response. ' +
+          'Please check the upload configuration and try again.'
+        );
+      }
+      
+      // Step 3: Construct S3 URL for dataset creation
+      let s3Url = "";
+      try {
+        const url = new URL(uploadURL);
+        s3Url = `s3:${url.pathname}`;
+      } catch (error) {
+        console.error('Error parsing upload URL:', error);
+        s3Url = uploadURL;
+      }
+      
+      console.log('Final s3Url for dataset creation:', s3Url);
       
       // Get file format from metadata or detect from filename
       const fileFormat = uploadedFile.meta.fileFormat?.toString() || "file";
@@ -352,6 +401,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 </Alert>
               )}
               <CsvValidationUppy
+                ref={csvValidationRef}
                 projectId={projectId}
                 onUploadSuccess={handleFileValidated}
                 onUploadError={handleUploadError}
