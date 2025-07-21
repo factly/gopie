@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Stepper, StepperContent, StepperActions, Step } from "@/components/ui/stepper";
 import { CsvValidationUppy, FileValidationUppyRef } from "@/components/dataset/csv-validation-uppy";
 import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
@@ -83,6 +83,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   // Database dialog state
   const [isDbDialogOpen, setIsDbDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<"postgres" | "mysql" | null>(null);
+  const [isValidationWarningDialogOpen, setIsValidationWarningDialogOpen] = useState(false);
   
   // Ref for CSV validation component to trigger upload
   const csvValidationRef = useRef<FileValidationUppyRef>(null);
@@ -318,6 +319,19 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   };
 
   const handleNext = () => {
+    // Check if we're on step 2 (validation) and have data type warnings
+    if (currentStep === 2 && validationResult?.rejectedRows && validationResult.rejectedRows.length > 0) {
+      setIsValidationWarningDialogOpen(true);
+      return;
+    }
+    
+    if (currentStep < WIZARD_STEPS.length) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleProceedWithWarnings = () => {
+    setIsValidationWarningDialogOpen(false);
     if (currentStep < WIZARD_STEPS.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -505,14 +519,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  <strong className="text-gray-900 dark:text-white">Supported formats:</strong> CSV, Parquet, JSON, Excel (.xlsx, .xls), DuckDB (.duckdb)
-                </div>
-                <div className="text-sm">
-                  <strong>Detected format:</strong> {validationResult.format || 'CSV'}
-                </div>
-              </div>
+
             </div>
           </div>
         )}
@@ -715,6 +722,72 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               onError={handleDbSourceError}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Validation Warning Dialog */}
+      <Dialog open={isValidationWarningDialogOpen} onOpenChange={setIsValidationWarningDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Data Type Validation Warnings
+            </DialogTitle>
+            <DialogDescription>
+              Some rows in your dataset contain data that doesn't match the expected types.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="text-sm text-yellow-800 mb-3">
+                <strong>{validationResult?.rejectedRows?.length || 0} row(s)</strong> will be excluded from your dataset due to data type mismatches:
+              </div>
+              
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {validationResult?.rejectedRows?.slice(0, 5).map((error: any, index: number) => (
+                  <div key={index} className="bg-yellow-100 p-2 rounded border border-yellow-300">
+                    <div className="font-medium text-yellow-800 text-sm">
+                      Row {error.rowNumber}: Column '{error.columnName}' expected a {error.expectedType} type but is empty
+                    </div>
+                    <div className="text-xs text-yellow-600 mt-1">
+                      Error when converting column '{error.columnName}': Could not convert string 'Uncontested' to 'DOUBLE'
+                    </div>
+                  </div>
+                ))}
+                {validationResult?.rejectedRows && validationResult.rejectedRows.length > 5 && (
+                  <div className="text-sm text-yellow-600 font-medium">
+                    ... and {validationResult.rejectedRows.length - 5} more issue(s)
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-sm text-blue-800">
+                <strong>What happens if you continue:</strong>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>Rows with data type issues will be automatically skipped</li>
+                  <li>Your dataset will be created with the remaining valid rows</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsValidationWarningDialogOpen(false)}
+            >
+              Go Back to Fix Data
+            </Button>
+            <Button 
+              onClick={handleProceedWithWarnings}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              Continue with {validationResult?.rejectedRows?.length || 0} Rows Skipped
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
