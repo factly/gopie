@@ -1,16 +1,17 @@
 from typing import Annotated
 
+from langgraph.types import Command
 from e2b_code_interpreter import AsyncSandbox
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
+from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.prebuilt import InjectedState
-
+from langchain_core.messages import ToolMessage
 
 @tool
 async def run_python_code(
     code: str,
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
-    executed_python_code: Annotated[str | None, InjectedState("executed_python_code")],
+    tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
 ):
     """Run python code in a sandbox.
@@ -23,12 +24,20 @@ async def run_python_code(
     """
     execution = await sandbox.run_code(code)
 
-    return {
-        "logs": execution.logs,
-        "error": execution.error,
-        "executed_python_code": code
-    }
-
+    return Command(
+        update={
+            "executed_python_code": code,
+            "messages": [
+                ToolMessage(
+                    content=str({
+                        "logs": execution.logs,
+                        "error": execution.error,
+                    }),
+                    tool_call_id=tool_call_id
+                ),
+            ]
+        },
+    )
 
 def get_dynamic_tool_text(args: dict) -> str:
     return "Running python code for visualization"
