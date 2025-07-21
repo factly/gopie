@@ -359,7 +359,7 @@ export function ChatMessage({
       setDisplayDatasets(finalizedDatasets || []);
       setDisplaySqlQueries(finalizedSqlQuery ? [finalizedSqlQuery] : []);
     }
-  }, [message, content, finalizedDatasets, finalizedSqlQuery]);
+  }, [message, content, finalizedDatasets, finalizedSqlQuery, chatId, setVisualizationPaths]);
 
   const handleRunQuery = useCallback(
     async (query: string) => {

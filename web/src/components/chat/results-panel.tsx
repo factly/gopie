@@ -3,15 +3,14 @@ import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { SqlResults } from "./sql-results";
 import { VisualizationResults } from "./visualization-results";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, BarChart3, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Database, BarChart3 } from "lucide-react";
 
 interface ResultsPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function ResultsPanel({ isOpen, onClose }: ResultsPanelProps) {
+export function ResultsPanel({ isOpen }: ResultsPanelProps) {
   const { results: sqlResults } = useSqlStore();
   const { paths: visualizationPaths } = useVisualizationStore();
 

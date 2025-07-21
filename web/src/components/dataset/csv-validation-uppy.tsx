@@ -191,7 +191,7 @@ export function FileValidationUppy({
         uppy.cancelAll();
       }
     };
-  }, [projectId]); // Only depend on projectId, not the store functions
+  }, [projectId, clearColumnDescriptions, resetColumnMappings, setProjectId, uppy]);
 
   // Initialize Uppy
   useEffect(() => {
@@ -277,7 +277,7 @@ export function FileValidationUppy({
     return () => {
       uppyInstance.cancelAll();
     };
-  }, []); // No dependencies - only run once on mount
+  }, [clearColumnDescriptions, getColumnMappings, onUploadSuccess, resetColumnMappings]);
 
   // Handle file selection
   const handleFileSelected = async (file: File) => {

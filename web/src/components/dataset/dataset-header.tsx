@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DownloadIcon,
@@ -11,8 +10,6 @@ import {
   TableIcon,
   RowsIcon,
   ClockIcon,
-  ChevronRightIcon,
-  FolderIcon,
   InfoIcon,
   UserIcon,
   CodeIcon,
@@ -41,7 +38,8 @@ interface DatasetHeaderProps {
   onUpdate?: () => Promise<void>;
 }
 
-// Helper function to determine dataset source
+// Helper function to determine dataset source (commented out as unused)
+/*
 function getDatasetSource(dataset: Dataset): string {
   // Check if dataset was sourced from database
   if (
@@ -87,6 +85,7 @@ function getDatasetSource(dataset: Dataset): string {
   // Fallback to format if we can't determine source
   return dataset.format || "Unknown";
 }
+*/
 
 export function DatasetHeader({
   dataset,

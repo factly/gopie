@@ -167,7 +167,7 @@ export function UrlUploader({
         uppy.cancelAll();
       }
     };
-  }, [projectId]);
+  }, [projectId, clearColumnDescriptions, resetColumnMappings, setProjectId, uppy]);
 
   // Process datatype changes immediately when they happen (only for CSV files)
   const handleDataTypeChange = async () => {
