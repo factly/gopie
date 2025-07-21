@@ -837,9 +837,14 @@ function ChatPageClient() {
   // Custom submit handler that works with our MentionInput component
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
+      // Prevent submission if no context is selected
+      if (selectedContexts.length === 0) {
+        toast.error("Please select at least one project or dataset before sending a message");
+        return;
+      }
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
-    [sdkHandleSubmit]
+    [sdkHandleSubmit, selectedContexts]
   );
 
   // Note: Projects are now fetched when needed for context selection
@@ -973,8 +978,7 @@ function ChatPageClient() {
     isInitialized,
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback(() => {
     // Handle scroll - can be used for loading more messages if needed
   }, []);
 

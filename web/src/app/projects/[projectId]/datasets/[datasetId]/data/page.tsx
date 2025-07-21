@@ -72,7 +72,7 @@ export default function SqlPage({
     Record<string, unknown>[] | null
   >(null);
   const [isResizing, setIsResizing] = React.useState(false);
-  const [previewRowLimit, setPreviewRowLimit] = React.useState(100);
+  const [previewRowLimit] = React.useState(100);
 
   const {
     transcript,
@@ -107,22 +107,6 @@ export default function SqlPage({
     });
   }, [query, executeSql]);
 
-  const fetchDatasetRows = React.useCallback(async () => {
-    if (!dataset?.name) return;
-
-    try {
-      const response = await executeSql.mutateAsync(
-        `SELECT * FROM ${dataset.name} LIMIT ${previewRowLimit}`
-      );
-      setDatasetRows(response.data);
-    } catch (error) {
-      console.error("Failed to fetch dataset rows:", error);
-      toast.error(
-        `Failed to fetch dataset preview: ${(error as Error).message || "Unknown error occurred"}`
-      );
-      setDatasetRows(null);
-    }
-  }, [dataset?.name, executeSql, previewRowLimit]);
 
   React.useEffect(() => {
     if (dataset?.name && dataset.name !== initializedDatasetRef.current) {
