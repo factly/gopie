@@ -296,6 +296,11 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	if err != nil {
 		return nil, err
 	}
+
+	if result == nil {
+		return map[string]any{}, nil
+	}
+
 	return map[string]any{
 		"data": result.Rows,
 	}, nil
