@@ -3,7 +3,7 @@ entries:
   companion:
   - apiVersion: v2
     appVersion: sha-e80a7f7
-    created: "2025-07-17T17:58:32.72245+05:30"
+    created: "2025-07-18T17:25:53.830139+05:30"
     description: The companion plugin can be used to upload files to Transloadit for
       all kinds of processing, such as transcoding video, resizing images, zipping/unzipping,
       and much more.
@@ -21,7 +21,7 @@ entries:
   gopie:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2025-07-17T17:58:32.721922+05:30"
+    created: "2025-07-18T17:25:53.829695+05:30"
     dependencies:
     - name: postgresql
       repository: https://charts.bitnami.com/bitnami
@@ -45,6 +45,32 @@ entries:
     urls:
     - https://factly.github.io/gopie/gopie-0.1.0.tgz
     version: 0.1.0
+  - apiVersion: v2
+    appVersion: 0.0.1
+    created: "2025-07-18T17:25:53.820801+05:30"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 15.5.2
+    - name: minio
+      repository: https://charts.bitnami.com/bitnami
+      version: 17.0.13
+    - name: companion
+      repository: https://factly.github.io/helm-charts
+      version: 0.1.10
+    - name: qdrant
+      repository: https://qdrant.github.io/qdrant-helm
+      version: 1.12.5
+    - name: zitadel
+      repository: https://charts.zitadel.com
+      version: 8.13.4
+    description: A Helm chart for Kubernetes
+    digest: 795f7ef7b0b7fc22b4ad638ac8a42b128b2a91c70d61b30bcc3dae70bdcfc430
+    name: gopie
+    type: application
+    urls:
+    - https://factly.github.io/gopie/gopie-0.0.1.tgz
+    version: 0.0.1
   minio:
   - annotations:
       category: Infrastructure
@@ -61,7 +87,7 @@ entries:
       tanzuCategory: service
     apiVersion: v2
     appVersion: 2025.6.13
-    created: "2025-07-17T17:58:32.725583+05:30"
+    created: "2025-07-18T17:25:53.833001+05:30"
     dependencies:
     - name: common
       repository: oci://registry-1.docker.io/bitnamicharts
@@ -102,7 +128,7 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: 16.3.0
-    created: "2025-07-17T17:58:32.728902+05:30"
+    created: "2025-07-18T17:25:53.835984+05:30"
     dependencies:
     - name: common
       repository: oci://registry-1.docker.io/bitnamicharts
@@ -139,7 +165,7 @@ entries:
           description: Update Qdrant to v1.12.5
     apiVersion: v2
     appVersion: v1.12.5
-    created: "2025-07-17T17:58:32.729795+05:30"
+    created: "2025-07-18T17:25:53.836588+05:30"
     description: Qdrant - Vector Database for the next generation of AI applications.
     digest: e4e8deb49473fcea067e623b5af2c7fe12d48193319c7a9c4e15764808e70375
     home: https://qdrant.tech
@@ -161,7 +187,7 @@ entries:
   zitadel:
   - apiVersion: v2
     appVersion: v2.67.2
-    created: "2025-07-17T17:58:32.730898+05:30"
+    created: "2025-07-18T17:25:53.837613+05:30"
     description: A Helm chart for ZITADEL
     digest: 9fa648ae44aaba4f33e356106164dd39efe096cb737cb117162933f983e95eff
     icon: https://zitadel.com/zitadel-logo-dark.svg
@@ -175,4 +201,4 @@ entries:
     urls:
     - https://factly.github.io/gopie/charts/zitadel-8.13.4.tgz
     version: 8.13.4
-generated: "2025-07-17T17:58:32.711757+05:30"
+generated: "2025-07-18T17:25:53.808592+05:30"
