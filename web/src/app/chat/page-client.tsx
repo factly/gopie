@@ -117,26 +117,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     }
   }, [error]);
 
-  const handleStartNewChat = () => {
-    selectChatForDataset(null, null, null);
-    setActiveTab("chat");
-    setSelectedContexts([]);
-    setLinkedDatasetId(null);
-
-    // Clear results when starting a new chat
-    resetExecutedQueries();
-    clearVisualizationPaths();
-    setIsOpen(false);
-    setVisualizationOpen(false);
-
-    // Clear URL parameters when starting a new chat
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("chatId");
-    params.delete("initialMessage");
-    params.delete("contextData");
-    router.replace(`/chat?${params.toString()}`);
-  };
-
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync({
