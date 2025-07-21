@@ -355,22 +355,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
   return (
     <div className="container max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-1 mb-4"
-          onClick={() => router.push(`/projects/${projectId}`)}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to project
-        </Button>
-        <h1 className="text-2xl font-semibold">Add Dataset</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Upload a data file or connect to a database to create a new dataset.
-        </p>
-      </div>
-
       <Stepper steps={WIZARD_STEPS} currentStep={currentStep} className="mb-8" />
 
       <StepperContent>
@@ -378,11 +362,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {currentStep === 1 && (
           <div className="space-y-8">
             <div className="bg-card border p-6">
-              <h2 className="text-xl font-semibold mb-1">Upload Data File</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Drag & drop a file or click to browse. Supports CSV, Parquet, JSON,
-                Excel (.xlsx, .xls), and DuckDB files. Excel files are automatically converted to CSV.
-              </p>
               {uploadError && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
@@ -429,16 +408,53 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 <Database className="h-5 w-5 mr-2" /> Connect to Database
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Create a dataset by querying your existing PostgreSQL or MySQL
-                database.
+                Create a dataset by connecting to your existing database or cloud storage.
               </p>
-              <div className="flex gap-4">
-                <Button onClick={() => openDbDialog("postgres")} variant="outline">
-                  Connect to PostgreSQL
-                </Button>
-                <Button onClick={() => openDbDialog("mysql")} variant="outline">
-                  Connect to MySQL
-                </Button>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div 
+                  onClick={() => openDbDialog("postgres")} 
+                  className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]"
+                >
+                  <img src="/images/databases/postgres.svg" alt="PostgreSQL" className="w-full h-3/4 object-contain" />
+                </div>
+                <div 
+                  onClick={() => openDbDialog("mysql")} 
+                  className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]"
+                >
+                  <img src="/images/databases/mysql.svg" alt="MySQL" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/snowflake.svg" alt="Snowflake" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/google-big-query.svg" alt="BigQuery" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/amazon-redshift.svg" alt="Redshift" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/amazon-s3.svg" alt="Amazon S3" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/azure-blob-storage.svg" alt="Azure Blob" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/gcs.svg" alt="Google Cloud Storage" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/duckdb.svg" alt="DuckDB" className="w-full h-3/4 object-contain" />
+                </div>
+                <div className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-white dark:bg-white aspect-[2/1] min-h-[60px]">
+                  <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Coming Soon</div>
+                  <img src="/images/databases/motherduck.svg" alt="MotherDuck" className="w-full h-3/4 object-contain" />
+                </div>
               </div>
             </div>
           </div>
@@ -490,8 +506,8 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               )}
 
               <div className="space-y-2">
-                <div className="text-sm">
-                  <strong>Supported formats:</strong> CSV, Parquet, JSON, Excel (.xlsx, .xls), DuckDB (.duckdb)
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <strong className="text-gray-900 dark:text-white">Supported formats:</strong> CSV, Parquet, JSON, Excel (.xlsx, .xls), DuckDB (.duckdb)
                 </div>
                 <div className="text-sm">
                   <strong>Detected format:</strong> {validationResult.format || 'CSV'}

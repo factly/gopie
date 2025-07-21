@@ -160,15 +160,9 @@ export function CustomFileUploader({
             accept={acceptAttribute}
           />
           <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-1">Upload Dataset File</h3>
+          <h3 className="text-lg font-medium mb-1">Upload File</h3>
           <p className="text-sm text-muted-foreground text-center mb-2">
             Drag and drop a file here or click to browse
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            Supports CSV, Parquet, JSON, Excel (.xlsx), and DuckDB files
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Files will be validated before upload
           </p>
         </div>
       ) : (
