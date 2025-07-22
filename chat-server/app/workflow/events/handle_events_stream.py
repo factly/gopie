@@ -103,7 +103,7 @@ class EventStreamHandler:
                 content = chunk.content
 
         elif event_type == "on_chat_model_end":
-            content = ""
+            content = "\n"
 
         return content
 
