@@ -48,8 +48,12 @@ async def get_python_code_from_viz(viz_path: str):
 
 
 @traceable
-def format_dataset_info(datasets: list[Dataset], csv_paths: list[str]) -> str:
+def format_dataset_info(datasets: list[Dataset] | None, csv_paths: list[str]) -> str:
     datasets_csv_info = ""
+
+    if not datasets:
+        return ""
+
     for idx, (dataset, csv_path) in enumerate(zip(datasets, csv_paths)):
         datasets_csv_info += f"Dataset {idx + 1}: \n\n"
         datasets_csv_info += f"Description: {dataset.description}\n\n"
@@ -81,7 +85,7 @@ async def update_sandbox_timeout(sandbox: AsyncSandbox):
 
 
 @traceable(run_type="chain", name="upload_csv_files")
-async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset]) -> list[str]:
+async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset] | None) -> list[str]:
     """
     Asynchronously writes dataset contents as CSV files to the sandbox file system.
 
@@ -91,6 +95,9 @@ async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset]) -> li
     Returns:
         list[str]: List of file names corresponding to the uploaded CSV files.
     """
+    if not datasets:
+        return []
+
     csv_files = datasets_to_csv(datasets)
     tasks = []
     for file_name, csv_data in csv_files:

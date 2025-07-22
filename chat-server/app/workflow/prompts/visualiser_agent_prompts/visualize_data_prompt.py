@@ -44,7 +44,7 @@ Always call the result_paths tool at the end to return the paths to the json fil
 """
 
     human_template_str = """This is the user query: {user_query}
-    
+
 The following are the datasets and their descriptions for the present query:
 
 {datasets_csv_info}
@@ -56,8 +56,11 @@ The following are the datasets and their descriptions for the present query:
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
+
     previous_python_text = """
-Previous python code - This is the python code that was executed to generate the previous visualization, Please note that the paths to csv files might have changed so use the new paths to csv files.
+Previous python code - This is the python code that was executed to generate the previous visualization,
+Please note that the paths to csv files might have changed so use the new paths to csv files.
+
 ```python
 {previous_python_code}
 ```
@@ -66,8 +69,8 @@ Previous python code - This is the python code that was executed to generate the
     human_content = human_template_str.format(
         user_query=user_query,
         datasets_csv_info=datasets_csv_info,
-        previous_python_code=previous_python_code,
     )
+
     if previous_python_code:
         human_content += previous_python_text.format(previous_python_code=previous_python_code)
 
