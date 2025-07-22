@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from langgraph.types import Command
 from e2b_code_interpreter import AsyncSandbox
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool, InjectedToolCallId
+from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
 
 
 @tool
@@ -18,7 +18,7 @@ async def run_python_code(
     """Run python code in a sandbox.
     Pandas and Altair are already installed.
     The dataset csv are saved in the `csv_path` locations.
-    Always use altair to create visualizations and save them to json.
+    Always use altair to create visualizations and save using altair.save("filename.json").
     To get any output in the logs, use the print function.
 
     Return the logs and error if any.

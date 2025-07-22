@@ -62,7 +62,8 @@ RESPOND ONLY IN THIS JSON FORMAT:
     human_template_str = """
 Current user query: {current_query}
 
-Previous conversation history: {formatted_chat_history}
+Previous conversation history:
+{formatted_chat_history}
 
 Analyze the above and return ONLY a single JSON response with the specified fields."""
 

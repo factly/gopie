@@ -32,8 +32,8 @@ def get_all_tool_calls(chat_history: list[BaseMessage]) -> list[ToolCall]:
 def get_sql_queries(tool_calls: list[ToolCall]) -> list[str]:
     sql_queries = []
     for tool_call in tool_calls:
-        if hasattr(tool_call, 'name') and tool_call.name == SQL_QUERIES_GENERATED:
-            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+        if tool_call.get("name") == SQL_QUERIES_GENERATED:
+            args = tool_call.get("args", {})
             sql_queries.extend(args.get(SQL_QUERIES_GENERATED_ARG, []))
     return sql_queries
 
@@ -41,8 +41,8 @@ def get_sql_queries(tool_calls: list[ToolCall]) -> list[str]:
 def get_datasets_used(tool_calls: list[ToolCall]) -> list[str]:
     datasets_used = []
     for tool_call in tool_calls:
-        if hasattr(tool_call, 'name') and tool_call.name == DATASETS_USED:
-            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+        if tool_call.get("name") == DATASETS_USED:
+            args = tool_call.get("args", {})
             datasets_used.append(args.get(DATASETS_USED_ARG, []))
     return datasets_used
 
@@ -50,9 +50,10 @@ def get_datasets_used(tool_calls: list[ToolCall]) -> list[str]:
 def get_vizpaths(tool_calls: list[ToolCall]) -> list[str]:
     vizpaths = []
     for tool_call in tool_calls:
-        if hasattr(tool_call, 'name') and tool_call.name == VISUALIZATION_RESULT:
-            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+        if tool_call.get("name") == VISUALIZATION_RESULT:
+            args = tool_call.get("args", {})
             vizpaths.extend(args.get(VISUALIZATION_RESULT_ARG, []))
+            break
     return vizpaths
 
 

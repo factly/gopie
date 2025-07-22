@@ -58,8 +58,8 @@ The following are the datasets and their descriptions for the present query:
         )
 
     previous_python_text = """
-Previous python code - This is the python code that was executed to generate the previous visualization,
-Please note that the paths to csv files might have changed so use the new paths to csv files.
+Previous python code - This is the python code that was used to generate the previous visualization,
+Please note that the paths to csv files might have changed so use the new paths in the code you are going to run.
 
 ```python
 {previous_python_code}

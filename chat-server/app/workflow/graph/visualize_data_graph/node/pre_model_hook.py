@@ -12,7 +12,7 @@ from app.workflow.graph.visualize_data_graph.types import (
 )
 from app.workflow.graph.visualize_data_graph.utils import (
     format_dataset_info,
-    get_python_code_from_viz,
+    get_python_code_files,
     get_sandbox,
     update_sandbox_timeout,
     upload_csv_files,
@@ -47,22 +47,21 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             sandbox = existing_sandbox
         else:
             sandbox = await get_sandbox()
-            csv_paths = await upload_csv_files(sandbox=sandbox, datasets=state.get("datasets", []))
+            await upload_csv_files(sandbox=sandbox, datasets=state.get("datasets", []))
 
         messages = []
         if not state.get("is_input_prepared"):
             await adispatch_custom_event("gopie-agent", {"content": "Preparing visualization ..."})
 
-            datasets_csv_info = format_dataset_info(
-                datasets=state.get("datasets", []), csv_paths=csv_paths
-            )
+            datasets_csv_info = format_dataset_info(datasets=state.get("datasets", []))
 
             previous_python_code = ""
 
-            if state.get("previous_visualization_result_path"):
-                previous_python_code = await get_python_code_from_viz(
-                    viz_path=state["previous_visualization_result_path"]
+            if state.get("previous_visualization_result_paths"):
+                previous_python_code_files = await get_python_code_files(
+                    viz_paths=state["previous_visualization_result_paths"]
                 )
+                previous_python_code = "\n".join(previous_python_code_files)
 
             messages = get_prompt(
                 "visualize_data",

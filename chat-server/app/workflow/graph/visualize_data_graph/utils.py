@@ -35,6 +35,20 @@ def datasets_to_csv(datasets: list[Dataset]):
     return results
 
 
+@traceable(run_type="chain", name="get_python_code_files")
+async def get_python_code_files(viz_paths: list[str]):
+    python_code_paths = []
+    for viz_path in viz_paths:
+        viz_path = viz_path.rsplit("-", 1)[0].strip()
+        python_code_path = viz_path.replace(".json", ".py")
+        if python_code_path not in python_code_paths:
+            python_code_paths.append(python_code_path)
+    python_code_files = await asyncio.gather(
+        *[get_python_code_from_viz(python_code_path) for python_code_path in python_code_paths]
+    )
+    return python_code_files
+
+
 @traceable(run_type="chain", name="get_python_code_for_viz")
 async def get_python_code_from_viz(viz_path: str):
     viz_path = viz_path.rsplit("-", 1)[0].strip()
@@ -101,7 +115,6 @@ async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset] | None
     for file_name, csv_data in csv_files:
         tasks.append(sandbox.files.write(file_name, csv_data))
     await asyncio.gather(*tasks)
-    return [file_name for file_name, _ in csv_files]
 
 
 @traceable(run_type="chain", name="run_python_code")

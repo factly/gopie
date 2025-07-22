@@ -20,7 +20,7 @@ class VisualizationResult(BaseModel):
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset] | None
-    previous_visualization_result_path: str | None
+    previous_visualization_result_paths: list[str] | None
     relevant_sql_queries: list[str] | None
 
 
@@ -30,7 +30,7 @@ class OutputState(TypedDict):
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    previous_visualization_result_path: str | None
+    previous_visualization_result_paths: list[str] | None
     datasets: list[Dataset] | None
     user_query: str
     result: VisualizationResult

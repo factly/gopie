@@ -1,7 +1,9 @@
 from langchain_core.runnables import RunnableConfig
-
-from app.workflow.graph.visualize_data_graph.graph import graph as visualize_data_graph
 from langgraph.graph import END
+
+from app.workflow.graph.visualize_data_graph.graph import (
+    graph as visualize_data_graph,
+)
 
 from ..types import AgentState
 
@@ -14,9 +16,9 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
     """
     input_state = {
         "user_query": state["user_query"],
-        "datasets": state["datasets"],
-        "previous_visualization_result_path": state["previous_json_paths"],
-        "relevant_sql_queries": state["relevant_sql_queries"],
+        "datasets": state.get("datasets", []),
+        "previous_visualization_result_paths": state.get("previous_json_paths", []),
+        "relevant_sql_queries": state.get("relevant_sql_queries", []),
     }
 
     _ = await visualize_data_graph.ainvoke(input_state, config=config)  # type: ignore
