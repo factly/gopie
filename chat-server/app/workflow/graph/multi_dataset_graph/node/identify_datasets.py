@@ -40,6 +40,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
 
+    last_message = state.get("messages", [])[-1]
+
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
     query_type = query_result.subqueries[query_index].query_type
@@ -105,7 +107,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             query_type=query_type,
         )
 
-        response = await llm.ainvoke(llm_prompt)
+        response = await llm.ainvoke(llm_prompt + [last_message])
 
         response_content = str(response.content)
         parser = JsonOutputParser()

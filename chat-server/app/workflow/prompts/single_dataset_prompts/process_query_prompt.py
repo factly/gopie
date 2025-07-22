@@ -6,7 +6,6 @@ from langchain_core.prompts import (
 
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-from app.models.query import ValidationResult
 from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
 from app.workflow.prompts.formatters.format_query_result import format_query_result
 
@@ -83,7 +82,6 @@ def format_process_query_input(
     dataset_schema: DatasetSchema,
     rows_csv: str,
     prev_query_result: QueryResult | None = None,
-    validation_result: ValidationResult | None = None,
     previous_sql_queries: list | None = None,
     **kwargs,
 ) -> dict:
@@ -114,41 +112,6 @@ def format_process_query_input(
     if prev_query_result:
         formatted_prev_result = format_query_result(prev_query_result)
         input_str += f"\n\n🔄 PREVIOUS QUERY CONTEXT:\n{formatted_prev_result}"
-
-    if validation_result:
-        confidence = validation_result["confidence"]
-        if confidence >= 0.9:
-            confidence_desc = "Very high confidence"
-            confidence_meaning = "excellent results"
-        elif confidence >= 0.7:
-            confidence_desc = "High confidence"
-            confidence_meaning = "good results, minor improvements possible"
-        elif confidence >= 0.4:
-            confidence_desc = "Medium confidence"
-            confidence_meaning = "some issues, improvements recommended"
-        else:  # 0.0-0.3
-            confidence_desc = "Low confidence"
-            confidence_meaning = "major issues, significant improvements needed"
-
-        validation_status = "✅ Valid" if validation_result["is_valid"] else "❌ Needs Improvement"
-
-        context_note = (
-            "📋 ANALYSIS: After reviewing the previous query result above"
-            if prev_query_result
-            else "📋 ANALYSIS: Initial validation"
-        )
-
-        input_str += f"""
-
-{context_note}
-🔍 VALIDATION: {validation_status}
-📊 Confidence: {confidence:.2f}/1.0 ({confidence_desc} - {confidence_meaning})
-💭 Reasoning: {validation_result['reasoning']}
-⚠️  The previous query result requires improvements before providing a final response."""
-
-        missing_elements = validation_result["missing_elements"]
-        if missing_elements:
-            input_str += f"\n❓ Still Missing: {', '.join(missing_elements)}"
 
     if previous_sql_queries:
         input_str += "\n--- PREVIOUS SQL QUERIES ---\n"

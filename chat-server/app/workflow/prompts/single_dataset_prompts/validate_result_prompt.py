@@ -51,12 +51,6 @@ VALIDATION DECISION CRITERIA:
 - Data quality issues make results unreliable
 - Missing essential information that user specifically requested
 
-CONFIDENCE SCORING (be precise):
-- 0.9-1.0: Very high confidence - excellent results
-- 0.7-0.9: High confidence - good results, minor improvements possible
-- 0.4-0.6: Medium confidence - some issues, improvements recommended
-- 0.0-0.3: Low confidence - major issues, significant improvements needed
-
 RECOMMENDATION FIELD (choose the most appropriate):
 - If you are validating a **single_dataset** result, only use:
     - "pass_on_results": Results are sufficient to answer the user's question.
@@ -68,14 +62,11 @@ RECOMMENDATION FIELD (choose the most appropriate):
 
 RESPONSE FORMAT (JSON only):
 {
-    "is_valid": true/false,
-    "reasoning": "Clear analysis explaining your decision - what works, what doesn't, and why",
-    "confidence": 0.0-1.0,
-    "missing_elements": ["specific items missing if invalid"],
-    "recommendation": "pass_on_results" | "rerun_query" | "replan" | "reidentify_datasets" | "route_response"
+    "recommendation": "pass_on_results" | "rerun_query" | "replan" | "reidentify_datasets" | "route_response",
+    "response": "A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
 }
 
-KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection."""
+KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection. Your response should be actionable and concise, providing clear reasoning and next steps based on your analysis."""
 
     human_template_str = "{input}"
 

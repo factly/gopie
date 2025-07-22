@@ -1,15 +1,12 @@
-from typing import Any
-
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
-from app.models.message import ErrorMessage, IntermediateStep
+from app.models.message import AIMessage, ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
-from app.models.query import ValidationResult
 
 
 RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
@@ -19,12 +16,15 @@ RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
     role="intermediate",
     progress_message="Validating query result...",
 )
-async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any]:
+async def validate_result(state: State, config: RunnableConfig) -> dict:
     """
     Validate the query result using a language model and return the validation outcome, updated retry count, and workflow messages.
-    
-    If the language model's recommendation is "rerun_query", the retry count is incremented. If the recommendation is not recognized, an error is raised and an error message is returned in the messages list. On successful validation, returns the parsed validation result and an intermediate step message; on failure, returns `None` for the validation result and an error message.
-     
+
+    If the language model's recommendation is "rerun_query", the retry count is incremented.
+    If the recommendation is not recognized, an error is raised and an error message is returned in the messages list.
+    On successful validation, returns the parsed validation result and an intermediate step message;
+    on failure, returns `None` for the validation result and an error message.
+
     Returns:
         dict: A dictionary containing the updated `retry_count`, the `validation_result` (or `None` on error), and a list of workflow messages.
     """
@@ -42,24 +42,26 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         parser = JsonOutputParser()
         response = await llm.ainvoke(prompt_messages)
         parsed_response = parser.parse(str(response.content))
-        validation_result = ValidationResult(**parsed_response)
 
-        if validation_result["recommendation"] not in RECOMMENDATION_LIST:
-            raise ValueError(f"Invalid recommendation: {validation_result['recommendation']}")
+        recommendation = parsed_response["recommendation"]
+        response = parsed_response["response"]
 
-        if validation_result["recommendation"] == "rerun_query":
+        if recommendation not in RECOMMENDATION_LIST:
+            raise ValueError(f"Invalid recommendation: {recommendation}")
+
+        if recommendation == "rerun_query":
             retry_count += 1
 
         return {
             "retry_count": retry_count,
-            "validation_result": validation_result,
-            "messages": [IntermediateStep.from_json(parsed_response)],
+            "messages": [AIMessage(content=response)],
+            "recommendation": recommendation,
+            "response": response,
         }
 
     except Exception as e:
         return {
             "retry_count": retry_count,
-            "validation_result": None,
             "messages": [
                 ErrorMessage(content=f"Validation error: {str(e)}. Proceeding with response.")
             ],
@@ -69,22 +71,16 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
 async def route_result_validation(state: State) -> str:
     """
     Determine the next workflow action based on the validation result, retry count, and last message.
-    
+
     Returns:
         str: The recommended action, either "pass_on_results" or "rerun_query", based on validation outcome and workflow state.
     """
-    last_message = state.get("messages", [])[-1]
-    validation_result = state.get("validation_result", None)
+    recommendation = state.get("recommendation", "pass_on_results")
     retry_count = state.get("retry_count", 0)
-
-    if not validation_result:
-        return "pass_on_results"
-
-    is_valid = validation_result["is_valid"]
-    recommendation = validation_result["recommendation"]
+    last_message = state.get("messages", [])[-1]
 
     if (
-        is_valid
+        recommendation == "pass_on_results"
         or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
         or isinstance(last_message, ErrorMessage)
     ):

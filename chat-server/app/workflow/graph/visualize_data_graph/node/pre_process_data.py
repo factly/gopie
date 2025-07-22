@@ -5,8 +5,8 @@ from app.workflow.graph.visualize_data_graph.types import State
 
 
 async def pre_process_visualization_data(state: State) -> dict:
-    datasets = state.get("datasets", [])
-    relevant_sql_queries = state.get("relevant_sql_queries", []) or []
+    datasets = state["datasets"] or []
+    relevant_sql_queries = state["relevant_sql_queries"] or []
 
     try:
         for sql_query in relevant_sql_queries:

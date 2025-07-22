@@ -4,7 +4,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from app.models.data import ColumnValueMatching
-from app.models.query import QueryResult, ValidationResult
+from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
 
 
@@ -51,7 +51,6 @@ class State(TypedDict):
     tool_call_count: int
     relevant_datasets_ids: list[str] | None
     previous_sql_queries: list[str] | None
-    validation_result: ValidationResult | None
 
 
 class ConfigSchema(TypedDict):

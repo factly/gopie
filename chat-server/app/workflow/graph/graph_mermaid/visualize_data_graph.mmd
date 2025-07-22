@@ -5,6 +5,7 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
+	pre_process_data(pre_process_data)
 	pre_model_hook(pre_model_hook)
 	agent(agent)
 	tools(tools)
@@ -12,12 +13,13 @@ graph TD;
 	cleanup(cleanup)
 	respond(respond)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> pre_model_hook;
+	__start__ --> pre_process_data;
 	agent -.-> process_result;
 	agent -. &nbsp;continue&nbsp; .-> tools;
 	cleanup --> respond;
 	pre_model_hook -.-> agent;
 	pre_model_hook -.-> cleanup;
+	pre_process_data --> pre_model_hook;
 	process_result --> cleanup;
 	tools --> pre_model_hook;
 	respond --> __end__;

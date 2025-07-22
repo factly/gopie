@@ -89,9 +89,9 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
     """
     user_query = state.get("user_query", "") or ""
     dataset_id = state.get("dataset_id", None)
-    validation_result = state.get("validation_result", None)
     prev_query_result = state.get("query_result", None)
     previous_sql_queries = state.get("previous_sql_queries", [])
+    last_message = state.get("messages", [])[-1]
 
     query_result = QueryResult(
         original_user_query=user_query,
@@ -130,14 +130,13 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             dataset_schema=dataset_schema,
             rows_csv=rows_csv,
             prev_query_result=prev_query_result,
-            validation_result=validation_result,
             previous_sql_queries=previous_sql_queries,
         )
 
         llm = get_model_provider(config).get_llm_for_node("process_query")
         parser = JsonOutputParser()
 
-        llm_response = await llm.ainvoke(prompt_messages)
+        llm_response = await llm.ainvoke(prompt_messages + [last_message])
 
         response_content = str(llm_response.content)
         parsed_response = parser.parse(response_content)

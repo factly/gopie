@@ -39,6 +39,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
         previous_sql_queries = state.get("previous_sql_queries", [])
+        last_message = state.get("messages", [])[-1]
 
         if not identified_datasets:
             raise Exception("No dataset selected for query planning")
@@ -64,7 +65,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         )
 
         llm = get_model_provider(config).get_llm_for_node("plan_query")
-        response = await llm.ainvoke(llm_prompt)
+        response = await llm.ainvoke(llm_prompt + [last_message])
         response_content = str(response.content)
 
         parser = JsonOutputParser()

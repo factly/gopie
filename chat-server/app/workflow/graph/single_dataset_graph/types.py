@@ -1,6 +1,6 @@
 from typing import Annotated, TypedDict
 
-from app.models.query import QueryResult, ValidationResult
+from app.models.query import QueryResult
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -17,9 +17,8 @@ class OutputState(TypedDict):
 
 
 class State(TypedDict):
-    messages: Annotated[list, add_messages]
+    messages: Annotated[list[BaseMessage], add_messages]
     retry_count: int
-    validation_result: ValidationResult | None
     dataset_id: str | None
     user_query: str | None
     query_result: QueryResult
