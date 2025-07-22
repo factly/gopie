@@ -14,6 +14,12 @@ import {
   SUPPORTED_FORMATS,
 } from "@/lib/validation/validate-file";
 
+interface FileInfo {
+  name: string;
+  size: number;
+  format?: string;
+}
+
 interface CustomFileUploaderProps {
   onFileSelected: (file: File) => void;
   onUpload: (datasetName?: string, description?: string) => Promise<void>;
@@ -23,6 +29,7 @@ interface CustomFileUploaderProps {
   canUpload: boolean;
   onClearFile: () => void;
   className?: string;
+  fileInfo?: FileInfo;
 }
 
 export function CustomFileUploader({
@@ -34,6 +41,7 @@ export function CustomFileUploader({
   canUpload,
   onClearFile,
   className,
+  fileInfo,
 }: CustomFileUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -137,9 +145,12 @@ export function CustomFileUploader({
     ","
   );
 
+  // Show file UI if we have a selected file OR fileInfo (when returning to step)
+  const hasFile = selectedFile || fileInfo;
+  
   return (
     <div className={cn("w-full", className)}>
-      {!selectedFile ? (
+      {!hasFile ? (
         <div
           className={cn(
             "border-2 border-dashed p-8 flex flex-col items-center justify-center cursor-pointer transition-colors",
@@ -171,16 +182,18 @@ export function CustomFileUploader({
             <div className="flex items-center">
               <File className="h-8 w-8 text-primary mr-3" />
               <div>
-                <p className="font-medium text-sm">{selectedFile.name}</p>
+                <p className="font-medium text-sm">
+                  {selectedFile ? selectedFile.name : fileInfo?.name || "Dataset file"}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatFileSize(selectedFile.size)}
-                  {selectedFile && (
+                  {selectedFile ? formatFileSize(selectedFile.size) : "Previously validated"}
+                  {(selectedFile || fileInfo) && (
                     <span className="ml-2">
                       •{" "}
-                      {detectFileFormat(
-                        selectedFile.name,
-                        selectedFile.type
-                      )?.toUpperCase() || "Unknown format"}
+                      {selectedFile 
+                        ? (detectFileFormat(selectedFile.name, selectedFile.type)?.toUpperCase() || "Unknown format")
+                        : (fileInfo?.format?.toUpperCase() || "Unknown format")
+                      }
                     </span>
                   )}
                 </p>

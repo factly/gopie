@@ -58,7 +58,7 @@ export function DatabaseSourceForm({
     }
 
     try {
-      const result = await sourceDatabaseDataset.mutateAsync({
+      const response = await sourceDatabaseDataset.mutateAsync({
         alias: datasetAlias,
         description: datasetDescription.trim() || undefined,
         connection_string: connectionString,
@@ -68,6 +68,9 @@ export function DatabaseSourceForm({
         created_by: "system",
       });
 
+      // Handle both response structures
+      const result = (response as any)?.data || response;
+      
       if (!result?.dataset?.id) {
         const errMessage =
           "Invalid response from server: Dataset ID not found.";
