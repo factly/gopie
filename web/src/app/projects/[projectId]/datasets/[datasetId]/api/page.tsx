@@ -144,7 +144,7 @@ export default function RestApiPage({
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto py-5 px-4 sm:px-6 lg:px-8">
       <div className="flex gap-6">
         {/* Left Panel - Options */}
         <div className="border-r pr-6">
@@ -256,7 +256,7 @@ export default function RestApiPage({
                     }
                   >
                     <SelectTrigger className="h-9 w-[180px]">
-                      <SelectValue placeholder="filter column" />
+                      <SelectValue placeholder="column" />
                     </SelectTrigger>
                     <SelectContent>
                       {columns.map((column) => (
@@ -365,7 +365,7 @@ export default function RestApiPage({
               <SqlPreview
                 value={JSON.stringify(tableData?.data || [], null, 2)}
                 language="json"
-                height="calc(100vh - 320px)"
+                height="calc(100vh - 250px)"
               />
             )}
           </div>
