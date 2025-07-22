@@ -19,37 +19,33 @@ from ..types import AgentState, Dataset
 )
 async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     user_input = state.get("initial_user_query", "")
-    chat_history = get_chat_history(config)
+    chat_history = get_chat_history(config) or []
     dataset_ids = state.get("dataset_ids", [])
-
-    if not chat_history:
-        return {"user_query": user_input}
 
     prompt_messages = get_prompt(
         "process_context",
         current_query=user_input,
-        chat_history=chat_history,
         dataset_ids=dataset_ids,
     )
 
     llm = get_model_provider(config).get_llm_for_node("process_context")
-    response = await llm.ainvoke(prompt_messages)
+    response = await llm.ainvoke(chat_history + prompt_messages)
 
     try:
         parser = JsonOutputParser()
         parsed_response = parser.parse(str(response.content))
 
+        is_follow_up = parsed_response.get("is_follow_up", False)
+        new_data_needed = parsed_response.get("new_data_needed", False)
+        needs_visualization = parsed_response.get("needs_visualization", False)
+        visualization_data = parsed_response.get("visualization_data", [])
+        previous_json_paths = parsed_response.get("previous_json_paths", [])
+        relevant_datasets_ids = parsed_response.get("relevant_datasets_ids", [])
+        relevant_sql_queries = parsed_response.get("relevant_sql_queries", [])
         enhanced_query = parsed_response.get("enhanced_query", user_input)
         context_summary = parsed_response.get("context_summary", "")
-        is_follow_up = parsed_response.get("is_follow_up", False)
-        need_semantic_search = parsed_response.get("need_semantic_search", True)
-        required_dataset_ids = parsed_response.get("required_dataset_ids", [])
-        visualization_data = parsed_response.get("visualization_data", [])
-        previous_sql_queries = parsed_response.get("previous_sql_queries", [])
-        prev_csv_paths = parsed_response.get("prev_csv_paths", [])
 
-        if context_summary and context_summary.strip():
-            final_query = f"""
+        final_query = f"""
 The original user query and the previous conversation history were processed
 and the following context summary was added to the query:
 
@@ -59,9 +55,6 @@ User Query: {enhanced_query}
 
 Context Summary: {context_summary}
 """
-        else:
-            final_query = enhanced_query
-
         datasets = []
         if visualization_data:
             for viz_data in visualization_data:
@@ -73,9 +66,9 @@ Context Summary: {context_summary}
                     )
                     datasets.append(dataset)
 
-        if previous_sql_queries:
+        if relevant_sql_queries:
             try:
-                for sql_query in previous_sql_queries:
+                for sql_query in relevant_sql_queries:
                     query_snippet = sql_query[:100]
                     logger.debug(f"Executing SQL query for context: {query_snippet}...")
                     sql_result = await execute_sql(query=sql_query)
@@ -98,11 +91,13 @@ Context Summary: {context_summary}
 
         return {
             "user_query": final_query,
-            "need_semantic_search": need_semantic_search,
-            "required_dataset_ids": required_dataset_ids,
+            "new_data_needed": new_data_needed,
+            "needs_visualization": needs_visualization,
+            "visualization_data": visualization_data,
+            "previous_json_paths": previous_json_paths,
+            "relevant_datasets_ids": relevant_datasets_ids,
+            "relevant_sql_queries": relevant_sql_queries,
             "datasets": datasets,
-            "previous_sql_queries": previous_sql_queries,
-            "prev_csv_paths": prev_csv_paths,
         }
 
     except Exception as e:

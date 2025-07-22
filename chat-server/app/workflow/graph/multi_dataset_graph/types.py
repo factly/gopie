@@ -30,8 +30,8 @@ class InputState(TypedDict):
     project_ids: list[str] | None
     messages: list[BaseMessage]
     user_query: str
-    need_semantic_search: bool | None
-    required_dataset_ids: list[str] | None
+    relevant_datasets_ids: list[str] | None
+    previous_sql_queries: list[str] | None
 
 
 class OutputState(TypedDict):
@@ -49,8 +49,8 @@ class State(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     query_result: QueryResult
     tool_call_count: int
-    need_semantic_search: bool | None
-    required_dataset_ids: list[str] | None
+    relevant_datasets_ids: list[str] | None
+    previous_sql_queries: list[str] | None
     validation_result: ValidationResult | None
 
 

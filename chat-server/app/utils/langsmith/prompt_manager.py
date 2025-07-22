@@ -19,7 +19,7 @@ class PromptManager:
         langsmith_prompt_name: NodeName,
         *args,
         **kwargs,
-    ) -> list[BaseMessage] | str:
+    ) -> list[BaseMessage]:
         """
         Get a prompt from LangSmith hub if enabled, otherwise return fallback.
         Returns:
@@ -53,10 +53,10 @@ class PromptManager:
         else:
             return self.get_fallback_prompt(langsmith_prompt_name, *args, **kwargs)
 
-    def get_fallback_prompt(self, node_name: NodeName, *args, **kwargs) -> list[BaseMessage] | str:
+    def get_fallback_prompt(self, node_name: NodeName, *args, **kwargs) -> list[BaseMessage]:
         return PromptSelector().get_prompt(node_name, *args, **kwargs)
 
 
-def get_prompt(node_name: NodeName, *args, **kwargs) -> list[BaseMessage] | str:
+def get_prompt(node_name: NodeName, *args, **kwargs) -> list[BaseMessage]:
     input_messages = PromptManager().get_prompt(node_name, *args, **kwargs)
     return input_messages

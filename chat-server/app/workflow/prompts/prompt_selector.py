@@ -95,7 +95,7 @@ class PromptSelector:
 
         return self.prompt_map[node_name](prompt_template=True)
 
-    def get_prompt(self, node_name: NodeName, **kwargs) -> list[BaseMessage] | str:
+    def get_prompt(self, node_name: NodeName, **kwargs) -> list[BaseMessage]:
         if node_name not in self.prompt_map:
             raise ValueError(f"No prompt available for node: {node_name}")
 

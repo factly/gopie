@@ -1,3 +1,4 @@
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
@@ -99,5 +100,5 @@ def get_custom_model(model_id: str):
     return ModelProvider(metadata={}).get_llm(model_id=model_id)
 
 
-def get_chat_history(config: RunnableConfig):
+def get_chat_history(config: RunnableConfig) -> list[BaseMessage]:
     return config.get("configurable", {}).get("chat_history", [])

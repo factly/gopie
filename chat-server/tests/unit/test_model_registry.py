@@ -153,7 +153,7 @@ class TestModelProvider:
     def test_model_provider_initialization(self, sample_metadata):
         """
         Test that ModelProvider initializes with the correct metadata and provider instances.
-        
+
         Verifies that the ModelProvider's attributes are set to the provided metadata and the mocked LLM and embedding providers.
         """
         with (
@@ -178,7 +178,7 @@ class TestModelProvider:
     def test_create_llm_model(self, sample_metadata, mock_llm_provider):
         """
         Test that ModelProvider._create_llm correctly retrieves an LLM model using the provided model ID.
-        
+
         Verifies that the LLM provider's get_llm_model method is called with the specified model ID and that a non-null model is returned.
         """
         with (
@@ -200,7 +200,7 @@ class TestModelProvider:
     def test_create_llm_with_tools(self, sample_metadata, mock_llm_provider):
         """
         Test that ModelProvider correctly creates an LLM model with tools bound to it.
-        
+
         Verifies that the LLM provider's `get_llm_model` method is called with the specified model ID, the appropriate tools are fetched and bound to the model, and the resulting model is not None.
         """
         mock_tools = {"test_tool": (Mock(), {})}
@@ -231,7 +231,7 @@ class TestModelProvider:
     def test_get_llm_for_node_without_tools(self, sample_metadata, mock_llm_provider):
         """
         Test that `ModelProvider.get_llm_for_node` retrieves the correct LLM model for a node when no tools are provided.
-        
+
         Verifies that the node model ID is resolved, the LLM provider's `get_llm_model` is called with the correct model ID, and a non-null model is returned.
         """
         with (
@@ -255,7 +255,7 @@ class TestModelProvider:
     def test_get_llm_for_node_with_tools(self, sample_metadata, mock_llm_provider):
         """
         Test that `ModelProvider.get_llm_for_node` correctly retrieves and binds tools to the LLM model for a given node.
-        
+
         Verifies that the appropriate provider and utility functions are called with the correct arguments, tools are fetched and bound to the LLM model, and the resulting model is not None.
         """
         mock_tools = {"test_tool": (Mock(), {})}
@@ -293,7 +293,7 @@ class TestModelProvider:
     def test_create_embeddings_model(self, sample_metadata, mock_embedding_provider):
         """
         Test that ModelProvider._create_embeddings_model returns an embeddings model using the default embedding model ID.
-        
+
         Verifies that the embedding provider's get_embeddings_model method is called with the expected default model and that a non-null result is returned.
         """
         with (
@@ -348,7 +348,7 @@ class TestModelProviderUtilities:
     def test_get_custom_model(self):
         """
         Test that `get_custom_model` retrieves an LLM model using the specified model ID.
-        
+
         Verifies that the LLM provider's `get_llm_model` method is called with the correct model ID and that a non-null model is returned.
         """
         with (
