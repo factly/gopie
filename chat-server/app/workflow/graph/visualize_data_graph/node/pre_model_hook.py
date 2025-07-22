@@ -55,6 +55,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             datasets_csv_info = format_dataset_info(
                 datasets=state.get("datasets", []), csv_paths=csv_paths
             )
+            previous_python_code = ""
             if state.get("previous_visualization_result_path"):
                 previous_python_code = await get_python_code_from_viz(
                     viz_path=state["previous_visualization_result_path"]

@@ -1,14 +1,12 @@
-from langchain_core.messages import (
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-)
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
 )
 
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
 
 
 def create_process_context_prompt(
@@ -16,63 +14,49 @@ def create_process_context_prompt(
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     current_query = kwargs.get("current_query", "")
-    dataset_ids = kwargs.get("dataset_ids", [])
+    formatted_chat_history = kwargs.get("formatted_chat_history", [])
 
     system_content = """
 You are a context analyzer. Your primary responsibility is to analyze the conversation history and
 current query to determine the appropriate context and data requirements for processing the user's request.
 
-Your analysis should follow these 9 key criteria in order:
+Your analysis should follow these key criteria:
 
 1. Is this a follow-up query? (`is_follow_up`)
-  • If the user's query is a follow-up query from the conversation history, then the answer should be true otherwise false.
+  • If the user's query is a follow-up query from the conversation history, then the answer should be true.
+  • If the user's query is independent and not related to the conversation history, then the answer should be false.
 
-2. Is new data needed? (`new_data_needed`)
-  • Determine if the user needs new data other than the data already processed in the previous queries.
-  • For eg: user wants to add some other data needed or a asks for a completely new data or something else like that.
+2. are the previously selected datasets sufficient for the user query? (`is_sufficient_data`)
+  • Determine if the previously selected datasets are sufficient to answer the user query.
 
-3. Does the user want a visualization? (`needs_visualization`)
-  • If the user wants a visualization, then the answer should be true otherwise false.
+3. is the query related to visualization? (`is_visualization_query`)
+  • Determine if the query is related to visualization.
 
-4. What is the visualization data? (`visualization_data`)
-  • If the user provided the data for the visualization, then format the data properly and add it to the visualization_data.
-  • Each element must have keys: data (list[list[Any]]), description (string), csv_path (null or string).
-  • The description should be a short description of the data and the column description for each column.
-  • The data follows the following format:
-    - Each list in the data list is a row
-    - The first row is the header row (column names)
-    - All the remaining rows are the data rows
+4. relevant datasets ids (`relevant_datasets_ids`)
+  • Select the most relevant datasets from the previously selected datasets based on the user query.
+  • Be greedy in selecting the relevant datasets.
+  • Do not invent any datasets. Only select from the previously used datasets.
 
-5. What are the previous json paths? (`previous_json_paths`)
-  • If the user wants to do some modification in the previously generated visualization, then add the previous json paths to the previous_json_paths.
-  • Otherwise, set the previous_json_paths to an empty list.
+5. relevant sql queries (`relevant_sql_queries`)
+  • Select the most relevant sql queries from the previously selected sql queries based on the user query.
+  • Be greedy in selecting the relevant sql queries.
+  • Do not invent any sql queries. Only select from the previously used sql queries.
 
-6. What are the relevant datasets ids? (`relevant_datasets_ids`)
-  • Always set the dataset ids of the last user/assistant message.
-  • After setting the dataset ids with the last user/assistant message, then you can add other dataset ids if
-    needed based on relevance to the user query, but the last used dataset ids should be always present.
-
-7. What are the relevant sql queries? (`relevant_sql_queries`)
-  • Always set the sql queries of the last user/assistant message.
-  • After setting the sql queries of the last user/assistant message, then you can add other sql queries if
-    needed based on relevance to the user query, but the last used sql query should be always present.
-
-8. What is the enhanced query? (`enhanced_query`)
+6. What is the enhanced query? (`enhanced_query`)
   • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history.
   • Keep the user's intent and wording where possible.
   • Make it clear whether user needs more data, new datasets, or just visualization.
+  • If the chat history is empty, then the enhanced query should be the same as the user query.
 
-9. What is the context summary? (`context_summary`)
-  • Build the context for that covers all the criteria from 1-8.
-  • The context should be in brief and expalin the decision making process for each criteria.
+7. Summary of the context (`context_summary`)
+  • Provide a summary of how the present query is related to the previous conversation history.
+  • If the chat history is empty, then the context summary should be empty.
 
 RESPOND ONLY IN THIS JSON FORMAT:
 {
   "is_follow_up": boolean,
-  "new_data_needed": boolean,
-  "needs_visualization": boolean,
-  "visualization_data": object[],
-  "previous_json_paths": string[],
+  "is_sufficient_data": boolean,
+  "is_visualization_query": boolean,
   "relevant_datasets_ids": string[],
   "relevant_sql_queries": string[],
   "enhanced_query": string,
@@ -82,7 +66,7 @@ RESPOND ONLY IN THIS JSON FORMAT:
     human_template_str = """
 Current user query: {current_query}
 
-Dataset IDs provided: {dataset_ids}
+Previous conversation history: {formatted_chat_history}
 
 Analyze the above and return ONLY a single JSON response with the specified fields."""
 
@@ -95,7 +79,8 @@ Analyze the above and return ONLY a single JSON response with the specified fiel
         )
 
     human_content = human_template_str.format(
-        current_query=current_query, dataset_ids=dataset_ids or []
+        current_query=current_query,
+        formatted_chat_history=formatted_chat_history,
     )
 
     return [

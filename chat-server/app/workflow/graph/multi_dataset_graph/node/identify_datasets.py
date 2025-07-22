@@ -2,7 +2,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.core.constants import DATASETS_USED
+from app.core.constants import DATASETS_USED, DATASETS_USED_ARG
 from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.get_schema import get_schema_by_dataset_ids
@@ -145,7 +145,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             {
                 "content": "Datasets identified",
                 "name": DATASETS_USED,
-                "values": {"datasets": selected_dataset_ids},
+                "values": {DATASETS_USED_ARG: selected_dataset_ids},
             },
         )
 

@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     LANGSMITH_PROMPT: bool = False
     LANGSMITH_API_KEY: str = ""
 
-    QDRANT_HOST: str = "host.docker.internal"
+    QDRANT_HOST: str = "host.docker.local"
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5

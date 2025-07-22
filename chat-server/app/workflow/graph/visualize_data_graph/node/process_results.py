@@ -2,7 +2,7 @@ from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.core.constants import VISUALIZATION_RESULT
+from app.core.constants import VISUALIZATION_RESULT, VISUALIZATION_RESULT_ARG
 from app.models.message import ErrorMessage
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph.utils import (
@@ -57,7 +57,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             {
                 "content": "Visualization Created",
                 "name": VISUALIZATION_RESULT,
-                "values": {"s3_paths": s3_paths},
+                "values": {VISUALIZATION_RESULT_ARG: s3_paths},
             },
         )
 

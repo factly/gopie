@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.core.constants import SQL_QUERIES_GENERATED
+from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.query import (
     QueryResult,
     SingleDatasetQueryResult,
@@ -156,7 +156,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                 {
                     "content": "SQL queries generated",
                     "name": SQL_QUERIES_GENERATED,
-                    "values": {"queries": sql_queries},
+                    "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
                 },
             )
 

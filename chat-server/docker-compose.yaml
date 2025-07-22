@@ -21,6 +21,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    extra_hosts:
+      - "host.docker.local:host-gateway"
 
   qdrant:
     image: qdrant/qdrant

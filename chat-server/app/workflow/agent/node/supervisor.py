@@ -8,12 +8,10 @@ def supervisor(
 ) -> Command:
     dataset_ids = state.get("dataset_ids", None)
     datasets_count = len(dataset_ids) if dataset_ids else 0
-    visualization_data = state.get("visualization_data", [])
     new_data_needed = state.get("new_data_needed", False)
     needs_visualization = state.get("needs_visualization", False)
-    previous_json_paths = state.get("previous_json_paths", [])
 
-    if not new_data_needed and (visualization_data or needs_visualization or previous_json_paths):
+    if not new_data_needed and needs_visualization:
         return Command(
             goto="visualization_agent",
         )
