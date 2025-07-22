@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { toast } from "sonner";
 import Uppy, { UppyFile, Meta } from "@uppy/core";
 import AwsS3 from "@uppy/aws-s3";
@@ -230,7 +230,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
       // We can't reconstruct the File object, but we can show the validation result
       setDetectedFormat(validationResult.format as SupportedFileFormat);
     }
-  }, [validationResult, selectedFile]);
+  }, [validationResult, selectedFile, setDetectedFormat]);
 
   // Initialize Uppy
   useEffect(() => {
@@ -277,8 +277,8 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     // Handle upload success
     uppyInstance.on("upload-success", async (file, response) => {
       try {
-        // Get column mappings
-        const mappings = getColumnMappings();
+        // Get column mappings (unused in this context but kept for potential future use)
+        // const mappings = getColumnMappings();
 
         // Log file metadata for debugging
         if (file) {
@@ -292,7 +292,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
         
         // Check various response formats - S3 companion response structure
         if (response && typeof response === 'object') {
-          const res = response as any;
+          const res = response as Record<string, unknown>;
           console.log('=== DETAILED RESPONSE STRUCTURE ===');
           console.log('Full response:', JSON.stringify(res, null, 2));
           console.log('Response body:', res.body);
@@ -300,10 +300,10 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
           console.log('Checking for uploadURL in:', {
             direct: res.uploadURL,
             body: res.body,
-            uploadURL: res.body?.uploadURL,
-            location: res.body?.location,
-            Location: res.body?.Location,
-            url: res.body?.url
+            uploadURL: (res.body as Record<string, unknown>)?.uploadURL,
+            location: (res.body as Record<string, unknown>)?.location,
+            Location: (res.body as Record<string, unknown>)?.Location,
+            url: (res.body as Record<string, unknown>)?.url
           });
         }
         
@@ -353,7 +353,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     return () => {
       uppyInstance.cancelAll();
     };
-  }, [clearColumnDescriptions, getColumnMappings, onUploadSuccess, resetColumnMappings]);
+  }, [clearColumnDescriptions, getColumnMappings, onUploadSuccess, resetColumnMappings, detectedFormat, setUploadResponse, validationResult]);
 
   // Handle file selection
   const handleFileSelected = async (file: File) => {
@@ -617,7 +617,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
       console.log('Upload result:', result);
       
       // Check if upload was successful
-      if (result.failed && result.failed.length > 0) {
+      if (result && result.failed && result.failed.length > 0) {
         console.error('Upload failed:', result.failed);
         throw new Error('Upload failed');
       }

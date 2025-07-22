@@ -8,7 +8,6 @@ import {
   Wand2,
   X,
   Check,
-  MessageSquare,
   InfoIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

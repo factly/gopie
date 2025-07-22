@@ -159,7 +159,7 @@ export function UrlUploader({
     return () => {
       uppyInstance.cancelAll();
     };
-  }, [onUploadSuccess]);
+  }, [onUploadSuccess, detectedFormat, validationResult]);
 
   // Set project ID in store when component mounts or project ID changes
   useEffect(() => {
