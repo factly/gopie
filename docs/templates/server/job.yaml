@@ -1,4 +1,4 @@
-{{- if .Values.server.reIndexingJob.enabled }}
+{{- if .Values.reIndexingJob.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -7,8 +7,8 @@ metadata:
   labels:
     {{- include "server.labels" . | nindent 4 }}
 spec:
-  backoffLimit: {{ .Values.server.reIndexingJob.backoffLimit | default 1 }}
-  ttlSecondsAfterFinished: {{ .Values.server.reIndexingJob.ttlSecondsAfterFinished | default 3600 }}
+  backoffLimit: {{ .Values.reIndexingJob.backoffLimit | default 1 }}
+  ttlSecondsAfterFinished: {{ .Values.reIndexingJob.ttlSecondsAfterFinished | default 3600 }}
   template:
     metadata:
       labels:
@@ -17,19 +17,19 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: re-indexing
-          image: "{{ .Values.server.reIndexingJob.image.repository }}:{{ .Values.server.reIndexingJob.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.server.reIndexingJob.image.pullPolicy | default "IfNotPresent" }}
-          command: {{- toYaml .Values.server.reIndexingJob.command | nindent 12 }}
-          args: {{- toYaml .Values.server.reIndexingJob.args | nindent 12 }}
+          image: "{{ .Values.reIndexingJob.image.repository }}:{{ .Values.reIndexingJob.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.reIndexingJob.image.pullPolicy | default "IfNotPresent" }}
+          command: {{- toYaml .Values.reIndexingJob.command | nindent 12 }}
+          args: {{- toYaml .Values.reIndexingJob.args | nindent 12 }}
           env:
-            {{- toYaml .Values.server.reIndexingJob.env | nindent 12 }}
+            {{- toYaml .Values.reIndexingJob.env | nindent 12 }}
           volumeMounts:
-            {{- range .Values.server.reIndexingJob.volumeMounts }}
+            {{- range .Values.reIndexingJob.volumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
               subPath: {{ .subPath | default "" }}
               readOnly: {{ .readOnly | default false }}
             {{- end }}
       volumes:
-        {{- toYaml .Values.server.reIndexingJob.volumes | nindent 8 }}
+        {{- toYaml .Values.reIndexingJob.volumes | nindent 8 }}
 {{- end }}

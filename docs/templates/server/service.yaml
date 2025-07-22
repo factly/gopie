@@ -6,11 +6,11 @@ metadata:
   labels:
     {{- include "server.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.server.service.type }}
+  type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.server.service.portNumber }}
-      targetPort: {{ .Values.server.service.portName }}
+    - port: {{ .Values.service.portNumber }}
+      targetPort: {{ .Values.service.portName }}
       protocol: TCP
-      name: {{ .Values.server.service.portName }}
+      name: {{ .Values.service.portName }}
   selector:
     {{- include "server.selectorLabels" . | nindent 4 }}

@@ -1,4 +1,4 @@
-{{- if and .Values.server.persistence.enabled (not .Values.server.persistence.existingClaim) (eq .Values.server.persistence.type "pvc")}}
+{{- if and .Values.stateful.persistence.enabled (not .Values.stateful.persistence.existingClaim) (eq .Values.stateful.persistence.type "pvc")}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -6,32 +6,32 @@ metadata:
   namespace: {{ include "gopie.namespace" . }}
   labels:
     {{- include "server.labels" . | nindent 4 }}
-    {{- with .Values.server.persistence.extraPvcLabels }}
+    {{- with .Values.stateful.persistence.extraPvcLabels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- with .Values.server.persistence.annotations  }}
+  {{- with .Values.stateful.persistence.annotations  }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- with .Values.server.persistence.finalizers  }}
+  {{- with .Values.stateful.persistence.finalizers  }}
   finalizers:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   accessModes:
-    {{- range .Values.server.persistence.accessModes }}
+    {{- range .Values.stateful.persistence.accessModes }}
     - {{ . | quote }}
     {{- end }}
   resources:
     requests:
-      storage: {{ .Values.server.persistence.size | quote }}
+      storage: {{ .Values.stateful.persistence.size | quote }}
   {{- if (lookup "v1" "PersistentVolumeClaim" (include "gopie.namespace" .) (include "server.name" .)) }}
   volumeName: {{ (lookup "v1" "PersistentVolumeClaim" (include "gopie.namespace" .) (include "server.name" .)).spec.volumeName }}
   {{- end }}
-  {{- with .Values.server.persistence.storageClassName }}
+  {{- with .Values.stateful.persistence.storageClassName }}
   storageClassName: {{ . }}
   {{- end }}
-  {{- with .Values.server.persistence.selectorLabels }}
+  {{- with .Values.stateful.persistence.selectorLabels }}
   selector:
     matchLabels:
     {{- toYaml . | nindent 6 }}

@@ -1,4 +1,4 @@
-{{- define "server.pod" -}}
+{{- define "deployment.pod" -}}
 {{- $root := . -}}
 {{- with .Values.imagePullSecrets }}
 imagePullSecrets:
@@ -6,10 +6,10 @@ imagePullSecrets:
 {{- end }}
 serviceAccountName: {{ include "server.serviceAccountName" . }}
 securityContext:
-  {{- toYaml .Values.server.podSecurityContext | nindent 2 }}
-{{- if .Values.server.initContainers }}
+  {{- toYaml .Values.deployment.podSecurityContext | nindent 2 }}
+{{- if .Values.deployment.initContainers }}
 initContainers:
-{{- range .Values.server.initContainers }}
+{{- range .Values.deployment.initContainers }}
   - name: {{ .name }}
     image: {{ .image }}
     imagePullPolicy: {{ .imagePullPolicy | default "IfNotPresent" }}
@@ -29,19 +29,19 @@ initContainers:
 containers:
   - name: {{ include "server.name" . }}
     securityContext:
-      {{- toYaml .Values.server.securityContext | nindent 6 }}
-    image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-    imagePullPolicy: {{ .Values.image.pullPolicy }}
+      {{- toYaml .Values.deployment.securityContext | nindent 6 }}
+    image: "{{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
     ports:
-      - name: {{ .Values.server.service.portName }}
-        containerPort: {{ .Values.server.service.portNumber }}
+      - name: {{ .Values.service.portName }}
+        containerPort: {{ .Values.service.portNumber }}
         protocol: TCP
     livenessProbe:
-      {{- toYaml .Values.server.livenessProbe | nindent 6 }}
+      {{- toYaml .Values.deployment.livenessProbe | nindent 6 }}
     readinessProbe:
-      {{- toYaml .Values.server.readinessProbe | nindent 6 }}
-    {{- if .Values.server.env }}
-    {{- with .Values.server.env }}
+      {{- toYaml .Values.deployment.readinessProbe | nindent 6 }}
+    {{- if .Values.deployment.env }}
+    {{- with .Values.deployment.env }}
     env:
       - name: GOPIE_POSTGRES_HOST
         value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
@@ -58,45 +58,123 @@ containers:
     {{- end }}
     {{- end }}
     resources:
-      {{- toYaml .Values.server.resources | nindent 6 }}
+      {{- toYaml .Values.deployment.resources | nindent 6 }}
     volumeMounts:
-      {{- range .Values.server.extraVolumeMounts }}
+      {{- range .Values.deployment.extraVolumeMounts }}
       - name: {{ .name }}
         mountPath: {{ .mountPath }}
         subPath: {{ .subPath | default "" }}
         readOnly: {{ .readOnly }}
       {{- end }}
-{{- with .Values.server.nodeSelector }}
+{{- with .Values.deployment.nodeSelector }}
 nodeSelector:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with .Values.server.affinity }}
+{{- with .Values.deployment.affinity }}
 affinity:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with .Values.server.tolerations }}
+{{- with .Values.deployment.tolerations }}
 tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 volumes:
-  
-  {{- if and .Values.server.persistence.enabled (eq .Values.server.persistence.type "pvc") }}
-  - name: store
+  {{- toYaml .Values.deployment.volumes | nindent 6 }}
+ {{- end }}
+
+
+
+
+
+
+
+
+{{- define "stateful.pod" -}}
+{{- $root := . -}}
+{{- with .Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+serviceAccountName: {{ include "server.serviceAccountName" . }}
+securityContext:
+  {{- toYaml .Values.stateful.podSecurityContext | nindent 2 }}
+{{- if .Values.stateful.initContainers }}
+initContainers:
+{{- range .Values.stateful.initContainers }}
+  - name: {{ .name }}
+    image: {{ .image }}
+    imagePullPolicy: {{ .imagePullPolicy | default "IfNotPresent" }}
+    command: {{- toYaml .command | nindent 8 }}
+    env:
+      {{- toYaml .env | nindent 8 }}
+    volumeMounts:
+      {{- range .volumeMounts }}
+      - name: {{ .name }}
+        mountPath: {{ .mountPath }}
+        subPath: {{ .subPath | default "" }}
+        readOnly: {{ .readOnly | default false }}
+      {{- end }}
+  {{- end }}
+  {{- end }}
+containers:
+  - name: {{ .Chart.Name }}
+    securityContext:
+      {{- toYaml .Values.stateful.securityContext | nindent 6 }}
+    image: "{{ .Values.stateful.image.repository }}:{{ .Values.stateful.image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: {{ .Values.stateful.image.pullPolicy }}
+    ports:
+      - name: {{ .Values.service.portName }}
+        containerPort: {{ .Values.service.portNumber }}
+        protocol: TCP
+    livenessProbe:
+      {{- toYaml .Values.stateful.livenessProbe | nindent 6 }}
+    readinessProbe:
+      {{- toYaml .Values.stateful.readinessProbe | nindent 6 }}
+    {{- if .Values.stateful.env }}
+    {{- with .Values.stateful.env }}
+    env:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    resources:
+      {{- toYaml .Values.stateful.resources | nindent 6 }}
+    volumeMounts:
+      {{- range .Values.stateful.extraVolumeMounts }}
+      - name: {{ .name }}
+        mountPath: {{ .mountPath }}
+        subPath: {{ .subPath | default "" }}
+        readOnly: {{ .readOnly }}
+      {{- end }}
+{{- with .Values.stateful.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.stateful.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.stateful.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+volumes:
+  {{- if and .Values.stateful.persistence.enabled (eq .Values.stateful.persistence.type "pvc") }}
+  - name: storage
     persistentVolumeClaim:
-      claimName: {{ tpl (.Values.server.persistence.existingClaim | default (include "server.name" .)) . }}
+      claimName: {{ tpl (.Values.stateful.persistence.existingClaim | default (include "server.name" .)) . }}
   {{- else }}
-  - name: store
-    {{- if .Values.server.persistence.inMemory.enabled }}
+  - name: storage
+    {{- if .Values.stateful.persistence.inMemory.enabled }}
     emptyDir:
       medium: Memory
-      {{- with .Values.server.persistence.inMemory.sizeLimit }}
+      {{- with .Values.stateful.persistence.inMemory.sizeLimit }}
       sizeLimit: {{ . }}
       {{- end }}
     {{- else }}
     emptyDir: {}
     {{- end }}
   {{- end }}
-  {{- range .Values.server.extraVolumes }}
+  {{- range .Values.stateful.extraVolumes }}
   - name: {{ .name }}
     {{- if .existingClaim }}
     persistentVolumeClaim:
@@ -112,7 +190,7 @@ volumes:
       {{- toYaml .configMap }}
     {{- else if .secret }}
     secret:
-      {{- toYaml .secret | nindent 4 }}
+      {{- toYaml .secret }}
     {{- else if .emptyDir }}
     emptyDir:
       {{- toYaml .emptyDir }}
@@ -120,4 +198,4 @@ volumes:
     emptyDir: {}
     {{- end }}
   {{- end }}
- {{- end }}
+{{- end }}

@@ -2,18 +2,20 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-image:
-  repository: ""  # Docker image repository for the main application
-  pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
-  tag: ""  # Image tag to use; defaults to chart appVersion if empty
+
+dbtype: motherduck
 
 imagePullSecrets: []  # List of image pull secrets for private registries
 nameOverride: ""  # Override the name of the chart
 fullnameOverride: "gopie"  # Override the full name of the chart resources
 
-## gopie main server deployment configuration
-server:
+deployment:
   name: server  # Name of the server deployment
+  image:
+    repository: ""  # Docker image repository for the main application
+    pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
+    tag: ""  # Image tag to use; defaults to chart appVersion if empty
+
   replicaCount: 1  # Number of server replicas to run
   extraLabels: {}  # Extra labels to add to deployment resources
   extraPodLabels: {}  # Extra labels to add to pods
@@ -30,12 +32,6 @@ server:
     image: ""  # Image for the init container
     env: []  # Environment variables for the init container
 
-  serviceAccount:
-    create: false  # Whether to create a new service account
-    automount: true  # Auto-mount API credentials for the service account
-    annotations: {}  # Annotations for the service account
-    name: ""  # Existing service account name to use
-
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
     # Example:
     # fsGroup: 2000
@@ -44,10 +40,6 @@ server:
     # Example:
     # runAsUser: 1000
 
-  service:
-    portName: http  # Name of the service port
-    type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
-    portNumber: 8000  # Service port number
 
   resources:  # Pod resource requests and limits
     limits:
@@ -65,14 +57,83 @@ server:
     targetMemoryUtilizationPercentage: 80  # Target average Memory usage
 
   # Uncomment and configure liveness/readiness probes if needed
-  # livenessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
-  # readinessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
+  livenessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
+  readinessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
+
+  nodeSelector: {}  # Node selector for scheduling the pods
+
+  tolerations: []  # Tolerations for scheduling onto nodes with taints
+
+  affinity: {}  # Pod affinity/anti-affinity rules
+
+  extraVolumeMounts: []  # Additional volume mounts for the container
+    # Example:
+    # - name: zitadel-key
+    #   mountPath: ./home/gopie/zitadel_key.json
+    #   subPath: zitadel_key.json
+
+  extraVolumes: []  # Additional volumes for the pod
+    # Example:
+    # - name: zitadel-key
+    #   secret:
+    #     secretName: zitadel-key
+  volumes: []
+
+
+stateful:
+  name: server  # Name of the server deployment
+  image:
+    repository: ""  # Docker image repository for the main application
+    pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
+    tag: ""  # Image tag to use; defaults to chart appVersion if empty
+
+  replicaCount: 1  # Number of server replicas to run
+  extraLabels: {}  # Extra labels to add to deployment resources
+  extraPodLabels: {}  # Extra labels to add to pods
+  annotations: {}  # Annotations for deployment resources
+  Podannotations: {}  # Annotations for pods
+
+  env: []  # Environment variables for the container
+    # Example:
+    # - name: GOPIE_API_SERVER_HOST
+    #   value: "localhost"
+
+  initContainers:  # List of init containers to run before the app container
+  - name: gopie-migrate  # Example init container for DB migration
+    image: ""  # Image for the init container
+    env: []  # Environment variables for the init container
+
+  podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
+    # Example:
+    # fsGroup: 2000
+
+  securityContext: {}  # Container-level security context (e.g., runAsUser)
+    # Example:
+    # runAsUser: 1000
+
+  resources:  # Pod resource requests and limits
+    limits:
+      cpu: 200m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+
+  # Uncomment and configure liveness/readiness probes if needed
+  livenessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
+  readinessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
 
   nodeSelector: {}  # Node selector for scheduling the pods
 
@@ -103,24 +164,34 @@ server:
       helm.sh/resource-policy: "keep"  # Annotation to keep PVC on deletion
     finalizers:
       - kubernetes.io/pvc-protection  # PVC finalizers
-    # selectorLabels: {}  # Selector labels to bind to existing PVs
+    selectorLabels: {}  # Selector labels to bind to existing PVs
     # subPath: ""  # Sub-path within the PV
     # existingClaim:  # Use an existing PVC instead of creating one
     extraPvcLabels: {}  # Extra labels for the PVC
 
     inMemory:  # Optional in-memory storage (EmptyDir)
       enabled: false  # Enable in-memory storage
-      # sizeLimit: 300Mi  # Limit for EmptyDir size (optional)
+      sizeLimit: 300Mi  # Limit for EmptyDir size (optional)
 
-  reIndexingJob:  # Re-indexing job configuration
-    enabled: true  # Enable the re-indexing job
-    image:
-      repository: ""  # Docker image repository for re-indexing job
-      tag: ""  # Image tag for the re-indexing job
-    env: []  # Environment variables for the re-indexing job
+serviceAccount:
+  create: false  # Whether to create a new service account
+  automount: true  # Auto-mount API credentials for the service account
+  annotations: {}  # Annotations for the service account
+  name: ""  # Existing service account name to use
 
-    volumeMounts: []  # Additional volume mounts for the re-indexing job
-    volumes: []  # Additional volumes for the re-indexing job
+service:
+  portName: http  # Name of the service port
+  type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
+  portNumber: 8000  # Service port number
+
+reIndexingJob:  # Re-indexing job configuration
+  enabled: true  # Enable the re-indexing job
+  image:
+    repository: ""  # Docker image repository for re-indexing job
+    tag: ""  # Image tag for the re-indexing job
+  env: []  # Environment variables for the re-indexing job
+  volumeMounts: []  # Additional volume mounts for the re-indexing job
+  volumes: []  # Additional volumes for the re-indexing job
 
 
 web:
@@ -165,6 +236,15 @@ web:
     # readOnlyRootFilesystem: true
     # runAsNonRoot: true
     # runAsUser: 1000
+
+  livenessProbe: {}
+    #   httpGet:
+    #     path: /
+    #     port: http
+  readinessProbe: {}
+    #   httpGet:
+    #     path: /
+    #     port: http
 
   service:
     portName: http  # Name of the service port
@@ -219,6 +299,7 @@ web:
     #   hostPath:
     #     path: /usr/shared/
     #     type: ""
+  volumes: []
 
 chatserver:
   name: chatserver  # Name identifier for the chatserver deployment
@@ -316,17 +397,17 @@ chatserver:
 
 
 postgresql:
-  enabled: true  # Enable or disable the bundled PostgreSQL chart
+  enabled: false  # Enable or disable the bundled PostgreSQL chart
   auth:
     username: default  # Database username for the PostgreSQL instance
     database: gopie     # Name of the default database to create
 
 minio:
-  enabled: true  # Enable or disable the bundled MinIO chart
+  enabled: false  # Enable or disable the bundled MinIO chart
   defaultBuckets: "gopie"  # Comma-separated list of default buckets to create in MinIO
 
 companion:
-  enabled: true  # Enable or disable the Companion service
+  enabled: false  # Enable or disable the Companion service
   env: []
     # Environment variables for Companion service
     # - name: COMPANION_PROTOCOL  # Protocol to use (http/https)
@@ -373,10 +454,10 @@ companion:
     enabled: false  # Enable or disable Ingress for Companion
 
 qdrant:
-  enabled: true  # Enable or disable the Qdrant vector database chart
+  enabled: false  # Enable or disable the Qdrant vector database chart
 
 zitadel:
-  enabled: true  # Enable or disable the ZITADEL identity provider chart
+  enabled: false  # Enable or disable the ZITADEL identity provider chart
   zitadel:
     masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
     configmapConfig:

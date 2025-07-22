@@ -27,7 +27,7 @@ If release name contains chart name it will be used as a full name.
 gopie server name
 */}}
 {{- define "server.name" -}}
-{{- printf "%s-%s" (include "gopie.fullname" .) .Values.server.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" (include "gopie.fullname" .) .Values.deployment.name | trunc 63 | trimSuffix "-" -}}
 {{- end }}
 
 
@@ -45,7 +45,7 @@ gopie server common labels
 {{ include "server.selectorLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ .Chart.Version }}
-{{- with .Values.server.extraLabels }}
+{{- with .Values.deployment.extraLabels }}
 {{ toYaml . }}
 {{ end }}
 {{ end }}
@@ -54,7 +54,7 @@ helm.sh/chart: {{ .Chart.Version }}
 gopie server annotations
 */}}
 {{- define "server.annotations" -}}
-{{- with .Values.server.annotations }}
+{{- with .Values.deployment.annotations }}
 {{ toYaml . }}
 {{ end }}
 {{ end }}
@@ -63,8 +63,8 @@ gopie server annotations
 gopie server Selector labels
 */}}
 {{- define "server.selectorLabels" -}}
-app.kubernetes.io/component: {{ .Values.server.name }}
-app.kubernetes.io/name: {{ include "gopie.fullname" . }}-{{ .Values.server.name }}
+app.kubernetes.io/component: {{ .Values.deployment.name }}
+app.kubernetes.io/name: {{ include "gopie.fullname" . }}-{{ .Values.deployment.name }}
 {{- end }}
 
 {{/* 
@@ -72,7 +72,7 @@ gopie server pod labels
 */}}
 {{- define "server.PodLabels" -}}
 {{ include "server.labels" . }}
-{{- with .Values.server.extraPodLabels }}
+{{- with .Values.deployment.extraPodLabels }}
 {{ toYaml . }}
 {{ end }}
 {{ end }}
@@ -81,7 +81,7 @@ gopie server pod labels
 gopie server pod annotations
 */}}
 {{- define "server.PodAnnotations" -}}
-{{- with .Values.server.Podannotations }}
+{{- with .Values.deployment.Podannotations }}
 {{ toYaml . }}
 {{ end }}
 {{ end }}
@@ -90,10 +90,10 @@ gopie server pod annotations
 Create service account to use for gopie server
 */}}
 {{- define "server.serviceAccountName" -}}
-{{- if .Values.server.serviceAccount.create }}
-{{- default (include "server.name" .) .Values.server.serviceAccount.name }}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "server.name" .) .Values.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.server.serviceAccount.name }}
+{{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 

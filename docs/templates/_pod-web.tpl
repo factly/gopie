@@ -11,8 +11,8 @@ containers:
   - name: {{ .Chart.Name }}
     securityContext:
       {{- toYaml .Values.web.securityContext | nindent 6 }}
-    image: "{{ .Values.web.image.repository | default .Values.image.repository }}:{{ .Values.web.image.tag | default .Values.image.tag | default .Chart.AppVersion }}"
-    imagePullPolicy: {{ .Values.web.image.pullPolicy | default .Values.image.pullPolicy }}
+    image: "{{ .Values.web.image.repository | default .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Values.web.image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: {{ .Values.web.image.pullPolicy | default .Values.web.image.pullPolicy }}
     ports:
       - name: {{ .Values.web.service.portName }}
         containerPort: {{ .Values.web.service.portNumber }}
@@ -49,5 +49,5 @@ tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 volumes:
-  {{- toYaml .Values.server.reIndexingJob.volumes | nindent 6 }}
+  {{- toYaml .Values.web.volumes | nindent 6 }}
 {{- end }}
