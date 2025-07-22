@@ -28,16 +28,17 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     Prepares the environment and prompt messages for the data visualization agent.
     Handles tool call counting and initial setup.
     """
-
-    result = state.get("result", VisualizationResult(data=[], errors=[]))
     tool_call_count = state.get("tool_call_count", 0)
 
     if tool_call_count > settings.MAX_TOOL_CALL_LIMIT:
+        result = state.get("result", VisualizationResult(data=[], errors=[]))
         result.errors.append("Maximum tool call limit reached during visualization generation")
         return {
             "messages": [ErrorMessage(content="Tool call limit exceeded")],
             "result": result,
         }
+
+    result = state.get("result", VisualizationResult(data=[], errors=[]))
 
     try:
         existing_sandbox = state.get("sandbox")
@@ -55,7 +56,9 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             datasets_csv_info = format_dataset_info(
                 datasets=state.get("datasets", []), csv_paths=csv_paths
             )
+
             previous_python_code = ""
+
             if state.get("previous_visualization_result_path"):
                 previous_python_code = await get_python_code_from_viz(
                     viz_path=state["previous_visualization_result_path"]

@@ -25,6 +25,5 @@ graph_builder.add_conditional_edges(
 
 graph_builder.add_edge(START, "process_query")
 graph_builder.add_edge("process_query", "validate_result")
-graph_builder.add_edge("validate_result", END)
 
 single_dataset_graph = graph_builder.compile()

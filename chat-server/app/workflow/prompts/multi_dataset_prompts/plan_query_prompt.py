@@ -73,7 +73,7 @@ Respond in this JSON format:
     "sql_queries": [
         {
             "sql_query": "the SQL query to fetch the required data",
-            "explanation": "brief explanation of the overall query strategy",
+            "explanation": "concise explanation including: Query strategy (e.g., filtering by X to get Y), key columns used and their data types, table metadata (table name, what data it contains), JOIN strategy if multiple tables, and expected result format",
             "tables_used": ["list of tables needed"],
             "expected_result": "description of what the query will return"
         }

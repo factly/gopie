@@ -32,24 +32,27 @@ def get_all_tool_calls(chat_history: list[BaseMessage]) -> list[ToolCall]:
 def get_sql_queries(tool_calls: list[ToolCall]) -> list[str]:
     sql_queries = []
     for tool_call in tool_calls:
-        if tool_call.name == SQL_QUERIES_GENERATED:
-            sql_queries.extend(tool_call.get("args", {}).get(SQL_QUERIES_GENERATED_ARG, []))
+        if hasattr(tool_call, 'name') and tool_call.name == SQL_QUERIES_GENERATED:
+            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+            sql_queries.extend(args.get(SQL_QUERIES_GENERATED_ARG, []))
     return sql_queries
 
 
 def get_datasets_used(tool_calls: list[ToolCall]) -> list[str]:
     datasets_used = []
     for tool_call in tool_calls:
-        if tool_call.name == DATASETS_USED:
-            datasets_used.append(tool_call.get("args", {}).get(DATASETS_USED_ARG, []))
+        if hasattr(tool_call, 'name') and tool_call.name == DATASETS_USED:
+            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+            datasets_used.append(args.get(DATASETS_USED_ARG, []))
     return datasets_used
 
 
 def get_vizpaths(tool_calls: list[ToolCall]) -> list[str]:
     vizpaths = []
     for tool_call in tool_calls:
-        if tool_call.name == VISUALIZATION_RESULT:
-            vizpaths.extend(tool_call.get("args", {}).get(VISUALIZATION_RESULT_ARG, []))
+        if hasattr(tool_call, 'name') and tool_call.name == VISUALIZATION_RESULT:
+            args = tool_call.get("args", {}) if isinstance(tool_call, dict) else getattr(tool_call, "args", {})
+            vizpaths.extend(args.get(VISUALIZATION_RESULT_ARG, []))
     return vizpaths
 
 

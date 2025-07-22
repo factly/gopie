@@ -51,7 +51,7 @@ RESPONSE FORMAT:
 Return a JSON object in one of these formats:
 {
     "sql_queries": ["<SQL query here without semicolon>", ...],
-    "explanations": ["<Brief explanation for each query>", ...],
+    "explanations": ["<Concise explanation for each query including: Query strategy (what data is being retrieved and how), table metadata (table name and content type), key columns and their data types, any aggregations/calculations, and expected output format>", ...],
     "response_for_non_sql": "<Brief explanation for non-sql response>"
 }
 Always respond with valid JSON only."""

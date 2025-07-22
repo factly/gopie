@@ -51,6 +51,8 @@ class State(TypedDict):
     tool_call_count: int
     relevant_datasets_ids: list[str] | None
     previous_sql_queries: list[str] | None
+    retry_count: int
+    recommendation: str
 
 
 class ConfigSchema(TypedDict):

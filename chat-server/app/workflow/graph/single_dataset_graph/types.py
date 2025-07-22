@@ -23,6 +23,7 @@ class State(TypedDict):
     user_query: str | None
     query_result: QueryResult
     previous_sql_queries: list | None
+    recommendation: str
 
 
 class ConfigSchema(TypedDict):
