@@ -20,6 +20,8 @@ from ..types import AgentState, Dataset
 async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     user_input = state.get("initial_user_query", "")
     chat_history = get_chat_history(config)
+    dataset_ids = state.get("dataset_ids", [])
+
     if not chat_history:
         return {"user_query": user_input}
 
@@ -27,6 +29,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         "process_context",
         current_query=user_input,
         chat_history=chat_history,
+        dataset_ids=dataset_ids,
     )
 
     llm = get_model_provider(config).get_llm_for_node("process_context")
@@ -43,6 +46,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         required_dataset_ids = parsed_response.get("required_dataset_ids", [])
         visualization_data = parsed_response.get("visualization_data", [])
         previous_sql_queries = parsed_response.get("previous_sql_queries", [])
+        prev_csv_paths = parsed_response.get("prev_csv_paths", [])
 
         if context_summary and context_summary.strip():
             final_query = f"""
@@ -69,7 +73,7 @@ Context Summary: {context_summary}
                     )
                     datasets.append(dataset)
 
-        elif previous_sql_queries:
+        if previous_sql_queries:
             try:
                 for sql_query in previous_sql_queries:
                     query_snippet = sql_query[:100]
@@ -98,6 +102,7 @@ Context Summary: {context_summary}
             "required_dataset_ids": required_dataset_ids,
             "datasets": datasets,
             "previous_sql_queries": previous_sql_queries,
+            "prev_csv_paths": prev_csv_paths,
         }
 
     except Exception as e:

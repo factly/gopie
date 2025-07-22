@@ -109,7 +109,6 @@ export interface Dataset {
   name: string;
   alias: string;
   description: string;
-  format: string;
   row_count: number;
   columns: ColumnInfo[];
   size: number;

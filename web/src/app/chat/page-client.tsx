@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
 import { ResultsPanel } from "@/components/chat/results-panel";
 import {
@@ -62,19 +62,17 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
-  searchParams,
-  router,
   currentUserId,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
-  searchParams: URLSearchParams;
-  router: ReturnType<typeof useRouter>;
   currentUserId: string;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
+  const { resetExecutedQueries, setIsOpen } = useSqlStore();
+  const { clearPaths: clearVisualizationPaths, setIsOpen: setVisualizationOpen } = useVisualizationStore();
 
   const deleteChat = useDeleteChat();
 
@@ -119,20 +117,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     }
   }, [error]);
 
-  const handleStartNewChat = () => {
-    selectChatForDataset(null, null, null);
-    setActiveTab("chat");
-    setSelectedContexts([]);
-    setLinkedDatasetId(null);
-
-    // Clear URL parameters when starting a new chat
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("chatId");
-    params.delete("initialMessage");
-    params.delete("contextData");
-    router.replace(`/chat?${params.toString()}`);
-  };
-
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync({
@@ -153,6 +137,11 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
         setLinkedDatasetId(null);
+        // Clear results when deleting the current chat
+        resetExecutedQueries();
+        clearVisualizationPaths();
+        setIsOpen(false);
+        setVisualizationOpen(false);
         await queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId }],
         });
@@ -171,6 +160,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     datasetName?: string,
     projectId?: string
   ) => {
+    // Clear results when selecting a different chat
+    resetExecutedQueries();
+    clearVisualizationPaths();
+    setIsOpen(false);
+    setVisualizationOpen(false);
+
     if (datasetId && datasetName && projectId) {
       setSelectedContexts([
         {
@@ -194,7 +189,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     if (!selectedChatId) {
       setLinkedDatasetId(null);
     }
-  }, [selectedChatId, setLinkedDatasetId]);
+  }, [selectedChatId, setLinkedDatasetId, selectChatForDataset]);
 
   if (isLoading) {
     return (
@@ -525,22 +520,17 @@ function ChatPageClient() {
     isOpen: sqlIsOpen,
     setIsOpen,
     resetExecutedQueries,
-    results,
+    // results, // removed unused variable
   } = useSqlStore();
   const {
     isOpen: isVisualizationOpen,
     setIsOpen: setVisualizationOpen,
-    paths: visualizationPaths,
+    // paths: visualizationPaths, // removed unused variable
     clearPaths: clearVisualizationPaths,
   } = useVisualizationStore();
 
   // Combined panel state - show if either SQL or visualizations are available
   const isResultsPanelOpen = sqlIsOpen || isVisualizationOpen;
-  const hasResults = !!(
-    results?.data?.length ||
-    results?.error ||
-    visualizationPaths.length > 0
-  );
   // const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   // const [latestAssistantMessage, setLatestAssistantMessage] = useState<
   //   string | null
@@ -552,7 +542,6 @@ function ChatPageClient() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
-  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
   // Helper function to update URL with chat state
   const updateUrlWithChatId = useCallback(
@@ -809,9 +798,14 @@ function ChatPageClient() {
   // Custom submit handler that works with our MentionInput component
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
+      // Prevent submission if no context is selected
+      if (selectedContexts.length === 0) {
+        toast.error("Please select at least one project or dataset before sending a message");
+        return;
+      }
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
-    [sdkHandleSubmit]
+    [sdkHandleSubmit, selectedContexts]
   );
 
   // Note: Projects are now fetched when needed for context selection
@@ -846,7 +840,7 @@ function ChatPageClient() {
       console.log("Updating chat title to:", chatDetails.title);
       selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
     }
-  }, [chatDetails, selectedChatId, linkedDatasetId]);
+  }, [chatDetails, selectedChatId, linkedDatasetId, selectChatForDataset, setSelectedChatTitle]);
 
   // Handle chat details loading error
   useEffect(() => {
@@ -895,12 +889,17 @@ function ChatPageClient() {
         ) as ContextItem[];
         if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
           setSelectedContexts(parsedContexts);
+          // Clear results when navigating with new context data
+          resetExecutedQueries();
+          clearVisualizationPaths();
+          setIsOpen(false);
+          setVisualizationOpen(false);
         }
       } catch (error) {
         console.error("Failed to parse context data:", error);
       }
     }
-  }, [contextData]);
+  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen]);
 
   useEffect(() => {
     resetExecutedQueries();
@@ -940,8 +939,7 @@ function ChatPageClient() {
     isInitialized,
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback(() => {
     // Handle scroll - can be used for loading more messages if needed
   }, []);
 
@@ -991,27 +989,7 @@ function ChatPageClient() {
   //   [handleInputChange, handleSubmit]
   // );
 
-  useEffect(() => {
-    if (!isResultsPanelOpen) {
-      setSqlPanelWidth(0);
-      return;
-    }
-    const updateWidth = () => {
-      if (sqlPanelRef.current) {
-        setSqlPanelWidth(sqlPanelRef.current.clientWidth);
-      }
-    };
-    updateWidth();
-    const resizeObserver = new ResizeObserver(updateWidth);
-    if (sqlPanelRef.current) {
-      resizeObserver.observe(sqlPanelRef.current);
-    }
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, [isResultsPanelOpen, sqlPanelRef]);
+  // Removed unused sqlPanelWidth state management
 
   // Update streaming state based on isLoading
   useEffect(() => {
@@ -1042,7 +1020,7 @@ function ChatPageClient() {
     } else {
       setOpen(false);
     }
-  }, []); // Empty dependency array means this runs only once on mount
+  }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
 
   return (
     <main className="flex flex-col w-full h-screen">
@@ -1118,6 +1096,12 @@ function ChatPageClient() {
                         setActiveTab("chat");
                         setSelectedContexts([]);
 
+                    // Clear results when starting a new chat
+                    resetExecutedQueries();
+                    clearVisualizationPaths();
+                    setIsOpen(false);
+                    setVisualizationOpen(false);
+
                         // Clear URL parameters when starting a new chat
                         const params = new URLSearchParams(searchParams.toString());
                         params.delete("chatId");
@@ -1169,8 +1153,6 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
-                  searchParams={searchParams}
-                  router={router}
                   currentUserId={currentUserId}
                 />
               </TabsContent>

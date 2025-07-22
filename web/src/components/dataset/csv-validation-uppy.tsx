@@ -206,7 +206,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
         uppy.cancelAll();
       }
     };
-  }, [projectId]); // Only depend on projectId, not the store functions
+  }, [projectId, clearColumnDescriptions, resetColumnMappings, setProjectId, uppy]);
 
   // Initialize Uppy
   useEffect(() => {
@@ -304,7 +304,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     return () => {
       uppyInstance.cancelAll();
     };
-  }, []); // No dependencies - only run once on mount
+  }, [clearColumnDescriptions, getColumnMappings, onUploadSuccess, resetColumnMappings]);
 
   // Handle file selection
   const handleFileSelected = async (file: File) => {

@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    MAX_RETRY_COUNT: int = 3
+    MAX_TOOL_CALL_LIMIT: int = 3
     MAX_VALIDATION_RETRY_COUNT: int = 2
 
     CORS_ORIGINS: list[str] = ["*"]

@@ -61,7 +61,6 @@ export function SchemaNode({ data }: SchemaNodeProps) {
 function FieldRow({
   field,
   isPrimary = false,
-  isLast = false,
 }: {
   field: ColumnInfo;
   isPrimary?: boolean;

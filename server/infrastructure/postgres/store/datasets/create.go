@@ -29,7 +29,6 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 	d, err := s.q.CreateDataset(ctx, gen.CreateDatasetParams{
 		Name:        params.Name,
 		Description: pgtype.Text{String: params.Description, Valid: true},
-		Format:      params.Format,
 		RowCount:    pgtype.Int4{Int32: int32(params.RowCount), Valid: true},
 		Size:        pgtype.Int8{Int64: int64(params.Size), Valid: true},
 		FilePath:    params.FilePath,
@@ -57,7 +56,6 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		ID:          d.ID,
 		Name:        d.Name,
 		Description: d.Description.String,
-		Format:      d.Format,
 		CreatedAt:   d.CreatedAt.Time,
 		UpdatedAt:   d.UpdatedAt.Time,
 		RowCount:    int(d.RowCount.Int32),

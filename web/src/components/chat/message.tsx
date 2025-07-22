@@ -152,10 +152,6 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
             </p>
           )}
           <div className="text-xs">
-            <span className="text-muted-foreground">Format:</span>{" "}
-            <span className="font-medium">{dataset.format}</span>
-          </div>
-          <div className="text-xs">
             <span className="text-muted-foreground">Rows:</span>{" "}
             <span className="font-medium">
               {dataset.row_count.toLocaleString()}
@@ -359,7 +355,7 @@ export function ChatMessage({
       setDisplayDatasets(finalizedDatasets || []);
       setDisplaySqlQueries(finalizedSqlQuery ? [finalizedSqlQuery] : []);
     }
-  }, [message, content, finalizedDatasets, finalizedSqlQuery]);
+  }, [message, content, finalizedDatasets, finalizedSqlQuery, chatId, setVisualizationPaths]);
 
   const handleRunQuery = useCallback(
     async (query: string) => {

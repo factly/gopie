@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -46,12 +46,7 @@ export function UploadConfirmationDialog({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isValid, setIsValid] = useState<boolean>(true);
 
-  // Validate form when input changes
-  useEffect(() => {
-    validateForm();
-  }, [datasetName, description]);
-
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     try {
       uploadFormSchema.parse({
         datasetName,
@@ -74,7 +69,12 @@ export function UploadConfirmationDialog({
       }
       return true;
     }
-  };
+  }, [datasetName, description]);
+
+  // Validate form when input changes
+  useEffect(() => {
+    validateForm();
+  }, [datasetName, description, validateForm]);
 
   const handleConfirm = () => {
     if (validateForm()) {

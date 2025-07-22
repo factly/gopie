@@ -4,6 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from app.workflow.graph.multi_dataset_graph.graph import multi_dataset_graph
 from app.workflow.graph.multi_dataset_graph.types import (
     OutputState as MultiDatasetOutputState,
+    InputState,
 )
 from app.workflow.graph.multi_dataset_graph.types import QueryResult
 
@@ -17,6 +18,14 @@ def list_of_dict_to_list_of_lists(list_of_dict: list[dict]) -> list[list]:
 
 
 def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
+    """
+    Convert a QueryResult object into a list of Dataset objects, each representing the result of a SQL query with its explanation.
+
+    Each Dataset contains tabular data (as a list of lists) and a description combining the SQL query and its explanation. Only SQL queries with results are included.
+
+    Returns:
+        List of Dataset objects generated from the query result.
+    """
     datasets = []
     dataset_count = 0
 
@@ -25,9 +34,7 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
             description = f"Query: {sql_query_info.sql_query}\n\n"
             description += f"Explanation: {sql_query_info.explanation}\n\n"
             if sql_query_info.sql_query_result:
-                data = list_of_dict_to_list_of_lists(
-                    sql_query_info.sql_query_result
-                )
+                data = list_of_dict_to_list_of_lists(sql_query_info.sql_query_result)
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
     return datasets
@@ -36,27 +43,38 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
 def transform_output_state(
     output_state: MultiDatasetOutputState,
 ) -> dict:
-    datasets = query_result_to_datasets(output_state.get("query_result", None))
-    response_text = output_state.get("response_text", "No response")
+    """
+    Convert a multi-dataset agent output state into a standardized response dictionary.
+
+    The response includes the original query result, a list of datasets derived from the query result, and a single AI message with a placeholder response.
+    """
+    query_result = output_state.get("query_result", {})
+    datasets = query_result_to_datasets(query_result)
+    response_text = "No response"
     return {
+        "query_result": query_result,
         "datasets": datasets,
         "messages": [AIMessage(content=response_text)],
     }
 
 
-async def call_multi_dataset_agent(
-    state: AgentState, config: RunnableConfig
-) -> dict:
-    input_state = {
+async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:
+    """
+    Asynchronously processes a multi-dataset agent query and returns the transformed response.
+
+    Prepares the input state from the provided agent state and configuration, invokes the multi-dataset graph asynchronously, and transforms the resulting output state into a response dictionary.
+
+    Returns:
+        dict: The transformed response containing the query result, datasets, and a placeholder AI message.
+    """
+    input_state: InputState = {
         "messages": state["messages"],
         "dataset_ids": state["dataset_ids"],
         "project_ids": state["project_ids"],
-        "user_query": state["user_query"],
+        "user_query": state["user_query"] or "",
         "need_semantic_search": state.get("need_semantic_search", True),
         "required_dataset_ids": state.get("required_dataset_ids", []),
     }
 
-    output_state = await multi_dataset_graph.ainvoke(
-        input_state, config=config
-    )
+    output_state = await multi_dataset_graph.ainvoke(input_state, config=config)
     return transform_output_state(output_state)  # type: ignore

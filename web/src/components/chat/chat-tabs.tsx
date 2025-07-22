@@ -9,6 +9,8 @@ import { useChatStore } from "@/lib/stores/chat-store";
 import { useChats } from "@/lib/queries/chat";
 import { useDeleteChat } from "@/lib/mutations/chat";
 import { toast } from "sonner";
+import { useSqlStore } from "@/lib/stores/sql-store";
+import { useVisualizationStore } from "@/lib/stores/visualization-store";
 
 interface ChatTabsProps {
   datasetId: string;
@@ -25,6 +27,8 @@ export function ChatTabs({
   const selectedChat = getSelectedChatForDataset(datasetId);
   const selectedChatId = selectedChat.id;
   const [activeTab, setActiveTab] = React.useState(defaultTab);
+  const { resetExecutedQueries, setIsOpen: setSqlOpen } = useSqlStore();
+  const { clearPaths: clearVisualizationPaths, setIsOpen: setVisualizationOpen } = useVisualizationStore();
 
   const {
     data: chatsData,
@@ -49,6 +53,11 @@ export function ChatTabs({
       await deleteChat.mutateAsync({ chatId, userId: "1" });
       if (chatId === selectedChatId) {
         selectChatForDataset(datasetId, null, null);
+        // Clear results when deleting the current chat
+        resetExecutedQueries();
+        clearVisualizationPaths();
+        setSqlOpen(false);
+        setVisualizationOpen(false);
       }
       await refetchChats();
       toast.success("Chat deleted successfully");
@@ -58,6 +67,12 @@ export function ChatTabs({
   };
 
   const handleSelectChat = (chatId: string, chatName: string) => {
+    // Clear results when selecting a different chat
+    resetExecutedQueries();
+    clearVisualizationPaths();
+    setSqlOpen(false);
+    setVisualizationOpen(false);
+    
     selectChatForDataset(datasetId, chatId, chatName || "New Chat");
     setActiveTab("chat"); // Switch to chat tab when a chat is selected
   };

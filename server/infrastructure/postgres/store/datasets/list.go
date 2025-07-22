@@ -38,7 +38,6 @@ func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination 
 			RowCount:    int(d.RowCount.Int32),
 			Size:        int(d.Size.Int64),
 			FilePath:    d.FilePath,
-			Format:      d.Format,
 			OrgID:       d.OrgID.String,
 		})
 	}
@@ -98,7 +97,6 @@ func (s *PgDatasetStore) ListAllDatasets(ctx context.Context) ([]*models.Dataset
 			RowCount:    int(d.RowCount.Int32),
 			Size:        int(d.Size.Int64),
 			FilePath:    d.FilePath,
-			Format:      d.Format,
 			OrgID:       d.OrgID.String,
 		})
 	}

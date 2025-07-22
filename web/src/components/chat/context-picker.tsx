@@ -47,7 +47,6 @@ export function ContextPicker({
   onRemoveContext,
   triggerClassName,
   lockableContextIds = [], // Default to empty array
-  shouldFlash = false,
 }: ContextPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [allDatasets, setAllDatasets] = useState<

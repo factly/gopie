@@ -3,7 +3,10 @@ from app.workflow.graph.multi_dataset_graph.types import State
 
 def route_response_handler(state: State) -> str:
     """
-    Route to the appropriate response handler based on the state
+    Determines the next response action based on the current subquery index in the state.
+    
+    Returns:
+        str: "stream_updates" if there are more subqueries to process, otherwise "pass_on_results".
     """
 
     subqueries = state.get("subqueries", [])
@@ -12,4 +15,4 @@ def route_response_handler(state: State) -> str:
     if len(subqueries) - 1 > query_index:
         return "stream_updates"
     else:
-        return "generate_result"
+        return "pass_on_results"

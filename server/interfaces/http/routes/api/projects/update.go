@@ -4,6 +4,7 @@ import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,7 +15,6 @@ type updateProjectBody struct {
 	Name string `json:"name,omitempty" validate:"required,min=3,max=50" example:"Updated Project Name"`
 	// Description of the project
 	Description string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
-	UpdatedBy   string `json:"updated_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // @Summary Update a project
@@ -31,6 +31,8 @@ type updateProjectBody struct {
 // @Router /v1/api/projects/{projectID} [patch]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 
 	body := updateProjectBody{}
 	if err := ctx.BodyParser(&body); err != nil {
@@ -53,7 +55,8 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	project, err := h.projectSvc.Update(projectID, &models.UpdateProjectParams{
 		Name:        body.Name,
 		Description: body.Description,
-		UpdatedBy:   body.UpdatedBy,
+		UpdatedBy:   userID,
+		OrgID:       orgID,
 	})
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

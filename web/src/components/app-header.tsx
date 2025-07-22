@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useProject } from "@/lib/queries/project/get-project";
 import { useDatasetById } from "@/lib/queries/dataset/get-dataset-by-id";
@@ -13,26 +14,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-
-// Define route mappings for better breadcrumb labels
-const routeLabels: Record<string, string> = {
-  dashboard: "Dashboard",
-  chat: "Chat",
-  upload: "Upload",
-  schemas: "Schemas",
-  projects: "Projects",
-  datasets: "Datasets",
-  api: "API",
-};
-
-// Helper function to detect if a segment looks like an ID
-function isIdSegment(segment: string): boolean {
-  // Check for UUID-like patterns or long alphanumeric strings
-  return (
-    /^[a-fA-F0-9]{8,}$/.test(segment.replace(/[-\s]/g, "")) ||
-    /^[a-zA-Z0-9]{20,}$/.test(segment)
-  );
-}
 
 function useBreadcrumbData() {
   const params = useParams();
@@ -57,7 +38,7 @@ function useBreadcrumbData() {
 function generateBreadcrumbs(
   pathname: string,
   projectData?: { id: string; name?: string; title?: string },
-  datasetData?: { id: string; name?: string; title?: string }
+  datasetData?: { id: string; name?: string; title?: string; alias?: string }
 ) {
   // Skip breadcrumbs for home page
   if (pathname === "/") {
@@ -71,48 +52,48 @@ function generateBreadcrumbs(
     isCurrentPage?: boolean;
   }> = [];
 
+  // Special handling for Projects page - treat it as Home
+  if (pathname === "/projects") {
+    return [];
+  }
+
   // Always add Home as first breadcrumb
   breadcrumbs.push({
     label: "Home",
     href: "/",
   });
 
-  // Build breadcrumbs from path segments
-  let currentPath = "";
-  segments.forEach((segment, index) => {
-    currentPath += `/${segment}`;
-    const isLast = index === segments.length - 1;
+  // Extract project and dataset IDs from the path
+  let projectId: string | undefined;
+  let datasetId: string | undefined;
 
-    let label: string;
-
-    // Check if this segment is an ID and try to get friendly name
-    if (isIdSegment(segment)) {
-      // Check if this is a project ID
-      if (projectData && segment === projectData.id) {
-        label = projectData.name || projectData.title || "Project";
-      }
-      // Check if this is a dataset ID
-      else if (datasetData && segment === datasetData.id) {
-        label = datasetData.title || datasetData.name || "Dataset";
-      }
-      // Fallback for unknown IDs - truncate for better display
-      else {
-        label = `${segment.substring(0, 8)}...`;
-      }
+  // Parse the segments to find project and dataset IDs
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i] === "projects" && i + 1 < segments.length) {
+      projectId = segments[i + 1];
     }
-    // Use predefined labels or format the segment
-    else {
-      label =
-        routeLabels[segment] ||
-        segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    if (segments[i] === "datasets" && i + 1 < segments.length) {
+      datasetId = segments[i + 1];
     }
+  }
 
+  // Add project breadcrumb if we have a project
+  if (projectId && projectData) {
     breadcrumbs.push({
-      label,
-      href: isLast ? undefined : currentPath,
-      isCurrentPage: isLast,
+      label: projectData.name || "Project",
+      href: `/projects/${projectId}`,
+      isCurrentPage: !datasetId, // Current page if no dataset
     });
-  });
+  }
+
+  // Add dataset breadcrumb if we have a dataset
+  if (datasetId && datasetData) {
+    breadcrumbs.push({
+      label: datasetData.alias || datasetData.name || "Dataset",
+      href: undefined, // No href for current page
+      isCurrentPage: true,
+    });
+  }
 
   return breadcrumbs;
 }
@@ -122,8 +103,8 @@ export function AppHeader() {
   const { projectData, datasetData } = useBreadcrumbData();
   const breadcrumbs = generateBreadcrumbs(pathname, projectData, datasetData);
 
-  // Hide header on home page
-  if (pathname === "/" || pathname.startsWith("/chat")) {
+  // Hide header on home page, projects page (treated as home), and chat
+  if (pathname === "/" || pathname === "/projects" || pathname.startsWith("/chat")) {
     return null;
   }
 
@@ -141,8 +122,8 @@ export function AppHeader() {
                     {crumb.isCurrentPage ? (
                       <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink href={crumb.href || "#"}>
-                        {crumb.label}
+                      <BreadcrumbLink asChild>
+                        <Link href={crumb.href || "#"}>{crumb.label}</Link>
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
