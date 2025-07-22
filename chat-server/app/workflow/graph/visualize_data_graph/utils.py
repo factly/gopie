@@ -48,16 +48,14 @@ async def get_python_code_from_viz(viz_path: str):
 
 
 @traceable
-def format_dataset_info(datasets: list[Dataset] | None, csv_paths: list[str]) -> str:
+def format_dataset_info(datasets: list[Dataset] | None) -> str:
     datasets_csv_info = ""
-
     if not datasets:
         return ""
-
-    for idx, (dataset, csv_path) in enumerate(zip(datasets, csv_paths)):
+    for idx, dataset in enumerate(datasets):
         datasets_csv_info += f"Dataset {idx + 1}: \n\n"
         datasets_csv_info += f"Description: {dataset.description}\n\n"
-        datasets_csv_info += f"CSV Path: {csv_path}\n\n"
+        datasets_csv_info += f"CSV Path: {dataset.csv_path}\n\n"
     return datasets_csv_info
 
 
@@ -139,16 +137,11 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
 
 @traceable(run_type="chain", name="add_context_to_python_code")
 async def add_context_to_python_code(python_code: str, datasets: list[Dataset]) -> str:
-    formatted_dataset_info = format_dataset_info(datasets=datasets, csv_paths=[])
+    formatted_dataset_info = format_dataset_info(datasets=datasets)
     # Convert dataset info str to comment
     formatted_dataset_info = formatted_dataset_info.replace("\n", "\n# ")
     # Add dataset info as a comment at the top of the python code
-    python_code_with_context = f"""
-# Information about the datasets present when this code was run
-{formatted_dataset_info}
-
-{python_code}
-"""
+    python_code_with_context = f"# Information about the datasets present when this code was run\n{formatted_dataset_info}\n\n{python_code}"
     return python_code_with_context
 
 
