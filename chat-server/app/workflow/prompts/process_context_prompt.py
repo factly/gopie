@@ -26,38 +26,34 @@ Your analysis should follow these key criteria:
   • If the user's query is a follow-up query from the conversation history, then the answer should be true.
   • If the user's query is independent and not related to the conversation history, then the answer should be false.
 
-2. are the previously selected datasets sufficient for the user query? (`is_sufficient_data`)
-  • Determine if the previously selected datasets are sufficient to answer the user query.
+2. Does the user query require new data? (`is_new_data_needed`)
+  • Determine if the previously used sql queries would have all the sufficient data to answer the user query.
+  • If the previously used sql queries would not have all the sufficient data to answer the user query, then the answer should be true.
 
 3. is the query related to visualization? (`is_visualization_query`)
   • Determine if the query is related to visualization.
 
-4. relevant datasets ids (`relevant_datasets_ids`)
-  • Select the most relevant datasets from the previously selected datasets based on the user query.
-  • Be greedy in selecting the relevant datasets.
-  • Do not invent any datasets. Only select from the previously used datasets.
-
-5. relevant sql queries (`relevant_sql_queries`)
+4. relevant sql queries (`relevant_sql_queries`)
   • Select the most relevant sql queries from the previously selected sql queries based on the user query.
   • Be greedy in selecting the relevant sql queries.
   • Do not invent any sql queries. Only select from the previously used sql queries.
+  • Do not modify the sql queries, only select from the previously used sql queries.
 
-6. What is the enhanced query? (`enhanced_query`)
+5. What is the enhanced query? (`enhanced_query`)
   • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history.
   • Keep the user's intent and wording where possible.
   • Make it clear whether user needs more data, new datasets, or just visualization.
   • If the chat history is empty, then the enhanced query should be the same as the user query.
 
-7. Summary of the context (`context_summary`)
+6. Summary of the context (`context_summary`)
   • Provide a summary of how the present query is related to the previous conversation history.
   • If the chat history is empty, then the context summary should be empty.
 
 RESPOND ONLY IN THIS JSON FORMAT:
 {
   "is_follow_up": boolean,
-  "is_sufficient_data": boolean,
+  "is_new_data_needed": boolean,
   "is_visualization_query": boolean,
-  "relevant_datasets_ids": string[],
   "relevant_sql_queries": string[],
   "enhanced_query": string,
   "context_summary": string,

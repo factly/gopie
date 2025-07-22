@@ -66,10 +66,7 @@ def format_chat_history(chat_history: list[BaseMessage]) -> str:
         )
         tool_calls = get_all_tool_calls(chat_history)
         sql_queries = get_sql_queries(tool_calls)
-        datasets_used = get_datasets_used(tool_calls)
-        formatted_chat_history += (
-            f"\n\n Previous SQL Queries: {sql_queries}\n\nPrevious Datasets Used: {datasets_used}"
-        )
+        formatted_chat_history += f"\n\n Previous SQL Queries: {sql_queries}\n\n"
     return formatted_chat_history
 
 
@@ -77,6 +74,12 @@ def get_last_vizpaths(chat_history: list[BaseMessage]) -> list[str]:
     tool_calls = get_all_tool_calls(chat_history)
     vizpaths = get_vizpaths(tool_calls)
     return vizpaths
+
+
+def get_previous_datasets_ids(chat_history: list[BaseMessage]) -> list[str]:
+    tool_calls = get_all_tool_calls(chat_history)
+    datasets_ids = get_datasets_used(tool_calls)
+    return datasets_ids
 
 
 @configure_node(
@@ -88,6 +91,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     chat_history = get_chat_history(config) or []
     formatted_chat_history = format_chat_history(chat_history)
     last_vizpaths = get_last_vizpaths(chat_history)
+    relevant_datasets_ids = get_previous_datasets_ids(chat_history)
 
     prompt_messages = get_prompt(
         "process_context",
@@ -103,9 +107,8 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         parsed_response = parser.parse(str(response.content))
 
         is_follow_up = parsed_response.get("is_follow_up", False)
-        is_sufficient_data = parsed_response.get("is_sufficient_data", False)
+        is_new_data_needed = parsed_response.get("is_new_data_needed", False)
         needs_visualization = parsed_response.get("is_visualization_query", False)
-        relevant_datasets_ids = parsed_response.get("relevant_datasets_ids", [])
         relevant_sql_queries = parsed_response.get("relevant_sql_queries", [])
         enhanced_query = parsed_response.get("enhanced_query", user_input)
         context_summary = parsed_response.get("context_summary", "")
@@ -121,7 +124,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             final_query = enhanced_query
         return {
             "user_query": final_query,
-            "new_data_needed": not is_sufficient_data,
+            "new_data_needed": is_new_data_needed,
             "needs_visualization": needs_visualization,
             "relevant_datasets_ids": relevant_datasets_ids,
             "relevant_sql_queries": relevant_sql_queries,
@@ -135,8 +138,8 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             "user_query": user_input,
             "new_data_needed": True,
             "needs_visualization": False,
-            "relevant_datasets_ids": [],
+            "relevant_datasets_ids": relevant_datasets_ids,
             "relevant_sql_queries": [],
             "enhanced_query": user_input,
-            "previous_json_paths": [],
+            "previous_json_paths": last_vizpaths,
         }
