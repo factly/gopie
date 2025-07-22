@@ -84,6 +84,7 @@ def format_process_query_input(
     rows_csv: str,
     prev_query_result: QueryResult | None = None,
     validation_result: ValidationResult | None = None,
+    previous_sql_queries: list | None = None,
     **kwargs,
 ) -> dict:
     """
@@ -148,5 +149,11 @@ def format_process_query_input(
         missing_elements = validation_result["missing_elements"]
         if missing_elements:
             input_str += f"\n❓ Still Missing: {', '.join(missing_elements)}"
+
+    if previous_sql_queries:
+        input_str += "\n--- PREVIOUS SQL QUERIES ---\n"
+        input_str += "Previous SQL queries:"
+        for sql_query in previous_sql_queries:
+            input_str += f"- {sql_query}\n"
 
     return {"input": input_str}

@@ -17,7 +17,7 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
     input_state = {
         "user_query": state.get("user_query", ""),
         "datasets": state.get("datasets", []),
-        "prev_csv_paths": state.get("prev_csv_paths", []),
+        "previous_visualization_result_path": state.get("previous_json_paths", []),
     }
 
     _ = await visualize_data_graph.ainvoke(input_state, config=config)  # type: ignore

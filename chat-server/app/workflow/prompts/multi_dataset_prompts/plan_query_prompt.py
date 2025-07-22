@@ -109,6 +109,7 @@ def format_plan_query_input(
     error_messages: list | None = None,
     retry_count: int = 0,
     node_messages: dict | None = None,
+    previous_sql_queries: list | None = None,
 ) -> dict:
     input_str = f"USER QUERY: {user_query}\n"
 
@@ -173,6 +174,12 @@ def format_plan_query_input(
                     input_str += f"  {key}: {value}"
             else:
                 input_str += f"- {node}: {message}"
+
+    if previous_sql_queries:
+        input_str += "\n--- PREVIOUS SQL QUERIES ---\n"
+        input_str += "Previous SQL queries:"
+        for sql_query in previous_sql_queries:
+            input_str += f"- {sql_query}\n"
 
     return {
         "input": input_str,

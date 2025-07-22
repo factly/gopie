@@ -17,15 +17,14 @@ def list_of_dict_to_list_of_lists(list_of_dict: list[dict]) -> list[list]:
     return [headers] + data
 
 
-def transform_output_state(
-    output_state: SingleDatasetOutputState,
-) -> AgentState | dict:
+def transform_output_state(output_state: SingleDatasetOutputState, state: AgentState) -> dict:
     """
     Processes the output state from a single dataset agent workflow and formats the query results for downstream consumption.
 
-    Extracts the query result and, if available, iterates over SQL query results to construct a list of datasets with descriptions and tabular data. Returns a dictionary containing the original query result, the list of datasets, and a default AI message.
+    Extracts the query result and, if available, iterates over SQL query results to construct a list of datasets
+    with descriptions and tabular data. Returns a dictionary containing the original query result, the list of datasets, and a default AI message.
     """
-    datasets = []
+    datasets = state.get("datasets", []) or []
     dataset_count = 0
     query_result: QueryResult = output_state.get("query_result")
 
@@ -44,11 +43,12 @@ def transform_output_state(
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
 
-    response_text = "No response"
     return {
         "query_result": query_result,
         "datasets": datasets,
-        "messages": [AIMessage(content=response_text)],
+        "messages": [
+            AIMessage(content="Successfully processed the user query with single dataset agent.")
+        ],
     }
 
 
@@ -71,7 +71,8 @@ async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -
         "messages": state["messages"],
         "dataset_id": dataset_id,
         "user_query": user_query,
+        "previous_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await single_dataset_graph.ainvoke(input_state, config=config)
-    return transform_output_state(output_state)  # type: ignore
+    return transform_output_state(output_state=output_state, state=state)  # type: ignore

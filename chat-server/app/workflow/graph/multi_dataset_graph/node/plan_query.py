@@ -38,6 +38,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
         query_result = state.get("query_result", {})
         datasets_info = state.get("datasets_info", {})
+        previous_sql_queries = state.get("previous_sql_queries", [])
 
         if not identified_datasets:
             raise Exception("No dataset selected for query planning")
@@ -59,6 +60,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             error_messages=error_messages,
             retry_count=retry_count,
             node_messages=node_messages,
+            previous_sql_queries=previous_sql_queries,
         )
 
         llm = get_model_provider(config).get_llm_for_node("plan_query")

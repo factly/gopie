@@ -9,6 +9,7 @@ class InputState(TypedDict):
     messages: list[BaseMessage]
     dataset_id: str | None
     user_query: str
+    previous_sql_queries: list | None
 
 
 class OutputState(TypedDict):
@@ -22,6 +23,7 @@ class State(TypedDict):
     dataset_id: str | None
     user_query: str | None
     query_result: QueryResult
+    previous_sql_queries: list | None
 
 
 class ConfigSchema(TypedDict):

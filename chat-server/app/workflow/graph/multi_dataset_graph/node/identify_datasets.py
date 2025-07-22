@@ -40,8 +40,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
 
-    need_semantic_search = state.get("need_semantic_search", True)
-    required_dataset_ids = state.get("required_dataset_ids", [])
+    relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
     query_type = query_result.subqueries[query_index].query_type
     confidence_score = query_result.subqueries[query_index].confidence_score
@@ -50,30 +49,27 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
-        required_dataset_schemas = await get_schema_by_dataset_ids(dataset_ids=required_dataset_ids)
+        relevant_dataset_schemas = await get_schema_by_dataset_ids(
+            dataset_ids=relevant_datasets_ids
+        )
 
         semantic_searched_datasets = []
-        if need_semantic_search or not required_dataset_schemas:
-            try:
-                semantic_searched_datasets = await search_schemas(
-                    user_query=user_query,
-                    embeddings=embeddings_model,
-                    dataset_ids=dataset_ids,
-                    project_ids=project_ids,
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Vector search error: {e!s}. Unable to retrieve dataset information."
-                )
+        try:
+            semantic_searched_datasets = await search_schemas(
+                user_query=user_query,
+                embeddings=embeddings_model,
+                dataset_ids=dataset_ids,
+                project_ids=project_ids,
+            )
+        except Exception as e:
+            logger.warning(f"Vector search error: {e!s}. Unable to retrieve dataset information.")
 
-        if not required_dataset_schemas and not semantic_searched_datasets:
+        if not semantic_searched_datasets:
             query_result.set_node_message(
                 "identify_datasets",
                 {
-                    "No relevant datasets found by doing semantic search or "
-                    "required datasets from previous messages. This query is "
-                    "not relavant to any datasets. Treating as conversational "
-                    "query."
+                    "No relevant datasets found by doing semantic search. This query is "
+                    "not relavant to any datasets. Treating as conversational query."
                 },
             )
 
@@ -103,7 +99,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
         llm_prompt = get_prompt(
             "identify_datasets",
             user_query=user_query,
-            required_dataset_schemas=required_dataset_schemas,
+            relevant_dataset_schemas=relevant_dataset_schemas,
             semantic_searched_datasets=semantic_searched_datasets,
             confidence_score=confidence_score,
             query_type=query_type,
@@ -116,7 +112,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
         parsed_content = parser.parse(response_content)
 
         selected_datasets = parsed_content.get("selected_dataset", [])
-        selected_datasets.extend([schema.dataset_name for schema in required_dataset_schemas])
         query_result.subqueries[query_index].tables_used = selected_datasets
 
         column_assumptions = parsed_content.get("column_assumptions", [])
@@ -129,7 +124,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
 
-        all_available_schemas = required_dataset_schemas + semantic_searched_datasets
+        all_available_schemas = relevant_dataset_schemas + semantic_searched_datasets
 
         filtered_dataset_schemas = [
             schema for schema in all_available_schemas if schema.dataset_name in selected_datasets

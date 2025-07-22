@@ -91,6 +91,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
     dataset_id = state.get("dataset_id", None)
     validation_result = state.get("validation_result", None)
     prev_query_result = state.get("query_result", None)
+    previous_sql_queries = state.get("previous_sql_queries", [])
 
     query_result = QueryResult(
         original_user_query=user_query,
@@ -130,6 +131,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             rows_csv=rows_csv,
             prev_query_result=prev_query_result,
             validation_result=validation_result,
+            previous_sql_queries=previous_sql_queries,
         )
 
         llm = get_model_provider(config).get_llm_for_node("process_query")

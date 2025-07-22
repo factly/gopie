@@ -42,6 +42,7 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
 
 def transform_output_state(
     output_state: MultiDatasetOutputState,
+    state: AgentState,
 ) -> dict:
     """
     Convert a multi-dataset agent output state into a standardized response dictionary.
@@ -49,12 +50,14 @@ def transform_output_state(
     The response includes the original query result, a list of datasets derived from the query result, and a single AI message with a placeholder response.
     """
     query_result = output_state.get("query_result", {})
-    datasets = query_result_to_datasets(query_result)
-    response_text = "No response"
+    datasets = state.get("datasets", []) or []
+    datasets.extend(query_result_to_datasets(query_result))
     return {
         "query_result": query_result,
         "datasets": datasets,
-        "messages": [AIMessage(content=response_text)],
+        "messages": [
+            AIMessage(content="Successfully processed the user query with multi dataset agent.")
+        ],
     }
 
 
@@ -72,9 +75,9 @@ async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) ->
         "dataset_ids": state["dataset_ids"],
         "project_ids": state["project_ids"],
         "user_query": state["user_query"] or "",
-        "need_semantic_search": state.get("need_semantic_search", True),
-        "required_dataset_ids": state.get("required_dataset_ids", []),
+        "relevant_datasets_ids": state.get("relevant_datasets_ids", []),
+        "previous_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await multi_dataset_graph.ainvoke(input_state, config=config)
-    return transform_output_state(output_state)  # type: ignore
+    return transform_output_state(output_state=output_state, state=state)  # type: ignore
