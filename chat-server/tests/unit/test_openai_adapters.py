@@ -24,9 +24,9 @@ class TestOpenAIInputAdapter:
 
         assert isinstance(result, QueryRequest)
         assert len(result.messages) == 2
-        assert result.messages[0].role == "user"
+        assert result.messages[0].type == "human"
         assert result.messages[0].content == "Hello, how are you?"
-        assert result.messages[1].role == "assistant"
+        assert result.messages[1].type == "ai"
         assert result.messages[1].content == "I'm doing well!"
         assert result.model_id == "gpt-4"
         assert result.user == "test_user_123"
