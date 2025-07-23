@@ -8,7 +8,6 @@ from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
-
 RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
 
 

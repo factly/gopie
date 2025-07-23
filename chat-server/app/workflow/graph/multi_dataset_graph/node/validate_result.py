@@ -1,9 +1,8 @@
 from typing import Any
 
+from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
-
-from langchain_core.messages import AIMessage
 
 from app.core.config import settings
 from app.models.message import ErrorMessage
@@ -11,7 +10,6 @@ from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
-
 
 RECOMMENDATION_LIST = ["route_response", "replan", "reidentify_datasets"]
 

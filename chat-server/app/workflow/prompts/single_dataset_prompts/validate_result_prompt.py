@@ -5,8 +5,12 @@ from langchain_core.prompts import (
 )
 
 from app.models.query import QueryResult
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
-from app.workflow.prompts.formatters.format_query_result import format_query_result
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
+from app.workflow.prompts.formatters.format_query_result import (
+    format_query_result,
+)
 
 
 def create_validate_result_prompt(

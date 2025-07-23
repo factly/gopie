@@ -1,8 +1,9 @@
 from langgraph.graph import END, START, StateGraph
 
 from app.models.schema import ConfigSchema
-from app.workflow.agent.node.router import query_router
 from app.workflow.agent.node.generate_result import generate_result
+from app.workflow.agent.node.router import query_router
+
 from .node.context_processor import process_context
 from .node.multi_dataset import call_multi_dataset_agent
 from .node.single_dataset import call_single_dataset_agent
@@ -14,7 +15,6 @@ from .node.visualisation import (
     should_run_visualization,
 )
 from .types import AgentState
-
 
 graph_builder = StateGraph(AgentState, config_schema=ConfigSchema)
 

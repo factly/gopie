@@ -1,8 +1,9 @@
 from typing import Annotated, TypedDict
 
-from app.models.query import QueryResult
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
+
+from app.models.query import QueryResult
 
 
 class InputState(TypedDict):

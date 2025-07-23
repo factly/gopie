@@ -33,7 +33,7 @@ async def process_test_case(
     evaluation_chain,
     formatter: Optional[TerminalFormatter] = None,
     test_num: Optional[int] = None,
-    total_tests: Optional[int] = None
+    total_tests: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Process a single test case."""
     user_query = get_user_query(test_case)
@@ -67,15 +67,17 @@ async def process_test_case(
                 response["final_response"],
                 response["selected_datasets"],
                 response["generated_sql_queries"],
-                response["tool_messages"]
+                response["tool_messages"],
             )
             formatter.print_evaluation_status()
 
         # Evaluate response
-        evaluation = await evaluation_chain.ainvoke({
-            "generated_answer": response["final_response"],
-            "expected_result": expected_result,
-        })
+        evaluation = await evaluation_chain.ainvoke(
+            {
+                "generated_answer": response["final_response"],
+                "expected_result": expected_result,
+            }
+        )
 
         update_results_with_evaluation(results, evaluation, response, expected_result, formatter)
         return results
@@ -84,19 +86,12 @@ async def process_test_case(
         if formatter:
             formatter.print_error(f"Test failed: {str(e)}")
 
-        results.update({
-            "reasoning": f"Error: {str(e)}",
-            "error": str(e),
-            "status": "error"
-        })
+        results.update({"reasoning": f"Error: {str(e)}", "error": str(e), "status": "error"})
         return results
 
 
 async def run_test_suite(
-    test_cases: List[Dict[str, Any]],
-    test_type: str,
-    evaluation_chain,
-    use_formatter: bool = True
+    test_cases: List[Dict[str, Any]], test_type: str, evaluation_chain, use_formatter: bool = True
 ) -> List[Dict[str, Any]]:
     """Run a suite of test cases."""
     start_time = datetime.now()
@@ -119,13 +114,16 @@ async def run_test_suite(
 
 def _create_pytest_test_function(test_cases: List[Dict[str, Any]], test_type: str):
     """Create a pytest test function for given test cases."""
+
     async def test_function(request, capfd):
         evaluation_chain = create_evaluation_chain()
         use_formatter = not request.config.getoption("--disable-formatter")
 
         if use_formatter:
             with capfd.disabled():
-                results = await run_test_suite(test_cases, test_type, evaluation_chain, use_formatter)
+                results = await run_test_suite(
+                    test_cases, test_type, evaluation_chain, use_formatter
+                )
         else:
             results = await run_test_suite(test_cases, test_type, evaluation_chain, use_formatter)
 
@@ -161,8 +159,7 @@ async def test_all_cases(request, capfd):
 
 # Utility functions for standalone execution
 async def run_tests(
-    test_type: str = "all",
-    server_url: str = "http://localhost:8001/api/v1/chat/completions"
+    test_type: str = "all", server_url: str = "http://localhost:8001/api/v1/chat/completions"
 ) -> List[Dict[str, Any]]:
     """Run test cases against the conversational AI server."""
     global URL

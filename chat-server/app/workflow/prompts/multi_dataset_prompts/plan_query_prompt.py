@@ -5,7 +5,9 @@ from langchain_core.prompts import (
 )
 
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
 
 
 def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:

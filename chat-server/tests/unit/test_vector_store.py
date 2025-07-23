@@ -1,17 +1,18 @@
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from langchain_core.documents import Document
 from typing import Union, cast
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 
+from app.services.qdrant.schema_search import search_schemas
+from app.services.qdrant.schema_vectorization import (
+    delete_schema_from_qdrant,
+    store_schema_in_qdrant,
+)
 from app.services.qdrant.vector_store import (
     add_document_to_vector_store,
     perform_similarity_search,
-)
-from app.services.qdrant.schema_search import search_schemas
-from app.services.qdrant.schema_vectorization import (
-    store_schema_in_qdrant,
-    delete_schema_from_qdrant,
 )
 
 
@@ -20,7 +21,7 @@ class TestVectorStore:
     def mock_document(self):
         """
         Provides a sample Document instance with predefined page content and metadata for testing purposes.
-        
+
         Returns:
             Document: A Document object containing test content and metadata fields for project and dataset identification.
         """
@@ -37,7 +38,7 @@ class TestVectorStore:
     def mock_embeddings(self):
         """
         Provides a mock embeddings object with a stubbed `embed_query` method returning a fixed vector.
-        
+
         Returns:
             Mock: An object simulating an embeddings interface for testing purposes.
         """
@@ -49,7 +50,7 @@ class TestVectorStore:
     async def test_add_document_to_vector_store(self, mock_document):
         """
         Test that a document is correctly added to the vector store with the expected document ID and embeddings.
-        
+
         Verifies that the vector store and document ID are obtained using the appropriate methods and that the document is added asynchronously with the correct parameters.
         """
         mock_vector_store = AsyncMock()
@@ -78,7 +79,7 @@ class TestVectorStore:
     async def test_perform_similarity_search_success(self):
         """
         Test that `perform_similarity_search` returns the expected results when the similarity search succeeds.
-        
+
         Asserts that the correct number of results is returned and that the vector store's async similarity search method is called with the correct parameters.
         """
         mock_vector_store = AsyncMock()
@@ -116,7 +117,7 @@ class TestVectorStore:
     async def test_perform_similarity_search_fallback_on_error(self):
         """
         Test that similarity search falls back to an unfiltered search if the filtered search raises an exception.
-        
+
         Verifies that when the initial similarity search with a filter fails, the function retries without the filter and returns the successful results.
         """
         mock_vector_store = AsyncMock()
@@ -151,7 +152,7 @@ class TestSchemaSearch:
     def mock_embeddings(self):
         """
         Create a mock OpenAIEmbeddings instance with a stubbed embed_query method returning a fixed vector.
-        
+
         Returns:
             OpenAIEmbeddings: A mock embeddings object for testing purposes.
         """
@@ -163,7 +164,7 @@ class TestSchemaSearch:
     async def test_search_schemas_success(self, mock_embeddings):
         """
         Test that `search_schemas` returns a list of schema objects when similarity search finds matching documents.
-        
+
         Verifies that the function correctly processes multiple documents with required metadata fields and returns schema objects with expected names.
         """
         mock_documents = [
@@ -211,7 +212,7 @@ class TestSchemaSearch:
     async def test_search_schemas_with_filters(self, mock_embeddings):
         """
         Test that `search_schemas` returns schemas filtered by project and dataset IDs.
-        
+
         Verifies that the function returns only schemas matching the specified filters and that the schema's name matches the expected value.
         """
         mock_document = Document(
@@ -289,7 +290,7 @@ class TestSchemaVectorization:
         # Create mock data with proper typing for SQL_RESPONSE_TYPE
         """
         Test that storing a schema in Qdrant succeeds when all dependent operations complete without error.
-        
+
         This test verifies that the schema creation, column description generation, schema formatting, and document addition functions are called as expected, and that the overall operation returns True.
         """
         dataset_summary = Mock()
@@ -366,7 +367,7 @@ class TestSchemaVectorization:
     async def test_delete_schema_from_qdrant_success(self):
         """
         Test that deleting a schema from Qdrant succeeds and returns True.
-        
+
         Verifies that the async client's delete method is called and the function returns True when deletion is successful.
         """
         with (

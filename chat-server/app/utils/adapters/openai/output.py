@@ -6,7 +6,9 @@ from openai.types.chat.chat_completion import ChatCompletion as Response
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import (
     ChatCompletionChunk as ResponseChunk,
-    Choice as ChunkChoice,
+)
+from openai.types.chat.chat_completion_chunk import Choice as ChunkChoice
+from openai.types.chat.chat_completion_chunk import (
     ChoiceDelta,
     ChoiceDeltaToolCall,
     ChoiceDeltaToolCallFunction,

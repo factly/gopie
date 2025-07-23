@@ -92,7 +92,7 @@ class TestPortkeyLLMProvider:
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
         """
         Test that PortkeyLLMProvider.get_llm_model returns the correct model instance with streaming disabled.
-        
+
         Verifies that the ChatOpenAI class is called with the expected parameters when requesting a non-streaming model, and that the returned object matches the mocked model.
         """
         with (
@@ -129,7 +129,7 @@ class TestPortkeyLLMProvider:
     def test_self_hosted_provider_initialization(self, sample_metadata):
         """
         Test that PortkeyLLMProvider initializes correctly with self-hosted configuration and provider API key.
-        
+
         Verifies that the provider's user, trace ID, chat ID, self-hosted flag, and provider API key are set as expected when self-hosted settings are provided.
         """
         with patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings:
@@ -260,7 +260,7 @@ class TestOpenRouterLLMProvider:
     def test_get_llm_model_with_streaming_false(self, sample_metadata):
         """
         Test that OpenRouterLLMProvider.get_llm_model returns the correct model instance with streaming disabled.
-        
+
         Verifies that the ChatOpenAI class is called with the expected API key, base URL, model name, metadata, and streaming flag set to False, and that the returned model matches the mock.
         """
         with (

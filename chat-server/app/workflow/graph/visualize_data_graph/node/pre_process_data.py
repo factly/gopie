@@ -1,7 +1,6 @@
 from app.core.log import logger
-from app.workflow.graph.visualize_data_graph.types import Dataset
 from app.services.gopie.sql_executor import execute_sql
-from app.workflow.graph.visualize_data_graph.types import State
+from app.workflow.graph.visualize_data_graph.types import Dataset, State
 
 
 async def pre_process_visualization_data(state: State) -> dict:

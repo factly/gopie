@@ -16,7 +16,7 @@ def result_paths(visualization_result_paths: list[str]):
 
     Args:
         visualization_result_paths: A list of paths to the json files containing the visualizations.
-    """  # noqa: E501
+    """
     return {"visualization_result_paths": visualization_result_paths}
 
 

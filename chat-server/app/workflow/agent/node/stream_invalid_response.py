@@ -1,8 +1,10 @@
-from app.core.log import logger
+from langchain_core.language_models.fake_chat_models import (
+    GenericFakeChatModel,
+)
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from app.core.log import logger
 from app.workflow.events.event_utils import configure_node
 
 from ..types import AgentState

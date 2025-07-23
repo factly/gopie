@@ -3,9 +3,9 @@ from typing import Literal
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-from .multi_dataset_prompts.analyze_query_prompt import create_analyze_query_prompt
-from .result_generation_prompt import create_result_generation_prompt
-from .result_generation_prompt import format_result_generation_input
+from .multi_dataset_prompts.analyze_query_prompt import (
+    create_analyze_query_prompt,
+)
 from .multi_dataset_prompts.generate_subqueries_prompt import (
     create_assess_query_complexity_prompt,
     create_generate_subqueries_prompt,
@@ -18,25 +18,31 @@ from .multi_dataset_prompts.plan_query_prompt import (
     create_plan_query_prompt,
     format_plan_query_input,
 )
+from .multi_dataset_prompts.stream_updates_prompt import (
+    create_execution_analysis_prompt,
+    create_stream_update_prompt,
+)
 from .plan_sql_query_tool import (
     create_sql_planning_prompt,
     format_sql_planning_input,
 )
 from .process_context_prompt import create_process_context_prompt
+from .result_generation_prompt import (
+    create_result_generation_prompt,
+    format_result_generation_input,
+)
 from .single_dataset_prompts.process_query_prompt import (
     create_process_query_prompt,
     format_process_query_input,
 )
-from .multi_dataset_prompts.stream_updates_prompt import (
-    create_execution_analysis_prompt,
-    create_stream_update_prompt,
-)
-from .validate_input_prompt import create_validate_input_prompt
 from .single_dataset_prompts.validate_result_prompt import (
     create_validate_result_prompt,
     format_validate_result_input,
 )
-from .visualiser_agent_prompts.visualize_data_prompt import create_visualize_data_prompt
+from .validate_input_prompt import create_validate_input_prompt
+from .visualiser_agent_prompts.visualize_data_prompt import (
+    create_visualize_data_prompt,
+)
 
 NodeName = Literal[
     "plan_query",

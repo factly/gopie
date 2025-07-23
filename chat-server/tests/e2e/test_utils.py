@@ -14,6 +14,7 @@ from app.core.constants import (
     INTERMEDIATE_MESSAGES,
     SQL_QUERIES_GENERATED,
 )
+
 from .terminal_formatter import TerminalFormatter
 
 load_dotenv()
@@ -146,7 +147,9 @@ def _extract_datasets(args: Dict[str, Any], datasets: List[str]) -> None:
 def _extract_datasets_from_content(args: Dict[str, Any], content: str, datasets: List[str]) -> None:
     if "datasets" in args:
         _extract_datasets(args, datasets)
-    elif ":" in content and any(keyword in content.lower() for keyword in ["using dataset", "selected dataset"]):
+    elif ":" in content and any(
+        keyword in content.lower() for keyword in ["using dataset", "selected dataset"]
+    ):
         datasets_part = content.split(":", 1)[1].strip()
         datasets.append(datasets_part)
 
@@ -182,7 +185,7 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
             json={**query_copy, "chat_id": "", "trace_id": ""},
             headers={"Content-Type": "application/json", "Accept": "text/event-stream"},
             stream=True,
-            timeout=REQUEST_TIMEOUT
+            timeout=REQUEST_TIMEOUT,
         )
         response.raise_for_status()
 
@@ -203,7 +206,7 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
                 break
 
             try:
-                chunk_data = json.loads(decoded_line[len("data: "):])
+                chunk_data = json.loads(decoded_line[len("data: ") :])
                 if "choices" in chunk_data and chunk_data["choices"]:
                     delta = chunk_data["choices"][0].get("delta", {})
 
@@ -223,7 +226,7 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
             "final_response": final_response,
             "tool_messages": tool_messages,
             "generated_sql_queries": generated_sql_queries,
-            "selected_datasets": selected_datasets
+            "selected_datasets": selected_datasets,
         }
 
     except requests.exceptions.RequestException as e:
@@ -239,16 +242,20 @@ def initialize_test_results(user_query: str, expected_result: Dict[str, Any]) ->
         "sql_query_count": 0,
         "expected_dataset": "",
         "expected_sql_count": expected_result.get("sql_query_count", "Not specified"),
-        "status": "error"
+        "status": "error",
     }
 
 
-def handle_expected_error(results: Dict[str, Any], formatter: Optional[TerminalFormatter]) -> Dict[str, Any]:
-    results.update({
-        "evaluation": {"note": "Expected error test case - passed"},
-        "status": "success",
-        "passed": True
-    })
+def handle_expected_error(
+    results: Dict[str, Any], formatter: Optional[TerminalFormatter]
+) -> Dict[str, Any]:
+    results.update(
+        {
+            "evaluation": {"note": "Expected error test case - passed"},
+            "status": "success",
+            "passed": True,
+        }
+    )
     if formatter:
         formatter.print_success("Expected error test completed successfully")
     return results
@@ -259,15 +266,17 @@ def update_results_with_evaluation(
     evaluation: Dict[str, Any],
     response: Dict[str, Any],
     expected_result: Dict[str, Any],
-    formatter: Optional[TerminalFormatter]
+    formatter: Optional[TerminalFormatter],
 ) -> None:
-    results.update({
-        "reasoning": evaluation.get("reasoning", "No reasoning provided"),
-        "used_datasets": response["selected_datasets"],
-        "sql_query_count": len(response["generated_sql_queries"]),
-        "response": response,
-        "evaluation": evaluation
-    })
+    results.update(
+        {
+            "reasoning": evaluation.get("reasoning", "No reasoning provided"),
+            "used_datasets": response["selected_datasets"],
+            "sql_query_count": len(response["generated_sql_queries"]),
+            "response": response,
+            "evaluation": evaluation,
+        }
+    )
 
     if "dataset_identified" in expected_result:
         results["expected_dataset"] = expected_result["dataset_identified"]
@@ -291,7 +300,9 @@ def update_results_with_evaluation(
             formatter.print_test_result("failed", results["reasoning"])
 
 
-def get_test_cases(single_dataset_cases: List[Dict], multi_dataset_cases: List[Dict], test_type: str = "all") -> List[Dict[str, Any]]:
+def get_test_cases(
+    single_dataset_cases: List[Dict], multi_dataset_cases: List[Dict], test_type: str = "all"
+) -> List[Dict[str, Any]]:
     if test_type == "single":
         return single_dataset_cases
     elif test_type == "multi":

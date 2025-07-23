@@ -5,7 +5,9 @@ from langchain_core.prompts import (
 )
 
 from app.models.query import QueryResult
-from app.workflow.prompts.formatters.format_query_result import format_query_result
+from app.workflow.prompts.formatters.format_query_result import (
+    format_query_result,
+)
 
 
 def create_result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:

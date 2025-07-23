@@ -62,9 +62,11 @@ def format_chat_history(chat_history: list[BaseMessage]) -> str:
     if chat_history:
         formatted_chat_history = "\n".join(
             [
-                f"User: {message.content}"
-                if message.type == "human"
-                else f"Assistant: {message.content}"
+                (
+                    f"User: {message.content}"
+                    if message.type == "human"
+                    else f"Assistant: {message.content}"
+                )
                 for message in chat_history
             ]
         )

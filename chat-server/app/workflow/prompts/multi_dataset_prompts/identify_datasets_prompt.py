@@ -5,7 +5,9 @@ from langchain_core.prompts import (
 )
 
 from app.models.schema import DatasetSchema
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
 
 
 def create_identify_datasets_prompt(
@@ -144,7 +146,9 @@ def format_identify_datasets_input(
     if confidence_score is not None:
         input_str += f"\nCONFIDENCE SCORE: {confidence_score}/10"
 
-    input_str += f"\n\n=== RELEVANT DATASETS (From Chat History): {len(relevant_dataset_schemas)} ==="
+    input_str += (
+        f"\n\n=== RELEVANT DATASETS (From Chat History): {len(relevant_dataset_schemas)} ==="
+    )
 
     if relevant_dataset_schemas:
         input_str += "\nThese datasets were used in previous queries from chat history."

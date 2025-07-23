@@ -6,7 +6,9 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import langsmith_compatible
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
 
 
 def create_sql_planning_prompt(

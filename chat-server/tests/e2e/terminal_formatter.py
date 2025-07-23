@@ -35,7 +35,7 @@ class TerminalFormatter:
     def __init__(self, use_colors: bool = True):
         """
         Initializes the TerminalFormatter, enabling or disabling colored output based on the use_colors flag.
-        
+
         Parameters:
             use_colors (bool): If False, disables ANSI color codes for plain text output.
         """
@@ -48,7 +48,7 @@ class TerminalFormatter:
     def print_header(self, text: str, char: str = "=", color: Optional[str] = None) -> None:
         """
         Prints a formatted header with colored border lines above and below the text.
-        
+
         Parameters:
             text (str): The header text to display.
             char (str, optional): The character used for the border lines. Defaults to "=".
@@ -63,7 +63,7 @@ class TerminalFormatter:
     def print_subheader(self, text: str, color: Optional[str] = None) -> None:
         """
         Prints a formatted subheader with an icon and colored underline.
-        
+
         The subheader is displayed with a chart icon, bold text, and an underline matching the text length. The color can be customized; if not specified, a default blue is used.
         """
         subheader_color = color if color is not None else self.Colors.OKBLUE
@@ -103,7 +103,7 @@ class TerminalFormatter:
     def print_test_result(self, status: str, reasoning: Optional[str] = None) -> None:
         """
         Prints the test result with a status icon and color, indicating whether the test passed, was partial, or failed.
-        
+
         If a reasoning message is provided, it is displayed below the status in gray.
         """
         if status == "passed":
@@ -132,12 +132,12 @@ class TerminalFormatter:
     ) -> None:
         """
         Prints a detailed summary of the AI response, including a preview of the response, datasets used, SQL queries executed, and processing steps.
-        
+
         Parameters:
-        	final_response (str): The full AI-generated response to be summarized.
-        	datasets (List[str]): Names of datasets referenced or used in the response.
-        	sql_queries (List[str]): SQL queries generated or executed, each previewed up to 80 characters.
-        	tool_messages (List[str]): Descriptions of processing steps or tool invocations related to the response.
+                final_response (str): The full AI-generated response to be summarized.
+                datasets (List[str]): Names of datasets referenced or used in the response.
+                sql_queries (List[str]): SQL queries generated or executed, each previewed up to 80 characters.
+                tool_messages (List[str]): Descriptions of processing steps or tool invocations related to the response.
         """
         response_preview = (
             final_response[:300] + "..." if len(final_response) > 300 else final_response
@@ -182,7 +182,7 @@ class TerminalFormatter:
     def print_framework_header(self, start_time: datetime) -> None:
         """
         Prints the main E2E testing framework header with a rocket icon and the test run start time.
-        
+
         Parameters:
             start_time (datetime): The timestamp indicating when the test run started.
         """
@@ -264,7 +264,7 @@ class TerminalFormatter:
     def _print_detailed_failures(self, results: List[Dict[str, Any]]) -> None:
         """
         Prints detailed information for each failed or partially passed test in the results list.
-        
+
         For each test that did not fully pass, displays its status, a preview of the query, reasoning, expected and actual SQL query counts, expected dataset, and used datasets.
         """
         self.print_header("🔍 DETAILED FAILURES & PARTIALS", "-", self.Colors.WARNING)
@@ -296,11 +296,11 @@ class TerminalFormatter:
     def print_progress_bar(self, current: int, total: int, width: int = 50) -> None:
         """
         Display a colored progress bar in the terminal indicating the current progress out of the total number of tests.
-        
+
         Parameters:
-        	current (int): The current progress count.
-        	total (int): The total number of items to process.
-        	width (int): The width of the progress bar in characters. Defaults to 50.
+                current (int): The current progress count.
+                total (int): The total number of items to process.
+                width (int): The width of the progress bar in characters. Defaults to 50.
         """
         progress = current / total
         filled_width = int(width * progress)
@@ -318,7 +318,7 @@ class TerminalFormatter:
     def print_separator(self, char: str = "─", length: int = 60) -> None:
         """
         Prints a horizontal separator line in gray using the specified character and length.
-        
+
         Parameters:
             char (str): The character to repeat for the separator line. Defaults to "─".
             length (int): The number of times to repeat the character. Defaults to 60.
@@ -340,7 +340,7 @@ class TerminalFormatter:
     def print_success(self, message: str, icon: str = "✅") -> None:
         """
         Prints a success message to the terminal, prefixed with a green icon.
-        
+
         Parameters:
             message (str): The success message to display.
             icon (str, optional): The icon to prefix the message. Defaults to "✅".

@@ -23,7 +23,9 @@ class TestLLMProvider:
 
             provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.llm_providers.portkey import PortkeyLLMProvider
+            from app.utils.providers.llm_providers.portkey import (
+                PortkeyLLMProvider,
+            )
 
             assert isinstance(provider, PortkeyLLMProvider)
 
@@ -36,7 +38,9 @@ class TestLLMProvider:
 
             provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.llm_providers.litellm import LiteLLMProvider
+            from app.utils.providers.llm_providers.litellm import (
+                LiteLLMProvider,
+            )
 
             assert isinstance(provider, LiteLLMProvider)
 
@@ -49,7 +53,9 @@ class TestLLMProvider:
 
             provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.llm_providers.cloudflare import CloudflareLLMProvider
+            from app.utils.providers.llm_providers.cloudflare import (
+                CloudflareLLMProvider,
+            )
 
             assert isinstance(provider, CloudflareLLMProvider)
 
@@ -62,7 +68,9 @@ class TestLLMProvider:
 
             provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.llm_providers.openrouter import OpenRouterLLMProvider
+            from app.utils.providers.llm_providers.openrouter import (
+                OpenRouterLLMProvider,
+            )
 
             assert isinstance(provider, OpenRouterLLMProvider)
 
@@ -75,7 +83,9 @@ class TestLLMProvider:
 
             provider = get_llm_provider(sample_metadata)
 
-            from app.utils.providers.llm_providers.custom import CustomLLMProvider
+            from app.utils.providers.llm_providers.custom import (
+                CustomLLMProvider,
+            )
 
             assert isinstance(provider, CustomLLMProvider)
 
@@ -90,7 +100,9 @@ class TestEmbeddingProvider:
 
             provider = get_embedding_provider(sample_metadata)
 
-            from app.utils.providers.embedding_providers.portkey import PortkeyEmbeddingProvider
+            from app.utils.providers.embedding_providers.portkey import (
+                PortkeyEmbeddingProvider,
+            )
 
             assert isinstance(provider, PortkeyEmbeddingProvider)
 
@@ -103,7 +115,9 @@ class TestEmbeddingProvider:
 
             provider = get_embedding_provider(sample_metadata)
 
-            from app.utils.providers.embedding_providers.litellm import LiteLLMEmbeddingProvider
+            from app.utils.providers.embedding_providers.litellm import (
+                LiteLLMEmbeddingProvider,
+            )
 
             assert isinstance(provider, LiteLLMEmbeddingProvider)
 
@@ -116,7 +130,9 @@ class TestEmbeddingProvider:
 
             provider = get_embedding_provider(sample_metadata)
 
-            from app.utils.providers.embedding_providers.openai import OpenAIEmbeddingProvider
+            from app.utils.providers.embedding_providers.openai import (
+                OpenAIEmbeddingProvider,
+            )
 
             assert isinstance(provider, OpenAIEmbeddingProvider)
 
@@ -129,7 +145,9 @@ class TestEmbeddingProvider:
 
             provider = get_embedding_provider(sample_metadata)
 
-            from app.utils.providers.embedding_providers.custom import CustomEmbeddingProvider
+            from app.utils.providers.embedding_providers.custom import (
+                CustomEmbeddingProvider,
+            )
 
             assert isinstance(provider, CustomEmbeddingProvider)
 

@@ -2,10 +2,18 @@ from unittest.mock import Mock, patch
 
 from portkey_ai import PORTKEY_GATEWAY_URL
 
-from app.utils.providers.embedding_providers.custom import CustomEmbeddingProvider
-from app.utils.providers.embedding_providers.litellm import LiteLLMEmbeddingProvider
-from app.utils.providers.embedding_providers.openai import OpenAIEmbeddingProvider
-from app.utils.providers.embedding_providers.portkey import PortkeyEmbeddingProvider
+from app.utils.providers.embedding_providers.custom import (
+    CustomEmbeddingProvider,
+)
+from app.utils.providers.embedding_providers.litellm import (
+    LiteLLMEmbeddingProvider,
+)
+from app.utils.providers.embedding_providers.openai import (
+    OpenAIEmbeddingProvider,
+)
+from app.utils.providers.embedding_providers.portkey import (
+    PortkeyEmbeddingProvider,
+)
 
 
 class TestPortkeyEmbeddingProvider:
@@ -49,7 +57,7 @@ class TestPortkeyEmbeddingProvider:
     def test_get_embeddings_model(self, sample_metadata):
         """
         Tests that PortkeyEmbeddingProvider.get_embeddings_model returns an embeddings model instance with the correct parameters.
-        
+
         Verifies that the OpenAIEmbeddings class is called with the expected API key, base URL, headers, and model name, and that the returned object matches the mocked embeddings model.
         """
         with (
@@ -88,7 +96,7 @@ class TestPortkeyEmbeddingProvider:
     def test_self_hosted_provider_initialization(self, sample_metadata):
         """
         Tests that PortkeyEmbeddingProvider initializes correctly in a self-hosted configuration.
-        
+
         Verifies that the provider extracts user, trace ID, and chat ID from metadata, sets self_hosted to True, and assigns the provider API key from settings.
         """
         with patch("app.utils.providers.embedding_providers.portkey.settings") as mock_settings:

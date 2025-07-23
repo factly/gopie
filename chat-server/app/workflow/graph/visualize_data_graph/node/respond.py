@@ -1,7 +1,9 @@
+from langchain_core.runnables import RunnableConfig
+
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
+
 from ...visualize_data_graph.types import State
-from langchain_core.runnables import RunnableConfig
 
 
 @configure_node(

@@ -1,6 +1,8 @@
-from app.workflow.events.event_utils import configure_node
-from ...visualize_data_graph.types import State
 from langchain_core.runnables import RunnableConfig
+
+from app.workflow.events.event_utils import configure_node
+
+from ...visualize_data_graph.types import State
 
 
 @configure_node(

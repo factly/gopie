@@ -14,7 +14,7 @@ from .node.stream_updates import (
     check_further_execution_requirement,
     stream_updates,
 )
-from .node.validate_result import validate_result, route_result_validation
+from .node.validate_result import route_result_validation, validate_result
 from .types import ConfigSchema, InputState, OutputState, State
 
 graph_builder = StateGraph(

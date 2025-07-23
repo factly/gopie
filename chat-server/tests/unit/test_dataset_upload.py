@@ -12,7 +12,7 @@ class TestDatasetUpload:
     def upload_request(self):
         """
         Provides a sample UploadSchemaRequest with preset project and dataset IDs for use in upload schema tests.
-        
+
         Returns:
             UploadSchemaRequest: An instance with test project and dataset IDs.
         """
@@ -40,7 +40,7 @@ class TestDatasetUpload:
     async def test_upload_schema_success(self, upload_request, mock_dataset_details):
         """
         Test that uploading a schema succeeds when all dependent services return successful results.
-        
+
         Verifies that the upload_schema function returns a success response and that all service dependencies are called with the expected arguments.
         """
         with (
@@ -84,7 +84,7 @@ class TestDatasetUpload:
     ):
         """
         Test that `upload_schema` raises an HTTP 500 error when schema generation fails.
-        
+
         Simulates a failure in the `generate_summary` function and verifies that an HTTPException with status code 500 is raised.
         """
         with (
@@ -143,7 +143,7 @@ class TestDatasetUpload:
     async def test_delete_schema_success(self, delete_request):
         """
         Test that deleting a schema with valid input returns a success response.
-        
+
         Asserts that the deletion function is called with the correct dataset and project IDs, and that the response indicates successful deletion.
         """
         with patch("app.api.v1.routers.dataset_upload.delete_schema_from_qdrant") as mock_delete:
@@ -159,7 +159,7 @@ class TestDatasetUpload:
     async def test_delete_schema_not_found(self, delete_request):
         """
         Test that deleting a schema returns a 404 HTTPException when the schema does not exist.
-        
+
         Verifies that the `delete_schema` function raises an HTTPException with status code 404 and an appropriate error message when the underlying deletion service indicates the schema was not found.
         """
         with patch("app.api.v1.routers.dataset_upload.delete_schema_from_qdrant") as mock_delete:
@@ -175,7 +175,7 @@ class TestDatasetUpload:
     async def test_delete_schema_service_exception(self, delete_request):
         """
         Test that an HTTP 500 error is raised when an exception occurs during schema deletion.
-        
+
         Verifies that if the underlying service raises an exception while deleting a schema, the API responds with a 500 status code and an appropriate error message.
         """
         with patch("app.api.v1.routers.dataset_upload.delete_schema_from_qdrant") as mock_delete:
