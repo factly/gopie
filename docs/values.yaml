@@ -22,7 +22,8 @@ deployment:
   annotations: {}  # Annotations for deployment resources
   Podannotations: {}  # Annotations for pods
 
-  env: []  # Environment variables for the container
+  env: []
+    # Environment variables for the container
     # Example:
     # - name: GOPIE_API_SERVER_HOST
     #   value: "localhost"
@@ -59,12 +60,16 @@ deployment:
   # Uncomment and configure liveness/readiness probes if needed
   livenessProbe: {}
     # httpGet:
-    #   path: /
-    #   port: http
+    #   path: /health
+    #   port: 8080
+    # initialDelaySeconds: 30
+    # periodSeconds: 10
   readinessProbe: {}
     # httpGet:
-    #   path: /
-    #   port: http
+    #   path: /health
+    #   port: 8080
+    # initialDelaySeconds: 5
+    # periodSeconds: 5
 
   nodeSelector: {}  # Node selector for scheduling the pods
 
@@ -407,114 +412,114 @@ minio:
   defaultBuckets: "gopie"  # Comma-separated list of default buckets to create in MinIO
 
 companion:
-  enabled: false  # Enable or disable the Companion service
+  enabled: true  # Enable or disable the Companion service
   env: []
     # Environment variables for Companion service
     # - name: COMPANION_PROTOCOL  # Protocol to use (http/https)
     #   value: https
-    # - name: COMPANION_PORT      # Port number for Companion server
-    #   value: "3020"
-    # - name: COMPANION_DATADIR   # Data directory for Companion
-    #   value: /
-    # - name: COMPANION_DOMAIN    # Public domain for Companion
-    #   value: companion-dega.factly.in
-    # - name: COMPANION_SELF_ENDPOINT  # Self endpoint URL for Companion
-    #   value: companion-dega.factly.in
-    # - name: COMPANION_AWS_BUCKET  # Target AWS bucket name for Companion uploads
-    #   value: dega.factly.in
-    # - name: COMPANION_AWS_ENDPOINT  # Endpoint URL for AWS/S3 compatible storage
-    #   value: https://storage.googleapis.com
-    # - name: COMPANION_AWS_KEY  # AWS access key, read from Kubernetes Secret
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: companion
-    #       key: COMPANION_AWS_KEY
-    # - name: COMPANION_AWS_SECRET  # AWS secret key, read from Kubernetes Secret
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: companion
-    #       key: COMPANION_AWS_SECRET
-    # - name: COMPANION_SECRET  # Companion internal secret, read from Kubernetes Secret
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: companion
-    #       key: COMPANION_SECRET
-    # - name: COMPANION_GOOGLE_KEY  # Google API key, read from Kubernetes Secret
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: companion
-    #       key: COMPANION_GOOGLE_KEY
-    # - name: COMPANION_GOOGLE_SECRET  # Google API secret, read from Kubernetes Secret
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: companion
-    #       key: COMPANION_GOOGLE_SECRET    
+#     # - name: COMPANION_PORT      # Port number for Companion server
+#     #   value: "3020"
+#     # - name: COMPANION_DATADIR   # Data directory for Companion
+#     #   value: /
+#     # - name: COMPANION_DOMAIN    # Public domain for Companion
+#     #   value: companion-dega.factly.in
+#     # - name: COMPANION_SELF_ENDPOINT  # Self endpoint URL for Companion
+#     #   value: companion-dega.factly.in
+#     # - name: COMPANION_AWS_BUCKET  # Target AWS bucket name for Companion uploads
+#     #   value: dega.factly.in
+#     # - name: COMPANION_AWS_ENDPOINT  # Endpoint URL for AWS/S3 compatible storage
+#     #   value: https://storage.googleapis.com
+#     # - name: COMPANION_AWS_KEY  # AWS access key, read from Kubernetes Secret
+#     #   valueFrom:
+#     #     secretKeyRef:
+#     #       name: companion
+#     #       key: COMPANION_AWS_KEY
+#     # - name: COMPANION_AWS_SECRET  # AWS secret key, read from Kubernetes Secret
+#     #   valueFrom:
+#     #     secretKeyRef:
+#     #       name: companion
+#     #       key: COMPANION_AWS_SECRET
+#     # - name: COMPANION_SECRET  # Companion internal secret, read from Kubernetes Secret
+#     #   valueFrom:
+#     #     secretKeyRef:
+#     #       name: companion
+#     #       key: COMPANION_SECRET
+#     # - name: COMPANION_GOOGLE_KEY  # Google API key, read from Kubernetes Secret
+#     #   valueFrom:
+#     #     secretKeyRef:
+#     #       name: companion
+#     #       key: COMPANION_GOOGLE_KEY
+#     # - name: COMPANION_GOOGLE_SECRET  # Google API secret, read from Kubernetes Secret
+#     #   valueFrom:
+#     #     secretKeyRef:
+#     #       name: companion
+#     #       key: COMPANION_GOOGLE_SECRET    
 
   ingress:
-    enabled: false  # Enable or disable Ingress for Companion
+    enabled: true  # Enable or disable Ingress for Companion
 
 qdrant:
-  enabled: false  # Enable or disable the Qdrant vector database chart
+  enabled: true  # Enable or disable the Qdrant vector database chart
 
-zitadel:
-  enabled: false  # Enable or disable the ZITADEL identity provider chart
-  zitadel:
-    masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
-    configmapConfig:
-      ExternalSecure: true  # Enable HTTPS for external access
-      ExternalPort:         # External port for ZITADEL (optional)
-      ExternalDomain: login.degacms.com  # Public domain for ZITADEL
-      TLS:
-        Enabled: false  # Enable TLS (handled by ingress or external proxy)
-      Database:
-        Postgres:
-          Host: postgres-host  # PostgreSQL host for ZITADEL database
-          Port: 5432           # PostgreSQL port
-          Database: zitadel    # Database name
-          MaxOpenConns: 20     # Maximum open DB connections
-          MaxIdleConns: 10     # Maximum idle DB connections
-          MaxConnLifetime: 30m # Max connection lifetime
-          MaxConnIdleTime: 5m  # Max idle time for DB connections
-          User:
-            Username: ""       # DB username
-            Password: ""       # DB password
-            SSL:
-              Mode: disable    # SSL mode for DB connection
-          Admin:
-            Username: ""       # Admin DB username
-            Password: ""       # Admin DB password
-            SSL:
-              Mode: disable    # SSL mode for admin DB connection
+# zitadel:
+#   enabled: false  # Enable or disable the ZITADEL identity provider chart
+#   zitadel:
+#     masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
+#     configmapConfig:
+#       ExternalSecure: true  # Enable HTTPS for external access
+#       ExternalPort:         # External port for ZITADEL (optional)
+#       ExternalDomain: login.degacms.com  # Public domain for ZITADEL
+#       TLS:
+#         Enabled: false  # Enable TLS (handled by ingress or external proxy)
+#       Database:
+#         Postgres:
+#           Host: postgres-host  # PostgreSQL host for ZITADEL database
+#           Port: 5432           # PostgreSQL port
+#           Database: zitadel    # Database name
+#           MaxOpenConns: 20     # Maximum open DB connections
+#           MaxIdleConns: 10     # Maximum idle DB connections
+#           MaxConnLifetime: 30m # Max connection lifetime
+#           MaxConnIdleTime: 5m  # Max idle time for DB connections
+#           User:
+#             Username: ""       # DB username
+#             Password: ""       # DB password
+#             SSL:
+#               Mode: disable    # SSL mode for DB connection
+#           Admin:
+#             Username: ""       # Admin DB username
+#             Password: ""       # Admin DB password
+#             SSL:
+#               Mode: disable    # SSL mode for admin DB connection
   
-      DefaultInstance:
-        LoginPolicy:
-          DefaultRedirectURI:   # Optional: redirect URL after login
+#       DefaultInstance:
+#         LoginPolicy:
+#           DefaultRedirectURI:   # Optional: redirect URL after login
 
-  env: []
-    # Additional ZITADEL environment variables
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
-    #   value: admin
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
-    #   value: admin
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
-    #   value: admin@domain.com
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
-    #   value: "true"
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
-    #   value: Password1!
+#   env: []
+#     # Additional ZITADEL environment variables
+#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
+#     #   value: admin
+#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
+#     #   value: admin
+#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
+#     #   value: admin@domain.com
+#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
+#     #   value: "true"
+#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
+#     #   value: Password1!
 
-  ingress:
-    enabled: true  # Enable or disable Ingress for ZITADEL
-    className: "nginx"  # Ingress class to use
-    annotations:
-      kubernetes.io/ingress.class: nginx  # Ingress controller annotation
-      cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
-    hosts:
-      - host: ""  # Hostname for ZITADEL Ingress
-        paths:
-          - path: /  # Path to route to ZITADEL
-            pathType: Prefix
-    tls:
-      - secretName: ""  # Secret name for TLS cert
-        hosts:
-          - ""          # Hosts covered by the TLS cert
+#   ingress:
+#     enabled: true  # Enable or disable Ingress for ZITADEL
+#     className: "nginx"  # Ingress class to use
+#     annotations:
+#       kubernetes.io/ingress.class: nginx  # Ingress controller annotation
+#       cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
+#     hosts:
+#       - host: ""  # Hostname for ZITADEL Ingress
+#         paths:
+#           - path: /  # Path to route to ZITADEL
+#             pathType: Prefix
+#     tls:
+#       - secretName: ""  # Secret name for TLS cert
+#         hosts:
+#           - ""          # Hosts covered by the TLS cert
