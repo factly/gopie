@@ -36,10 +36,14 @@ containers:
       - name: {{ .Values.service.portName }}
         containerPort: {{ .Values.service.portNumber }}
         protocol: TCP
+    {{- if .Values.deployment.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.deployment.livenessProbe | nindent 6 }}
+    {{- end }}
+    {{- if .Values.deployment.readinessProbe }}
     readinessProbe:
       {{- toYaml .Values.deployment.readinessProbe | nindent 6 }}
+    {{- end }}
     {{- if .Values.deployment.env }}
     {{- with .Values.deployment.env }}
     env:
@@ -126,10 +130,14 @@ containers:
       - name: {{ .Values.service.portName }}
         containerPort: {{ .Values.service.portNumber }}
         protocol: TCP
+    {{- if .Values.stateful.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.stateful.livenessProbe | nindent 6 }}
+    {{- end }}
+    {{- if .Values.stateful.readinessProbe }}
     readinessProbe:
       {{- toYaml .Values.stateful.readinessProbe | nindent 6 }}
+    {{- end }}
     {{- if .Values.stateful.env }}
     {{- with .Values.stateful.env }}
     env:

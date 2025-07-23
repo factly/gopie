@@ -60,16 +60,12 @@ deployment:
   # Uncomment and configure liveness/readiness probes if needed
   livenessProbe: {}
     # httpGet:
-    #   path: /health
-    #   port: 8080
-    # initialDelaySeconds: 30
-    # periodSeconds: 10
+    #   path: /
+    #   port: http
   readinessProbe: {}
     # httpGet:
-    #   path: /health
-    #   port: 8080
-    # initialDelaySeconds: 5
-    # periodSeconds: 5
+    #   path: /
+    #   port: http
 
   nodeSelector: {}  # Node selector for scheduling the pods
 
@@ -202,9 +198,9 @@ reIndexingJob:  # Re-indexing job configuration
 web:
   # Container image configuration for the web component
   image:
-    repository: ""  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
+    repository: "sia-south1-docker.pkg.dev/factly-prod/gopie/gopie-migrate"  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
     pullPolicy: IfNotPresent  # Image pull policy (Always, IfNotPresent, Never)
-    tag: ""  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
+    tag: "0.0.1"  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
 
   replicaCount: 1  # Number of desired web pod replicas
   name: web  # Name identifier for the web deployment
@@ -363,14 +359,14 @@ chatserver:
       cpu: 100m
       memory: 128Mi
 
-  # livenessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
-  # readinessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
+  livenessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
+  readinessProbe: {}
+    # httpGet:
+    #   path: /
+    #   port: http
 
   autoscaling:
     enabled: false  # Enable autoscaling for the chatserver
@@ -399,6 +395,7 @@ chatserver:
     #   hostPath:
     #     path: /usr/shared/
     #     type: ""
+  volumes: []
 
 
 postgresql:

@@ -17,10 +17,14 @@ containers:
       - name: {{ .Values.web.service.portName }}
         containerPort: {{ .Values.web.service.portNumber }}
         protocol: TCP
+    {{- if .Values.web.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.web.livenessProbe | nindent 6 }}
+    {{- end }}
+    {{- if .Values.web.readinessProbe }}
     readinessProbe:
       {{- toYaml .Values.web.readinessProbe | nindent 6 }}
+    {{- end }}
     {{- if .Values.web.env }}
     {{- with .Values.web.env }}
     env:

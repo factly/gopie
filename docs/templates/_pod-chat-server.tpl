@@ -19,10 +19,14 @@ containers:
         protocol: TCP
     command: ["/bin/sh"]
     args: ["-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    {{- if .Values.chatserver.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.chatserver.livenessProbe | nindent 6 }}
+    {{- end }}
+    {{- if .Values.chatserver.readinessProbe }}
     readinessProbe:
       {{- toYaml .Values.chatserver.readinessProbe | nindent 6 }}
+    {{- end }}
     {{- if .Values.chatserver.env }}
     {{- with .Values.chatserver.env }}
     env:
