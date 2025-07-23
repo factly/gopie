@@ -203,6 +203,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 				}
 
 				dataToSend := dataChunk
+				h.logger.Debug("SSE: Data chuck received", zap.Int("bytes", len(dataToSend)))
 
 				// accumulate assistant messages
 				var data models.ChatMessage
