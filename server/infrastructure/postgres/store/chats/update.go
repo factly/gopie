@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -70,14 +71,16 @@ func (s *PostgresChatStore) AddNewMessage(ctx context.Context, chatID string, me
 
 	qtx := s.q.WithTx(tx)
 	var chatMessages []models.ChatMessage
+	now := time.Now()
 
-	for _, msg := range messages {
+	for i, msg := range messages {
 		choiceBytes, _ := json.Marshal(msg.Choices)
 		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-			ChatID:  chatID,
-			Choices: choiceBytes,
-			Object:  msg.Object,
-			Model:   pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
+			ChatID:    chatID,
+			Choices:   choiceBytes,
+			Object:    msg.Object,
+			Model:     pgtype.Text{String: msg.Model, Valid: msg.Model != ""},
+			CreatedAt: pgtype.Timestamptz{Valid: true, Time: now.Add(time.Duration(i) * time.Millisecond)},
 		})
 		if err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))
