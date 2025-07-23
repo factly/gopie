@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatasetHeader } from "@/components/dataset/dataset-header";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export default function DatasetPage({
   params,
@@ -17,6 +18,7 @@ export default function DatasetPage({
 }) {
   const { datasetId, projectId } = React.use(params);
   const queryClient = useQueryClient();
+  const { setOpen } = useSidebar();
 
   const { data: dataset, isLoading } = useDataset({
     variables: {
@@ -26,6 +28,12 @@ export default function DatasetPage({
   });
 
   const tableSchema = dataset?.columns || [];
+
+  // Close sidebar only on initial mount
+  React.useEffect(() => {
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpdate = async () => {
     await queryClient.invalidateQueries({

@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
+import { useSidebar } from "@/components/ui/sidebar";
 
 declare global {
   interface Window {
@@ -60,6 +61,7 @@ export default function SqlPage({
   params: Promise<{ projectId: string; datasetId: string }>;
 }) {
   const { datasetId, projectId } = React.use(params);
+  const { setOpen } = useSidebar();
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
   >(null);
@@ -90,6 +92,12 @@ export default function SqlPage({
 
   const [query, setQuery] = React.useState("");
   const initializedDatasetRef = React.useRef<string | null>(null);
+
+  // Close sidebar only on initial mount
+  React.useEffect(() => {
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExecuteSql = React.useCallback(async () => {
     if (!query.trim()) {
@@ -354,6 +362,31 @@ export default function SqlPage({
                   />
                 </div>
               </div>
+
+              {/* Schema Section */}
+              {dataset.columns && dataset.columns.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Schema
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {dataset.columns.map((column, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        {column.column_name}
+                        {column.column_type && (
+                          <span className="text-muted-foreground ml-1">
+                            ({column.column_type})
+                          </span>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -377,34 +410,10 @@ export default function SqlPage({
             className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 bg-border"
             onMouseDown={handleMouseDown}
           />
-          <div className="flex items-center justify-between border-b px-4 py-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium">Dataset & Results</h3>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setRightPanelOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
 
-          <Tabs defaultValue="dataset" className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 rounded-none bg-background border-b">
-              <TabsTrigger
-                value="dataset"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
-              >
-                <Database className="h-4 w-4 mr-2" />
-                Dataset
-                {dataset.columns && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({dataset.columns.length})
-                  </span>
-                )}
-              </TabsTrigger>
+
+          <Tabs defaultValue="results" className="flex-1 min-h-0 flex flex-col">
+            <TabsList className="grid w-full grid-cols-1 rounded-none bg-background border-b">
               <TabsTrigger
                 value="results"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
@@ -420,69 +429,7 @@ export default function SqlPage({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent
-              value="dataset"
-              className="flex-1 m-0 min-h-0 data-[state=inactive]:hidden flex flex-col"
-            >
-              <div className="flex-1 min-h-0 overflow-auto p-4 flex flex-col gap-4">
-                {/* Dataset Information */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Table className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Name:</span>
-                    <Badge variant="secondary">{dataset.name}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Columns:
-                    </span>
-                    <Badge variant="outline">
-                      {dataset.columns?.length || 0}
-                    </Badge>
-                  </div>
-                </div>
 
-                {/* Schema - Compact Version */}
-                {dataset.columns && dataset.columns.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      Schema:
-                    </h4>
-                    <div className="flex flex-wrap gap-1">
-                      {dataset.columns.map((column, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {column.column_name}
-                          {column.column_type && (
-                            <span className="text-muted-foreground ml-1">
-                              ({column.column_type})
-                            </span>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Dataset Rows Preview */}
-                {datasetRows && datasetRows.length > 0 && (
-                  <div className="flex-1 min-h-0 flex flex-col gap-2">
-                    <h4 className="text-sm font-medium text-muted-foreground flex-shrink-0">
-                      Sample Data (first {previewRowLimit} rows):
-                    </h4>
-                    <div className="border rounded-md overflow-hidden flex-1 min-h-0">
-                      <div className="h-full overflow-auto">
-                        <ResultsTable results={datasetRows} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
 
             <TabsContent
               value="results"

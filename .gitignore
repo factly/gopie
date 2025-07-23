@@ -6,7 +6,9 @@ zitadel_key.json
 chat-server/user_scripts
 main
 /dataful
-/data
+data
+# Exception: Do NOT ignore the data directory under the specific datasets path
+!/web/src/app/projects/*/datasets/*/data/
 /tmp
 config.env
 *.db
@@ -253,8 +255,6 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/macos
 goose.env
 
-data
-/*/tmp
 .windsurf
 
 TODO.md
