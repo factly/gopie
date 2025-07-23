@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Stepper, StepperContent, StepperActions, Step } from "@/components/ui/stepper";
+import { Stepper, StepperContent, Step } from "@/components/ui/stepper";
 import { CsvValidationUppy, FileValidationUppyRef } from "@/components/dataset/csv-validation-uppy";
 import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
 import { UrlUploader } from "@/components/dataset/url-uploader";
@@ -610,16 +610,28 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {/* Step 2: Dataset Validation */}
         <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
           <div className="space-y-6">
-            {/* Cancel Upload button */}
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
+            {/* Top Navigation */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearUpload}
+                  className="flex items-center gap-1.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Upload
+                </Button>
+              </div>
+              <Button 
                 size="sm"
-                onClick={handleClearUpload}
-                className="flex items-center gap-1.5"
+                onClick={handleNext}
+                disabled={!canProceedFromStep2}
               >
-                <X className="h-3.5 w-3.5" />
-                Cancel Upload
+                Next
               </Button>
             </div>
             
@@ -680,16 +692,28 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {/* Step 3: AI Readiness */}
         <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
           <div className="space-y-6">
-            {/* Cancel Upload button */}
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
+            {/* Top Navigation */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearUpload}
+                  className="flex items-center gap-1.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Upload
+                </Button>
+              </div>
+              <Button 
                 size="sm"
-                onClick={handleClearUpload}
-                className="flex items-center gap-1.5"
+                onClick={handleNext}
+                disabled={!canProceedFromStep3}
               >
-                <X className="h-3.5 w-3.5" />
-                Cancel Upload
+                Next
               </Button>
             </div>
             
@@ -717,16 +741,35 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {/* Step 4: Dataset Details */}
         <div style={{ display: currentStep === 4 && !createdDataset ? 'block' : 'none' }}>
           <div className="space-y-6">
-            {/* Cancel Upload button */}
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
+            {/* Top Navigation */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearUpload}
+                  className="flex items-center gap-1.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Upload
+                </Button>
+              </div>
+              <Button 
                 size="sm"
-                onClick={handleClearUpload}
-                className="flex items-center gap-1.5"
+                onClick={handleCreateDataset}
+                disabled={!datasetName.trim() || datasetDescription.length < 10 || isProcessing}
               >
-                <X className="h-3.5 w-3.5" />
-                Cancel Upload
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Creating Dataset...
+                  </>
+                ) : (
+                  "Create Dataset"
+                )}
               </Button>
             </div>
             
@@ -776,6 +819,12 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {/* Step 4: Success Message (after dataset creation) */}
         <div style={{ display: currentStep === 4 && createdDataset ? 'block' : 'none' }}>
           <div className="space-y-6">
+            {/* Top Navigation */}
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleFinish}>
+                View Dataset
+              </Button>
+            </div>
             <div className="bg-card border p-6">
               <div className="text-center space-y-4">
                 <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
@@ -816,61 +865,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         </div>
       </StepperContent>
 
-      <StepperActions>
-        <div>
-          {currentStep > 2 && (
-            <Button variant="outline" onClick={handleBack}>
-              Back
-            </Button>
-          )}
-        </div>
-        <div>
-          {currentStep === 1 && (
-            <Button 
-              onClick={handleNext} 
-              disabled={!canProceedFromStep1}
-            >
-              Next
-            </Button>
-          )}
-          {currentStep === 2 && (
-            <Button 
-              onClick={handleNext}
-              disabled={!canProceedFromStep2}
-            >
-              Next
-            </Button>
-          )}
-          {currentStep === 3 && (
-            <Button 
-              onClick={handleNext}
-              disabled={!canProceedFromStep3}
-            >
-              Next
-            </Button>
-          )}
-          {currentStep === 4 && !createdDataset && (
-            <Button 
-              onClick={handleCreateDataset}
-              disabled={!datasetName.trim() || datasetDescription.length < 10 || isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating Dataset...
-                </>
-              ) : (
-                "Create Dataset"
-              )}
-            </Button>
-          )}
-          {currentStep === 4 && createdDataset && (
-            <Button onClick={handleFinish}>
-              View Dataset
-            </Button>
-          )}
-        </div>
-      </StepperActions>
+
 
       <Dialog open={isDbDialogOpen} onOpenChange={setIsDbDialogOpen}>
         <DialogContent className="sm:max-w-lg">
