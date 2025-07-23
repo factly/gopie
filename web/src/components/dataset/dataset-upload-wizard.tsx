@@ -819,12 +819,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         {/* Step 4: Success Message (after dataset creation) */}
         <div style={{ display: currentStep === 4 && createdDataset ? 'block' : 'none' }}>
           <div className="space-y-6">
-            {/* Top Navigation */}
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleFinish}>
-                View Dataset
-              </Button>
-            </div>
             <div className="bg-card border p-6">
               <div className="text-center space-y-4">
                 <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
@@ -832,33 +826,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 <p className="text-muted-foreground">
                   Your dataset has been uploaded and is ready for analysis.
                 </p>
-              </div>
-
-              <div className="mt-8 space-y-4">
-                <h3 className="text-lg font-semibold">Dataset Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div><strong>Name:</strong> {createdDataset?.alias}</div>
-                    <div><strong>Format:</strong> {createdDataset?.formatDisplay}</div>
-                    <div><strong>Columns:</strong> {validationResult?.columnNames?.length || 0}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div><strong>Total Rows:</strong> {validationResult?.previewRowCount || 'N/A'}</div>
-                    {validationResult?.rejectedRows && validationResult.rejectedRows.length > 0 && (
-                      <div><strong>Skipped Rows:</strong> {validationResult.rejectedRows.length}</div>
-                    )}
-                    <div><strong>Status:</strong> <span className="text-green-600">Ready</span></div>
-                  </div>
+                <div className="pt-4">
+                  <Button onClick={handleFinish}>
+                    View Dataset
+                  </Button>
                 </div>
-
-                {validationResult?.columnNames && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">Columns:</h4>
-                    <div className="text-sm text-muted-foreground">
-                      {validationResult.columnNames.join(", ")}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
