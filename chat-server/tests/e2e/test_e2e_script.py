@@ -1,15 +1,16 @@
-import asyncio
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pytest
 
-from .multi_dataset_cases import MULTI_DATASET_TEST_CASES
-from .single_dataset_cases import SINGLE_DATASET_TEST_CASES
+from .dataset_test_cases import (
+    MULTI_DATASET_TEST_CASES,
+    SINGLE_DATASET_TEST_CASES,
+    VISUALIZATION_TEST_CASES,
+)
 from .terminal_formatter import TerminalFormatter
 from .test_utils import (
     create_evaluation_chain,
-    get_test_cases,
     get_user_query,
     handle_expected_error,
     initialize_test_results,
@@ -17,7 +18,7 @@ from .test_utils import (
     update_results_with_evaluation,
 )
 
-URL = "http://localhost:8001/api/v1/chat/completions"
+URL = "http://localhost:8002/api/v1/chat/completions"
 
 
 async def process_test_case(
@@ -32,7 +33,7 @@ async def process_test_case(
     if formatter and test_num and total_tests:
         formatter.print_test_case_header(test_num, total_tests, user_query)
 
-    expected_result = test_case.get("expected_result", {})
+    expected_result = test_case.get("expected_result", "")
     results = initialize_test_results(user_query, expected_result)
 
     try:
@@ -42,12 +43,18 @@ async def process_test_case(
         response = await send_chat_request(test_case, URL)
 
         if "error" in response:
-            if expected_result.get("error_expected") or expected_result.get("execution_failure"):
+            # Check if this is an expected error test case
+            if isinstance(expected_result, dict) and (
+                expected_result.get("error_expected") or expected_result.get("execution_failure")
+            ):
                 return handle_expected_error(results, formatter)
             else:
                 raise Exception(response["error"])
 
-        if expected_result.get("error_expected") or expected_result.get("execution_failure"):
+        # Check if we expected an error but didn't get one
+        if isinstance(expected_result, dict) and (
+            expected_result.get("error_expected") or expected_result.get("execution_failure")
+        ):
             raise Exception("Expected error but API call succeeded")
 
         if formatter:
@@ -59,10 +66,13 @@ async def process_test_case(
             )
             formatter.print_evaluation_status()
 
+        # For string expected results, use them directly for evaluation
+        evaluation_input = expected_result if isinstance(expected_result, str) else expected_result
+
         evaluation = await evaluation_chain.ainvoke(
             {
                 "generated_answer": response["final_response"],
-                "expected_result": expected_result,
+                "expected_result": evaluation_input,
             }
         )
 
@@ -101,7 +111,7 @@ async def run_test_suite(
 def _create_pytest_test_function(test_cases: List[Dict[str, Any]], test_type: str):
     async def test_function(request, capfd):
         evaluation_chain = create_evaluation_chain()
-        use_formatter = not request.config.getoption("--disable-formatter")
+        use_formatter = not request.config.getoption("--disable-formatter", default=False)
 
         if use_formatter:
             with capfd.disabled():
@@ -125,6 +135,12 @@ async def test_single_dataset_cases(request, capfd):
 
 
 @pytest.mark.asyncio
+async def test_visualization_cases(request, capfd):
+    test_function = _create_pytest_test_function(VISUALIZATION_TEST_CASES, "visualization")
+    await test_function(request, capfd)
+
+
+@pytest.mark.asyncio
 async def test_multi_dataset_cases(request, capfd):
     test_function = _create_pytest_test_function(MULTI_DATASET_TEST_CASES, "multi dataset")
     await test_function(request, capfd)
@@ -132,34 +148,14 @@ async def test_multi_dataset_cases(request, capfd):
 
 @pytest.mark.asyncio
 async def test_all_cases(request, capfd):
-    all_cases = SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES
+    all_cases = SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES + VISUALIZATION_TEST_CASES
     test_function = _create_pytest_test_function(all_cases, "all")
     await test_function(request, capfd)
 
 
-async def run_tests(
-    test_type: str = "all", server_url: str = "http://localhost:8001/api/v1/chat/completions"
-) -> List[Dict[str, Any]]:
-    global URL
-    URL = server_url
-
-    start_time = datetime.now()
-    formatter = TerminalFormatter(use_colors=True)
-    formatter.print_framework_header(start_time)
-
-    chain = create_evaluation_chain()
-    test_cases = get_test_cases(SINGLE_DATASET_TEST_CASES, MULTI_DATASET_TEST_CASES, test_type)
-    results = []
-
-    formatter.print_test_suite_info(len(test_cases), test_type, server_url)
-
-    for i, query in enumerate(test_cases, 1):
-        result = await process_test_case(query, chain, formatter, i, len(test_cases))
-        results.append(result)
-
-    formatter.print_results_summary(results, test_type, server_url, start_time)
-    return results
-
-
 if __name__ == "__main__":
-    asyncio.run(run_tests(test_type="multi"))
+    print("Use pytest to run the tests:")
+    print("pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases -v")
+    print("pytest tests/e2e/test_e2e_script.py::test_multi_dataset_cases -v")
+    print("pytest tests/e2e/test_e2e_script.py::test_visualization_cases -v")
+    print("pytest tests/e2e/test_e2e_script.py::test_all_cases -v")
