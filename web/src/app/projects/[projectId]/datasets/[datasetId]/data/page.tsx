@@ -261,7 +261,7 @@ export default function SqlPage({
       className="h-screen flex overflow-hidden"
     >
       {/* Main Query Interface */}
-      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-hidden min-h-0 flex flex-col">
+      <div className="flex-1 px-4 overflow-hidden min-h-0 flex flex-col">
         <motion.div variants={fadeInVariants} className="flex-1 min-h-0">
           <Card className="h-full flex flex-col">
             <CardHeader className="pb-3 flex-shrink-0">
@@ -290,7 +290,7 @@ export default function SqlPage({
                 <div className="relative flex flex-col gap-2">
                   <div className="relative flex items-center">
                     <Textarea
-                      placeholder="Ask a question about your data... (e.g. 'Show me the top 10 users by revenue')"
+                      placeholder="Ask AI to help you write your query..."
                       value={naturalQuery}
                       onChange={(e) => setNaturalQuery(e.target.value)}
                       className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 pr-12 resize-none rounded-xl shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
@@ -404,13 +404,13 @@ export default function SqlPage({
         >
           {/* Resize Handle */}
           <div
-            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 bg-border"
+            className="absolute left-0 top-0 bottom-0 w-px cursor-col-resize hover:bg-primary/50 bg-border"
             onMouseDown={handleMouseDown}
           />
 
 
           {/* Results Header */}
-          <div className="border-b bg-muted/50 p-3">
+          <div className="border-b bg-muted/50 p-3 ml-4">
             <div className="flex items-center gap-2">
               <h3 className="font-medium">Results</h3>
             </div>
