@@ -63,6 +63,7 @@ export default function SqlPage({
   const [naturalQuery, setNaturalQuery] = React.useState("");
   const [rightPanelOpen, setRightPanelOpen] = React.useState(true);
   const [panelWidth, setPanelWidth] = React.useState(70);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [datasetRows, setDatasetRows] = React.useState<
     Record<string, unknown>[] | null
   >(null);
