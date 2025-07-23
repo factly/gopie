@@ -11,9 +11,6 @@ import {
   Mic,
   MicOff,
   Database,
-  Table,
-  Hash,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
@@ -23,7 +20,7 @@ import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -402,7 +399,7 @@ export default function SqlPage({
             transition: { duration: 0 },
           }}
           exit={{ width: 0, opacity: 0 }}
-          className="border-l bg-muted/50 flex flex-col min-h-0 relative h-full"
+          className="border-l flex flex-col min-h-0 relative h-full"
           transition={{ duration: 0 }}
         >
           {/* Resize Handle */}
@@ -412,40 +409,23 @@ export default function SqlPage({
           />
 
 
-          <Tabs defaultValue="results" className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="grid w-full grid-cols-1 rounded-none bg-background border-b">
-              <TabsTrigger
-                value="results"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none rounded-none"
-                disabled={!results}
-              >
-                <Table className="h-4 w-4 mr-2" />
-                Results
-                {results && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({results.length})
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+          {/* Results Header */}
+          <div className="border-b bg-muted/50 p-3">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">Results</h3>
+            </div>
+          </div>
 
-
-
-            <TabsContent
-              value="results"
-              className="flex-1 m-0 min-h-0 data-[state=inactive]:hidden"
-            >
-              <div className="h-full overflow-auto">
-                {results ? (
-                  <ResultsTable results={results} />
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No results to display. Execute a query to see results.
-                  </div>
-                )}
+          {/* Results Content */}
+          <div className="mt-4 ml-4 flex-1 min-h-0 overflow-auto">
+            {results ? (
+              <ResultsTable results={results} />
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">
+                No results to display. Execute a query to see results.
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </motion.div>
       )}
 
