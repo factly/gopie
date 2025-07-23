@@ -304,11 +304,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             asChild
                             className={
                               pathname === "/chat"
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : ""
+                                ? "bg-primary text-primary-foreground border-primary/20 shadow-sm"
+                                : "bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-primary shadow-sm"
                             }
                           >
-                            <Link href="/chat" className="flex items-center gap-2">
+                            <Link href="/chat" className="flex items-center gap-2 font-medium">
                               <MessageSquarePlus className="h-4 w-4" />
                               <span>New chat</span>
                             </Link>
@@ -381,13 +381,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     asChild
                     className={
                       pathname === "/chat"
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : ""
+                        ? "bg-primary text-primary-foreground border-primary/20 shadow-sm"
+                        : "bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-primary shadow-sm"
                     }
                   >
-                    <Link href="/chat" className="flex items-center gap-2">
+                    <Link href="/chat" className="flex items-center gap-2 font-medium">
                       <MessageSquarePlus className="h-4 w-4" />
-                      
                       <span>New chat</span>
                     </Link>
                   </SidebarMenuButton>
