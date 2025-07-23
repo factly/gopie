@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   PlayIcon,
   Loader2,
-  Mic,
-  MicOff,
   Database,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,9 +20,6 @@ import { format } from "sql-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
 import { useSidebar } from "@/components/ui/sidebar";
 
 declare global {
@@ -73,13 +68,6 @@ export default function SqlPage({
   >(null);
   const [isResizing, setIsResizing] = React.useState(false);
   const [previewRowLimit] = React.useState(100);
-
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
 
   const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
@@ -166,12 +154,6 @@ export default function SqlPage({
     }
   }, [dataset?.name, executeSql, previewRowLimit]);
 
-  React.useEffect(() => {
-    if (transcript) {
-      setNaturalQuery(transcript);
-    }
-  }, [transcript]);
-
   const handleGenerateAndExecute = async () => {
     if (!naturalQuery.trim()) {
       toast.error("Please enter your question");
@@ -217,15 +199,6 @@ export default function SqlPage({
       toast.error("Failed to process question: " + (error as Error).message, {
         id: promiseId,
       });
-    }
-  };
-
-  const toggleListening = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening({ continuous: true });
     }
   };
 
@@ -319,46 +292,12 @@ export default function SqlPage({
                   </Button>
                 </div>
                 <div className="relative flex flex-col gap-2">
-                  <div className="relative flex items-center">
-                    <Textarea
-                      placeholder="Ask AI to help you write your query..."
-                      value={naturalQuery}
-                      onChange={(e) => setNaturalQuery(e.target.value)}
-                      className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 pr-12 resize-none rounded-md shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
-                    />
-                    {browserSupportsSpeechRecognition && (
-                      <div className="absolute right-3 top-3">
-                        <Button
-                          size="sm"
-                          variant={listening ? "destructive" : "secondary"}
-                          className={`rounded-full w-8 h-8 p-0 transition-all duration-200 ${
-                            listening
-                              ? "animate-pulse shadow-md shadow-red-500/20"
-                              : "hover:shadow-sm"
-                          }`}
-                          onClick={toggleListening}
-                          aria-label={listening ? "Stop voice input" : "Start voice input"}
-                        >
-                          {listening ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  {listening && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="text-sm text-muted-foreground flex items-center gap-2"
-                    >
-                      <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      Listening... Click the mic button again to stop
-                    </motion.div>
-                  )}
+                  <Textarea
+                    placeholder="Ask AI to help you write your query..."
+                    value={naturalQuery}
+                    onChange={(e) => setNaturalQuery(e.target.value)}
+                    className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 resize-none rounded-md shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
+                  />
                 </div>
               </div>
 
