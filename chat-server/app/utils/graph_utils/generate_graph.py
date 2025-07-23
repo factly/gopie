@@ -2,7 +2,7 @@ import os
 
 from langchain_core.runnables.graph import CurveStyle
 
-from app.workflow.agent import agent_graph
+from app.workflow.agent.graph import agent_graph
 from app.workflow.graph.multi_dataset_graph.graph import multi_dataset_graph
 from app.workflow.graph.single_dataset_graph.graph import single_dataset_graph
 from app.workflow.graph.visualize_data_graph.graph import (

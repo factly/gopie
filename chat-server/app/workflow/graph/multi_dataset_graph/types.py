@@ -30,13 +30,12 @@ class InputState(TypedDict):
     project_ids: list[str] | None
     messages: list[BaseMessage]
     user_query: str
-    need_semantic_search: bool | None
-    required_dataset_ids: list[str] | None
+    relevant_datasets_ids: list[str] | None
+    previous_sql_queries: list[str] | None
 
 
 class OutputState(TypedDict):
     query_result: QueryResult
-    response_text: str
 
 
 class State(TypedDict):
@@ -49,10 +48,11 @@ class State(TypedDict):
     user_query: str
     messages: Annotated[list[BaseMessage], add_messages]
     query_result: QueryResult
-    response_text: str
     tool_call_count: int
-    need_semantic_search: bool | None
-    required_dataset_ids: list[str] | None
+    relevant_datasets_ids: list[str] | None
+    previous_sql_queries: list[str] | None
+    retry_count: int
+    recommendation: str
 
 
 class ConfigSchema(TypedDict):
@@ -60,3 +60,11 @@ class ConfigSchema(TypedDict):
     trace_id: str
     chat_history: list[BaseMessage]
     user: str
+
+
+class ValidationResult(TypedDict):
+    is_valid: bool
+    reasoning: str
+    recommendation: str
+    confidence: float
+    missing_elements: list[str]

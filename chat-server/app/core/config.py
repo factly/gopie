@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    MAX_RETRY_COUNT: int = 3
+    MAX_TOOL_CALL_LIMIT: int = 3
     MAX_VALIDATION_RETRY_COUNT: int = 2
 
     CORS_ORIGINS: list[str] = ["*"]
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     LANGSMITH_PROMPT: bool = False
     LANGSMITH_API_KEY: str = ""
 
-    QDRANT_HOST: str = "host.docker.internal"
+    QDRANT_HOST: str = "host.docker.local"
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5

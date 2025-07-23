@@ -42,6 +42,7 @@ type UpdateProjectParams struct {
 	// Description of the project
 	Description string `json:"description,omitempty" example:"Updated project description"`
 	UpdatedBy   string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID       string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // SearchProjectsResults represents a project with dataset count in search results

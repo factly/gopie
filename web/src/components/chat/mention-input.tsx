@@ -176,13 +176,13 @@ export function MentionInput({
       } else if (e.ctrlKey || e.metaKey) {
         // Allow Ctrl+Enter or Cmd+Enter to also submit
         e.preventDefault();
-        if (value.trim() && !disabled) {
+        if (value.trim() && !disabled && hasContext) {
           onSubmit(e);
         }
       } else {
         // Regular Enter submits the form
         e.preventDefault();
-        if (value.trim() && !disabled) {
+        if (value.trim() && !disabled && hasContext) {
           onSubmit(e);
         }
       }
@@ -374,7 +374,9 @@ export function MentionInput({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(e);
+        if (hasContext && value.trim() && !disabled) {
+          onSubmit(e);
+        }
       }}
       className="relative w-full"
     >

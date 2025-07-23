@@ -5,6 +5,7 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -13,7 +14,6 @@ import (
 // sqlRequestBody represents the request body for SQL query execution
 // @Description Request body for executing a SQL query
 type sqlRequestBody struct {
-	// SQL query to execute (only SELECT statements are allowed)
 	Query string `json:"query" validate:"required,min=1" example:"SELECT * FROM sales_data WHERE value > 1000"`
 }
 
@@ -31,6 +31,7 @@ type sqlRequestBody struct {
 // @Router /v1/api/sql [post]
 func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 	var body sqlRequestBody
+	imposeLimits := ctx.Locals(middleware.ImposeLimitsCtxKey).(bool)
 	if err := ctx.BodyParser(&body); err != nil {
 		h.logger.Info("Error parsing request body", zap.Error(err))
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -58,7 +59,7 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 
 	}
 
-	result, err := h.driverSvc.SqlQuery(body.Query)
+	result, err := h.driverSvc.SqlQuery(body.Query, imposeLimits)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 

@@ -2,20 +2,26 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, TypedDict
 
-# TODO: Add type hints for all the fields in this
-
 
 @dataclass
 class SqlQueryInfo:
     sql_query: str
     explanation: str
     sql_query_result: list | None = None
+    success: bool = True
+    error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Return a dictionary representation of the SqlQueryInfo instance, including the SQL query,
+        explanation, result, success status, and error message.
+        """
         return {
             "sql_query": self.sql_query,
             "explanation": self.explanation,
             "sql_query_result": self.sql_query_result,
+            "success": self.success,
+            "error": self.error,
         }
 
 
@@ -47,6 +53,13 @@ class SubQueryInfo:
         self.error_message.append({error_origin_type: error_message})
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Return a dictionary representation of the subquery, including its text, associated SQL queries,
+        metadata, error messages, and node messages.
+
+        Returns:
+            A dictionary containing all fields of the subquery, with SQL queries serialized as dictionaries.
+        """
         return {
             "query_text": self.query_text,
             "sql_queries": [query.to_dict() for query in self.sql_queries],
@@ -57,6 +70,26 @@ class SubQueryInfo:
             "retry_count": self.retry_count,
             "confidence_score": self.confidence_score,
             "node_messages": self.node_messages,
+        }
+
+
+@dataclass
+class SingleDatasetQueryResult:
+    user_friendly_dataset_name: str | None
+    dataset_name: str | None
+    sql_results: list[SqlQueryInfo] | None
+    response_for_non_sql: str | None
+    error: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "user_friendly_dataset_name": self.user_friendly_dataset_name,
+            "dataset_name": self.dataset_name,
+            "sql_results": (
+                [result.to_dict() for result in self.sql_results] if self.sql_results else None
+            ),
+            "response_for_non_sql": self.response_for_non_sql,
+            "error": self.error,
         }
 
 
@@ -78,9 +111,13 @@ class QueryResult:
     original_user_query: str
     execution_time: float
     timestamp: datetime
+    single_dataset_query_result: SingleDatasetQueryResult | None = None
     subqueries: list[SubQueryInfo] = field(default_factory=list)
 
     def __post_init__(self):
+        """
+        Initializes the timestamp to the current datetime if it is not already set.
+        """
         if not hasattr(self, "timestamp"):
             self.timestamp = datetime.now()
 
@@ -116,6 +153,11 @@ class QueryResult:
             "original_user_query": self.original_user_query,
             "execution_time": self.execution_time,
             "timestamp": self.timestamp.isoformat(),
+            "single_dataset_query_result": (
+                self.single_dataset_query_result.to_dict()
+                if self.single_dataset_query_result
+                else None
+            ),
             "subqueries": [sq.to_dict() for sq in self.subqueries],
         }
 

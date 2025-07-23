@@ -12,21 +12,57 @@ import (
 	"go.uber.org/zap"
 )
 
+func ConvertToToolCall(data any) (openai.ToolCall, error) {
+	var toolCall openai.ToolCall
+
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return openai.ToolCall{}, fmt.Errorf("failed to marshal data to JSON: %w", err)
+	}
+
+	if err := json.Unmarshal(bytes, &toolCall); err != nil {
+		return openai.ToolCall{}, fmt.Errorf("failed to unmarshal JSON to ToolCall: %w", err)
+	}
+
+	return toolCall, nil
+}
+
 // Chat initiates a chat session with the AI agent using OpenAI's API
 func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	// Convert messages to OpenAI format
 	messages := make([]openai.ChatCompletionMessage, 0, len(params.Messages))
 	for _, msg := range params.PrevMessages {
+		toolCalls := []openai.ToolCall{}
+		for _, call := range msg.ToolCalls {
+			c, err := ConvertToToolCall(call)
+			if err != nil {
+				a.logger.Error("Failed to convert tool call to openai.ToolCall", zap.Error(err))
+				continue
+			}
+			toolCalls = append(toolCalls, c)
+		}
+
 		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    msg.Role,
-			Content: msg.Content,
+			Role:      msg.Role,
+			Content:   msg.Content,
+			ToolCalls: toolCalls,
 		})
 	}
 
 	for _, msg := range params.Messages {
+		toolCalls := []openai.ToolCall{}
+		for _, call := range msg.ToolCalls {
+			c, err := ConvertToToolCall(call)
+			if err != nil {
+				a.logger.Error("Failed to convert tool call to openai.ToolCall", zap.Error(err))
+				continue
+			}
+			toolCalls = append(toolCalls, c)
+		}
 		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    msg.Role,
-			Content: msg.Content,
+			Role:      msg.Role,
+			Content:   msg.Content,
+			ToolCalls: toolCalls,
 		})
 	}
 

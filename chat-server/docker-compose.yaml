@@ -8,7 +8,8 @@ services:
     volumes:
       - ./app:/code/app
     env_file:
-      - .env
+      # - ./.env
+      - ../config-noauth.env
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload"
     depends_on:
       - qdrant
@@ -20,6 +21,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    extra_hosts:
+      - "host.docker.local:host-gateway"
 
   qdrant:
     image: qdrant/qdrant

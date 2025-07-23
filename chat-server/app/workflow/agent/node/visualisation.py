@@ -1,9 +1,6 @@
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END
 
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
-from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph.graph import (
     graph as visualize_data_graph,
 )
@@ -11,30 +8,27 @@ from app.workflow.graph.visualize_data_graph.graph import (
 from ..types import AgentState
 
 
-@configure_node(
-    role="intermediate",
-    progress_message="Checking visualization needs...",
-)
-async def check_visualization(state: AgentState, config: RunnableConfig) -> dict:
-    user_input = state.get("initial_user_query", "")
-    prompt_messages = get_prompt(
-        "check_visualization",
-        user_query=user_input,
-    )
-
-    llm = get_model_provider(config).get_llm_for_node("check_visualization")
-    response = await llm.ainvoke(prompt_messages)
-
-    parser = JsonOutputParser()
-    parsed_response = parser.parse(str(response.content))
-    needs_visualization = parsed_response.get("wants_visualization", False)
-    return {"needs_visualization": needs_visualization}
-
-
 async def call_visualization_agent(state: AgentState, config: RunnableConfig) -> AgentState | None:
+    """
+    Invoke the visualization agent to process the user query and datasets.
+
+    This function asynchronously calls the data graph visualization agent using the current user query and datasets from the agent state. It does not return a value.
+    """
     input_state = {
-        "user_query": state.get("user_query", ""),
+        "user_query": state["user_query"],
         "datasets": state.get("datasets", []),
+        "previous_visualization_result_paths": state.get("previous_json_paths", []),
+        "relevant_sql_queries": state.get("relevant_sql_queries", []),
     }
 
-    _ = await visualize_data_graph.ainvoke(input_state, config=config)
+    _ = await visualize_data_graph.ainvoke(input_state, config=config)  # type: ignore
+
+
+async def should_run_visualization(state: AgentState):
+    """
+    Determine the next workflow step based on whether visualization is needed and datasets are available.
+    """
+    if state.get("needs_visualization", False) and state.get("datasets", []):
+        return "visualization_agent"
+    else:
+        return END

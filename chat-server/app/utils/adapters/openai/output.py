@@ -7,6 +7,12 @@ from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import (
     ChatCompletionChunk as ResponseChunk,
 )
+from openai.types.chat.chat_completion_chunk import Choice as ChunkChoice
+from openai.types.chat.chat_completion_chunk import (
+    ChoiceDelta,
+    ChoiceDeltaToolCall,
+    ChoiceDeltaToolCallFunction,
+)
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
@@ -48,7 +54,7 @@ class OpenAIOutputAdapter:
                 yield f"data: {chunk.model_dump_json(exclude_defaults=True)}\n\n"
         yield "data: [DONE]\n\n"
 
-    def create_tool_call_chunk(self, event_chunk: EventChunkData) -> ResponseChunk:
+    def create_tool_call_chunk(self, event_chunk: EventChunkData) -> ResponseChunk | None:
         tool_call_params = None
         if event_chunk.extra_data:
             name = event_chunk.extra_data.name
@@ -64,23 +70,23 @@ class OpenAIOutputAdapter:
                 intermediate_message["category"] = event_chunk.category
             name = INTERMEDIATE_MESSAGES
             arguments = json.dumps(intermediate_message)
-        tool_call_params = {
-            "name": name,
-            "arguments": arguments,
-        }
+        tool_call_params = ChoiceDeltaToolCallFunction(
+            name=name,
+            arguments=arguments,
+        )
         if tool_call_params:
-            tool_call = {
-                "id": f"call_{self.tool_calls_count}",
-                "index": self.tool_calls_count,
-                "type": "function",
-                "function": tool_call_params,
-            }
+            tool_call = ChoiceDeltaToolCall(
+                id=f"call_{self.tool_calls_count}",
+                index=self.tool_calls_count,
+                type="function",
+                function=tool_call_params,
+            )
             choices = [
-                {
-                    "index": 0,
-                    "delta": {"tool_calls": [tool_call]},
-                    "finish_reason": None,
-                }
+                ChunkChoice(
+                    index=0,
+                    delta=ChoiceDelta(tool_calls=[tool_call]),
+                    finish_reason=None,
+                )
             ]
             self.tool_calls_count += 1
             return ResponseChunk(
@@ -91,7 +97,7 @@ class OpenAIOutputAdapter:
                 choices=choices,
             )
 
-    def event_to_response(self, event_chunk: EventChunkData) -> ResponseChunk:
+    def event_to_response(self, event_chunk: EventChunkData) -> ResponseChunk | None:
         should_be_tool_call = (
             (event_chunk.extra_data)
             or (event_chunk.category)
@@ -102,15 +108,15 @@ class OpenAIOutputAdapter:
             return tool_call_chunk
         else:
             choices = [
-                {
-                    "index": 0,
-                    "delta": {"content": event_chunk.content},
-                    "finish_reason": None,
-                }
+                ChunkChoice(
+                    index=0,
+                    delta=ChoiceDelta(content=event_chunk.content),
+                    finish_reason=None,
+                )
             ]
             if self.first_chunk:
                 self.first_chunk = False
-                choices[0]["delta"]["role"] = "assistant"
+                choices[0].delta.role = "assistant"
         return ResponseChunk(
             id=self.trace_id,
             object="chat.completion.chunk",
@@ -126,11 +132,11 @@ class OpenAIOutputAdapter:
             created=self.created,
             model=self.model,
             choices=[
-                {
-                    "index": 0,
-                    "delta": {},
-                    "finish_reason": "stop",
-                }
+                ChunkChoice(
+                    index=0,
+                    delta=ChoiceDelta(),
+                    finish_reason="stop",
+                )
             ],
         )
 
@@ -144,16 +150,22 @@ class OpenAIOutputAdapter:
             if completion_chunk.choices[0].delta.tool_calls:
                 for tool_call in completion_chunk.choices[0].delta.tool_calls:
                     call_id = tool_call.id
-                    tool_calls.append(
-                        ChatCompletionMessageToolCall(
-                            id=call_id,
-                            type="function",
-                            function=Function(
-                                name=tool_call.function.name,
-                                arguments=tool_call.function.arguments,
-                            ),
+                    if (
+                        call_id
+                        and tool_call.function
+                        and tool_call.function.name
+                        and tool_call.function.arguments
+                    ):
+                        tool_calls.append(
+                            ChatCompletionMessageToolCall(
+                                id=call_id,
+                                type="function",
+                                function=Function(
+                                    name=tool_call.function.name,
+                                    arguments=tool_call.function.arguments,
+                                ),
+                            )
                         )
-                    )
         message = ChatCompletionMessage(
             role="assistant",
             content=content,

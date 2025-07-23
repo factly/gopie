@@ -137,7 +137,6 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	// update dataset entry for successful upload
 	dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
 		Description: body.Description,
-		Format:      res.Format,
 		FilePath:    filePath,
 		RowCount:    int(count),
 		Size:        res.Size,
@@ -162,7 +161,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 
 	// Get dataset summary if column descriptions were provided
 	var summary *models.DatasetSummaryWithName
-	if body.ColumnDescriptions != nil && len(body.ColumnDescriptions) > 0 {
+	if len(body.ColumnDescriptions) > 0 {
 		datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
 		if err != nil {
 			h.logger.Error("Error fetching dataset summary", zap.Error(err))

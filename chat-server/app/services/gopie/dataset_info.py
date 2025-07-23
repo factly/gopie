@@ -9,7 +9,7 @@ from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
 async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
-    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/" f"datasets/{dataset_id}"
+    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/datasets/{dataset_id}"
     headers = {"accept": "application/json"}
 
     try:

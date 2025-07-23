@@ -3,7 +3,9 @@ from pydantic import BaseModel
 
 
 class ResultPathsSchema(BaseModel):
-    """Use this to return the paths to the json files created by the agent, after visualization"""  # noqa: E501
+    """
+    Use this to return the paths to the json files created by the agent, after visualization
+    """
 
     visualization_result_paths: list[str]
 
@@ -14,7 +16,7 @@ def result_paths(visualization_result_paths: list[str]):
 
     Args:
         visualization_result_paths: A list of paths to the json files containing the visualizations.
-    """  # noqa: E501
+    """
     return {"visualization_result_paths": visualization_result_paths}
 
 

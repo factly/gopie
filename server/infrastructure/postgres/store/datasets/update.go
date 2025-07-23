@@ -19,7 +19,6 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 	d, err := s.q.UpdateDataset(ctx, gen.UpdateDatasetParams{
 		ID:          datasetID,
 		Description: pgtype.Text{String: updateDatasetParams.Description, Valid: true},
-		Format:      updateDatasetParams.Format,
 		RowCount:    pgtype.Int4{Int32: int32(updateDatasetParams.RowCount), Valid: true},
 		Size:        pgtype.Int8{Int64: int64(updateDatasetParams.Size), Valid: true},
 		Columns:     columnsBytes,
@@ -33,7 +32,6 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		ID:          d.ID,
 		Name:        d.Name,
 		Description: d.Description.String,
-		Format:      d.Format,
 		CreatedAt:   d.CreatedAt.Time,
 		UpdatedAt:   d.UpdatedAt.Time,
 		RowCount:    int(d.RowCount.Int32),

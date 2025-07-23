@@ -3,7 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.core.constants import SQL_QUERIES_GENERATED
+from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.utils.model_registry.model_selection import get_node_model
@@ -61,7 +61,7 @@ async def plan_sql_query(
             {
                 "content": "SQL query planning tool",
                 "name": SQL_QUERIES_GENERATED,
-                "values": {"queries": sql_queries},
+                "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
             },
         )
 

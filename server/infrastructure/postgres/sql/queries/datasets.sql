@@ -2,7 +2,6 @@
 insert into datasets (
     name,
     description,
-    format,
     row_count,
     size,
     file_path,
@@ -11,7 +10,7 @@ insert into datasets (
     created_by,
     updated_by,
     org_id
-) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 returning *;
 
 -- name: GetDataset :one
@@ -19,16 +18,15 @@ select * from datasets where id = $1 and org_id = $2;
 
 -- name: UpdateDataset :one
 update datasets
-set 
+set
     description = coalesce($1, description),
-    format = coalesce($2, format),
-    row_count = coalesce($3, row_count),
-    size = coalesce($4, size),
-    file_path = coalesce($5, file_path),
-    columns = coalesce($6, columns),
-    alias = coalesce($7, alias),
-    updated_by = coalesce($8, updated_by)
-where id = $9 and org_id = $10
+    row_count = coalesce($2, row_count),
+    size = coalesce($3, size),
+    file_path = coalesce($4, file_path),
+    columns = coalesce($5, columns),
+    alias = coalesce($6, alias),
+    updated_by = coalesce($7, updated_by)
+where id = $8 and org_id = $9
 returning *;
 
 -- name: DeleteDataset :exec
@@ -36,13 +34,13 @@ delete from datasets where id = $1 and org_id = $2;
 
 -- name: SearchDatasets :many
 select * from datasets
-where 
+where
     org_id = $1 and
     (name ilike concat('%', $2, '%') or
     description ilike concat('%', $2, '%') or
     alias ilike concat('%', $2, '%'))
-order by 
-    case 
+order by
+    case
         when alias ilike concat($2, '%') then 1
         when name ilike concat($2, '%') then 2
         when name ilike concat('%', $2, '%') then 3

@@ -51,14 +51,9 @@ async def process_single_schema_upload(schema_data):
 
         print(f"Response: {response_data}")
 
-        api_success = (
-            response.status_code == 200
-            and response_data.get("success") is True
-        )
+        api_success = response.status_code == 200 and response_data.get("success") is True
 
-        if (expected_result and api_success) or (
-            not expected_result and not api_success
-        ):
+        if (expected_result and api_success) or (not expected_result and not api_success):
             results["passed"] = True
             if expected_result:
                 results["message"] = "Schema upload successful as expected"
@@ -93,9 +88,7 @@ async def run_schema_tests():
     results = []
 
     for dataset in datasets:
-        print(
-            f"Running schema upload test for dataset_id: {dataset['dataset_id']}"
-        )
+        print(f"Running schema upload test for dataset_id: {dataset['dataset_id']}")
         result = await process_single_schema_upload(dataset)
         results.append(result)
 

@@ -113,9 +113,7 @@ class TestOpenAIInputAdapter:
 class TestOpenAIOutputAdapter:
     @pytest.fixture
     def output_adapter(self):
-        return OpenAIOutputAdapter(
-            chat_id="test_chat_123", trace_id="test_trace_456"
-        )
+        return OpenAIOutputAdapter(chat_id="test_chat_123", trace_id="test_trace_456")
 
     def test_output_adapter_initialization(self, output_adapter):
         assert output_adapter.chat_id == "test_chat_123"
@@ -130,9 +128,7 @@ class TestOpenAIOutputAdapter:
             role=Role.AI,
             content="Tool execution",
             category="tool_call",
-            extra_data=ExtraData(
-                name="execute_sql", args={"query": "SELECT * FROM users"}
-            ),
+            extra_data=ExtraData(name="execute_sql", args={"query": "SELECT * FROM users"}),
         )
 
         result = output_adapter.create_tool_call_chunk(event_chunk)
@@ -176,9 +172,7 @@ class TestOpenAIOutputAdapter:
         assert args["category"] == "data_processing"
         assert args["content"] == "Processing data"
 
-    def test_create_tool_call_chunk_with_intermediate_role(
-        self, output_adapter
-    ):
+    def test_create_tool_call_chunk_with_intermediate_role(self, output_adapter):
         event_chunk = EventChunkData(
             role=Role.INTERMEDIATE,
             content="Intermediate step",
@@ -198,9 +192,7 @@ class TestOpenAIOutputAdapter:
         assert args["role"] == Role.INTERMEDIATE
         assert args["content"] == "Intermediate step"
 
-    def test_create_tool_call_chunk_with_empty_intermediate(
-        self, output_adapter
-    ):
+    def test_create_tool_call_chunk_with_empty_intermediate(self, output_adapter):
         event_chunk = EventChunkData(
             role=Role.INTERMEDIATE,
             content="",
@@ -273,9 +265,7 @@ class TestOpenAIOutputAdapter:
             yield EventChunkData(role=Role.AI, content="world!", category=None)
 
         chunks = []
-        async for chunk in output_adapter.create_chat_completion_stream(
-            mock_event_chunks()
-        ):
+        async for chunk in output_adapter.create_chat_completion_stream(mock_event_chunks()):
             chunks.append(chunk)
 
         assert len(chunks) >= 3  # At least 2 content chunks + 1 final chunk
@@ -293,14 +283,10 @@ class TestOpenAIOutputAdapter:
                 role=Role.INTERMEDIATE,
                 content="Tool result",
                 category="tool_call",
-                extra_data=ExtraData(
-                    name="test_tool", args={"param": "value"}
-                ),
+                extra_data=ExtraData(name="test_tool", args={"param": "value"}),
             )
 
-        result = await output_adapter.create_chat_completion(
-            mock_event_chunks()
-        )
+        result = await output_adapter.create_chat_completion(mock_event_chunks())
 
         assert result.id == "test_trace_456"
         assert result.object == "chat.completion"
@@ -308,10 +294,7 @@ class TestOpenAIOutputAdapter:
         assert len(result.choices) == 1
         assert result.choices[0].message.content == "Hello world!"
         assert len(result.choices[0].message.tool_calls) == 1
-        assert (
-            result.choices[0].message.tool_calls[0].function.name
-            == "test_tool"
-        )
+        assert result.choices[0].message.tool_calls[0].function.name == "test_tool"
         assert result.choices[0].finish_reason == "stop"
 
     def test_tool_calls_counter_increment(self, output_adapter):

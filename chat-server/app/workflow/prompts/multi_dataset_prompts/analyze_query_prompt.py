@@ -4,10 +4,30 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
+
 
 def create_analyze_query_prompt(
     **kwargs,
 ) -> list | ChatPromptTemplate:
+    """
+    Generate a prompt for classifying a user query as either "data_query" or "conversational" based on detailed guidelines and context.
+
+    Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of message objects ready for use in a chat-based classification system. The prompt incorporates the user query, previous tool results, tool call count, dataset IDs, and project IDs, and provides comprehensive instructions for accurate query classification.
+
+    Parameters:
+        prompt_template (bool, optional): If True, returns a `ChatPromptTemplate` object; otherwise, returns a list of message objects.
+        user_query (str, optional): The user's input query to be classified.
+        tool_results (str, optional): Results from previous tool calls, if any.
+        tool_call_count (int, optional): Number of tool calls made so far.
+        dataset_ids (list, optional): List of dataset identifiers relevant to the query.
+        project_ids (list, optional): List of project identifiers relevant to the query.
+
+    Returns:
+        list | ChatPromptTemplate: A list of message objects or a `ChatPromptTemplate` for use in a chat or classification workflow.
+    """
     prompt_template = kwargs.get("prompt_template", False)
     user_query = kwargs.get("user_query", "")
     tool_results = kwargs.get("tool_results", "")
@@ -51,6 +71,9 @@ TOOL USAGE GUIDELINES:
   - Consider classifying as "data_query" to use database search
 * If previous tool calls successfully answered the query:
   - Maintain conversational classification
+
+HANDLING TRUNCATED RESULTS:
+  - Truncated results from running SQL query results are due to large result sizes and are visile to the user for analysis, so don't consider them as unsuccessful queries
 
 GENERAL TOOL DECISION PROCESS:
 1. Read the user query carefully
@@ -107,7 +130,7 @@ PROJECT IDS: {project_ids}
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

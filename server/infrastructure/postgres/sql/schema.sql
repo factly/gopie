@@ -2,7 +2,6 @@ create table if not exists datasets(
     id uuid primary key default uuid_generate_v4(),
     name text not null,
     description text default null,
-    format text not null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
     row_count integer,

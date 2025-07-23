@@ -2,7 +2,7 @@ FROM python:3.12 as requirements-stage
 WORKDIR /tmp
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY uv.lock* ./pyproject.toml ./.python-version /tmp/
-RUN uv export --no-hashes --format requirements-txt -o requirements.txt
+RUN uv export --no-dev --no-hashes --format requirements-txt -o requirements.txt
 
 FROM python:3.12 as build-stage
 RUN python -m venv /code/venv

@@ -11,6 +11,15 @@ mock_session.SingletonAiohttp.get_aiohttp_client.return_value = Mock()
 sys.modules["app.core.session"] = mock_session
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--disable-formatter",
+        action="store_true",
+        default=False,
+        help="Disable terminal formatter output for cleaner pytest output",
+    )
+
+
 @pytest.fixture
 def sample_metadata():
     return {

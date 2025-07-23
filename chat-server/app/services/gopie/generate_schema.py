@@ -1,7 +1,10 @@
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
 from app.models.schema import DatasetSummary
-from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE, execute_sql
+from app.services.gopie.sql_executor import (
+    SQL_RESPONSE_TYPE,
+    execute_sql_with_limit,
+)
 
 
 async def generate_summary(
@@ -13,7 +16,7 @@ async def generate_summary(
     headers = {"accept": "application/json"}
 
     sample_values_query = f"SELECT DISTINCT * FROM {dataset_name} LIMIT {limit}"
-    sample_data = await execute_sql(query=sample_values_query)
+    sample_data = await execute_sql_with_limit(query=sample_values_query)
 
     data = None
 

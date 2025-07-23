@@ -40,7 +40,6 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	err := d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames)
 	return &models.UploadDatasetResult{
 		FilePath:  s3Path,
-		Format:    format,
 		Size:      0,
 		TableName: tableName,
 	}, err
@@ -72,7 +71,6 @@ func (d *OlapService) IngestFile(ctx context.Context, filepath string, name stri
 	res := models.UploadDatasetResult{
 		FilePath:  filepath,
 		TableName: tableName,
-		Format:    format,
 		Size:      int(size),
 	}
 
@@ -121,7 +119,7 @@ func parseFilepath(filepath string) (string, string, error) {
 	return bucket, path, nil
 }
 
-func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
+func (d *OlapService) SqlQuery(sql string, imposeLimits bool) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
 	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
 		parts := strings.Split(sql, `"`)
@@ -153,13 +151,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	countSql, err := pkg.BuildCountQuery(sql)
-	if err != nil {
-		d.logger.Error("Invalid query", zap.Error(err))
-		return nil, fmt.Errorf("failed to build count query: %w", err)
-	}
-
-	queryResult, err := d.getResultsWithCount(countSql, sql)
+	queryResult, err := d.getResultsWithCount("", sql, imposeLimits)
 	if err != nil {
 		d.logger.Error("Query execution failed", zap.Error(err))
 		return nil, err
@@ -211,16 +203,20 @@ type asyncResult[T any] struct {
 	err  error
 }
 
-func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, error) {
+func (d *OlapService) getResultsWithCount(_, sql string, imposeLim bool) (*queryResult, error) {
 	// countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
 	// go d.executeCountQuery(countSql, countChan)
-
-	limitedSql, err := pkg.ImposeLimits(sql, 1000)
-	if err != nil {
-		return nil, fmt.Errorf("failed to impose limits: %w", err)
+	limitedSql := sql
+	var err error
+	if imposeLim {
+		limitedSql, err = pkg.ImposeLimits(sql, 1000)
+		if err != nil {
+			return nil, fmt.Errorf("failed to impose limits: %w", err)
+		}
 	}
+
 	go d.executeDataQuery(limitedSql, rowsChan)
 
 	// countResult := <-countChan
@@ -230,7 +226,7 @@ func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, e
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
-		return nil, fmt.Errorf("data query failed: %w", rowsResult.err)
+		return nil, err
 	}
 
 	return &queryResult{
@@ -300,9 +296,16 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 		return nil, err
 	}
 
-	result, err := d.getResultsWithCount(countSql, sql)
+	result, err := d.getResultsWithCount(countSql, sql, params.ImposeLimits)
+	if err != nil {
+		return nil, err
+	}
+
+	if result == nil {
+		return map[string]any{}, nil
+	}
+
 	return map[string]any{
-		// "total": result.Count,
 		"data": result.Rows,
 	}, nil
 }

@@ -6,6 +6,10 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    langsmith_compatible,
+)
+
 
 def create_sql_planning_prompt(
     **kwargs,
@@ -25,6 +29,8 @@ INSTRUCTIONS:
 4. Plan the SQL query/queries needed to answer the question
 5. Consider joins, aggregations, filters, and ordering as needed
 6. Provide clear reasoning for your approach
+7. If the user is also asking for visualization than just ignore that and don't reply anything in
+  context to the visualization requirements of the user.
 
 OUTPUT FORMAT (JSON):
 {
@@ -47,7 +53,7 @@ multiple queries are needed, explain the sequence and purpose of each."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=system_content),
+                SystemMessage(content=langsmith_compatible(system_content)),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

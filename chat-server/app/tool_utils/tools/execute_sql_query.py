@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 
-from app.services.gopie.sql_executor import execute_sql
+from app.services.gopie.sql_executor import execute_sql_with_limit
 
 
 @tool
@@ -23,7 +23,7 @@ async def execute_sql_query(
     try:
         results = []
         for query in queries:
-            result = await execute_sql(query=query)
+            result = await execute_sql_with_limit(query=query)
             results.append(result)
         return results
     except Exception as e:

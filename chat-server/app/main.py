@@ -57,9 +57,7 @@ app.add_middleware(
 )
 
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
-app.include_router(
-    schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"]
-)
+app.include_router(schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"])
 
 
 def start():

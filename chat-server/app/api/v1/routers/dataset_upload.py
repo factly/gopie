@@ -27,9 +27,7 @@ async def upload_schema(payload: UploadSchemaRequest):
         dataset_id = payload.dataset_id
 
         dataset_details = await get_dataset_info(dataset_id, project_id)
-        dataset_summary, sample_data = await generate_summary(
-            dataset_details.name
-        )
+        dataset_summary, sample_data = await generate_summary(dataset_details.name)
 
         success = await store_schema_in_qdrant(
             dataset_summary=dataset_summary,
