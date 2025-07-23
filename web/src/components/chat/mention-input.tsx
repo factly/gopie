@@ -52,6 +52,8 @@ interface MentionInputProps {
   stopMessageStream?: () => void;
   lockableContextIds?: string[]; // Array of context IDs that cannot be removed
   hasContext?: boolean; // Whether any context is selected
+  onFocus?: () => void; // Callback when input is focused
+  onBlur?: () => void; // Callback when input loses focus
 }
 
 export function MentionInput({
@@ -71,6 +73,8 @@ export function MentionInput({
   stopMessageStream = () => {},
   lockableContextIds,
   hasContext,
+  onFocus,
+  onBlur,
 }: MentionInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -383,7 +387,7 @@ export function MentionInput({
       <div className="relative">
         <div
           className={cn(
-            "flex flex-col justify-start rounded-lg border bg-background px-4 shadow-sm transition-all duration-200",
+            "flex flex-col justify-start border bg-background px-4 shadow-sm transition-all duration-200",
             "hover:shadow-md focus-within:shadow-md",
             selectedContexts.length > 0
               ? "min-h-[4rem] py-3"
@@ -457,7 +461,13 @@ export function MentionInput({
               value={value}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              onFocus={() => setTimeout(() => autoResizeTextarea(), 0)}
+              onFocus={() => {
+                setTimeout(() => autoResizeTextarea(), 0);
+                onFocus?.();
+              }}
+              onBlur={() => {
+                onBlur?.();
+              }}
               disabled={disabled}
               rows={1}
               style={{
@@ -480,7 +490,7 @@ export function MentionInput({
                       size="icon"
                       variant={isStreaming ? "destructive" : "default"}
                       className={cn(
-                        "h-8 w-8 rounded-full shadow-sm",
+                        "h-8 w-8 shadow-sm",
                         className.includes("dark-input") &&
                           "bg-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground border-0"
                       )}
@@ -497,7 +507,7 @@ export function MentionInput({
                       }
                     >
                       {isSending && !isStreaming ? (
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        <span className="h-3.5 w-3.5 animate-spin border-2 border-current border-t-transparent" />
                       ) : isStreaming ? (
                         <Square className="h-3.5 w-3.5" />
                       ) : (

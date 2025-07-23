@@ -19,6 +19,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Share2, Globe, Lock, Building2 } from "lucide-react";
 import { ChatVisibility, useUpdateChatVisibility } from "@/lib/mutations/chat";
 import { toast } from "sonner";
@@ -92,10 +97,16 @@ export function ShareChatDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button variant="ghost" size="sm">
-            <Share2 className="h-4 w-4 mr-1" />
-            Share
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" className="mr-2">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -143,7 +154,7 @@ export function ShareChatDialog({
           </div>
 
           {selectedVisibility === "public" && (
-            <div className="p-3 bg-muted/50 rounded-lg border">
+            <div className="p-3 bg-muted/50 border">
               <div className="flex items-center gap-2 text-sm">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Public Link</span>

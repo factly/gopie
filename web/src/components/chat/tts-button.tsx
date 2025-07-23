@@ -99,7 +99,7 @@ function TTSInner({ text, datasetId }: { text: string; datasetId?: string }) {
             disabled={isConnecting}
           >
             {isConnecting ? (
-              <span className="h-3 w-3 rounded-full bg-primary/50 animate-pulse" />
+              <span className="h-3 w-3 bg-primary/50 animate-pulse" />
             ) : isPlaying ? (
               <VolumeX className="h-3 w-3" />
             ) : (

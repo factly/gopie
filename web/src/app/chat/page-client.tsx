@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
 import { ResultsPanel } from "@/components/chat/results-panel";
 import {
@@ -29,6 +29,7 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { History, PanelLeft } from "lucide-react";
 import { useChatStore } from "@/lib/stores/chat-store";
 // import { VoiceMode } from "@/components/chat/voice-mode";
 // import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
@@ -37,6 +38,11 @@ import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { ReadOnlyMessage } from "@/components/chat/read-only-message";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,15 +62,11 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
-  searchParams,
-  router,
   currentUserId,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
-  searchParams: URLSearchParams;
-  router: ReturnType<typeof useRouter>;
   currentUserId: string;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
@@ -114,26 +116,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       toast.error("Failed to load chat history");
     }
   }, [error]);
-
-  const handleStartNewChat = () => {
-    selectChatForDataset(null, null, null);
-    setActiveTab("chat");
-    setSelectedContexts([]);
-    setLinkedDatasetId(null);
-
-    // Clear results when starting a new chat
-    resetExecutedQueries();
-    clearVisualizationPaths();
-    setIsOpen(false);
-    setVisualizationOpen(false);
-
-    // Clear URL parameters when starting a new chat
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("chatId");
-    params.delete("initialMessage");
-    params.delete("contextData");
-    router.replace(`/chat?${params.toString()}`);
-  };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
@@ -207,7 +189,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     if (!selectedChatId) {
       setLinkedDatasetId(null);
     }
-  }, [selectedChatId, setLinkedDatasetId]);
+  }, [selectedChatId, setLinkedDatasetId, selectChatForDataset]);
 
   if (isLoading) {
     return (
@@ -221,17 +203,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex items-center justify-between p-2 mb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStartNewChat}
-          className="h-8 px-2 text-xs w-full justify-start"
-        >
-          <MessageSquarePlus className="h-4 w-4 mr-2" />
-          New Chat
-        </Button>
-      </div>
+
 
       {allChats.length > 0 ? (
         <ScrollArea className="flex-1 pr-2">
@@ -267,7 +239,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                 <div
                   key={chat.id}
                   className={cn(
-                    "group relative flex flex-col rounded-lg px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
+                    "group relative flex flex-col px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
                     selectedChatId === chat.id &&
                       "bg-muted/80 border border-border/10"
                   )}
@@ -286,9 +258,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <ChatVisibilityIndicator visibility={chat.visibility} />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                        {dateString}
-                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -302,10 +271,8 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       </Button>
                     </div>
                   </div>
-                  {/* Note: Since the API doesn't return dataset/project info with chats,
-                      we might need to fetch this information separately or store it differently */}
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    Chat History
+                    {dateString}
                   </div>
                 </div>
               );
@@ -364,12 +331,12 @@ const ChatInput = React.memo(
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
-        <div className="flex items-start gap-2 w-full px-2">
+        <div className="flex items-start gap-2 w-full pr-2">
           <ContextPicker
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
-            triggerClassName="h-10 w-10 rounded-full bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+            triggerClassName="h-10 w-10 bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
             lockableContextIds={lockableContextIds}
           />
           <MentionInput
@@ -377,7 +344,7 @@ const ChatInput = React.memo(
             onChange={handleMentionInputChange}
             onSubmit={handleSubmit}
             disabled={isLoading}
-            placeholder="Ask a question..."
+            placeholder="Ask questions about your data..."
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
@@ -451,7 +418,7 @@ const ChatView = React.memo(
               >
                 {isFetchingNextPage ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent mr-2" />
                     Loading...
                   </>
                 ) : (
@@ -553,22 +520,17 @@ function ChatPageClient() {
     isOpen: sqlIsOpen,
     setIsOpen,
     resetExecutedQueries,
-    results,
+    // results, // removed unused variable
   } = useSqlStore();
   const {
     isOpen: isVisualizationOpen,
     setIsOpen: setVisualizationOpen,
-    paths: visualizationPaths,
+    // paths: visualizationPaths, // removed unused variable
     clearPaths: clearVisualizationPaths,
   } = useVisualizationStore();
 
   // Combined panel state - show if either SQL or visualizations are available
   const isResultsPanelOpen = sqlIsOpen || isVisualizationOpen;
-  const hasResults = !!(
-    results?.data?.length ||
-    results?.error ||
-    visualizationPaths.length > 0
-  );
   // const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   // const [latestAssistantMessage, setLatestAssistantMessage] = useState<
   //   string | null
@@ -580,7 +542,6 @@ function ChatPageClient() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
-  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
   // Helper function to update URL with chat state
   const updateUrlWithChatId = useCallback(
@@ -879,7 +840,7 @@ function ChatPageClient() {
       console.log("Updating chat title to:", chatDetails.title);
       selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
     }
-  }, [chatDetails, selectedChatId, linkedDatasetId]);
+  }, [chatDetails, selectedChatId, linkedDatasetId, selectChatForDataset, setSelectedChatTitle]);
 
   // Handle chat details loading error
   useEffect(() => {
@@ -1028,27 +989,7 @@ function ChatPageClient() {
   //   [handleInputChange, handleSubmit]
   // );
 
-  useEffect(() => {
-    if (!isResultsPanelOpen) {
-      setSqlPanelWidth(0);
-      return;
-    }
-    const updateWidth = () => {
-      if (sqlPanelRef.current) {
-        setSqlPanelWidth(sqlPanelRef.current.clientWidth);
-      }
-    };
-    updateWidth();
-    const resizeObserver = new ResizeObserver(updateWidth);
-    if (sqlPanelRef.current) {
-      resizeObserver.observe(sqlPanelRef.current);
-    }
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, [isResultsPanelOpen, sqlPanelRef]);
+  // Removed unused sqlPanelWidth state management
 
   // Update streaming state based on isLoading
   useEffect(() => {
@@ -1079,20 +1020,35 @@ function ChatPageClient() {
     } else {
       setOpen(false);
     }
-  }, []); // Empty dependency array means this runs only once on mount
+  }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
 
   return (
     <main className="flex flex-col w-full h-screen">
       <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full h-full flex flex-col"
-            >
+            <div className="relative w-full h-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full h-full flex flex-col"
+              >
               <div className="flex w-full items-center border-b">
-                <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mr-2 ml-2 p-1 h-10 w-8"
+                  onClick={() => {
+                    if (isMobile) {
+                      setOpenMobile(!isSidebarOpen);
+                    } else {
+                      setOpen(!isSidebarOpen);
+                    }
+                  }}
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </Button>
+                <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
                   <TabsTrigger
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
@@ -1112,22 +1068,33 @@ function ChatPageClient() {
                       </span>
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="history"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
-                  >
-                    History
-                  </TabsTrigger>
                 </TabsList>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mr-2"
-                  onClick={() => {
-                    selectChatForDataset(null, null, null);
-                    setLinkedDatasetId(null);
-                    setActiveTab("chat");
-                    setSelectedContexts([]);
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`mr-2 ${activeTab === "history" ? "bg-muted border-b-2 border-primary" : ""}`}
+                      onClick={() => setActiveTab("history")}
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>History</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => {
+                        selectChatForDataset(null, null, null);
+                        setLinkedDatasetId(null);
+                        setActiveTab("chat");
+                        setSelectedContexts([]);
 
                     // Clear results when starting a new chat
                     resetExecutedQueries();
@@ -1135,46 +1102,28 @@ function ChatPageClient() {
                     setIsOpen(false);
                     setVisualizationOpen(false);
 
-                    // Clear URL parameters when starting a new chat
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.delete("chatId");
-                    params.delete("initialMessage");
-                    params.delete("contextData");
-                    router.replace(`/chat?${params.toString()}`);
-                  }}
-                >
-                  <MessageSquarePlus className="h-4 w-4 mr-1" />
-                  New Chat
-                </Button>
+                        // Clear URL parameters when starting a new chat
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("chatId");
+                        params.delete("initialMessage");
+                        params.delete("contextData");
+                        router.replace(`/chat?${params.toString()}`);
+                      }}
+                    >
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Chat</p>
+                  </TooltipContent>
+                </Tooltip>
                 {selectedChatId && (
                   <ShareChatDialog
                     chatId={selectedChatId}
                     currentVisibility={chatDetails?.visibility || "private"}
                   />
                 )}
-                {hasResults && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mr-2"
-                    onClick={() => {
-                      if (isResultsPanelOpen) {
-                        setIsOpen(false);
-                        setVisualizationOpen(false);
-                      } else {
-                        if (results?.data?.length || results?.error) {
-                          setIsOpen(true);
-                        }
-                        if (visualizationPaths.length > 0) {
-                          setVisualizationOpen(true);
-                        }
-                      }
-                    }}
-                  >
-                    <Table2 className="h-4 w-4 mr-1" />
-                    Results
-                  </Button>
-                )}
+
               </div>
 
               <TabsContent
@@ -1204,12 +1153,40 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
-                  searchParams={searchParams}
-                  router={router}
                   currentUserId={currentUserId}
                 />
               </TabsContent>
-            </Tabs>
+              </Tabs>
+              {activeTab === "chat" && (
+                <div className="absolute bottom-0 left-0 right-0 z-10">
+                  {isCurrentUserOwner || isAuthDisabled ? (
+                    <ChatInput
+                      onStop={handleStop}
+                      isStreaming={isStreaming}
+                      selectedContexts={selectedContexts}
+                      onSelectContext={handleSelectContext}
+                      onRemoveContext={handleRemoveContext}
+                      // isVoiceModeActive={isVoiceModeActive}
+                      // setIsVoiceModeActive={setIsVoiceModeActive}
+                      lockableContextIds={
+                        selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+                      }
+                      hasContext={selectedContexts.length > 0}
+                      input={input}
+                      handleInputChange={handleInputChange}
+                      handleSubmit={handleSubmit}
+                      isLoading={isLoading}
+                    />
+                  ) : selectedChatId ? (
+                    <ReadOnlyMessage
+                      chatOwner={chatDetails?.created_by}
+                      chatVisibility={chatDetails?.visibility}
+                      chatTitle={chatDetails?.title}
+                    />
+                  ) : null}
+                </div>
+              )}
+            </div>
           </ResizablePanel>
           {isResultsPanelOpen && (
             <>
@@ -1229,41 +1206,7 @@ function ChatPageClient() {
           )}
         </ResizablePanelGroup>
       </div>
-      {activeTab === "chat" && (
-        <div
-          className="fixed bottom-0 z-10"
-          style={{
-            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "0rem",
-            right: isResultsPanelOpen ? sqlPanelWidth : 0,
-          }}
-        >
-          {isCurrentUserOwner || isAuthDisabled ? (
-            <ChatInput
-              onStop={handleStop}
-              isStreaming={isStreaming}
-              selectedContexts={selectedContexts}
-              onSelectContext={handleSelectContext}
-              onRemoveContext={handleRemoveContext}
-              // isVoiceModeActive={isVoiceModeActive}
-              // setIsVoiceModeActive={setIsVoiceModeActive}
-              lockableContextIds={
-                selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-              }
-              hasContext={selectedContexts.length > 0}
-              input={input}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-          ) : selectedChatId ? (
-            <ReadOnlyMessage
-              chatOwner={chatDetails?.created_by}
-              chatVisibility={chatDetails?.visibility}
-              chatTitle={chatDetails?.title}
-            />
-          ) : null}
-        </div>
-      )}
+
       {/* {isVoiceModeActive && latestAssistantMessage && (
         <VoiceMode
           isActive={isVoiceModeActive}

@@ -5,16 +5,14 @@ import {
   PencilIcon,
   CheckIcon,
   XIcon,
-  FileIcon,
   MessageSquareIcon,
   DatabaseIcon,
   TableIcon,
   RowsIcon,
   ClockIcon,
-  ChevronRightIcon,
-  FolderIcon,
   InfoIcon,
   UserIcon,
+  CodeIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +38,54 @@ interface DatasetHeaderProps {
   onUpdate?: () => Promise<void>;
 }
 
+// Helper function to determine dataset source (commented out as unused)
+/*
+function getDatasetSource(dataset: Dataset): string {
+  // Check if dataset was sourced from database
+  if (
+    dataset.description?.includes("Dataset sourced from database via GoPie Web")
+  ) {
+    // Try to determine specific database from description or file path
+    if (
+      dataset.description.toLowerCase().includes("postgres") ||
+      dataset.file_path?.toLowerCase().includes("postgres")
+    ) {
+      return "PostgreSQL";
+    }
+    if (
+      dataset.description.toLowerCase().includes("mysql") ||
+      dataset.file_path?.toLowerCase().includes("mysql")
+    ) {
+      return "MySQL";
+    }
+    // Generic database if we can't determine specific type
+    return "Database";
+  }
+
+  // Check if it's a file upload (S3 path)
+  if (dataset.file_path?.startsWith("s3:/")) {
+    // Return the actual file format
+    const format = dataset.format?.toLowerCase();
+    switch (format) {
+      case "csv":
+        return "CSV";
+      case "parquet":
+        return "Parquet";
+      case "json":
+        return "JSON";
+      case "excel":
+        return "Excel";
+      case "duckdb":
+        return "DuckDB";
+      default:
+        return dataset.format || "File";
+    }
+  }
+
+  // Fallback to format if we can't determine source
+  return dataset.format || "Unknown";
+}
+*/
 
 export function DatasetHeader({
   dataset,
@@ -133,27 +179,22 @@ export function DatasetHeader({
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link
-          href={`/projects/${projectId}`}
-          className="hover:text-primary transition-colors flex items-center gap-1"
-        >
-          <FolderIcon className="h-4 w-4" />
-          Datasets
-        </Link>
-        <ChevronRightIcon className="h-4 w-4" />
-        <span className="text-muted-foreground truncate">{dataset.name}</span>
-      </div>
-
       {/* Main Header */}
-      <div className="flex items-start gap-6">
+      <div className="flex items-start gap-6 relative">
+        <div className="absolute -top-8 -right-8 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 ease-in-out opacity-100" />
+        {/* Chat Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute -top-8 -right-8 h-[50px] w-[50px] p-0 z-10"
+          title="Chat with Dataset"
+          onClick={handleChatClick}
+        >
+          <MessageSquareIcon className="h-4 w-4" />
+        </Button>
+        
         {/* Left Section - Main Info */}
-        <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="bg-primary/10 rounded-lg border p-3 flex-shrink-0">
-            <FileIcon className="h-6 w-6 text-primary" />
-          </div>
-
+        <div className="flex items-start gap-4 flex-1 min-w-0 pr-[60px]">
           <div className="flex-1 min-w-0 space-y-3">
             {/* Title and Badge */}
             {isEditing ? (
@@ -203,7 +244,7 @@ export function DatasetHeader({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-full hover:bg-secondary/80 flex-shrink-0"
+                    className="h-7 w-7 hover:bg-secondary/80 flex-shrink-0"
                     onClick={() => setIsEditing(true)}
                   >
                     <PencilIcon className="h-4 w-4" />
@@ -219,7 +260,7 @@ export function DatasetHeader({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                       onClick={() => setIsEditing(true)}
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
@@ -228,34 +269,35 @@ export function DatasetHeader({
                 </div>
 
                 {/* Quick Stats */}
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <TableIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {new Intl.NumberFormat("en", {
-                        notation: "compact",
-                      }).format(dataset.row_count || 0)}
-                    </span>
-                    <span className="text-muted-foreground">rows</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
-                    <span className="font-medium">
-                      {dataset.columns?.length || 0}
-                    </span>
-                    <span className="text-muted-foreground">columns</span>
-                  </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-muted-foreground hover:text-foreground"
-                      >
-                        <InfoIcon className="h-4 w-4 mr-1" />
-                        More details
-                      </Button>
-                    </DialogTrigger>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <TableIcon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {new Intl.NumberFormat("en", {
+                          notation: "compact",
+                        }).format(dataset.row_count || 0)}
+                      </span>
+                      <span className="text-muted-foreground">rows</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RowsIcon className="h-4 w-4 text-muted-foreground rotate-90" />
+                      <span className="font-medium">
+                        {dataset.columns?.length || 0}
+                      </span>
+                      <span className="text-muted-foreground">columns</span>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-muted-foreground hover:text-foreground"
+                        >
+                          <InfoIcon className="h-4 w-4 mr-1" />
+                          More details
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent className="max-w-md">
                       <DialogHeader>
                         <DialogTitle>Dataset Details</DialogTitle>
@@ -265,7 +307,7 @@ export function DatasetHeader({
                         <div className="space-y-3">
                           <h4 className="font-medium text-sm">Statistics</h4>
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-secondary/20 rounded-lg p-3">
+                            <div className="bg-secondary/20 p-3">
                               <div className="text-xs text-muted-foreground mb-1">
                                 Rows
                               </div>
@@ -275,7 +317,7 @@ export function DatasetHeader({
                                 }).format(dataset.row_count || 0)}
                               </div>
                             </div>
-                            <div className="bg-secondary/20 rounded-lg p-3">
+                            <div className="bg-secondary/20 p-3">
                               <div className="text-xs text-muted-foreground mb-1">
                                 Columns
                               </div>
@@ -283,7 +325,7 @@ export function DatasetHeader({
                                 {dataset.columns?.length || 0}
                               </div>
                             </div>
-                            <div className="bg-secondary/20 rounded-lg p-3 col-span-2">
+                            <div className="bg-secondary/20 p-3 col-span-2">
                               <div className="text-xs text-muted-foreground mb-1">
                                 File Size
                               </div>
@@ -360,44 +402,48 @@ export function DatasetHeader({
                       </div>
                     </DialogContent>
                   </Dialog>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  {!isEditing && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 hover:bg-secondary/80"
+                        title="Download Dataset"
+                      >
+                        <DownloadIcon className="h-5 w-5" />
+                      </Button>
+                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-secondary/80"
+                          title="Query Dataset"
+                        >
+                          <DatabaseIcon className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/api`}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-secondary/80"
+                          title="API Playground"
+                        >
+                          <CodeIcon className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Section - Action Buttons */}
-        {!isEditing && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Download Dataset"
-            >
-              <DownloadIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 hover:bg-secondary/80"
-              title="Chat with Dataset"
-              onClick={handleChatClick}
-            >
-              <MessageSquareIcon className="h-5 w-5" />
-            </Button>
-            <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 hover:bg-secondary/80"
-                title="Query Dataset"
-              >
-                <DatabaseIcon className="h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        )}
+
       </div>
     </div>
   );

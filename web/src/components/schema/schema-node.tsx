@@ -22,7 +22,7 @@ export function SchemaNode({ data }: SchemaNodeProps) {
 
   return (
     <Card className="w-[400px] shadow-lg">
-      <CardHeader className="p-3 border-b bg-muted/50 rounded-t-lg">
+      <CardHeader className="p-3 border-b bg-muted/50">
         <CardTitle className="flex items-center gap-2 text-sm">
           <TableIcon className="h-4 w-4 text-muted-foreground" />
           <Badge variant="outline" className="font-mono px-2 py-0.5">
@@ -44,7 +44,7 @@ export function SchemaNode({ data }: SchemaNodeProps) {
             ))}
           </div>
         )}
-        <div className="divide-y rounded-b-lg overflow-hidden">
+        <div className="divide-y overflow-hidden">
           {regularFields.map((field, index) => (
             <FieldRow
               key={field.column_name}
@@ -61,7 +61,6 @@ export function SchemaNode({ data }: SchemaNodeProps) {
 function FieldRow({
   field,
   isPrimary = false,
-  isLast = false,
 }: {
   field: ColumnInfo;
   isPrimary?: boolean;
@@ -72,7 +71,6 @@ function FieldRow({
       className={cn(
         "group flex items-center gap-2 pl-8 pr-3 py-2 hover:bg-muted/50 relative",
         isPrimary && "hover:bg-primary/10",
-        isLast && "rounded-b-lg",
       )}
     >
       <Handle

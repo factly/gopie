@@ -189,7 +189,7 @@ export function ProjectsSidebar() {
                     >
                       <>
                         <div
-                          className="group flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent cursor-pointer transition-all duration-200"
+                          className="group flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer transition-all duration-200"
                           onClick={() => toggleProjectExpansion(project.id)}
                         >
                           <div className="flex-shrink-0 w-4">
@@ -227,7 +227,7 @@ export function ProjectsSidebar() {
                               datasets.map((dataset) => (
                                 <div
                                   key={dataset.id}
-                                  className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-accent cursor-pointer group"
+                                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent cursor-pointer group"
                                   onClick={(e) =>
                                     navigateToDataset(project.id, dataset.id, e)
                                   }

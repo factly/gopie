@@ -112,7 +112,7 @@ export default function ManageSecretsPage() {
               {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between p-4 border"
                 >
                   <div className="space-y-2 flex-1">
                     <Skeleton className="h-4 w-1/3" />
@@ -139,7 +139,7 @@ export default function ManageSecretsPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+            <div className="border border-destructive/50 bg-destructive/5 p-4">
               <h4 className="text-sm font-semibold text-destructive">Error</h4>
               <p className="text-sm text-destructive/80 mt-1">
                 {error.message}
@@ -198,7 +198,7 @@ export default function ManageSecretsPage() {
               </div>
             </motion.div>
           ) : (
-            <div className="rounded-md border">
+            <div className="border">
               <Table>
                 <TableHeader>
                   <TableRow>

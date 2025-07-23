@@ -35,7 +35,7 @@ export function AuthStatus({
   if (isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="h-8 w-8" />
         {showName && <Skeleton className="h-4 w-24" />}
       </div>
     );

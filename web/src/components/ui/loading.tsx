@@ -30,13 +30,13 @@ export function Loading({
       <div className="relative">
         <div
           className={cn(
-            "animate-spin rounded-full border-2 border-primary/20 border-t-primary",
+            "animate-spin border-2 border-primary/20 border-t-primary",
             sizeClasses[size]
           )}
         />
         <div
           className={cn(
-            "absolute inset-0 animate-ping rounded-full bg-primary/10",
+            "absolute inset-0 animate-ping bg-primary/10",
             sizeClasses[size]
           )}
         />
@@ -49,9 +49,9 @@ export function Loading({
             {text}
           </span>
           <div className="flex gap-0.5">
-            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]" />
-            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]" />
-            <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" />
+            <div className="w-1 h-1 bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+            <div className="w-1 h-1 bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
+            <div className="w-1 h-1 bg-muted-foreground animate-bounce" />
           </div>
         </div>
       )}
@@ -66,9 +66,9 @@ export function PageLoading() {
       {/* Header skeleton */}
       <div className="border-b bg-background/50 backdrop-blur-sm w-[80%] mx-auto">
         <div className="container flex h-14 items-center">
-          <div className="w-8 h-8 bg-muted animate-pulse rounded" />
-          <div className="ml-4 w-24 h-4 bg-muted animate-pulse rounded" />
-          <div className="ml-auto w-32 h-8 bg-muted animate-pulse rounded" />
+          <div className="w-8 h-8 bg-muted animate-pulse" />
+          <div className="ml-4 w-24 h-4 bg-muted animate-pulse" />
+          <div className="ml-auto w-32 h-8 bg-muted animate-pulse" />
         </div>
       </div>
 

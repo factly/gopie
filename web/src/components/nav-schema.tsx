@@ -80,7 +80,7 @@ export function NavSchema() {
           {schema.map((column) => (
             <div
               key={column.column_name}
-              className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+              className="group flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="text-muted-foreground/70 group-hover:text-muted-foreground/90 transition-colors">

@@ -301,10 +301,7 @@ export function DataPreview(props: { datasetId: string }) {
         className="flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Data Preview
-          </h2>
-          <div className="flex items-center border rounded-md shadow-sm">
+          <div className="flex items-center border shadow-sm">
             <Button
               variant={viewMode === "table" ? "secondary" : "ghost"}
               size="sm"
@@ -421,13 +418,13 @@ export function DataPreview(props: { datasetId: string }) {
                         </Button>
                       )}
                     </div>
-                    <ScrollArea className="h-[120px] rounded-md border bg-muted/5 p-2">
+                    <ScrollArea className="h-[120px] border bg-muted/5 p-2">
                       {filters.length > 0 ? (
                         <div className="space-y-2 p-1">
                           {filters.map((filter, index) => (
                             <div
                               key={index}
-                              className="group flex items-center gap-2 rounded-md border bg-background p-2 shadow-sm transition-colors hover:bg-muted/30"
+                              className="group flex items-center gap-2 border bg-background p-2 shadow-sm transition-colors hover:bg-muted/30"
                             >
                               <div className="flex flex-1 items-center gap-2">
                                 <Badge
