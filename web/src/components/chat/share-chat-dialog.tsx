@@ -8,7 +8,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,98 +92,110 @@ export function ShareChatDialog({
     (option) => option.value === selectedVisibility
   );
 
+  // Default trigger button with tooltip
+  const triggerButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="mr-2"
+          onClick={() => setOpen(true)}
+        >
+          <Share2 className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Share</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="mr-2">
-                <Share2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Share</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Share Chat</DialogTitle>
-          <DialogDescription>
-            Choose who can view this chat conversation.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="visibility">Visibility</Label>
-            <Select
-              value={selectedVisibility}
-              onValueChange={(value: ChatVisibility) =>
-                setSelectedVisibility(value)
+    <>
+      {children ? (
+        <div onClick={() => setOpen(true)}>{children}</div>
+      ) : (
+        triggerButton
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Chat</DialogTitle>
+            <DialogDescription>
+              Choose who can view this chat conversation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="visibility">Visibility</Label>
+              <Select
+                value={selectedVisibility}
+                onValueChange={(value: ChatVisibility) =>
+                  setSelectedVisibility(value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {selectedOption && (
+                      <div className="flex items-center gap-2">
+                        <selectedOption.icon className="h-4 w-4" />
+                        <span>{selectedOption.label}</span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {visibilityOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-start gap-3">
+                        <option.icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {option.description}
+                          </span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedVisibility === "public" && (
+              <div className="p-3 bg-muted/50 border">
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Public Link</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Anyone with this link will be able to view the chat
+                  conversation.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={updateVisibility.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateVisibility}
+              disabled={
+                updateVisibility.isPending ||
+                selectedVisibility === currentVisibility
               }
             >
-              <SelectTrigger>
-                <SelectValue>
-                  {selectedOption && (
-                    <div className="flex items-center gap-2">
-                      <selectedOption.icon className="h-4 w-4" />
-                      <span>{selectedOption.label}</span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {visibilityOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-start gap-3">
-                      <option.icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{option.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedVisibility === "public" && (
-            <div className="p-3 bg-muted/50 border">
-              <div className="flex items-center gap-2 text-sm">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Public Link</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Anyone with this link will be able to view the chat
-                conversation.
-              </p>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={updateVisibility.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpdateVisibility}
-            disabled={
-              updateVisibility.isPending ||
-              selectedVisibility === currentVisibility
-            }
-          >
-            {updateVisibility.isPending ? "Updating..." : "Update"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              {updateVisibility.isPending ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
