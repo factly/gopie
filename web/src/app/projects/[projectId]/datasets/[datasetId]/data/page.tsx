@@ -18,7 +18,7 @@ import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { format } from "sql-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -268,92 +268,71 @@ export default function SqlPage({
       <div className="flex-1 px-4 overflow-hidden min-h-0 flex flex-col">
         <motion.div variants={fadeInVariants} className="flex-1 min-h-0">
           <Card className="h-full flex flex-col">
-            <CardHeader className="pb-3 flex-shrink-0">
-              <CardTitle className="text-lg">Query Data</CardTitle>
+            <CardHeader className="pb-4 flex-shrink-0 border-b bg-muted/50">
+              <CardTitle className="font-medium">Query Data</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 overflow-auto space-y-6">
               {/* Natural Language Input */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Ask in Natural Language
-                  </h3>
-                  <Button
-                    onClick={handleGenerateAndExecute}
-                    disabled={isPending}
-                    size="sm"
-                  >
-                    {nl2Sql.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <PlayIcon className="mr-2 h-4 w-4" />
-                    )}
-                    Generate & Execute
-                  </Button>
-                </div>
-                <div className="relative flex flex-col gap-2">
-                  <Textarea
-                    placeholder="Ask AI to help you write your query..."
-                    value={naturalQuery}
-                    onChange={(e) => setNaturalQuery(e.target.value)}
-                    className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 resize-none rounded-md shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
-                  />
+              <div className="space-y-4 pt-4">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Ask in Natural Language
+                </h3>
+                <div className="relative flex flex-col gap-2 border">
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Ask AI to help you write your query..."
+                      value={naturalQuery}
+                      onChange={(e) => setNaturalQuery(e.target.value)}
+                      className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 resize-none rounded-md shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40 pr-16"
+                    />
+                    <Button
+                      onClick={handleGenerateAndExecute}
+                      disabled={isPending}
+                      size="sm"
+                      variant="ghost"
+                      className="absolute right-2 bottom-2 bg-transparent hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary"
+                    >
+                      {nl2Sql.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <PlayIcon className="h-4 w-4" />
+                      )}
+                      Run
+                    </Button>
+                  </div>
                 </div>
               </div>
 
               {/* SQL Editor */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    SQL Query
-                  </h3>
-                  <Button
-                    onClick={handleExecuteSql}
-                    disabled={isPending}
-                    size="sm"
-                  >
-                    {executeSql.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <PlayIcon className="mr-2 h-4 w-4" />
-                    )}
-                    Execute Query
-                  </Button>
-                </div>
-                <div className="border rounded-md overflow-hidden">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  SQL Query
+                </h3>
+                <div className="relative border rounded-md overflow-hidden">
                   <SqlEditor
                     value={query}
                     onChange={setQuery}
                     schema={dataset.columns}
                     datasetId={dataset.name}
                   />
+                  <Button
+                    onClick={handleExecuteSql}
+                    disabled={isPending}
+                    size="sm"
+                    variant="ghost"
+                    className="absolute right-2 bottom-2 z-10 bg-transparent hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary"
+                  >
+                    {executeSql.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <PlayIcon className="h-4 w-4" />
+                    )}
+                    Run
+                  </Button>
                 </div>
               </div>
 
-              {/* Schema Section */}
-              {dataset.columns && dataset.columns.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">
-                    Schema
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {dataset.columns.map((column, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs"
-                      >
-                        {column.column_name}
-                        {column.column_type && (
-                          <span className="text-muted-foreground ml-1">
-                            ({column.column_type})
-                          </span>
-                        )}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </CardContent>
           </Card>
         </motion.div>
@@ -380,8 +359,8 @@ export default function SqlPage({
 
 
           {/* Results Header */}
-          <div className="border-b bg-muted/50 p-3 ml-4">
-            <div className="flex items-center gap-2">
+          <div className="border-b bg-muted/50 p-3 ml-4 border">
+            <div className="flex items-center">
               <h3 className="font-medium">Results</h3>
             </div>
           </div>
