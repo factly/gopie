@@ -63,6 +63,7 @@ async def process_test_case(
                 response["selected_datasets"],
                 response["generated_sql_queries"],
                 response["tool_messages"],
+                response.get("visualization_results", []),
             )
             formatter.print_evaluation_status()
 

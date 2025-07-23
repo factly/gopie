@@ -11,8 +11,12 @@ from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
 from app.core.constants import (
     DATASETS_USED,
+    DATASETS_USED_ARG,
     INTERMEDIATE_MESSAGES,
     SQL_QUERIES_GENERATED,
+    SQL_QUERIES_GENERATED_ARG,
+    VISUALIZATION_RESULT,
+    VISUALIZATION_RESULT_ARG,
 )
 
 from .terminal_formatter import TerminalFormatter
@@ -89,13 +93,16 @@ Return the response as JSON object:
     return prompt | setup_model() | JsonOutputParser()
 
 
-def process_tool_calls(tool_calls: List[Dict[str, Any]]) -> Tuple[List[str], List[str], List[str]]:
+def process_tool_calls(
+    tool_calls: List[Dict[str, Any]],
+) -> Tuple[List[str], List[str], List[str], List[str]]:
     tool_messages = []
     generated_sql_queries = []
     selected_datasets = []
+    visualization_results = []
 
     if not tool_calls:
-        return tool_messages, generated_sql_queries, selected_datasets
+        return tool_messages, generated_sql_queries, selected_datasets, visualization_results
 
     for tool_call in tool_calls:
         if not tool_call or "function" not in tool_call:
@@ -113,6 +120,9 @@ def process_tool_calls(tool_calls: List[Dict[str, Any]]) -> Tuple[List[str], Lis
             elif name == DATASETS_USED:
                 _extract_datasets(args, selected_datasets)
 
+            elif name == VISUALIZATION_RESULT:
+                _extract_visualization_results(args, visualization_results)
+
             elif name == INTERMEDIATE_MESSAGES and args.get("role") == "intermediate":
                 content = args.get("content", "")
                 category = args.get("category", "")
@@ -127,14 +137,12 @@ def process_tool_calls(tool_calls: List[Dict[str, Any]]) -> Tuple[List[str], Lis
         except json.JSONDecodeError:
             continue
 
-    return tool_messages, generated_sql_queries, selected_datasets
+    return tool_messages, generated_sql_queries, selected_datasets, visualization_results
 
 
 def _extract_sql_queries(args: Dict[str, Any], sql_queries: List[str]) -> None:
-    if "query" in args and args.get("query"):
-        sql_queries.append(str(args.get("query")))
-    elif "queries" in args:
-        queries = args.get("queries")
+    if SQL_QUERIES_GENERATED_ARG in args and args.get(SQL_QUERIES_GENERATED_ARG):
+        queries = args.get(SQL_QUERIES_GENERATED_ARG)
         if isinstance(queries, list):
             sql_queries.extend([str(q) for q in queries if q])
         elif queries:
@@ -142,12 +150,21 @@ def _extract_sql_queries(args: Dict[str, Any], sql_queries: List[str]) -> None:
 
 
 def _extract_datasets(args: Dict[str, Any], datasets: List[str]) -> None:
-    dataset_args = args.get("datasets", [])
-    if dataset_args:
+    if DATASETS_USED_ARG in args and args.get(DATASETS_USED_ARG):
+        dataset_args = args.get(DATASETS_USED_ARG)
         if isinstance(dataset_args, list):
             datasets.extend(dataset_args)
         else:
             datasets.append(str(dataset_args))
+
+
+def _extract_visualization_results(args: Dict[str, Any], visualization_results: List[str]) -> None:
+    if VISUALIZATION_RESULT_ARG in args and args.get(VISUALIZATION_RESULT_ARG):
+        viz_args = args.get(VISUALIZATION_RESULT_ARG)
+        if isinstance(viz_args, list):
+            visualization_results.extend([str(v) for v in viz_args if v])
+        elif viz_args:
+            visualization_results.append(str(viz_args))
 
 
 def _extract_datasets_from_content(args: Dict[str, Any], content: str, datasets: List[str]) -> None:
@@ -199,6 +216,7 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
         tool_messages = []
         generated_sql_queries = []
         selected_datasets = []
+        visualization_results = []
 
         for line in response.iter_lines():
             if not line:
@@ -221,10 +239,11 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
 
                     tool_calls = delta.get("tool_calls")
                     if tool_calls is not None:
-                        msgs, queries, datasets = process_tool_calls(tool_calls)
+                        msgs, queries, datasets, viz_results = process_tool_calls(tool_calls)
                         tool_messages.extend(msgs)
                         generated_sql_queries.extend(queries)
                         selected_datasets.extend(datasets)
+                        visualization_results.extend(viz_results)
             except json.JSONDecodeError:
                 continue
 
@@ -233,6 +252,7 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
             "tool_messages": tool_messages,
             "generated_sql_queries": generated_sql_queries,
             "selected_datasets": selected_datasets,
+            "visualization_results": visualization_results,
         }
 
     except requests.exceptions.RequestException as e:
