@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
@@ -39,18 +38,18 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 	}
 
 	messages := make([]models.ChatMessage, 0, len(params.Messages))
-	now := time.Now()
+	// now := time.Now()
 
 	// Process messages sequentially within the transaction
-	for i, message := range params.Messages {
+	for _, message := range params.Messages {
 		choiceBytes, _ := json.Marshal(message.Choices)
 		// Create chat message in DB
 		chat, err := qtx.CreateChatMessage(ctx, gen.CreateChatMessageParams{
-			ChatID:    c.ID,
-			Choices:   choiceBytes,
-			Object:    message.Object,
-			Model:     pgtype.Text{String: message.Model, Valid: message.Model != ""},
-			CreatedAt: pgtype.Timestamptz{Valid: true, Time: now.Add(time.Duration(i) * time.Millisecond)},
+			ChatID:  c.ID,
+			Choices: choiceBytes,
+			Object:  message.Object,
+			Model:   pgtype.Text{String: message.Model, Valid: message.Model != ""},
+			// CreatedAt: pgtype.Timestamptz{Valid: true, Time: now.Add(time.Duration(i) * time.Millisecond)},
 		})
 		if err != nil {
 			s.logger.Error("Error creating chat message", zap.Error(err))

@@ -208,16 +208,16 @@ func (d *OlapService) getResultsWithCount(_, sql string, imposeLim bool) (*query
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
 	// go d.executeCountQuery(countSql, countChan)
-	limitedSql := sql
-	var err error
-	if imposeLim {
-		limitedSql, err = pkg.ImposeLimits(sql, 1000)
-		if err != nil {
-			return nil, fmt.Errorf("failed to impose limits: %w", err)
-		}
-	}
+	// limitedSql := sql
+	// var err error
+	// if imposeLim {
+	// 	limitedSql, err = pkg.ImposeLimits(sql, 1000)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to impose limits: %w", err)
+	// 	}
+	// }
 
-	go d.executeDataQuery(limitedSql, rowsChan)
+	go d.executeDataQuery(sql, rowsChan)
 
 	// countResult := <-countChan
 	// if countResult.err != nil {
@@ -226,7 +226,7 @@ func (d *OlapService) getResultsWithCount(_, sql string, imposeLim bool) (*query
 
 	rowsResult := <-rowsChan
 	if rowsResult.err != nil {
-		return nil, err
+		return nil, rowsResult.err
 	}
 
 	return &queryResult{
