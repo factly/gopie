@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNl2Sql } from "@/lib/mutations/dataset/nl2sql";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
+import { format } from "sql-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -102,7 +103,24 @@ export default function SqlPage({
       return;
     }
 
-    toast.promise(executeSql.mutateAsync(query), {
+    // Format the SQL query before executing
+    let formattedQuery = query;
+    try {
+      formattedQuery = format(query, {
+        language: 'sql',
+        tabWidth: 2,
+        useTabs: false,
+        keywordCase: 'lower',
+        linesBetweenQueries: 2,
+      });
+      // Update the query state with formatted version
+      setQuery(formattedQuery);
+    } catch (error) {
+      console.warn('Failed to format SQL:', error);
+      // Continue with original query if formatting fails
+    }
+
+    toast.promise(executeSql.mutateAsync(formattedQuery), {
       loading: "Executing SQL query...",
       success: (response) => {
         setResults(response.data);
@@ -110,7 +128,7 @@ export default function SqlPage({
       },
       error: (err) => `Failed to execute query: ${err.message}`,
     });
-  }, [query, executeSql]);
+  }, [query, executeSql, setQuery]);
 
 
   React.useEffect(() => {
@@ -174,11 +192,24 @@ export default function SqlPage({
         datasetId: dataset.name,
       });
 
-      // Set the generated SQL directly in the main editor
-      setQuery(sqlQuery.sql);
+      // Format and set the generated SQL in the main editor
+      let formattedSQL = sqlQuery.sql;
+      try {
+        formattedSQL = format(sqlQuery.sql, {
+          language: 'sql',
+          tabWidth: 2,
+          useTabs: false,
+          keywordCase: 'lower',
+          linesBetweenQueries: 2,
+        });
+      } catch (error) {
+        console.warn('Failed to format AI-generated SQL:', error);
+        // Use original SQL if formatting fails
+      }
+      setQuery(formattedSQL);
 
       toast.loading("Executing generated SQL...", { id: promiseId });
-      const response = await executeSql.mutateAsync(sqlQuery.sql);
+      const response = await executeSql.mutateAsync(formattedSQL);
       setResults(response.data);
 
       toast.success("Query executed successfully", { id: promiseId });
@@ -293,7 +324,7 @@ export default function SqlPage({
                       placeholder="Ask AI to help you write your query..."
                       value={naturalQuery}
                       onChange={(e) => setNaturalQuery(e.target.value)}
-                      className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 pr-12 resize-none rounded-xl shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
+                      className="min-h-[80px] text-base leading-relaxed bg-background focus:ring-2 focus:ring-primary/20 border-muted placeholder:text-muted-foreground/50 pr-12 resize-none rounded-md shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 focus:border-primary/40"
                     />
                     {browserSupportsSpeechRecognition && (
                       <div className="absolute right-3 top-3">

@@ -86,6 +86,7 @@
     "reactflow": "^11.11.4",
     "regenerator-runtime": "^0.14.1",
     "sonner": "^2.0.3",
+    "sql-formatter": "^15.6.6",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
