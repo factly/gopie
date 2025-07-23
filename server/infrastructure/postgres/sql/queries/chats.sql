@@ -45,9 +45,10 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model
+  model,
+  created_at
 ) values (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 returning *;
 

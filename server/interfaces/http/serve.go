@@ -55,6 +55,9 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		Logger: appLogger.Logger,
 	}))
 
+	// Impose limits on web facing apis
+	app.Use(middleware.ImposeLimit(true))
+
 	// Swagger route
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
@@ -171,6 +174,9 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: appLogger.Logger,
 	}))
+
+	// Don't impose limits on internal server
+	app.Use(middleware.ImposeLimit(false))
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{

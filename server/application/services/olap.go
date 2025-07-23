@@ -119,7 +119,7 @@ func parseFilepath(filepath string) (string, string, error) {
 	return bucket, path, nil
 }
 
-func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
+func (d *OlapService) SqlQuery(sql string, imposeLimits bool) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
 	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
 		parts := strings.Split(sql, `"`)
@@ -151,7 +151,7 @@ func (d *OlapService) SqlQuery(sql string) (map[string]any, error) {
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	queryResult, err := d.getResultsWithCount("", sql)
+	queryResult, err := d.getResultsWithCount("", sql, imposeLimits)
 	if err != nil {
 		d.logger.Error("Query execution failed", zap.Error(err))
 		return nil, err
@@ -203,16 +203,20 @@ type asyncResult[T any] struct {
 	err  error
 }
 
-func (d *OlapService) getResultsWithCount(countSql, sql string) (*queryResult, error) {
+func (d *OlapService) getResultsWithCount(_, sql string, imposeLim bool) (*queryResult, error) {
 	// countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
 	// go d.executeCountQuery(countSql, countChan)
-
-	limitedSql, err := pkg.ImposeLimits(sql, 1000)
-	if err != nil {
-		return nil, fmt.Errorf("failed to impose limits: %w", err)
+	limitedSql := sql
+	var err error
+	if imposeLim {
+		limitedSql, err = pkg.ImposeLimits(sql, 1000)
+		if err != nil {
+			return nil, fmt.Errorf("failed to impose limits: %w", err)
+		}
 	}
+
 	go d.executeDataQuery(limitedSql, rowsChan)
 
 	// countResult := <-countChan
@@ -292,7 +296,7 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 		return nil, err
 	}
 
-	result, err := d.getResultsWithCount(countSql, sql)
+	result, err := d.getResultsWithCount(countSql, sql, params.ImposeLimits)
 	if err != nil {
 		return nil, err
 	}

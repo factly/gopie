@@ -5,6 +5,7 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -25,6 +26,7 @@ import (
 // @Router /v1/api/tables/{tableName} [get]
 func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 	table := ctx.Params("tableName")
+	imposeLimits := ctx.Locals(middleware.ImposeLimitsCtxKey).(bool)
 
 	columns := strings.Split(ctx.Query("columns", "*"), ",")
 	filters := ctx.Queries()
@@ -33,12 +35,13 @@ func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 	page := ctx.QueryInt("page", 1)
 
 	params := models.RestParams{
-		Cols:   columns,
-		Sort:   sort,
-		Limit:  limit,
-		Page:   page,
-		Filter: filters,
-		Table:  table,
+		Cols:         columns,
+		Sort:         sort,
+		Limit:        limit,
+		Page:         page,
+		Filter:       filters,
+		Table:        table,
+		ImposeLimits: imposeLimits,
 	}
 
 	result, err := h.driverSvc.RestQuery(params)

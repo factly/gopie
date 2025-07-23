@@ -73,18 +73,20 @@ insert into chat_messages (
   chat_id,
   choices,
   object,
-  model
+  model,
+  created_at
 ) values (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 returning id, chat_id, choices, object, model, created_at
 `
 
 type CreateChatMessageParams struct {
-	ChatID  string
-	Choices []byte
-	Object  string
-	Model   pgtype.Text
+	ChatID    string
+	Choices   []byte
+	Object    string
+	Model     pgtype.Text
+	CreatedAt pgtype.Timestamptz
 }
 
 func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error) {
@@ -93,6 +95,7 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 		arg.Choices,
 		arg.Object,
 		arg.Model,
+		arg.CreatedAt,
 	)
 	var i ChatMessage
 	err := row.Scan(
