@@ -8,7 +8,6 @@ import {
   Wand2,
   X,
   Check,
-  MessageSquare,
   InfoIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -232,32 +231,23 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
           <li>No special characters</li>
           <li>Cannot be a single digit</li>
         </ul>
-        <div className="mt-2">
-          You can also edit the data types to change how DuckDB processes the
-          CSV. Changes to datatypes are processed immediately.
-        </div>
-        <div className="mt-2">
-          Click the <MessageSquare className="h-3.5 w-3.5 inline mx-1" /> icon
-          to add descriptions to your columns to help users understand the data.
-          These descriptions will be saved with your dataset.
-        </div>
       </p>
 
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Original Name</TableHead>
-              <TableHead>Updated Name</TableHead>
-              <TableHead>Data Type</TableHead>
-              <TableHead className="w-[180px]">Description</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="w-[120px]">Original Name</TableHead>
+              <TableHead className="w-[120px]">Updated Name</TableHead>
+              <TableHead className="w-[100px]">Data Type</TableHead>
+              <TableHead className="w-[250px]">Description</TableHead>
+              <TableHead className="w-[80px]">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {mappingsArray.map((mapping) => (
               <TableRow key={mapping.originalName}>
-                <TableCell className="whitespace-nowrap">
+                <TableCell className="whitespace-nowrap w-[120px]">
                   {mapping.originalName}
                 </TableCell>
                 <TableCell>
@@ -309,9 +299,9 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                         onClick={() =>
                           handleEditNameStart(mapping.originalName)
                         }
-                        className="h-7 w-7 bg-muted/60 ml-2"
+                        className="h-7 w-7 bg-muted/30 ml-2 opacity-60 hover:opacity-100 hover:bg-muted/60"
                       >
-                        <PencilIcon className="h-3.5 w-3.5" />
+                        <PencilIcon className="h-3 w-3" />
                       </Button>
                     </div>
                   )}
@@ -369,9 +359,9 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                         onClick={() =>
                           handleEditDataTypeStart(mapping.originalName)
                         }
-                        className="h-7 w-7 bg-muted/60 ml-2"
+                        className="h-7 w-7 bg-muted/30 ml-2 opacity-60 hover:opacity-100 hover:bg-muted/60"
                       >
-                        <PencilIcon className="h-3.5 w-3.5" />
+                        <PencilIcon className="h-3 w-3" />
                       </Button>
                     </div>
                   )}
@@ -409,9 +399,9 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
                       onClick={() =>
                         handleOpenDescriptionDialog(mapping.originalName)
                       }
-                      className="h-6 w-6 bg-muted/60 flex-shrink-0"
+                      className="h-6 w-6 bg-muted/30 flex-shrink-0 opacity-60 hover:opacity-100 hover:bg-muted/60"
                     >
-                      <MessageSquare className="h-3 w-3" />
+                      <PencilIcon className="h-3 w-3" />
                     </Button>
                   </div>
                 </TableCell>
