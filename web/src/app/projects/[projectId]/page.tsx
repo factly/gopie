@@ -107,7 +107,7 @@ export default function ProjectPage({
   if (!project) return null;
 
   return (
-    <div className="mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8 space-y-8">
       <InlineProjectEditor project={project} />
 
       <div className="pt-8">
