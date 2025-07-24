@@ -1121,9 +1121,9 @@ function ChatPageClient() {
                   }
                   router.replace(`/chat?${params.toString()}`);
                 }}
-                className="w-full h-full flex flex-col"
+                className="w-full h-full flex flex-col relative"
               >
-              <div className="flex w-full items-center border-b">
+              <div className="flex w-full items-center border-b relative z-10">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1226,7 +1226,7 @@ function ChatPageClient() {
                 value="chat"
                 className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
               >
-                <div className="flex flex-col h-full min-h-0">
+                <div className="flex flex-col h-full min-h-0 relative">
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
@@ -1256,8 +1256,8 @@ function ChatPageClient() {
               {activeTab === "chat" && (
                 <>
                   {!selectedChatId && displayMessages.length === 0 ? (
-                    <div className="absolute inset-0 flex items-center justify-center px-4">
-                      <div className="w-full max-w-2xl">
+                    <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
+                      <div className="w-full max-w-2xl pointer-events-auto">
                         <div className="mb-6 text-center">
                           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                             Chat with your data
@@ -1304,7 +1304,7 @@ function ChatPageClient() {
                       </div>
                     </div>
                   ) : (
-                    <div className="absolute bottom-0 left-0 right-0 z-10">
+                    <div className="absolute bottom-0 left-0 right-0 z-20">
                       {isCurrentUserOwner || isAuthDisabled ? (
                         <ChatInput
                           onStop={handleStop}
