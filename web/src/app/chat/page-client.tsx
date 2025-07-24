@@ -434,16 +434,7 @@ const ChatView = React.memo(
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-16 w-2/3" />
             </div>
-          ) : !selectedChatId && messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center pt-12 text-center max-w-lg mx-auto space-y-6">
-              <div className="text-lg font-medium">
-                Start a new conversation
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Select contexts and ask questions about your data.
-              </p>
-            </div>
-          ) : (
+          ) : !selectedChatId && messages.length === 0 ? null : (
             <div className="space-y-6">
               {messages.map((message) => (
                 <ChatMessage
@@ -516,6 +507,7 @@ function ChatPageClient() {
     setSelectedChatTitle,
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const {
     isOpen: sqlIsOpen,
     setIsOpen,
@@ -629,6 +621,9 @@ function ChatPageClient() {
       );
       // Switch to streaming messages when we start receiving a response
       setUseStreamingMessages(true);
+      setIsStreaming(true);
+      // Hide loading message once we start receiving the actual stream
+      setShowLoadingMessage(false);
     },
     onFinish: (message, { usage, finishReason }) => {
       console.log("Chat message finished:", message);
@@ -640,6 +635,7 @@ function ChatPageClient() {
       if (message.role === "assistant") {
         // setLatestAssistantMessage(message.content); // Removed voice mode state
         setIsStreaming(false);
+        setShowLoadingMessage(false);
       }
 
       // If this was a new chat (no selectedChatId), invalidate chats list
@@ -659,19 +655,49 @@ function ChatPageClient() {
       toast.error("Error processing chat: " + (err.message || "Unknown error"));
       // Switch back to query messages on error
       setUseStreamingMessages(false);
+      setIsStreaming(false);
+      setShowLoadingMessage(false);
     },
     initialMessages: [], // Don't use initial messages from query
   });
 
   // Determine which messages to display
   const displayMessages = useMemo(() => {
-    if (useStreamingMessages && streamingMessages.length > 0) {
-      // When streaming, combine query messages with streaming messages
-      return [...allChatMessages, ...streamingMessages];
+    let messages = [];
+    
+    if (useStreamingMessages) {
+      // When streaming, show streaming messages (which includes the user message immediately)
+      // If we have a selectedChatId, prepend existing messages
+      if (selectedChatId && allChatMessages.length > 0) {
+        messages = [...allChatMessages, ...streamingMessages];
+      } else {
+        // For new chats, just show streaming messages
+        messages = streamingMessages;
+      }
+    } else {
+      // Otherwise, use query messages
+      messages = allChatMessages;
     }
-    // Otherwise, use query messages
-    return allChatMessages;
-  }, [useStreamingMessages, streamingMessages, allChatMessages]);
+    
+    // Add optimistic loading message if needed
+    if (showLoadingMessage && messages.length > 0) {
+      // Check if the last message is from the user and there's no assistant message yet
+      const lastMessage = messages[messages.length - 1];
+      const hasAssistantResponse = streamingMessages.some(msg => msg.role === 'assistant' && msg.content);
+      
+      if (lastMessage.role === 'user' && !hasAssistantResponse) {
+        // Add a loading assistant message
+        messages = [...messages, {
+          id: 'loading-' + Date.now(),
+          role: 'assistant' as const,
+          content: '',
+          createdAt: new Date()
+        } as UIMessage];
+      }
+    }
+    
+    return messages;
+  }, [useStreamingMessages, streamingMessages, allChatMessages, selectedChatId, showLoadingMessage]);
 
   // Log messages for debugging
   useEffect(() => {
@@ -803,9 +829,19 @@ function ChatPageClient() {
         toast.error("Please select at least one project or dataset before sending a message");
         return;
       }
+      
+      // For new chats, immediately switch to streaming messages to show the user message
+      if (!selectedChatId && input.trim()) {
+        setUseStreamingMessages(true);
+      }
+      
+      // Set loading state immediately
+      setIsStreaming(true);
+      setShowLoadingMessage(true);
+      
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
-    [sdkHandleSubmit, selectedContexts]
+    [sdkHandleSubmit, selectedContexts, selectedChatId, input]
   );
 
   // Note: Projects are now fetched when needed for context selection
@@ -853,6 +889,8 @@ function ChatPageClient() {
   // Reset streaming state when switching chats
   useEffect(() => {
     setUseStreamingMessages(false);
+    setShowLoadingMessage(false);
+    setIsStreaming(false);
   }, [selectedChatId]);
 
   // This logic is now handled by the useChatDetails hook above
@@ -1199,33 +1237,85 @@ function ChatPageClient() {
               </TabsContent>
               </Tabs>
               {activeTab === "chat" && (
-                <div className="absolute bottom-0 left-0 right-0 z-10">
-                  {isCurrentUserOwner || isAuthDisabled ? (
-                    <ChatInput
-                      onStop={handleStop}
-                      isStreaming={isStreaming}
-                      selectedContexts={selectedContexts}
-                      onSelectContext={handleSelectContext}
-                      onRemoveContext={handleRemoveContext}
-                      // isVoiceModeActive={isVoiceModeActive}
-                      // setIsVoiceModeActive={setIsVoiceModeActive}
-                      lockableContextIds={
-                        selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-                      }
-                      hasContext={selectedContexts.length > 0}
-                      input={input}
-                      handleInputChange={handleInputChange}
-                      handleSubmit={handleSubmit}
-                      isLoading={isLoading}
-                    />
-                  ) : selectedChatId ? (
-                    <ReadOnlyMessage
-                      chatOwner={chatDetails?.created_by}
-                      chatVisibility={chatDetails?.visibility}
-                      chatTitle={chatDetails?.title}
-                    />
-                  ) : null}
-                </div>
+                <>
+                  {!selectedChatId && displayMessages.length === 0 ? (
+                    <div className="absolute inset-0 flex items-center justify-center px-4">
+                      <div className="w-full max-w-2xl">
+                        <div className="mb-6 text-center">
+                          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                            Chat with your data
+                          </h1>
+                          <p className="text-sm text-muted-foreground">
+                            Select contexts and ask questions about your data
+                          </p>
+                        </div>
+                        <div
+                          className="bg-card border border-border shadow-lg 
+                          ring-[1.5px] ring-foreground/10 
+                          hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
+                          focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
+                          transition-all duration-200"
+                        >
+                          <div className="flex items-center">
+                            <div className="flex items-center justify-center h-12 w-12">
+                              <ContextPicker
+                                selectedContexts={selectedContexts}
+                                onSelectContext={handleSelectContext}
+                                onRemoveContext={handleRemoveContext}
+                                triggerClassName="flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 bg-muted/70"
+                              />
+                            </div>
+                            <MentionInput
+                              value={input}
+                              onChange={handleInputChange}
+                              onSubmit={handleSubmit}
+                              disabled={isLoading}
+                              placeholder="Ask questions about your data..."
+                              selectedContexts={selectedContexts}
+                              onSelectContext={handleSelectContext}
+                              onRemoveContext={handleRemoveContext}
+                              className="flex-1"
+                              showSendButton={true}
+                              isSending={isLoading}
+                              isStreaming={isStreaming}
+                              stopMessageStream={handleStop}
+                              lockableContextIds={[]}
+                              hasContext={selectedContexts.length > 0}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute bottom-0 left-0 right-0 z-10">
+                      {isCurrentUserOwner || isAuthDisabled ? (
+                        <ChatInput
+                          onStop={handleStop}
+                          isStreaming={isStreaming}
+                          selectedContexts={selectedContexts}
+                          onSelectContext={handleSelectContext}
+                          onRemoveContext={handleRemoveContext}
+                          // isVoiceModeActive={isVoiceModeActive}
+                          // setIsVoiceModeActive={setIsVoiceModeActive}
+                          lockableContextIds={
+                            selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+                          }
+                          hasContext={selectedContexts.length > 0}
+                          input={input}
+                          handleInputChange={handleInputChange}
+                          handleSubmit={handleSubmit}
+                          isLoading={isLoading}
+                        />
+                      ) : selectedChatId ? (
+                        <ReadOnlyMessage
+                          chatOwner={chatDetails?.created_by}
+                          chatVisibility={chatDetails?.visibility}
+                          chatTitle={chatDetails?.title}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </ResizablePanel>
