@@ -912,21 +912,54 @@ function ChatPageClient() {
       initialMessage &&
       !initialMessageSent &&
       selectedContexts.length > 0 &&
-      isInitialized
+      isInitialized &&
+      !isLoading // Don't submit if already loading
     ) {
-      handleInputChange(initialMessage);
+      // Decode the initial message
+      const decodedMessage = decodeURIComponent(initialMessage);
+      
+      // Set the input value
+      handleInputChange(decodedMessage);
 
-      // Create a submit event for the form
-      const submitEvent = new Event("submit", { bubbles: true });
-      handleSubmit(submitEvent as unknown as React.FormEvent);
-
+      // Mark as sent immediately to prevent double submission
       setInitialMessageSent(true);
 
-      // Only remove initialMessage and contextData, preserve chatId
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("initialMessage");
-      params.delete("contextData");
-      router.replace(`/chat?${params.toString()}`);
+      // Use requestAnimationFrame to ensure React has updated the DOM
+      requestAnimationFrame(() => {
+        // Another frame to ensure the input value is properly set
+        requestAnimationFrame(() => {
+          // Now submit the form
+          const form = document.querySelector('form');
+          if (form && form instanceof HTMLFormElement) {
+            // Try using requestSubmit if available (modern browsers)
+            if ('requestSubmit' in form && typeof form.requestSubmit === 'function') {
+              form.requestSubmit();
+            } else {
+              // Fallback for older browsers
+              const submitEvent = new Event('submit', { 
+                bubbles: true, 
+                cancelable: true 
+              });
+              form.dispatchEvent(submitEvent);
+            }
+          } else {
+            // Direct fallback if form is not found
+            const submitEvent = new Event("submit", { 
+              bubbles: true, 
+              cancelable: true 
+            });
+            handleSubmit(submitEvent as unknown as React.FormEvent);
+          }
+        });
+      });
+
+      // Clean up URL parameters after a short delay
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("initialMessage");
+        params.delete("contextData");
+        router.replace(`/chat?${params.toString()}`);
+      }, 500);
     }
   }, [
     initialMessage,
@@ -937,6 +970,7 @@ function ChatPageClient() {
     router,
     searchParams,
     isInitialized,
+    isLoading,
   ]);
 
   const handleScroll = useCallback(() => {
