@@ -42,7 +42,7 @@ def setup_model() -> ChatOpenAI:
             trace_id="e2e_test",
             chat_id="e2e_test",
         ),
-        model="gpt-4o-mini",
+        model="gpt-4o",
     )
 
 

@@ -1,201 +1,276 @@
-# Test Suite for GoPie Chat Server
+# GoPie Chat Server Test Suite
 
-This directory contains tests for the GoPie Chat Server, including unit tests and end-to-end (E2E) tests.
+Comprehensive testing framework for the GoPie Chat Server, featuring end-to-end (E2E) and unit tests for the multi-dataset SQL agent.
 
-## Test Files Structure
+## 📁 Test Structure
 
-### E2E Test Files
+### E2E Tests (`tests/e2e/`)
 
-- `tests/e2e/test_e2e_script.py`: Main pytest test file for chat completion functionality with actual API calls
-- `tests/e2e/test_utils.py`: Utility functions for E2E testing (model setup, API requests, evaluation chains)
-- `tests/e2e/test_upload_schema.py`: Tests schema upload endpoint functionality
-- `tests/e2e/single_dataset_cases.py`: Contains test cases for single dataset queries
-- `tests/e2e/multi_dataset_cases.py`: Contains test cases for multi-dataset queries
-- `tests/e2e/visualization_cases.py`: Contains test cases for visualization queries
+**Core Files:**
 
-### Unit Test Files
+- `test_e2e_script.py` - Main pytest runner with async test execution
+- `test_utils.py` - Utilities for API calls, response processing, and LLM-based evaluation
+- `terminal_formatter.py` - Rich terminal output formatter with colors and progress tracking
+- `test_upload_schema.py` - Schema upload endpoint testing
 
-- `tests/unit/test_prompts.py`: Tests the prompt selection and management functionality
-- `tests/unit/test_openai_adapters.py`: Tests OpenAI API format adapters for input/output
-- `tests/unit/test_vector_store.py`: Tests vector store operations for schema search
-- `tests/unit/test_llm_providers.py`: Tests different LLM provider integrations (Portkey, LiteLLM, etc.)
-- `tests/unit/test_dataset_upload.py`: Tests dataset schema upload functionality
-- `tests/unit/test_embedding_providers.py`: Tests embedding model providers
-- `tests/unit/test_model_registry.py`: Tests model registry and selection functionality
+**Test Cases:**
 
-## Running Tests
+- `dataset_test_cases.py` - Single and multi-dataset query test cases
+- `visualization_cases.py` - Visualization generation and modification test cases
 
-### Running E2E Tests
+### Unit Tests (`tests/unit/`)
 
-```bash
-# Run chat completion tests
-python -m tests.e2e.test_e2e_script
+- `test_dataset_upload.py` - Dataset schema upload/delete API endpoints
+- `test_prompts.py` - Prompt management, LangSmith integration, and fallbacks
+- `test_vector_store.py` - Qdrant vector operations and schema search
+- `test_llm_providers.py` - LLM provider integrations (Portkey, LiteLLM, etc.)
+- `test_embedding_providers.py` - Embedding model provider configurations
+- `test_model_registry.py` - Model selection and configuration management
+- `test_openai_adapters.py` - OpenAI API format conversion utilities
 
-pytest tests/e2e/test_e2e_script.py::test_all_cases
+## 🚀 Quick Start
 
-# Run schema upload tests
-python -m tests.e2e.test_upload_schema
-```
-
-### Running Unit Tests
+### Prerequisites
 
 ```bash
-# Run all unit tests
-pytest tests/unit/
+# Install dependencies
+uv sync --dev
 
-# Run a specific test file
-pytest tests/unit/test_prompts.py
+# Set environment variables
+export PORTKEY_API_KEY="your_portkey_api_key"
+export PORTKEY_PROVIDER_NAME="openai"  # or your preferred provider
 ```
 
-## PyTest Configuration
+### Running Tests
 
-The pytest configuration is in the `pyproject.toml` file at the project root:
+**E2E Tests:**
+
+```bash
+# All E2E tests
+pytest tests/e2e/ -v
+
+# Specific test categories
+pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases -v
+pytest tests/e2e/test_e2e_script.py::test_multi_dataset_cases -v
+pytest tests/e2e/test_e2e_script.py::test_visualization_cases -v
+
+# All categories combined
+pytest tests/e2e/test_e2e_script.py::test_all_cases -v
+
+# Schema upload tests
+pytest tests/e2e/test_upload_schema.py -v
+
+# Disable colored terminal output
+pytest tests/e2e/ --disable-formatter -v
+```
+
+**Unit Tests:**
+
+```bash
+# All unit tests
+pytest tests/unit/ -v
+
+# Specific components
+pytest tests/unit/test_prompts.py -v
+pytest tests/unit/test_vector_store.py -v
+pytest tests/unit/test_llm_providers.py -v
+```
+
+**Combined:**
+
+```bash
+# Run everything
+pytest tests/ -v
+
+# Run with parallel execution
+pytest tests/ -n auto -v
+```
+
+## 🧪 Test Details
+
+### E2E Testing Framework
+
+**Architecture:**
+
+- **Async Test Execution**: Built with pytest-asyncio for concurrent testing
+- **LLM-Based Evaluation**: Uses GPT-4 to evaluate response quality and correctness
+- **Streaming Response Handling**: Processes real-time API responses with tool calls
+- **Rich Terminal Output**: Color-coded progress, summaries, and detailed failure reports
+
+**Test Categories:**
+
+1. **Single Dataset Tests** (`SINGLE_DATASET_TEST_CASES`)
+
+   - 20+ test cases covering individual dataset queries
+   - Tests for CSR data, election data, and visualization requests
+   - Edge cases: empty queries, malicious inputs, division by zero
+
+2. **Multi Dataset Tests** (`MULTI_DATASET_TEST_CASES`)
+
+   - Complex queries requiring multiple dataset integration
+   - Tests graph traversal through dataset identification → query planning → execution
+   - Error handling: invalid dataset IDs, incompatible joins, resource limits
+
+3. **Visualization Tests** (`VISUALIZATION_TEST_CASES`)
+   - Chart generation from previous query results
+   - Chart modification (bar → pie, grouped → stacked)
+   - Single-request data + visualization workflows
+
+**Response Evaluation:**
+
+```python
+{
+    "ai_response": "Generated text response",
+    "datasets_used": ["dataset_id_1", "dataset_id_2"],
+    "sql_queries_generated": ["SELECT * FROM..."],
+    "processing_steps": ["Step descriptions"],
+    "visualization_results": ["Chart configs"],
+    "metadata": {"dataset_count": 2, "sql_query_count": 1}
+}
+```
+
+### Unit Testing Components
+
+**Core Areas:**
+
+1. **Prompt Management** (`test_prompts.py`)
+
+   - LangSmith integration with fallback mechanisms
+   - Prompt formatting and parameter injection
+   - Dynamic prompt selection by workflow node
+
+2. **Vector Operations** (`test_vector_store.py`)
+
+   - Qdrant document addition and similarity search
+   - Schema search with project/dataset filtering
+   - Error handling and fallback behaviors
+
+3. **Provider Integrations** (`test_llm_providers.py`, `test_embedding_providers.py`)
+
+   - Multiple LLM providers: Portkey, LiteLLM, OpenRouter, Cloudflare
+   - Authentication and header management
+   - Model initialization and configuration
+
+4. **API Adapters** (`test_openai_adapters.py`)
+
+   - OpenAI-compatible request/response formatting
+   - Tool call serialization and streaming responses
+   - Format conversion utilities
+
+5. **Dataset Management** (`test_dataset_upload.py`)
+   - Schema upload/delete operations
+   - Error handling for invalid datasets
+   - Vector store integration testing
+
+## ⚙️ Configuration
+
+**pytest.ini Options** (in `pyproject.toml`):
 
 ```toml
 [tool.pytest.ini_options]
 testpaths = ["tests/e2e", "tests/unit"]
-addopts = """
-    --tb=short
-    --strict-markers
-    --durations=5
-    -v
-"""
+addopts = "--tb=short --strict-markers --durations=5 -v"
 pythonpath = ["."]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
 markers = [
-  "e2e: marks tests as end-to-end (deselect with '-m \"not e2e\"')",
+  "e2e: marks tests as end-to-end",
   "unit: marks tests as unit tests",
-  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "slow: marks tests as slow"
 ]
 cache_dir = "tests/.pytest_cache"
 ```
 
-## Test Details
+**Test Fixtures** (`conftest.py`):
 
-### E2E Tests
+- `sample_metadata` - Test user/trace/chat IDs
+- `mock_settings` - Configuration mocks for all providers
+- `mock_vector_store` - Qdrant vector store mocks
+- `sample_dataset_schema` - Standard dataset structure
+- `sample_query_request` - API request templates
 
-#### `test_e2e_script.py`
+**E2E Test Configuration**:
 
-This script performs comprehensive end-to-end testing of the chat completion API:
+- Server URL: `http://localhost:8002/api/v1/chat/completions`
+- Request timeout: 120 seconds
+- Streaming response processing
+- LLM evaluation with GPT-4o
 
-- **Test Organization**: Uses pytest framework with fixtures for clean test execution
-- **Response Evaluation**: Uses LLM-based evaluation to assess response correctness against expected outcomes
-- **Modular Design**: Imports utility functions from `test_utils.py` for clean separation of concerns
+## 🛠 Development
 
-The test uses test cases defined in `single_dataset_cases.py` and `multi_dataset_cases.py` to cover a wide range of query scenarios.
+### Adding New Tests
 
-#### `test_utils.py`
+**E2E Tests:**
 
-Contains utility functions for E2E testing:
+1. Add test cases to `dataset_test_cases.py`:
 
-- **Model Setup**: Functions for configuring LLM models and evaluation chains
-- **API Communication**: Helper functions for sending chat requests and processing responses
-- **Tool Call Processing**: Functions for handling and validating tool calls in API responses
-- **Result Evaluation**: Functions for evaluating test results using LLM-based assessment
-
-#### `test_upload_schema.py`
-
-Tests the schema upload endpoint with real project and dataset IDs:
-
-- **API Request Testing**: Validates proper API request/response handling
-- **Success Response Validation**: Checks that successful uploads return `{"success": True}`
-- **Error Handling**: Tests error responses for invalid inputs
-
-### Unit Tests
-
-#### `test_prompts.py`
-
-Tests the prompt management system:
-
-- **Prompt Selection**: Tests selecting the right prompt for each workflow node
-- **Prompt Formatting**: Tests proper formatting of prompt inputs
-- **LangSmith Integration**: Tests fetching prompts from LangSmith
-- **Prompt Fallbacks**: Tests fallback behavior when prompt retrieval fails
-
-#### `test_openai_adapters.py`
-
-Tests adapters for OpenAI-compatible API:
-
-- **Input Format Conversion**: Tests converting from OpenAI request format to internal format
-- **Output Format Conversion**: Tests converting internal responses to OpenAI response format
-- **Tool Calls Handling**: Tests proper formatting of tool calls in responses
-- **Streaming Responses**: Tests generating streaming response chunks
-
-#### `test_vector_store.py`
-
-Tests the vector store functionality:
-
-- **Document Addition**: Tests adding documents to the vector store
-- **Similarity Search**: Tests searching for similar documents
-- **Filter Handling**: Tests applying filters to search results
-- **Schema Search**: Tests searching for relevant schemas
-
-#### `test_llm_providers.py`
-
-Tests various LLM provider integrations:
-
-- **Provider Initialization**: Tests initializing different providers
-- **Model Creation**: Tests creating models with different configurations
-- **Headers/Authentication**: Tests proper authentication with each provider
-- **Providers Tested**: Portkey, PortkeySelfHosted, LiteLLM, OpenRouter, Cloudflare, and Custom providers
-
-#### `test_dataset_upload.py`
-
-Tests the dataset schema upload functionality:
-
-- **Schema Upload Flow**: Tests the complete schema upload process
-- **Error Handling**: Tests handling of various error conditions
-- **API Integration**: Tests integration with the upload endpoint
-
-#### `test_embedding_providers.py`
-
-Tests embedding model providers:
-
-- **Provider Initialization**: Tests initializing different embedding providers
-- **Embedding Model Creation**: Tests creating embedding models
-- **Providers Tested**: Portkey, PortkeySelfHosted, LiteLLM, OpenAI, and Custom providers
-
-#### `test_model_registry.py`
-
-Tests the model registry and selection system:
-
-- **Model Configuration**: Tests creating model configs with different parameters
-- **Provider Selection**: Tests selecting appropriate providers based on configuration
-- **Model Selection**: Tests selecting models for different workflow nodes
-- **Tool Integration**: Tests integrating tools with models
-
-## Environment Setup for Tests
-
-The tests rely on environment variables for configuration. Create a `.env` file at the root of the project with the following variables:
-
-```
-PORTKEY_API_KEY=your_portkey_api_key
-GEMINI_VIRTUAL_KEY=your_gemini_virtual_key
-```
-
-## Adding New Tests
-
-### Adding E2E Tests
-
-#### For Chat Completion Tests:
-
-1. Add your test case to the appropriate file:
-
-   - `tests/e2e/single_dataset_cases.py` for single dataset queries
-   - `tests/e2e/multi_dataset_cases.py` for multi-dataset queries
-
-2. Run with:
-   ```bash
-   pytest tests/e2e/test_e2e_script.py
+   ```python
+   {
+       "messages": [{"role": "user", "content": "Your query"}],
+       "model": "test",
+       "user": "test",
+       "metadata": {"dataset_id": "your_dataset_id"},
+       "stream": True,
+       "expected_result": "Description of expected behavior"
+   }
    ```
 
-### Adding Unit Tests
-
-1. Create a file in `tests/unit/` (name starting with `test_`)
-
-2. Use fixtures defined in `tests/unit/conftest.py` for common test setup and resources
-
-3. Run with:
+2. Run specific test:
    ```bash
-   pytest tests/unit
+   pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases -v
    ```
+
+**Unit Tests:**
+
+1. Create `test_*.py` file in `tests/unit/`
+2. Use fixtures from `conftest.py`
+3. Follow async/await patterns for database operations
+4. Mock external dependencies (API calls, databases)
+
+### Debugging
+
+**E2E Test Debugging:**
+
+```bash
+# Run with detailed output
+pytest tests/e2e/ -v -s --tb=long
+
+# Single test with no formatter
+pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases --disable-formatter -v
+
+# Check specific test case
+pytest tests/e2e/ -k "test_name" -v
+```
+
+**Unit Test Debugging:**
+
+```bash
+# Show print statements
+pytest tests/unit/ -s -v
+
+# Stop on first failure
+pytest tests/unit/ -x -v
+
+# Run failed tests from last run
+pytest tests/unit/ --lf -v
+```
+
+## 📊 Test Metrics
+
+**Coverage Areas:**
+
+- ✅ Multi-dataset query processing
+- ✅ SQL query generation and execution
+- ✅ Visualization generation and modification
+- ✅ Vector store operations and schema search
+- ✅ LLM provider integrations
+- ✅ API format conversions
+- ✅ Error handling and edge cases
+- ✅ Prompt management and fallbacks
+
+**Performance:**
+
+- E2E tests: ~12-14 minutes for full suite
+- Unit tests: ~10 seconds for full suite
+
+Run `pytest --durations=10` to see slowest tests.
