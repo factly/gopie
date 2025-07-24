@@ -55,6 +55,9 @@ def format_query_result(query_result: QueryResult) -> str:
 
                     subquery_section.extend(sql_section)
 
+            if subquery.no_sql_response:
+                subquery_section.append(f"No SQL Response: {subquery.no_sql_response}")
+
             if subquery.tool_used_result is not None:
                 subquery_section.append(f"Tool Result: {subquery.tool_used_result}")
 

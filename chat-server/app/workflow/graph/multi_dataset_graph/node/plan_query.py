@@ -46,7 +46,6 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
         retry_count = query_result.subqueries[query_index].retry_count
         error_messages = query_result.subqueries[query_index].error_message
-        node_messages = query_result.subqueries[query_index].node_messages
 
         if not identified_datasets:
             raise Exception("No dataset selected for query planning")
@@ -60,7 +59,6 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             datasets_info=datasets_info,
             error_messages=error_messages,
             retry_count=retry_count,
-            node_messages=node_messages,
             previous_sql_queries=previous_sql_queries,
         )
 
@@ -72,55 +70,66 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         try:
             parsed_response = parser.parse(response_content)
 
-            sql_queries = parsed_response.get("sql_queries", None)
-            formatted_sql_queries = []
-            sql_queries_info = []
-
-            if not sql_queries:
-                raise Exception("Failed in parsing SQL query/queries")
-
-            for sql_query in sql_queries:
-                sql_query_explanation = sql_query.get("explanation", "")
-                sql_queries_info.append(
-                    SqlQueryInfo(
-                        sql_query=sql_query["sql_query"],
-                        explanation=sql_query_explanation,
-                    )
-                )
-
-                formatted_sql_queries.append(sql_query["sql_query"])
-
-            query_result.subqueries[query_index].sql_queries = sql_queries_info
-
-            # Extract additional details for node_messages
-            reasoning = parsed_response.get("reasoning", "")
+            sql_queries = parsed_response.get("sql_queries", [])
+            response_for_no_sql = parsed_response.get("response_for_no_sql", "")
             limitations = parsed_response.get("limitations", "")
 
-            tables_used = []
-            for query in sql_queries:
-                if "tables_used" in query:
-                    tables_used.extend(query["tables_used"])
+            if response_for_no_sql:
+                query_result.subqueries[query_index].no_sql_response = response_for_no_sql
 
-            query_result.set_node_message(
-                "plan_query",
-                {
-                    "query_strategy": (
-                        "single_query" if len(sql_queries) == 1 else "multiple_queries"
-                    ),
-                    "tables_used": list(set(tables_used)),
-                    "query_count": len(sql_queries),
-                    "reasoning": reasoning,
-                    "limitations": limitations,
-                },
-            )
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": "Generated SQL query",
-                    "name": SQL_QUERIES_GENERATED,
-                    "values": {SQL_QUERIES_GENERATED_ARG: formatted_sql_queries},
-                },
-            )
+                query_result.set_node_message(
+                    "plan_query",
+                    {
+                        "query_strategy": "no_sql_response",
+                        "no_sql_response": response_for_no_sql,
+                        "limitations": limitations,
+                    },
+                )
+            elif sql_queries:
+                formatted_sql_queries = []
+                sql_queries_info = []
+
+                for sql_query in sql_queries:
+                    sql_query_explanation = sql_query.get("explanation", "")
+                    sql_queries_info.append(
+                        SqlQueryInfo(
+                            sql_query=sql_query["sql_query"],
+                            explanation=sql_query_explanation,
+                        )
+                    )
+
+                    formatted_sql_queries.append(sql_query["sql_query"])
+
+                query_result.subqueries[query_index].sql_queries = sql_queries_info
+
+                tables_used = []
+                for query in sql_queries:
+                    if "tables_used" in query:
+                        tables_used.extend(query["tables_used"])
+
+                query_result.set_node_message(
+                    "plan_query",
+                    {
+                        "query_strategy": (
+                            "single_query" if len(sql_queries) == 1 else "multiple_queries"
+                        ),
+                        "tables_used": list(set(tables_used)),
+                        "query_count": len(sql_queries),
+                        "limitations": limitations,
+                    },
+                )
+                await adispatch_custom_event(
+                    "gopie-agent",
+                    {
+                        "content": "Generated SQL query",
+                        "name": SQL_QUERIES_GENERATED,
+                        "values": {SQL_QUERIES_GENERATED_ARG: formatted_sql_queries},
+                    },
+                )
+            else:
+                raise Exception(
+                    "Invalid response: must contain either 'sql_queries' or 'response_for_no_sql'"
+                )
 
             return {
                 "query_result": query_result,

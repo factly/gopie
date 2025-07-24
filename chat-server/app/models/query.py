@@ -8,6 +8,7 @@ class SqlQueryInfo:
     sql_query: str
     explanation: str
     sql_query_result: list | None = None
+    full_sql_result: list | None = None
     success: bool = True
     error: str | None = None
 
@@ -20,6 +21,7 @@ class SqlQueryInfo:
             "sql_query": self.sql_query,
             "explanation": self.explanation,
             "sql_query_result": self.sql_query_result,
+            "full_sql_result": self.full_sql_result,
             "success": self.success,
             "error": self.error,
         }
@@ -42,6 +44,7 @@ class SubQueryInfo:
     tables_used: str | None = None
     query_type: str | None = None
     error_message: list[dict] | None = None
+    no_sql_response: str | None = None
     retry_count: int = 0
     tool_used_result: list[ToolUsedResult] | None = None
     confidence_score: int = 5
@@ -67,6 +70,7 @@ class SubQueryInfo:
             "query_type": self.query_type,
             "tool_used_result": self.tool_used_result,
             "error_message": self.error_message,
+            "no_sql_response": self.no_sql_response,
             "retry_count": self.retry_count,
             "confidence_score": self.confidence_score,
             "node_messages": self.node_messages,
