@@ -7,5 +7,5 @@ VISUALIZATION_RESULT = "visualization_result"
 
 # Tool Call Args - Do not change these without updating the UI
 SQL_QUERIES_GENERATED_ARG = "queries"
-DATASETS_USED_ARG = "datasets_used"
+DATASETS_USED_ARG = "datasets"
 VISUALIZATION_RESULT_ARG = "s3_paths"
