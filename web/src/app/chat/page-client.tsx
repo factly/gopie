@@ -202,7 +202,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col">
 
 
       {allChats.length > 0 ? (
@@ -1023,7 +1023,7 @@ function ChatPageClient() {
   }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
 
   return (
-    <main className="flex flex-col w-full h-screen">
+    <main className="flex flex-col w-full h-[calc(100vh-16px)]">
       <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
@@ -1192,7 +1192,7 @@ function ChatPageClient() {
             <>
               <ResizableHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
-                <div ref={sqlPanelRef} className="h-screen overflow-hidden">
+                <div ref={sqlPanelRef} className="h-[calc(100vh-16px)]">
                   <ResultsPanel
                     isOpen={isResultsPanelOpen}
                     onClose={() => {

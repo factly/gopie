@@ -202,6 +202,9 @@ export function ChatMessage({
   const [expandedQueries, setExpandedQueries] = useState<Set<number>>(
     new Set()
   );
+  const [editedQueries, setEditedQueries] = useState<Map<number, string>>(
+    new Map()
+  );
 
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
@@ -653,7 +656,8 @@ export function ChatMessage({
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRunQuery(query);
+                            const queryToRun = editedQueries.get(index) ?? query;
+                            handleRunQuery(queryToRun);
                           }}
                           disabled={isExecuting}
                           className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
@@ -670,9 +674,13 @@ export function ChatMessage({
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
                         <SqlEditor
-                          value={query}
-                          onChange={() => {
-                            /* no-op for display only */
+                          value={editedQueries.get(index) ?? query}
+                          onChange={(newValue) => {
+                            setEditedQueries((prev) => {
+                              const newMap = new Map(prev);
+                              newMap.set(index, newValue);
+                              return newMap;
+                            });
                           }}
                           datasetId={""}
                         />
