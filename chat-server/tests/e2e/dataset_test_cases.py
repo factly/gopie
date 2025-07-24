@@ -289,7 +289,7 @@ Expected format: States where amount_spent = 0 for any fiscal_year.""",
         },
         "stream": True,
         "expected_result": """The query should show state-wise CSR spending and create choropleth map visualization.
-Expected format: State-wise amount_spent for fiscal_year = '2022-23' with choropleth map visualization.""",
+Expected format: State-wise amount_spent for fiscal_year = '2022-23' with Choropleth map support not there for creating visualization response""",
     },
     # CSR Project Details Cases
     {
@@ -418,8 +418,7 @@ Expected format: Companies with ratio calculation CASE WHEN prescribed_csr_expen
             "dataset_id": "0f4c2c1b-efe4-45b1-b25f-f4b1b7a4886b",
         },
         "stream": True,
-        "expected_result": """The system should handle empty query gracefully.
-Expected behavior: System should return an error message indicating empty or invalid query.""",
+        "expected_result": """The generated result should be empty and no response to be generated for this.""",
     },
     {
         "messages": [

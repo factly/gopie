@@ -70,9 +70,23 @@ async def process_test_case(
         # For string expected results, use them directly for evaluation
         evaluation_input = expected_result if isinstance(expected_result, str) else expected_result
 
+        comprehensive_response = {
+            "ai_response": response["final_response"],
+            "datasets_used": response["selected_datasets"],
+            "sql_queries_generated": response["generated_sql_queries"],
+            "processing_steps": response["tool_messages"],
+            "visualization_results": response.get("visualization_results", []),
+            "metadata": {
+                "dataset_count": len(response["selected_datasets"]),
+                "sql_query_count": len(response["generated_sql_queries"]),
+                "processing_step_count": len(response["tool_messages"]),
+                "visualization_count": len(response.get("visualization_results", [])),
+            },
+        }
+
         evaluation = await evaluation_chain.ainvoke(
             {
-                "generated_answer": response["final_response"],
+                "generated_answer": comprehensive_response,
                 "expected_result": evaluation_input,
             }
         )
