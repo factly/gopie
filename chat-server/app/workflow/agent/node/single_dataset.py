@@ -34,12 +34,12 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
         sql_results = result.sql_results
         if sql_results is not None:
             for sql_query_info in sql_results:
-                if not sql_query_info.sql_query_result:
+                if not sql_query_info.full_sql_result:
                     continue
                 description = f"Dataset {dataset_count}\n\n"
                 description += f"Query: {sql_query_info.sql_query}\n\n"
                 description += f"Explanation: {sql_query_info.explanation}\n\n"
-                data = list_of_dict_to_list_of_lists(sql_query_info.sql_query_result)
+                data = list_of_dict_to_list_of_lists(sql_query_info.full_sql_result)
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
 
