@@ -27,7 +27,8 @@ type updateRequestBody struct {
 	// Column descriptions
 	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
 	// Project ID of the dataset
-	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ProjectID    string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	IgnoreErrors bool   `json:"ignore_errors"`
 }
 
 // @Summary Update dataset from S3
@@ -43,7 +44,9 @@ type updateRequestBody struct {
 // @Router /source/s3/update [post]
 func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	// Get request body from context
-	var body updateRequestBody
+	body := updateRequestBody{
+		IgnoreErrors: true,
+	}
 	if err := ctx.BodyParser(&body); err != nil {
 		h.logger.Info("Error parsing request body", zap.Error(err))
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -93,7 +96,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	originalDataset := d
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(ctx.Context(), filePath, d.Name, body.AlterColumnNames)
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), filePath, d.Name, body.AlterColumnNames, body.IgnoreErrors)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", filePath))
 
@@ -122,7 +125,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
 
 		// Try to revert back to original data if possible
-		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil)
+		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil, body.IgnoreErrors)
 		if revertErr != nil {
 			h.logger.Error("Failed to revert table to original state", zap.Error(revertErr))
 		}
@@ -147,7 +150,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		h.logger.Error("Error updating dataset record", zap.Error(err))
 
 		// Try to revert back to original data
-		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil)
+		_, revertErr := h.olapSvc.IngestS3File(ctx.Context(), originalDataset.FilePath, originalDataset.Name, nil, body.IgnoreErrors)
 		if revertErr != nil {
 			h.logger.Error("Failed to revert table to original state", zap.Error(revertErr))
 		}

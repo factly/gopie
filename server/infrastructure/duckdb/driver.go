@@ -385,7 +385,7 @@ func (m *OlapDBDriver) renameTableColumns(tx *sql.Tx, tableName string, alterCol
 }
 
 // createTableInternal is the shared logic for CreateTable and CreateTableFromS3.
-func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string, alterColumnNames map[string]string, isS3 bool) error {
+func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string, alterColumnNames map[string]string, isS3 bool, ignoreErrors bool) error {
 	dataSourceType := "file"
 	if isS3 {
 		dataSourceType = "S3"
@@ -399,6 +399,16 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 	if err != nil {
 		m.logger.Error("failed to build read function for table creation", zap.String("format", format), zap.Error(err))
 		return err
+	}
+
+	if ignoreErrors {
+		lastParen := strings.LastIndex(readFunc, ")")
+		if lastParen != -1 {
+			// Injects ignore_errors=true into the read function call.
+			// e.g., "read_csv_auto('path')" becomes "read_csv_auto('path', ignore_errors=true)"
+			readFunc = readFunc[:lastParen] + ", ignore_errors=true)"
+			m.logger.Debug("added ignore_errors=true to read function for DuckDB")
+		}
 	}
 
 	// Using SelectBuilder for the read part of "CREATE TABLE AS SELECT..."
@@ -451,13 +461,13 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 }
 
 // CreateTable creates a table in DuckDB by reading data from a local file path.
-func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColumnNames map[string]string) error {
-	return m.createTableInternal(filePath, tableName, format, alterColumnNames, false)
+func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColumnNames map[string]string, ignoreErrors bool) error {
+	return m.createTableInternal(filePath, tableName, format, alterColumnNames, false, ignoreErrors)
 }
 
 // CreateTableFromS3 creates a table in DuckDB by reading data from an S3 path.
-func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string) error {
-	return m.createTableInternal(s3Path, tableName, format, alterColumnNames, true)
+func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string, ignoreErrors bool) error {
+	return m.createTableInternal(s3Path, tableName, format, alterColumnNames, true, ignoreErrors)
 }
 
 // Query executes a given SQL query string against the database.
