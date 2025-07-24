@@ -39,6 +39,7 @@ export const useSourceDataset = createMutation({
         created_by: createdBy,
         alter_column_names: alter_column_names,
         column_descriptions: column_descriptions,
+        ignore_errors: true,
       }),
     });
 
