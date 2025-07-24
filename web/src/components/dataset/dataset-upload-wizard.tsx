@@ -449,7 +449,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     }
   };
 
-  const canProceedFromStep1 = uploadedFile && validationResult;
+  // const canProceedFromStep1 = uploadedFile && validationResult;
   const canProceedFromStep2 = validationResult;
   const canProceedFromStep3 = !isProcessing;
 
