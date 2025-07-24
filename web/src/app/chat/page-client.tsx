@@ -63,11 +63,13 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setSelectedContexts,
   setLinkedDatasetId,
   currentUserId,
+  updateUrlWithContext,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
   currentUserId: string;
+  updateUrlWithContext: (contexts: ContextItem[]) => void;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -136,6 +138,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       if (selectedChatId === chatId) {
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
+        updateUrlWithContext([]);
         setLinkedDatasetId(null);
         // Clear results when deleting the current chat
         resetExecutedQueries();
@@ -167,18 +170,21 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setVisualizationOpen(false);
 
     if (datasetId && datasetName && projectId) {
-      setSelectedContexts([
+      const newContexts = [
         {
           id: datasetId,
-          type: "dataset",
+          type: "dataset" as const,
           name: datasetName,
           projectId: projectId,
         },
-      ]);
+      ];
+      setSelectedContexts(newContexts);
+      updateUrlWithContext(newContexts);
       selectChatForDataset(datasetId, chatId, chatName || "New Chat");
       setLinkedDatasetId(datasetId);
     } else {
       setSelectedContexts([]);
+      updateUrlWithContext([]);
       selectChatForDataset(null, chatId, chatName || "New Chat");
       setLinkedDatasetId(null);
     }
@@ -485,6 +491,7 @@ function ChatPageClient() {
   const router = useRouter();
   const initialMessage = searchParams.get("initialMessage");
   const contextData = searchParams.get("contextData");
+  const contextsFromUrl = searchParams.get("contexts");
   const chatIdFromUrl = searchParams.get("chatId");
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl === "history" ? "history" : "chat");
@@ -533,6 +540,7 @@ function ChatPageClient() {
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [contextInitialized, setContextInitialized] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
 
@@ -546,6 +554,20 @@ function ChatPageClient() {
         params.delete("chatId");
         params.delete("initialMessage");
         params.delete("contextData");
+      }
+      router.replace(`/chat?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
+
+  // Helper function to update URL with context data
+  const updateUrlWithContext = useCallback(
+    (contexts: ContextItem[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (contexts.length > 0) {
+        params.set("contexts", encodeURIComponent(JSON.stringify(contexts)));
+      } else {
+        params.delete("contexts");
       }
       router.replace(`/chat?${params.toString()}`);
     },
@@ -858,6 +880,29 @@ function ChatPageClient() {
     }
   }, [chatIdFromUrl, selectedChatId, selectChatForDataset, isInitialized]);
 
+  // Initialize contexts from URL on first load
+  useEffect(() => {
+    if (!contextInitialized && contextsFromUrl && !contextData) {
+      try {
+        const parsedContexts = JSON.parse(decodeURIComponent(contextsFromUrl)) as ContextItem[];
+        if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
+          setSelectedContexts(parsedContexts);
+          
+          // Set linked dataset if there's a dataset context
+          const datasetContext = parsedContexts.find(ctx => ctx.type === "dataset");
+          if (datasetContext) {
+            setLinkedDatasetId(datasetContext.id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse contexts from URL:", error);
+      }
+      setContextInitialized(true);
+    } else if (!contextInitialized) {
+      setContextInitialized(true);
+    }
+  }, [contextsFromUrl, contextData, contextInitialized]);
+
   // Update chat title when chat details are loaded
   useEffect(() => {
     console.log("Chat details effect:", {
@@ -1051,12 +1096,20 @@ function ChatPageClient() {
   }, [displayMessages]);
 
   const handleSelectContext = useCallback((context: ContextItem) => {
-    setSelectedContexts((prev) => [...prev, context]);
-  }, []);
+    setSelectedContexts((prev) => {
+      const newContexts = [...prev, context];
+      updateUrlWithContext(newContexts);
+      return newContexts;
+    });
+  }, [updateUrlWithContext]);
 
   const handleRemoveContext = useCallback((contextId: string) => {
-    setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
-  }, []);
+    setSelectedContexts((prev) => {
+      const newContexts = prev.filter((c) => c.id !== contextId);
+      updateUrlWithContext(newContexts);
+      return newContexts;
+    });
+  }, [updateUrlWithContext]);
 
   // const handleSendVoiceMessage = useCallback(
   //   async (message: string) => {
@@ -1191,6 +1244,7 @@ function ChatPageClient() {
                         setLinkedDatasetId(null);
                         setActiveTab("chat");
                         setSelectedContexts([]);
+                        updateUrlWithContext([]);
 
                     // Clear results when starting a new chat
                     resetExecutedQueries();
@@ -1203,6 +1257,7 @@ function ChatPageClient() {
                         params.delete("chatId");
                         params.delete("initialMessage");
                         params.delete("contextData");
+                        params.delete("contexts");
                         router.replace(`/chat?${params.toString()}`);
                       }}
                     >
@@ -1250,6 +1305,7 @@ function ChatPageClient() {
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
                   currentUserId={currentUserId}
+                  updateUrlWithContext={updateUrlWithContext}
                 />
               </TabsContent>
               </Tabs>
