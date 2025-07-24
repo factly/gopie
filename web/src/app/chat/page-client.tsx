@@ -888,18 +888,25 @@ function ChatPageClient() {
           decodeURIComponent(contextData)
         ) as ContextItem[];
         if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
+          // Clear existing chat when navigating with new context data
+          selectChatForDataset(null, null, null);
+          setLinkedDatasetId(null);
           setSelectedContexts(parsedContexts);
           // Clear results when navigating with new context data
           resetExecutedQueries();
           clearVisualizationPaths();
           setIsOpen(false);
           setVisualizationOpen(false);
+          // Clear URL parameters to avoid re-applying context data
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("contextData");
+          router.replace(`/chat?${params.toString()}`);
         }
       } catch (error) {
         console.error("Failed to parse context data:", error);
       }
     }
-  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen]);
+  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen, selectChatForDataset, setLinkedDatasetId, searchParams, router]);
 
   useEffect(() => {
     resetExecutedQueries();
