@@ -64,7 +64,6 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	body.IgnoreErrors = true
 
 	err := pkg.ValidateRequest(h.logger, &body)
 	if err != nil {

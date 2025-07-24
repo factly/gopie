@@ -467,7 +467,7 @@ func (m *OlapDBDriver) CreateTable(filePath, tableName, format string, alterColu
 
 // CreateTableFromS3 creates a table in DuckDB by reading data from an S3 path.
 func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alterColumnNames map[string]string, ignoreErrors bool) error {
-	return m.createTableInternal(s3Path, tableName, format, alterColumnNames, true, true)
+	return m.createTableInternal(s3Path, tableName, format, alterColumnNames, true, ignoreErrors)
 }
 
 // Query executes a given SQL query string against the database.
