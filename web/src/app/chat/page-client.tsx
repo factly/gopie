@@ -486,7 +486,8 @@ function ChatPageClient() {
   const initialMessage = searchParams.get("initialMessage");
   const contextData = searchParams.get("contextData");
   const chatIdFromUrl = searchParams.get("chatId");
-  const [activeTab, setActiveTab] = useState("chat");
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl === "history" ? "history" : "chat");
   const queryClient = useQueryClient();
 
   // Get current user from auth store
@@ -1109,7 +1110,17 @@ function ChatPageClient() {
             <div className="relative w-full h-full">
               <Tabs
                 value={activeTab}
-                onValueChange={setActiveTab}
+                onValueChange={(value) => {
+                  setActiveTab(value);
+                  // Update URL with tab parameter
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (value === "history") {
+                    params.set("tab", "history");
+                  } else {
+                    params.delete("tab");
+                  }
+                  router.replace(`/chat?${params.toString()}`);
+                }}
                 className="w-full h-full flex flex-col"
               >
               <div className="flex w-full items-center border-b">
@@ -1154,7 +1165,13 @@ function ChatPageClient() {
                       variant="ghost"
                       size="sm"
                       className={`mr-2 ${activeTab === "history" ? "bg-muted border-b-2 border-primary" : ""}`}
-                      onClick={() => setActiveTab("history")}
+                      onClick={() => {
+                        setActiveTab("history");
+                        // Update URL with tab parameter
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set("tab", "history");
+                        router.replace(`/chat?${params.toString()}`);
+                      }}
                     >
                       <History className="h-4 w-4" />
                     </Button>
