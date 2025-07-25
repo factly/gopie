@@ -140,8 +140,8 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             raise Exception(f"Failed to parse LLM response: {parse_error!s}") from parse_error
 
     except Exception as e:
-        query_result.add_error_message(str(e), "Error in query planning")
         error_msg = f"Unexpected error in query planning: {e!s}"
+        query_result.add_error_message(error_msg, "Error in query planning")
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -152,5 +152,5 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
         return {
             "query_result": query_result,
-            "messages": [ErrorMessage.from_json({"error": error_msg})],
+            "messages": [ErrorMessage(content=error_msg)],
         }

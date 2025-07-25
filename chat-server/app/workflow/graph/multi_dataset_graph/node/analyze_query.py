@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
@@ -20,7 +21,15 @@ from app.workflow.graph.multi_dataset_graph.types import State
 )
 async def analyze_query(state: State, config: RunnableConfig) -> dict:
     tool_call_count = state.get("tool_call_count", 0)
-    query_result = state.get("query_result")
+    query_result = state.get(
+        "query_result",
+        QueryResult(
+            original_user_query=state.get("user_query", ""),
+            timestamp=datetime.now(),
+            execution_time=0,
+            subqueries=[],
+        ),
+    )
     user_input = state.get("user_query")
 
     analyze_result = query_result.analyze_query_result

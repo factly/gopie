@@ -30,10 +30,9 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
     Returns:
         dict: Updated workflow state containing the retry count, validation result (or None on error), and a list of messages reflecting the validation outcome.
     """
-    query_result = state.get("query_result", None)
-    retry_count = state.get("retry_count", 0)
     query_result = state["query_result"]
-    subquery_index = state.get("subquery_index", -1)
+    retry_count = state.get("retry_count", 0)
+    subquery_index = state.get("subquery_index", 0)
 
     no_sql_response = query_result.subqueries[subquery_index].no_sql_response
 

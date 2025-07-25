@@ -135,16 +135,8 @@ def format_identify_datasets_input(
     user_query: str,
     relevant_dataset_schemas: list[DatasetSchema] = [],
     semantic_searched_datasets: list[DatasetSchema] = [],
-    confidence_score: float | None = None,
-    query_type: str | None = None,
 ) -> dict:
     input_str = f"USER QUERY: {user_query}"
-
-    if query_type:
-        input_str += f"\nQUERY TYPE: {query_type}"
-
-    if confidence_score is not None:
-        input_str += f"\nCONFIDENCE SCORE: {confidence_score}/10"
 
     input_str += (
         f"\n\n=== RELEVANT DATASETS (From Chat History): {len(relevant_dataset_schemas)} ==="
