@@ -148,7 +148,7 @@ SENTRY_AUTH_TOKEN=your_auth_token_here
    bun run dev
    ```
 
-2. Navigate to `/sentry-debug` in your browser
+2. Navigate to `/sentry` in your browser
 
 3. Test different error scenarios:
    - **Client-side errors**: Click "Test Client Error" button
