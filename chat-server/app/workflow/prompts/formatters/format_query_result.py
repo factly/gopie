@@ -1,4 +1,5 @@
 from app.models.query import (
+    AnalyzeQueryResult,
     QueryResult,
     SingleDatasetQueryResult,
     SqlQueryInfo,
@@ -80,6 +81,38 @@ def format_failed_sql_results(sql_results: list[SqlQueryInfo]) -> str:
     return "".join(sections)
 
 
+def format_analyze_query_result(analyze_result: AnalyzeQueryResult) -> str:
+    """
+    Format the analyze query result into a readable string.
+
+    Args:
+        analyze_result: The analyze query result to format
+
+    Returns:
+        str: Formatted analyze query result
+    """
+    sections = []
+
+    if analyze_result.query_type:
+        sections.append(f"Query Type: {analyze_result.query_type}")
+
+    if analyze_result.response:
+        sections.append(f"Analysis Response: {analyze_result.response}")
+
+    if analyze_result.tool_used_result:
+        sections.append("Tool Results:")
+        for tool_result in analyze_result.tool_used_result:
+            tool_name = tool_result.get("name", "Unknown Tool")
+            tool_content = tool_result.get("content", "No content")
+            tool_call_id = tool_result.get("tool_call_id", "Unknown ID")
+            sections.append(f"  - {tool_name} (ID: {tool_call_id}): {tool_content}")
+
+    if analyze_result.confidence_score != 5:
+        sections.append(f"Confidence Score: {analyze_result.confidence_score}/10")
+
+    return "\n".join(sections) if sections else "No analysis result available"
+
+
 def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[str]:
     """
     Format a single subquery information object into readable sections.
@@ -94,9 +127,6 @@ def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[s
     subquery_section = [f"\n--- SUBQUERY {subquery_number} ---"]
     subquery_section.append(f"Query: {subquery.query_text}")
 
-    if subquery.query_type:
-        subquery_section.append(f"Type: {subquery.query_type}")
-
     if subquery.tables_used:
         subquery_section.append(f"Tables: {subquery.tables_used}")
 
@@ -109,17 +139,11 @@ def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[s
     if subquery.no_sql_response:
         subquery_section.append(f"No SQL Response: {subquery.no_sql_response}")
 
-    if subquery.tool_used_result is not None:
-        subquery_section.append(f"Tool Result: {subquery.tool_used_result}")
-
     if subquery.error_message:
         subquery_section.append("Errors encountered:")
         for error in subquery.error_message:
             for error_type, error_msg in error.items():
                 subquery_section.append(f"- {error_type}: {error_msg}")
-
-    if subquery.confidence_score != 5:
-        subquery_section.append(f"Confidence: {subquery.confidence_score}/10")
 
     if subquery.node_messages:
         subquery_section.append("Additional Context:")
@@ -133,7 +157,7 @@ def format_query_result(query_result: QueryResult) -> str:
     """
     Format a comprehensive query result into a detailed, human-readable multi-line string.
 
-    The output includes the original user query, execution time, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, type, tables used, executed SQL queries (including their explanations and results), tool results, error messages, confidence scores (if not default), and any additional context messages. If no subqueries are present, the output notes this explicitly.
+    The output includes the original user query, execution time, analyze query result, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, tables used, executed SQL queries (including their explanations and results), error messages, and any additional context messages. If no subqueries are present, the output notes this explicitly.
 
     Parameters:
         query_result (QueryResult): The query result object to format.
@@ -147,6 +171,10 @@ def format_query_result(query_result: QueryResult) -> str:
         f"USER QUERY: {user_query}",
         f"EXECUTION TIME: {query_result.execution_time:.2f}s",
     ]
+
+    if query_result.analyze_query_result:
+        input_parts.append("\n=== QUERY ANALYSIS ===")
+        input_parts.append(format_analyze_query_result(query_result.analyze_query_result))
 
     if query_result.single_dataset_query_result:
         input_parts.append("\n=== SINGLE DATASET QUERY RESULT ===")

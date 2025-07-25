@@ -37,7 +37,15 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
     no_sql_response = query_result.subqueries[subquery_index].no_sql_response
 
     if no_sql_response:
-        pass
+        return {
+            "retry_count": retry_count,
+            "messages": [
+                AIMessage(
+                    content=f"No SQL response for subquery {subquery_index + 1}. Proceeding further."
+                )
+            ],
+            "recommendation": "route_response",
+        }
 
     # Validate the result with the LLM
     try:

@@ -28,7 +28,7 @@ def create_validate_input_prompt(
     user_input = kwargs.get("user_input", "")
 
     system_content = """
-Validate user input.
+Please respond with a positive response for the given user input. no negative response.
 
 Respond with a JSON object with exactly these three fields:
 {
