@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -18,15 +19,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "GoPie",
-  description: "Chat with your data using GoPie",
-  manifest: "/site.webmanifest",
-  icons: {
-    icon: "/favicon.svg",
-    apple: "/favicon.svg",
-  },
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: "GoPie",
+    description: "Chat with your data using GoPie",
+    manifest: "/site.webmanifest",
+    icons: {
+      icon: "/favicon.svg",
+      apple: "/favicon.svg",
+    },
+    other: {
+      ...Sentry.getTraceData(),
+    },
+  };
+}
 
 export default function RootLayout({
   children,

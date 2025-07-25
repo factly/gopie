@@ -1,0 +1,101 @@
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+
+  // Environment configuration
+  environment: process.env.NODE_ENV,
+
+  // Adds request headers and IP for users
+  sendDefaultPii: true,
+
+  // Set tracesSampleRate to 1.0 to capture 100%
+  // of transactions for tracing.
+  // We recommend adjusting this value in production
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+
+  // Session Replay
+  integrations: [
+    // Replay may only be enabled for the client-side
+    Sentry.replayIntegration({
+      // Mask all text content, but keep media playback
+      maskAllText: true,
+      blockAllMedia: false,
+    }),
+    // Capture console logs
+    Sentry.captureConsoleIntegration({
+      levels: ["error", "warn"],
+    }),
+    // Browser tracing
+    Sentry.browserTracingIntegration(),
+    // Extra error data
+    Sentry.extraErrorDataIntegration({
+      depth: 10,
+    }),
+  ],
+
+  // Capture Replay for 10% of all sessions,
+  // plus for 100% of sessions with an error
+  replaysSessionSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0.5,
+  replaysOnErrorSampleRate: 1.0,
+
+  // Always enable when DSN is present
+  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
+  
+  // Debug mode for development
+  debug: process.env.NODE_ENV === "development",
+
+  // Before send hook to filter out certain errors or add context
+  beforeSend(event, hint) {
+    // Add user context if available
+    if (typeof window !== "undefined") {
+      const userInfo = window.localStorage.getItem("userInfo");
+      if (userInfo) {
+        try {
+          const user = JSON.parse(userInfo);
+          Sentry.setUser({
+            id: user.id,
+            email: user.email,
+            username: user.username,
+          });
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+
+    // Filter out specific errors if needed
+    if (event.exception) {
+      const error = hint.originalException;
+      
+      // Example: Don't send ResizeObserver errors
+      if (error && error.toString().includes("ResizeObserver")) {
+        return null;
+      }
+    }
+
+    return event;
+  },
+
+  // Ignore specific errors
+  ignoreErrors: [
+    // Browser extensions
+    "top.GLOBALS",
+    // Network errors
+    "NetworkError",
+    "Failed to fetch",
+    // Common browser errors
+    "Non-Error promise rejection captured",
+    // Ignore specific error messages
+    /ResizeObserver loop limit exceeded/,
+    /ResizeObserver loop completed with undelivered notifications/,
+    // Chrome extensions
+    /extensions\//,
+    /^chrome:\/\//,
+    /^moz-extension:\/\//,
+  ],
+
+});
+
+// This export will instrument router navigations
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
