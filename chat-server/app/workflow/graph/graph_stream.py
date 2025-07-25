@@ -44,6 +44,7 @@ async def stream_graph_updates(
         "user": user,
     }
     config = RunnableConfig(
+        metadata=metadata,
         configurable={
             "metadata": metadata,
             "chat_history": messages[:-1],
