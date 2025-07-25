@@ -34,6 +34,26 @@ class ToolUsedResult(TypedDict):
 
 
 @dataclass
+class AnalyzeQueryResult:
+    """
+    A class to represent the result of query analysis
+    """
+
+    query_type: str | None = None
+    response: str | None = None
+    tool_used_result: list[ToolUsedResult] | None = None
+    confidence_score: int = 5
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "query_type": self.query_type,
+            "response": self.response,
+            "tool_used_result": self.tool_used_result,
+            "confidence_score": self.confidence_score,
+        }
+
+
+@dataclass
 class SubQueryInfo:
     """
     A class to represent information about a subquery
@@ -41,13 +61,10 @@ class SubQueryInfo:
 
     query_text: str
     sql_queries: list[SqlQueryInfo]
-    tables_used: str | None = None
-    query_type: str | None = None
+    tables_used: list[str] | None = None
     error_message: list[dict] | None = None
     no_sql_response: str | None = None
     retry_count: int = 0
-    tool_used_result: list[ToolUsedResult] | None = None
-    confidence_score: int = 5
     node_messages: dict = field(default_factory=dict)
 
     def add_error_message(self, error_message: str, error_origin_type: str):
@@ -67,12 +84,9 @@ class SubQueryInfo:
             "query_text": self.query_text,
             "sql_queries": [query.to_dict() for query in self.sql_queries],
             "tables_used": self.tables_used,
-            "query_type": self.query_type,
-            "tool_used_result": self.tool_used_result,
             "error_message": self.error_message,
             "no_sql_response": self.no_sql_response,
             "retry_count": self.retry_count,
-            "confidence_score": self.confidence_score,
             "node_messages": self.node_messages,
         }
 
@@ -97,14 +111,6 @@ class SingleDatasetQueryResult:
         }
 
 
-class QueryInfo(TypedDict, total=False):
-    tables_used: str | None
-    query_type: str | None
-    tool_used_result: list[ToolUsedResult] | None
-    confidence_score: int
-    node_messages: dict
-
-
 @dataclass
 class QueryResult:
     """
@@ -117,6 +123,7 @@ class QueryResult:
     timestamp: datetime
     single_dataset_query_result: SingleDatasetQueryResult | None = None
     subqueries: list[SubQueryInfo] = field(default_factory=list)
+    analyze_query_result: AnalyzeQueryResult = field(default_factory=AnalyzeQueryResult)
 
     def __post_init__(self):
         """
@@ -129,16 +136,12 @@ class QueryResult:
         self,
         query_text: str,
         sql_queries: list[SqlQueryInfo],
-        query_info: QueryInfo | None = None,
+        tables_used: list[str] | None = None,
     ):
         subquery_info = SubQueryInfo(
             query_text=query_text,
             sql_queries=sql_queries,
-            tables_used=query_info.get("tables_used") if query_info else None,
-            query_type=query_info.get("query_type") if query_info else None,
-            tool_used_result=(query_info.get("tool_used_result") if query_info else None),
-            confidence_score=(query_info.get("confidence_score", 5) if query_info else 5),
-            node_messages=(query_info.get("node_messages", {}) if query_info else {}),
+            tables_used=tables_used,
         )
         self.subqueries.append(subquery_info)
 
@@ -163,6 +166,7 @@ class QueryResult:
                 else None
             ),
             "subqueries": [sq.to_dict() for sq in self.subqueries],
+            "analyze_query_result": self.analyze_query_result.to_dict(),
         }
 
     def calculate_execution_time(self):
