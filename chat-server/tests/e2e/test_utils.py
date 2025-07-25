@@ -1,14 +1,15 @@
 import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 import requests
 from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
 
+from app.core.config import settings
 from app.core.constants import (
     DATASETS_USED,
     DATASETS_USED_ARG,
@@ -18,32 +19,25 @@ from app.core.constants import (
     VISUALIZATION_RESULT,
     VISUALIZATION_RESULT_ARG,
 )
+from app.utils.model_registry.model_provider import get_llm_provider
 
 from .terminal_formatter import TerminalFormatter
 
 load_dotenv()
 
 REQUEST_TIMEOUT = 120
+trace_id = str(uuid4())
 
 
 def setup_model() -> ChatOpenAI:
-    api_key = os.getenv("PORTKEY_API_KEY")
-    provider = os.getenv("PORTKEY_PROVIDER_NAME")
-
-    return ChatOpenAI(
-        api_key="X",  # type: ignore
-        base_url=PORTKEY_GATEWAY_URL,
-        default_headers=createHeaders(
-            api_key=api_key,
-            provider=provider,
-            metadata={
-                "_user": "e2e_test",
-            },
-            trace_id="e2e_test",
-            chat_id="e2e_test",
-        ),
-        model="gpt-4o",
+    llm_provider = get_llm_provider(
+        {
+            "user": "e2e_test",
+            "trace_id": trace_id,
+            "chat_id": "e2e_test",
+        }
     )
+    return llm_provider.get_llm_model(settings.DEFAULT_LLM_MODEL)
 
 
 def create_evaluation_chain():

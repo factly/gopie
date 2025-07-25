@@ -191,7 +191,7 @@ cache_dir = "tests/.pytest_cache"
 
 **E2E Test Configuration**:
 
-- Server URL: `http://localhost:8002/api/v1/chat/completions`
+- Server URL: `http://localhost:8001/api/v1/chat/completions`
 - Request timeout: 120 seconds
 - Streaming response processing
 - LLM evaluation with GPT-4o
