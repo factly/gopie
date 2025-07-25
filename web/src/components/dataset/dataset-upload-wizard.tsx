@@ -265,11 +265,12 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
           
           // Extract bucket and key from the URL
           // URL format: https://bucket.s3.region.amazonaws.com/path/to/file
+          // or: https://bucket.s3.region.wasabisys.com/path/to/file
           // or: https://s3.region.amazonaws.com/bucket/path/to/file
           const pathParts = url.pathname.split('/').filter(part => part.length > 0);
           
-          if (url.hostname.includes('s3') && url.hostname.includes('amazonaws.com')) {
-            // Standard S3 URL format
+          if (url.hostname.includes('s3') && (url.hostname.includes('amazonaws.com') || url.hostname.includes('wasabisys.com'))) {
+            // Standard S3 or S3-compatible URL format
             if (url.hostname.startsWith('s3')) {
               // Format: https://s3.region.amazonaws.com/bucket/key
               // pathParts[0] is bucket, rest is key
@@ -278,6 +279,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               s3Url = `s3://${bucket}/${key}`;
             } else {
               // Format: https://bucket.s3.region.amazonaws.com/key
+              // or: https://bucket.s3.region.wasabisys.com/key
               const bucket = url.hostname.split('.')[0];
               const key = pathParts.join('/');
               s3Url = `s3://${bucket}/${key}`;
