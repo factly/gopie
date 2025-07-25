@@ -377,7 +377,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
               onRemoveContext={handleRemoveContext}
               currentDatasetId={params.datasetId}
               currentProjectId={params.projectId}
-              triggerClassName="h-11 w-11 rounded-full"
+              triggerClassName="h-11 w-11"
               lockableContextIds={[params.datasetId]}
             />
             <MentionInput
@@ -404,7 +404,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                   <VoiceModeToggle
                     isActive={isVoiceModeActive}
                     onToggle={() => setIsVoiceModeActive(!isVoiceModeActive)}
-                    className="h-9 w-9 flex-shrink-0 rounded-full mr-0.5"
+                    className="h-9 w-9 flex-shrink-0 mr-0.5"
                     variant="ghost"
                   />
                 </>
@@ -491,7 +491,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                             {/* Loading more indicator */}
                             {isFetchingNextPage && (
                               <div className="flex justify-center py-3">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                                <span className="h-5 w-5 animate-spin border-2 border-muted-foreground border-t-transparent" />
                               </div>
                             )}
 

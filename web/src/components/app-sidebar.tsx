@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  MessageSquareIcon,
+  MessageSquarePlus,
   LifeBuoy,
   Send,
   KeyIcon,
@@ -220,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 mass: 0.8,
                 duration: 0.25,
               }}
-              className="fixed left-2 top-2 bottom-2 z-40 w-64 bg-sidebar border shadow-2xl rounded-xl overflow-hidden"
+              className="fixed left-2 top-2 bottom-2 z-40 w-64 bg-sidebar border shadow-2xl overflow-hidden"
               onMouseEnter={() => {
                 if (timeoutRef.current) {
                   clearTimeout(timeoutRef.current);
@@ -268,9 +268,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                           <Link
                             href="/"
-                            className="flex items-center justify-center"
+                            className="flex items-center justify-start"
                           >
-                            <div className="flex items-center justify-center">
+                            <div className="flex items-center justify-start">
                               <Image
                                 src={
                                   theme === "dark"
@@ -278,30 +278,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     : "/GoPie_Logo.svg"
                                 }
                                 alt="GoPie"
-                                width={80}
-                                height={40}
-                                className="h-8"
+                                width={100}
+                                height={50}
+                                className="h-10"
                               />
                             </div>
                           </Link>
                         </SidebarMenuButton>
                         <div className="flex items-center space-x-10">
-                          <SidebarMenuButton
-                            size="sm"
-                            asChild
-                            className={
-                              pathname === "/chat"
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                : ""
-                            }
-                          >
-                            <Link
-                              href="/chat"
-                              className="flex items-center justify-center"
-                            >
-                              <MessageSquareIcon className="h-4 w-4" />
-                            </Link>
-                          </SidebarMenuButton>
                           <ThemeToggle />
                         </div>
                       </div>
@@ -309,10 +293,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenu>
 
                   {!isSettingsPage && (
-                    <CommandSearch
-                      projectId={projectId}
-                      onNavigate={() => {}}
-                    />
+                    <>
+                      <CommandSearch
+                        projectId={projectId}
+                        onNavigate={() => {}}
+                      />
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            className={
+                              pathname === "/chat"
+                                ? "bg-primary text-primary-foreground border-primary/20 shadow-sm"
+                                : "bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-primary shadow-sm"
+                            }
+                          >
+                            <Link href="/chat" className="flex items-center gap-2 font-medium">
+                              <MessageSquarePlus className="h-4 w-4" />
+                              <span>New chat</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      </SidebarMenu>
+                    </>
                   )}
                 </SidebarHeader>
                 <SidebarContent className="flex-1">
@@ -346,8 +349,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <div className="flex items-center justify-between w-full">
                 <SidebarMenuButton size="lg" asChild className="p-0 h-8">
-                  <Link href="/" className="flex items-center justify-center">
-                    <div className="flex items-center justify-center">
+                  <Link href="/" className="flex items-center justify-start">
+                    <div className="flex items-center justify-start">
                       <Image
                         src={
                           theme === "dark"
@@ -355,30 +358,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             : "/GoPie_Logo.svg"
                         }
                         alt="GoPie"
-                        width={80}
-                        height={40}
-                        className="h-8"
+                        width={100}
+                        height={50}
+                        className="h-10"
                       />
                     </div>
                   </Link>
                 </SidebarMenuButton>
                 <div className="flex items-center space-x-10">
-                  <SidebarMenuButton
-                    size="sm"
-                    asChild
-                    className={
-                      pathname === "/chat"
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : ""
-                    }
-                  >
-                    <Link
-                      href="/chat"
-                      className="flex items-center justify-center"
-                    >
-                      <MessageSquareIcon className="h-4 w-4" />
-                    </Link>
-                  </SidebarMenuButton>
                   <ThemeToggle />
                 </div>
               </div>
@@ -386,7 +373,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
 
           {!isSettingsPage && (
-            <CommandSearch projectId={projectId} onNavigate={() => {}} />
+            <>
+              <CommandSearch projectId={projectId} onNavigate={() => {}} />
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={
+                      pathname === "/chat"
+                        ? "bg-primary text-primary-foreground border-primary/20 shadow-sm"
+                        : "bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-primary shadow-sm"
+                    }
+                  >
+                    <Link href="/chat" className="flex items-center gap-2 font-medium">
+                      <MessageSquarePlus className="h-4 w-4" />
+                      <span>New chat</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </>
           )}
         </SidebarHeader>
         <SidebarContent>

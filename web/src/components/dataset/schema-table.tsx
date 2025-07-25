@@ -54,7 +54,7 @@ export function SchemaTable({ schema }: { schema: ColumnInfo[] }) {
               </motion.div>
             </TableCell>
             <TableCell>
-              <code className="px-2 py-1 bg-muted rounded-md text-sm">
+              <code className="px-2 py-1 bg-muted text-sm">
                 {column.column_type}
               </code>
             </TableCell>
@@ -75,7 +75,7 @@ export function SchemaTable({ schema }: { schema: ColumnInfo[] }) {
               {column.default === null ? (
                 <span className="text-muted-foreground italic">null</span>
               ) : (
-                <code className="px-2 py-1 bg-muted rounded-md text-sm">
+                <code className="px-2 py-1 bg-muted text-sm">
                   {column.default}
                 </code>
               )}

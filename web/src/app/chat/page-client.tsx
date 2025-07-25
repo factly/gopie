@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Table2, MessageSquarePlus, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
 import { ResultsPanel } from "@/components/chat/results-panel";
 import {
@@ -29,6 +29,7 @@ import {
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { History, PanelLeft } from "lucide-react";
 import { useChatStore } from "@/lib/stores/chat-store";
 // import { VoiceMode } from "@/components/chat/voice-mode";
 // import { VoiceModeToggle } from "@/components/chat/voice-mode-toggle";
@@ -37,6 +38,11 @@ import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { ReadOnlyMessage } from "@/components/chat/read-only-message";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,16 +62,14 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setActiveTab,
   setSelectedContexts,
   setLinkedDatasetId,
-  searchParams,
-  router,
   currentUserId,
+  updateUrlWithContext,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
-  searchParams: URLSearchParams;
-  router: ReturnType<typeof useRouter>;
   currentUserId: string;
+  updateUrlWithContext: (contexts: ContextItem[]) => void;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -115,26 +119,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     }
   }, [error]);
 
-  const handleStartNewChat = () => {
-    selectChatForDataset(null, null, null);
-    setActiveTab("chat");
-    setSelectedContexts([]);
-    setLinkedDatasetId(null);
-
-    // Clear results when starting a new chat
-    resetExecutedQueries();
-    clearVisualizationPaths();
-    setIsOpen(false);
-    setVisualizationOpen(false);
-
-    // Clear URL parameters when starting a new chat
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("chatId");
-    params.delete("initialMessage");
-    params.delete("contextData");
-    router.replace(`/chat?${params.toString()}`);
-  };
-
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync({
@@ -154,6 +138,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       if (selectedChatId === chatId) {
         selectChatForDataset(null, null, null);
         setSelectedContexts([]);
+        updateUrlWithContext([]);
         setLinkedDatasetId(null);
         // Clear results when deleting the current chat
         resetExecutedQueries();
@@ -185,18 +170,21 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setVisualizationOpen(false);
 
     if (datasetId && datasetName && projectId) {
-      setSelectedContexts([
+      const newContexts = [
         {
           id: datasetId,
-          type: "dataset",
+          type: "dataset" as const,
           name: datasetName,
           projectId: projectId,
         },
-      ]);
+      ];
+      setSelectedContexts(newContexts);
+      updateUrlWithContext(newContexts);
       selectChatForDataset(datasetId, chatId, chatName || "New Chat");
       setLinkedDatasetId(datasetId);
     } else {
       setSelectedContexts([]);
+      updateUrlWithContext([]);
       selectChatForDataset(null, chatId, chatName || "New Chat");
       setLinkedDatasetId(null);
     }
@@ -207,7 +195,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     if (!selectedChatId) {
       setLinkedDatasetId(null);
     }
-  }, [selectedChatId, setLinkedDatasetId]);
+  }, [selectedChatId, setLinkedDatasetId, selectChatForDataset]);
 
   if (isLoading) {
     return (
@@ -220,18 +208,8 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex items-center justify-between p-2 mb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStartNewChat}
-          className="h-8 px-2 text-xs w-full justify-start"
-        >
-          <MessageSquarePlus className="h-4 w-4 mr-2" />
-          New Chat
-        </Button>
-      </div>
+    <div className="flex flex-col">
+
 
       {allChats.length > 0 ? (
         <ScrollArea className="flex-1 pr-2">
@@ -267,7 +245,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                 <div
                   key={chat.id}
                   className={cn(
-                    "group relative flex flex-col rounded-lg px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
+                    "group relative flex flex-col px-4 py-3 hover:bg-muted cursor-pointer transition-colors",
                     selectedChatId === chat.id &&
                       "bg-muted/80 border border-border/10"
                   )}
@@ -286,9 +264,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <ChatVisibilityIndicator visibility={chat.visibility} />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                        {dateString}
-                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -302,10 +277,8 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
                       </Button>
                     </div>
                   </div>
-                  {/* Note: Since the API doesn't return dataset/project info with chats,
-                      we might need to fetch this information separately or store it differently */}
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    Chat History
+                    {dateString}
                   </div>
                 </div>
               );
@@ -364,12 +337,12 @@ const ChatInput = React.memo(
 
     return (
       <div className="border-t bg-background/80 backdrop-blur-md p-2">
-        <div className="flex items-start gap-2 w-full px-2">
+        <div className="flex items-start gap-2 w-full pr-2">
           <ContextPicker
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
-            triggerClassName="h-10 w-10 rounded-full bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+            triggerClassName="h-10 w-10 bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
             lockableContextIds={lockableContextIds}
           />
           <MentionInput
@@ -377,7 +350,7 @@ const ChatInput = React.memo(
             onChange={handleMentionInputChange}
             onSubmit={handleSubmit}
             disabled={isLoading}
-            placeholder="Ask a question..."
+            placeholder="Ask questions about your data..."
             selectedContexts={selectedContexts}
             onSelectContext={onSelectContext}
             onRemoveContext={onRemoveContext}
@@ -451,7 +424,7 @@ const ChatView = React.memo(
               >
                 {isFetchingNextPage ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent mr-2" />
                     Loading...
                   </>
                 ) : (
@@ -467,16 +440,7 @@ const ChatView = React.memo(
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-16 w-2/3" />
             </div>
-          ) : !selectedChatId && messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center pt-12 text-center max-w-lg mx-auto space-y-6">
-              <div className="text-lg font-medium">
-                Start a new conversation
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Select contexts and ask questions about your data.
-              </p>
-            </div>
-          ) : (
+          ) : !selectedChatId && messages.length === 0 ? null : (
             <div className="space-y-6">
               {messages.map((message) => (
                 <ChatMessage
@@ -527,8 +491,10 @@ function ChatPageClient() {
   const router = useRouter();
   const initialMessage = searchParams.get("initialMessage");
   const contextData = searchParams.get("contextData");
+  const contextsFromUrl = searchParams.get("contexts");
   const chatIdFromUrl = searchParams.get("chatId");
-  const [activeTab, setActiveTab] = useState("chat");
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl === "history" ? "history" : "chat");
   const queryClient = useQueryClient();
 
   // Get current user from auth store
@@ -549,26 +515,22 @@ function ChatPageClient() {
     setSelectedChatTitle,
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showLoadingMessage, setShowLoadingMessage] = useState(false);
   const {
     isOpen: sqlIsOpen,
     setIsOpen,
     resetExecutedQueries,
-    results,
+    // results, // removed unused variable
   } = useSqlStore();
   const {
     isOpen: isVisualizationOpen,
     setIsOpen: setVisualizationOpen,
-    paths: visualizationPaths,
+    // paths: visualizationPaths, // removed unused variable
     clearPaths: clearVisualizationPaths,
   } = useVisualizationStore();
 
   // Combined panel state - show if either SQL or visualizations are available
   const isResultsPanelOpen = sqlIsOpen || isVisualizationOpen;
-  const hasResults = !!(
-    results?.data?.length ||
-    results?.error ||
-    visualizationPaths.length > 0
-  );
   // const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   // const [latestAssistantMessage, setLatestAssistantMessage] = useState<
   //   string | null
@@ -578,9 +540,9 @@ function ChatPageClient() {
   const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [contextInitialized, setContextInitialized] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
-  const [sqlPanelWidth, setSqlPanelWidth] = useState(0);
 
   // Helper function to update URL with chat state
   const updateUrlWithChatId = useCallback(
@@ -592,6 +554,20 @@ function ChatPageClient() {
         params.delete("chatId");
         params.delete("initialMessage");
         params.delete("contextData");
+      }
+      router.replace(`/chat?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
+
+  // Helper function to update URL with context data
+  const updateUrlWithContext = useCallback(
+    (contexts: ContextItem[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (contexts.length > 0) {
+        params.set("contexts", encodeURIComponent(JSON.stringify(contexts)));
+      } else {
+        params.delete("contexts");
       }
       router.replace(`/chat?${params.toString()}`);
     },
@@ -668,6 +644,9 @@ function ChatPageClient() {
       );
       // Switch to streaming messages when we start receiving a response
       setUseStreamingMessages(true);
+      setIsStreaming(true);
+      // Hide loading message once we start receiving the actual stream
+      setShowLoadingMessage(false);
     },
     onFinish: (message, { usage, finishReason }) => {
       console.log("Chat message finished:", message);
@@ -679,6 +658,7 @@ function ChatPageClient() {
       if (message.role === "assistant") {
         // setLatestAssistantMessage(message.content); // Removed voice mode state
         setIsStreaming(false);
+        setShowLoadingMessage(false);
       }
 
       // If this was a new chat (no selectedChatId), invalidate chats list
@@ -698,19 +678,49 @@ function ChatPageClient() {
       toast.error("Error processing chat: " + (err.message || "Unknown error"));
       // Switch back to query messages on error
       setUseStreamingMessages(false);
+      setIsStreaming(false);
+      setShowLoadingMessage(false);
     },
     initialMessages: [], // Don't use initial messages from query
   });
 
   // Determine which messages to display
   const displayMessages = useMemo(() => {
-    if (useStreamingMessages && streamingMessages.length > 0) {
-      // When streaming, combine query messages with streaming messages
-      return [...allChatMessages, ...streamingMessages];
+    let messages = [];
+    
+    if (useStreamingMessages) {
+      // When streaming, show streaming messages (which includes the user message immediately)
+      // If we have a selectedChatId, prepend existing messages
+      if (selectedChatId && allChatMessages.length > 0) {
+        messages = [...allChatMessages, ...streamingMessages];
+      } else {
+        // For new chats, just show streaming messages
+        messages = streamingMessages;
+      }
+    } else {
+      // Otherwise, use query messages
+      messages = allChatMessages;
     }
-    // Otherwise, use query messages
-    return allChatMessages;
-  }, [useStreamingMessages, streamingMessages, allChatMessages]);
+    
+    // Add optimistic loading message if needed
+    if (showLoadingMessage && messages.length > 0) {
+      // Check if the last message is from the user and there's no assistant message yet
+      const lastMessage = messages[messages.length - 1];
+      const hasAssistantResponse = streamingMessages.some(msg => msg.role === 'assistant' && msg.content);
+      
+      if (lastMessage.role === 'user' && !hasAssistantResponse) {
+        // Add a loading assistant message
+        messages = [...messages, {
+          id: 'loading-' + Date.now(),
+          role: 'assistant' as const,
+          content: '',
+          createdAt: new Date()
+        } as UIMessage];
+      }
+    }
+    
+    return messages;
+  }, [useStreamingMessages, streamingMessages, allChatMessages, selectedChatId, showLoadingMessage]);
 
   // Log messages for debugging
   useEffect(() => {
@@ -842,9 +852,19 @@ function ChatPageClient() {
         toast.error("Please select at least one project or dataset before sending a message");
         return;
       }
+      
+      // For new chats, immediately switch to streaming messages to show the user message
+      if (!selectedChatId && input.trim()) {
+        setUseStreamingMessages(true);
+      }
+      
+      // Set loading state immediately
+      setIsStreaming(true);
+      setShowLoadingMessage(true);
+      
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
-    [sdkHandleSubmit, selectedContexts]
+    [sdkHandleSubmit, selectedContexts, selectedChatId, input]
   );
 
   // Note: Projects are now fetched when needed for context selection
@@ -859,6 +879,29 @@ function ChatPageClient() {
       setIsInitialized(true);
     }
   }, [chatIdFromUrl, selectedChatId, selectChatForDataset, isInitialized]);
+
+  // Initialize contexts from URL on first load
+  useEffect(() => {
+    if (!contextInitialized && contextsFromUrl && !contextData) {
+      try {
+        const parsedContexts = JSON.parse(decodeURIComponent(contextsFromUrl)) as ContextItem[];
+        if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
+          setSelectedContexts(parsedContexts);
+          
+          // Set linked dataset if there's a dataset context
+          const datasetContext = parsedContexts.find(ctx => ctx.type === "dataset");
+          if (datasetContext) {
+            setLinkedDatasetId(datasetContext.id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse contexts from URL:", error);
+      }
+      setContextInitialized(true);
+    } else if (!contextInitialized) {
+      setContextInitialized(true);
+    }
+  }, [contextsFromUrl, contextData, contextInitialized]);
 
   // Update chat title when chat details are loaded
   useEffect(() => {
@@ -879,7 +922,7 @@ function ChatPageClient() {
       console.log("Updating chat title to:", chatDetails.title);
       selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
     }
-  }, [chatDetails, selectedChatId, linkedDatasetId]);
+  }, [chatDetails, selectedChatId, linkedDatasetId, selectChatForDataset, setSelectedChatTitle]);
 
   // Handle chat details loading error
   useEffect(() => {
@@ -892,6 +935,8 @@ function ChatPageClient() {
   // Reset streaming state when switching chats
   useEffect(() => {
     setUseStreamingMessages(false);
+    setShowLoadingMessage(false);
+    setIsStreaming(false);
   }, [selectedChatId]);
 
   // This logic is now handled by the useChatDetails hook above
@@ -927,18 +972,25 @@ function ChatPageClient() {
           decodeURIComponent(contextData)
         ) as ContextItem[];
         if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
+          // Clear existing chat when navigating with new context data
+          selectChatForDataset(null, null, null);
+          setLinkedDatasetId(null);
           setSelectedContexts(parsedContexts);
           // Clear results when navigating with new context data
           resetExecutedQueries();
           clearVisualizationPaths();
           setIsOpen(false);
           setVisualizationOpen(false);
+          // Clear URL parameters to avoid re-applying context data
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("contextData");
+          router.replace(`/chat?${params.toString()}`);
         }
       } catch (error) {
         console.error("Failed to parse context data:", error);
       }
     }
-  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen]);
+  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen, selectChatForDataset, setLinkedDatasetId, searchParams, router]);
 
   useEffect(() => {
     resetExecutedQueries();
@@ -951,21 +1003,54 @@ function ChatPageClient() {
       initialMessage &&
       !initialMessageSent &&
       selectedContexts.length > 0 &&
-      isInitialized
+      isInitialized &&
+      !isLoading // Don't submit if already loading
     ) {
-      handleInputChange(initialMessage);
+      // Decode the initial message
+      const decodedMessage = decodeURIComponent(initialMessage);
+      
+      // Set the input value
+      handleInputChange(decodedMessage);
 
-      // Create a submit event for the form
-      const submitEvent = new Event("submit", { bubbles: true });
-      handleSubmit(submitEvent as unknown as React.FormEvent);
-
+      // Mark as sent immediately to prevent double submission
       setInitialMessageSent(true);
 
-      // Only remove initialMessage and contextData, preserve chatId
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("initialMessage");
-      params.delete("contextData");
-      router.replace(`/chat?${params.toString()}`);
+      // Use requestAnimationFrame to ensure React has updated the DOM
+      requestAnimationFrame(() => {
+        // Another frame to ensure the input value is properly set
+        requestAnimationFrame(() => {
+          // Now submit the form
+          const form = document.querySelector('form');
+          if (form && form instanceof HTMLFormElement) {
+            // Try using requestSubmit if available (modern browsers)
+            if ('requestSubmit' in form && typeof form.requestSubmit === 'function') {
+              form.requestSubmit();
+            } else {
+              // Fallback for older browsers
+              const submitEvent = new Event('submit', { 
+                bubbles: true, 
+                cancelable: true 
+              });
+              form.dispatchEvent(submitEvent);
+            }
+          } else {
+            // Direct fallback if form is not found
+            const submitEvent = new Event("submit", { 
+              bubbles: true, 
+              cancelable: true 
+            });
+            handleSubmit(submitEvent as unknown as React.FormEvent);
+          }
+        });
+      });
+
+      // Clean up URL parameters after a short delay
+      setTimeout(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("initialMessage");
+        params.delete("contextData");
+        router.replace(`/chat?${params.toString()}`);
+      }, 500);
     }
   }, [
     initialMessage,
@@ -976,6 +1061,7 @@ function ChatPageClient() {
     router,
     searchParams,
     isInitialized,
+    isLoading,
   ]);
 
   const handleScroll = useCallback(() => {
@@ -1010,12 +1096,20 @@ function ChatPageClient() {
   }, [displayMessages]);
 
   const handleSelectContext = useCallback((context: ContextItem) => {
-    setSelectedContexts((prev) => [...prev, context]);
-  }, []);
+    setSelectedContexts((prev) => {
+      const newContexts = [...prev, context];
+      updateUrlWithContext(newContexts);
+      return newContexts;
+    });
+  }, [updateUrlWithContext]);
 
   const handleRemoveContext = useCallback((contextId: string) => {
-    setSelectedContexts((prev) => prev.filter((c) => c.id !== contextId));
-  }, []);
+    setSelectedContexts((prev) => {
+      const newContexts = prev.filter((c) => c.id !== contextId);
+      updateUrlWithContext(newContexts);
+      return newContexts;
+    });
+  }, [updateUrlWithContext]);
 
   // const handleSendVoiceMessage = useCallback(
   //   async (message: string) => {
@@ -1028,27 +1122,7 @@ function ChatPageClient() {
   //   [handleInputChange, handleSubmit]
   // );
 
-  useEffect(() => {
-    if (!isResultsPanelOpen) {
-      setSqlPanelWidth(0);
-      return;
-    }
-    const updateWidth = () => {
-      if (sqlPanelRef.current) {
-        setSqlPanelWidth(sqlPanelRef.current.clientWidth);
-      }
-    };
-    updateWidth();
-    const resizeObserver = new ResizeObserver(updateWidth);
-    if (sqlPanelRef.current) {
-      resizeObserver.observe(sqlPanelRef.current);
-    }
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, [isResultsPanelOpen, sqlPanelRef]);
+  // Removed unused sqlPanelWidth state management
 
   // Update streaming state based on isLoading
   useEffect(() => {
@@ -1079,20 +1153,45 @@ function ChatPageClient() {
     } else {
       setOpen(false);
     }
-  }, []); // Empty dependency array means this runs only once on mount
+  }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
 
   return (
-    <main className="flex flex-col w-full h-screen">
+    <main className="flex flex-col w-full h-[calc(100vh-16px)]">
       <div className="flex w-full relative overflow-hidden h-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full h-full flex flex-col"
-            >
-              <div className="flex w-full items-center border-b">
-                <TabsList className="flex-1 h-10 grid grid-cols-2 rounded-none bg-background">
+            <div className="relative w-full h-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => {
+                  setActiveTab(value);
+                  // Update URL with tab parameter
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (value === "history") {
+                    params.set("tab", "history");
+                  } else {
+                    params.delete("tab");
+                  }
+                  router.replace(`/chat?${params.toString()}`);
+                }}
+                className="w-full h-full flex flex-col relative"
+              >
+              <div className="flex w-full items-center border-b relative z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mr-2 ml-2 p-1 h-10 w-8"
+                  onClick={() => {
+                    if (isMobile) {
+                      setOpenMobile(!isSidebarOpen);
+                    } else {
+                      setOpen(!isSidebarOpen);
+                    }
+                  }}
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </Button>
+                <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
                   <TabsTrigger
                     value="chat"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
@@ -1112,22 +1211,40 @@ function ChatPageClient() {
                       </span>
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="history"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all"
-                  >
-                    History
-                  </TabsTrigger>
                 </TabsList>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mr-2"
-                  onClick={() => {
-                    selectChatForDataset(null, null, null);
-                    setLinkedDatasetId(null);
-                    setActiveTab("chat");
-                    setSelectedContexts([]);
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`mr-2 ${activeTab === "history" ? "bg-muted border-b-2 border-primary" : ""}`}
+                      onClick={() => {
+                        setActiveTab("history");
+                        // Update URL with tab parameter
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set("tab", "history");
+                        router.replace(`/chat?${params.toString()}`);
+                      }}
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>History</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => {
+                        selectChatForDataset(null, null, null);
+                        setLinkedDatasetId(null);
+                        setActiveTab("chat");
+                        setSelectedContexts([]);
+                        updateUrlWithContext([]);
 
                     // Clear results when starting a new chat
                     resetExecutedQueries();
@@ -1135,53 +1252,36 @@ function ChatPageClient() {
                     setIsOpen(false);
                     setVisualizationOpen(false);
 
-                    // Clear URL parameters when starting a new chat
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.delete("chatId");
-                    params.delete("initialMessage");
-                    params.delete("contextData");
-                    router.replace(`/chat?${params.toString()}`);
-                  }}
-                >
-                  <MessageSquarePlus className="h-4 w-4 mr-1" />
-                  New Chat
-                </Button>
+                        // Clear URL parameters when starting a new chat
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("chatId");
+                        params.delete("initialMessage");
+                        params.delete("contextData");
+                        params.delete("contexts");
+                        router.replace(`/chat?${params.toString()}`);
+                      }}
+                    >
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Chat</p>
+                  </TooltipContent>
+                </Tooltip>
                 {selectedChatId && (
                   <ShareChatDialog
                     chatId={selectedChatId}
                     currentVisibility={chatDetails?.visibility || "private"}
                   />
                 )}
-                {hasResults && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mr-2"
-                    onClick={() => {
-                      if (isResultsPanelOpen) {
-                        setIsOpen(false);
-                        setVisualizationOpen(false);
-                      } else {
-                        if (results?.data?.length || results?.error) {
-                          setIsOpen(true);
-                        }
-                        if (visualizationPaths.length > 0) {
-                          setVisualizationOpen(true);
-                        }
-                      }
-                    }}
-                  >
-                    <Table2 className="h-4 w-4 mr-1" />
-                    Results
-                  </Button>
-                )}
+
               </div>
 
               <TabsContent
                 value="chat"
                 className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
               >
-                <div className="flex flex-col h-full min-h-0">
+                <div className="flex flex-col h-full min-h-0 relative">
                   <ChatView
                     scrollRef={scrollRef}
                     handleScroll={handleScroll}
@@ -1204,18 +1304,99 @@ function ChatPageClient() {
                   setActiveTab={setActiveTab}
                   setSelectedContexts={setSelectedContexts}
                   setLinkedDatasetId={setLinkedDatasetId}
-                  searchParams={searchParams}
-                  router={router}
                   currentUserId={currentUserId}
+                  updateUrlWithContext={updateUrlWithContext}
                 />
               </TabsContent>
-            </Tabs>
+              </Tabs>
+              {activeTab === "chat" && (
+                <>
+                  {!selectedChatId && displayMessages.length === 0 ? (
+                    <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
+                      <div className="w-full max-w-2xl pointer-events-auto">
+                        <div className="mb-6 text-center">
+                          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                            Chat with your data
+                          </h1>
+                          <p className="text-sm text-muted-foreground">
+                            Select contexts and ask questions about your data
+                          </p>
+                        </div>
+                        <div
+                          className="bg-card border border-border shadow-lg 
+                          ring-[1.5px] ring-foreground/10 
+                          hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
+                          focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
+                          transition-all duration-200"
+                        >
+                          <div className="flex items-center">
+                            <div className="flex items-center justify-center h-12 w-12">
+                              <ContextPicker
+                                selectedContexts={selectedContexts}
+                                onSelectContext={handleSelectContext}
+                                onRemoveContext={handleRemoveContext}
+                                triggerClassName="flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 bg-muted/70"
+                              />
+                            </div>
+                            <MentionInput
+                              value={input}
+                              onChange={handleInputChange}
+                              onSubmit={handleSubmit}
+                              disabled={isLoading}
+                              placeholder="Ask questions about your data..."
+                              selectedContexts={selectedContexts}
+                              onSelectContext={handleSelectContext}
+                              onRemoveContext={handleRemoveContext}
+                              className="flex-1"
+                              showSendButton={true}
+                              isSending={isLoading}
+                              isStreaming={isStreaming}
+                              stopMessageStream={handleStop}
+                              lockableContextIds={[]}
+                              hasContext={selectedContexts.length > 0}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute bottom-0 left-0 right-0 z-20">
+                      {isCurrentUserOwner || isAuthDisabled ? (
+                        <ChatInput
+                          onStop={handleStop}
+                          isStreaming={isStreaming}
+                          selectedContexts={selectedContexts}
+                          onSelectContext={handleSelectContext}
+                          onRemoveContext={handleRemoveContext}
+                          // isVoiceModeActive={isVoiceModeActive}
+                          // setIsVoiceModeActive={setIsVoiceModeActive}
+                          lockableContextIds={
+                            selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+                          }
+                          hasContext={selectedContexts.length > 0}
+                          input={input}
+                          handleInputChange={handleInputChange}
+                          handleSubmit={handleSubmit}
+                          isLoading={isLoading}
+                        />
+                      ) : selectedChatId ? (
+                        <ReadOnlyMessage
+                          chatOwner={chatDetails?.created_by}
+                          chatVisibility={chatDetails?.visibility}
+                          chatTitle={chatDetails?.title}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </ResizablePanel>
           {isResultsPanelOpen && (
             <>
               <ResizableHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
-                <div ref={sqlPanelRef} className="h-screen overflow-hidden">
+                <div ref={sqlPanelRef} className="h-[calc(100vh-16px)]">
                   <ResultsPanel
                     isOpen={isResultsPanelOpen}
                     onClose={() => {
@@ -1229,41 +1410,7 @@ function ChatPageClient() {
           )}
         </ResizablePanelGroup>
       </div>
-      {activeTab === "chat" && (
-        <div
-          className="fixed bottom-0 z-10"
-          style={{
-            left: isMobile ? 0 : isSidebarOpen ? "16rem" : "0rem",
-            right: isResultsPanelOpen ? sqlPanelWidth : 0,
-          }}
-        >
-          {isCurrentUserOwner || isAuthDisabled ? (
-            <ChatInput
-              onStop={handleStop}
-              isStreaming={isStreaming}
-              selectedContexts={selectedContexts}
-              onSelectContext={handleSelectContext}
-              onRemoveContext={handleRemoveContext}
-              // isVoiceModeActive={isVoiceModeActive}
-              // setIsVoiceModeActive={setIsVoiceModeActive}
-              lockableContextIds={
-                selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
-              }
-              hasContext={selectedContexts.length > 0}
-              input={input}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-          ) : selectedChatId ? (
-            <ReadOnlyMessage
-              chatOwner={chatDetails?.created_by}
-              chatVisibility={chatDetails?.visibility}
-              chatTitle={chatDetails?.title}
-            />
-          ) : null}
-        </div>
-      )}
+
       {/* {isVoiceModeActive && latestAssistantMessage && (
         <VoiceMode
           isActive={isVoiceModeActive}

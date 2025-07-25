@@ -45,11 +45,14 @@ export default function HomePage() {
   const [inputValue, setInputValue] = useState("");
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const createChat = useCreateChat();
   const { selectChat } = useChatStore();
 
   const handleSelectContext = (context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
+    // Stop flashing when context is selected
+    setIsInputFocused(false);
   };
 
   const handleRemoveContext = (contextId: string) => {
@@ -219,7 +222,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-[200px] rounded-lg" />
+              <Skeleton key={i} className="h-[200px]" />
             ))}
           </div>
         </div>
@@ -257,7 +260,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               <Link
                 href="/settings"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
+                className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
               >
                 <SettingsIcon className="h-4 w-4" />
                 <span className="sr-only">Settings</span>
@@ -283,18 +286,10 @@ export default function HomePage() {
             >
               <div className="mb-6">
                 <div className="flex justify-center mb-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/30 backdrop-blur-sm max-w-md">
-                    <div className="bg-muted text-muted-foreground text-xs font-medium rounded-full px-1.5 py-0.5">
-                      NEW
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      GoPie is open source!
-                    </span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
                     <a
-                      href="https://github.com/factly/gopie"
+                      href="/chat?tab=history"
                       className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                      target="_blank"
-                      rel="noopener noreferrer"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -306,10 +301,11 @@ export default function HomePage() {
                         strokeLinejoin="round"
                         className="h-4 w-4"
                       >
-                        <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-                        <path d="M9 18c-4.51 2-5-2-7-2" />
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                        <path d="M12 7v5l4 2" />
                       </svg>
-                      View on GitHub
+                      Previous Chats
                     </a>
                   </div>
                 </div>
@@ -319,19 +315,24 @@ export default function HomePage() {
               </div>
 
               <div
-                className="rounded-xl bg-card dark:bg-card/90 border border-border shadow-lg 
+                className="bg-card dark:bg-card/90 border border-border shadow-lg 
                 ring-[1.5px] ring-foreground/10 
                 hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
                 focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
                 transition-all duration-200"
               >
                 <div className="flex items-center">
-                  <div className="flex items-center justify-center h-12 w-12 ml-2">
+                  <div className="flex items-center justify-center h-12 w-12">
                     <ContextPicker
                       selectedContexts={selectedContexts}
                       onSelectContext={handleSelectContext}
                       onRemoveContext={handleRemoveContext}
-                      triggerClassName="flex items-center justify-center h-9 w-9 rounded-full bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
+                        isInputFocused && selectedContexts.length === 0
+                          ? "animate-slow-pulse bg-muted/90"
+                          : "bg-muted/70"
+                      }`}
+                      shouldFlash={isInputFocused && selectedContexts.length === 0}
                     />
                   </div>
                   <MentionInput
@@ -339,7 +340,7 @@ export default function HomePage() {
                     onChange={setInputValue}
                     onSubmit={handleSendMessage}
                     disabled={isSending}
-                    placeholder="Ask GoPie anything..."
+                    placeholder="Ask questions about your data..."
                     selectedContexts={selectedContexts}
                     onSelectContext={handleSelectContext}
                     onRemoveContext={handleRemoveContext}
@@ -347,9 +348,39 @@ export default function HomePage() {
                     showSendButton={true}
                     isSending={isSending}
                     hasContext={selectedContexts.length > 0}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                 </div>
               </div>
+              
+              {/* Help message when context selection is needed */}
+              {isInputFocused && selectedContexts.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <div className="flex items-center gap-1">
+                    <svg 
+                      className="w-4 h-4 text-primary animate-bounce" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M7 11l5-5m0 0l5 5m-5-5v12" 
+                      />
+                    </svg>
+                    <span className="text-primary font-medium">Click here</span>
+                  </div>
+                  <span>to select at least one project or dataset to continue</span>
+                </motion.div>
+              )}
             </motion.div>
           </div>
 
@@ -359,7 +390,7 @@ export default function HomePage() {
               <motion.h1
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-4xl font-bold tracking-tight"
+                className="text-3xl font-bold tracking-tight"
               >
                 Projects
               </motion.h1>
@@ -392,7 +423,7 @@ export default function HomePage() {
                   animate={{ opacity: 1 }}
                   className="col-span-full flex flex-col items-center justify-center py-12"
                 >
-                  <div className="rounded-full bg-muted p-4 mb-4">
+                  <div className="bg-muted p-4 mb-4">
                     <FolderIcon className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-medium text-foreground mb-2">

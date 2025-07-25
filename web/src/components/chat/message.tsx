@@ -108,7 +108,7 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
 
   if (isLoading) {
     return (
-      <span className="text-xs bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary-foreground/70 px-2 py-0.5 rounded-md font-mono flex items-center gap-1">
+      <span className="text-xs bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary-foreground/70 px-2 py-0.5 font-mono flex items-center gap-1">
         <Loader2 className="h-3 w-3 animate-spin" />
         {datasetId.substring(0, 8)}...
       </span>
@@ -117,7 +117,7 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
 
   if (isError || !dataset) {
     return (
-      <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-md font-mono">
+      <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 font-mono">
         {datasetId.substring(0, 8)}...
       </span>
     );
@@ -201,6 +201,9 @@ export function ChatMessage({
     useState<string[]>([]);
   const [expandedQueries, setExpandedQueries] = useState<Set<number>>(
     new Set()
+  );
+  const [editedQueries, setEditedQueries] = useState<Map<number, string>>(
+    new Map()
   );
 
   const toggleQueryExpansion = (index: number) => {
@@ -355,7 +358,7 @@ export function ChatMessage({
       setDisplayDatasets(finalizedDatasets || []);
       setDisplaySqlQueries(finalizedSqlQuery ? [finalizedSqlQuery] : []);
     }
-  }, [message, content, finalizedDatasets, finalizedSqlQuery]);
+  }, [message, content, finalizedDatasets, finalizedSqlQuery, chatId, setVisualizationPaths]);
 
   const handleRunQuery = useCallback(
     async (query: string) => {
@@ -442,7 +445,7 @@ export function ChatMessage({
       <div className={cn("group flex w-full justify-start")}>
         <div
           className={cn(
-            "flex items-start gap-3 rounded-2xl px-4 py-3",
+            "flex items-start gap-3 px-4 py-3",
             "w-fit max-w-[90%] min-w-0",
             "bg-muted shadow-sm border border-border/10"
           )}
@@ -469,7 +472,7 @@ export function ChatMessage({
       <div className={cn("group flex w-full justify-start")}>
         <div
           className={cn(
-            "flex items-start gap-3 rounded-2xl px-4 py-3",
+            "flex items-start gap-3 px-4 py-3",
             "w-fit max-w-[90%] min-w-0",
             "bg-muted shadow-sm border border-border/10 border-dashed opacity-90"
           )}
@@ -500,7 +503,7 @@ export function ChatMessage({
                 <div
                   className={cn(
                     "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
                     "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
                     "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
                   )}
@@ -524,11 +527,10 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "flex flex-col items-start gap-2 rounded-2xl px-4 py-3",
-          "w-fit max-w-[90%] min-w-0",
+          "flex flex-col items-start gap-2 px-4 py-3",
           styleRole === "user"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "bg-muted shadow-sm border border-border/10"
+            ? "w-fit max-w-[90%] min-w-0 bg-primary text-primary-foreground shadow-sm"
+            : "w-full min-w-0 bg-muted shadow-sm border border-border/10"
         )}
         id={`message-${id}`}
         data-message-role={role}
@@ -555,7 +557,7 @@ export function ChatMessage({
               <div
                 className={cn(
                   "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                  "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                  "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
                   "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
                   "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
                 )}
@@ -580,7 +582,7 @@ export function ChatMessage({
                         key={`${id}-part-${index}`}
                         className={cn(
                           "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                          "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                          "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
                           "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
                           styleRole === "user"
                             ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
@@ -601,7 +603,7 @@ export function ChatMessage({
                 <div
                   className={cn(
                     "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:rounded-lg",
+                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
                     "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
                     styleRole === "user"
                       ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
@@ -625,9 +627,9 @@ export function ChatMessage({
                     key={index}
                     open={expandedQueries.has(index)}
                     onOpenChange={() => toggleQueryExpansion(index)}
-                    className="rounded-lg border border-border bg-card shadow-sm"
+                    className="border border-border bg-card shadow-sm"
                   >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors rounded-lg data-[state=open]:rounded-b-none">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {expandedQueries.has(index) ? (
                           <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -654,7 +656,8 @@ export function ChatMessage({
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRunQuery(query);
+                            const queryToRun = editedQueries.get(index) ?? query;
+                            handleRunQuery(queryToRun);
                           }}
                           disabled={isExecuting}
                           className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
@@ -671,9 +674,13 @@ export function ChatMessage({
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
                         <SqlEditor
-                          value={query}
-                          onChange={() => {
-                            /* no-op for display only */
+                          value={editedQueries.get(index) ?? query}
+                          onChange={(newValue) => {
+                            setEditedQueries((prev) => {
+                              const newMap = new Map(prev);
+                              newMap.set(index, newValue);
+                              return newMap;
+                            });
                           }}
                           datasetId={""}
                         />
@@ -693,8 +700,8 @@ export function ChatMessage({
                     {!isLoading && (
                       <div className="absolute top-2 right-2 flex items-center gap-2">
                         {isExecuting && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">
-                            <span className="h-2 w-2 rounded-full bg-primary/50 animate-pulse" />
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 backdrop-blur-sm shadow-sm">
+                            <span className="h-2 w-2 bg-primary/50 animate-pulse" />
                             Running...
                           </div>
                         )}
@@ -751,7 +758,7 @@ export function ChatMessage({
                 {displayVisualizationResults.map((path, index) => (
                   <div
                     key={index}
-                    className="group relative flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30"
+                    className="group relative flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <BarChart3 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -829,7 +836,7 @@ export function ChatMessage({
                 {displayVisualizationPaths.map((path, index) => (
                   <div
                     key={index}
-                    className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md font-mono"
+                    className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 font-mono"
                   >
                     {path}
                   </div>

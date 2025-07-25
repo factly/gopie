@@ -58,7 +58,7 @@ export function DatabaseSourceForm({
     }
 
     try {
-      const result = await sourceDatabaseDataset.mutateAsync({
+      const response = await sourceDatabaseDataset.mutateAsync({
         alias: datasetAlias,
         description: datasetDescription.trim() || undefined,
         connection_string: connectionString,
@@ -68,14 +68,22 @@ export function DatabaseSourceForm({
         created_by: "system",
       });
 
-      if (!result?.dataset?.id) {
+      // Handle both response structures
+      const result = (response as unknown as Record<string, unknown>)?.data || response;
+      
+      // Type the result properly
+      const typedResult = result as Record<string, unknown>;
+      const dataset = typedResult?.dataset as Record<string, unknown> | undefined;
+      
+      if (!dataset?.id) {
         const errMessage =
           "Invalid response from server: Dataset ID not found.";
         setFormError(errMessage);
         onError(errMessage);
         return;
       }
-      onSuccess(result.dataset.alias, result.dataset.id);
+      
+      onSuccess(dataset.alias as string, dataset.id as string);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";

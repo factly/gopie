@@ -28,6 +28,7 @@ type uploadRequestBody struct {
 	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
 	// Column descriptions
 	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
+	IgnoreErrors       bool              `json:"ignore_errors"`
 }
 
 // @Summary Upload file from S3
@@ -52,7 +53,9 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 	// Get request body from context
-	var body uploadRequestBody
+	body := uploadRequestBody{
+		IgnoreErrors: true,
+	}
 	if err := ctx.BodyParser(&body); err != nil {
 		h.logger.Info("Error parsing request body", zap.Error(err))
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -93,7 +96,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	h.logger.Info("Starting file upload", zap.String("file_path", body.FilePath), zap.String("project_id", project.ID))
 
 	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "", body.AlterColumnNames)
+	res, err := h.olapSvc.IngestS3File(ctx.Context(), body.FilePath, "", body.AlterColumnNames, body.IgnoreErrors)
 	if err != nil {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 

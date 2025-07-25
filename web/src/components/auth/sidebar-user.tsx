@@ -86,7 +86,7 @@ export function SidebarUser() {
           <Button
             variant="ghost"
             size="sm"
-            className="relative h-8 w-8 rounded-full mr-0"
+            className="relative h-8 w-8 mr-0"
           >
             <Avatar className="h-8 w-8">
               <AvatarImage

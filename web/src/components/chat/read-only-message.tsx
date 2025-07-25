@@ -28,7 +28,7 @@ export function ReadOnlyMessage({
   return (
     <div className="border-t bg-muted/30 p-4">
       <div className="flex items-center gap-3 max-w-4xl mx-auto">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
+        <div className="flex items-center justify-center w-10 h-10 bg-muted">
           <Eye className="h-5 w-5 text-muted-foreground" />
         </div>
         <div className="flex-1">

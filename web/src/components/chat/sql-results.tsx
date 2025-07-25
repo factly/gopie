@@ -1,6 +1,5 @@
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Database, Download } from "lucide-react";
 import { cn, downloadCsv } from "@/lib/utils";
 
@@ -41,53 +40,51 @@ export function SqlResults() {
           )}
         </div>
       </div>
-      <ScrollArea className="flex-1 min-h-0 p-4">
+      <div className="flex-1 min-h-0 overflow-auto p-4">
         <div className="flex h-full items-center justify-center">
           {results?.error ? (
-            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{results.error}</p>
               <pre className="mt-2 text-xs text-muted-foreground">
                 {results.query}
               </pre>
             </div>
           ) : results?.data?.length ? (
-            <div className="w-full rounded-lg border">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      {Object.keys(results.data[0] || {}).map((key) => (
-                        <th
-                          key={key}
-                          className="border-r px-4 py-2 text-left font-medium last:border-r-0"
+            <div className="w-full overflow-x-auto border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    {Object.keys(results.data[0] || {}).map((key) => (
+                      <th
+                        key={key}
+                        className="whitespace-nowrap border-r px-4 py-2 text-left font-medium last:border-r-0"
+                      >
+                        {key}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.data.map((row, i) => (
+                    <tr
+                      key={i}
+                      className={cn(
+                        "border-b last:border-b-0",
+                        i % 2 === 0 ? "bg-background" : "bg-muted/30"
+                      )}
+                    >
+                      {Object.values(row).map((value, j) => (
+                        <td
+                          key={j}
+                          className="whitespace-nowrap border-r px-4 py-2 last:border-r-0"
                         >
-                          {key}
-                        </th>
+                          {String(value)}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {results.data.map((row, i) => (
-                      <tr
-                        key={i}
-                        className={cn(
-                          "border-b last:border-b-0",
-                          i % 2 === 0 ? "bg-background" : "bg-muted/30"
-                        )}
-                      >
-                        {Object.values(row).map((value, j) => (
-                          <td
-                            key={j}
-                            className="border-r px-4 py-2 last:border-r-0"
-                          >
-                            {String(value)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -97,7 +94,7 @@ export function SqlResults() {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

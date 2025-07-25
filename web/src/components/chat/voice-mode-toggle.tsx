@@ -26,7 +26,7 @@ export function VoiceModeToggle({
           variant={isActive ? "default" : variant || "outline"}
           size="icon"
           onClick={onToggle}
-          className={`h-11 w-11 rounded-full shadow-sm ${
+          className={`h-11 w-11 shadow-sm ${
             isActive ? "bg-primary text-primary-foreground" : ""
           } ${className}`}
         >

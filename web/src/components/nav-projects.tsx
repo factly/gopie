@@ -1,12 +1,11 @@
 "use client";
 
 import {
-  // DatabaseIcon,
+  DatabaseIcon,
   TableIcon,
-  // MessageSquareIcon,
   CodeIcon,
-  NetworkIcon,
   ChevronDown,
+  ArrowLeftRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -78,7 +77,7 @@ export function NavProjects() {
     <>
       {/* Projects Navigation */}
       <SidebarGroup>
-        <SidebarGroupLabel className="flex items-center justify-between">
+        <SidebarGroupLabel className="flex items-center justify-between pl-2 pr-0">
           <span className="truncate font-medium">
             {project?.name || "Select Project"}
           </span>
@@ -88,9 +87,9 @@ export function NavProjects() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 px-2 text-xs flex items-center gap-1"
+                  className="h-5 p-0 text-xs flex items-center gap-1"
                 >
-                  <span>Switch</span>
+                  <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
@@ -144,7 +143,7 @@ export function NavProjects() {
       {/* Datasets Navigation */}
       {datasetId && datasets?.results && (
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
+          <SidebarGroupLabel className="flex items-center justify-between pl-2 pr-0">
             <span className="truncate font-medium">
               {datasets.results.find((d) => d.id === datasetId)?.alias ||
                 datasets.results.find((d) => d.id === datasetId)?.name ||
@@ -155,9 +154,9 @@ export function NavProjects() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 px-2 text-xs flex items-center gap-1"
+                  className="h-5 p-0 text-xs flex items-center gap-1"
                 >
-                  <span>Switch</span>
+                  <ArrowLeftRight className="h-3 w-3 opacity-50" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
@@ -209,8 +208,8 @@ export function NavProjects() {
                   isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/data`)}
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}/data`}>
-                    <CodeIcon className="h-4 w-4" />
-                    <span>Query</span>
+                    <DatabaseIcon className="h-4 w-4" />
+                    <span>SQL Playground</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -220,8 +219,8 @@ export function NavProjects() {
                   isActive={isActive(`/projects/${projectId}/datasets/${datasetId}/api`)}
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}/api`}>
-                    <NetworkIcon className="h-4 w-4" />
-                    <span>Rest API</span>
+                    <CodeIcon className="h-4 w-4" />
+                    <span>API Playground</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

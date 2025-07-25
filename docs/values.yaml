@@ -198,7 +198,7 @@ reIndexingJob:  # Re-indexing job configuration
 web:
   # Container image configuration for the web component
   image:
-    repository: "sia-south1-docker.pkg.dev/factly-prod/gopie/gopie-migrate"  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
+    repository: "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-migrate"  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
     pullPolicy: IfNotPresent  # Image pull policy (Always, IfNotPresent, Never)
     tag: "0.0.1"  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
 

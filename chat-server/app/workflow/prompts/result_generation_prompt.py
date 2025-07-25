@@ -20,7 +20,8 @@ def create_result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptT
     input_content = kwargs.get("input", "")
 
     system_content = """
-You are generating the final response to a user query based on the context provided.
+You are an conversational agent responding to the user query. Your role is to answer the USER'S SPECIFIC QUERY based the data fetched.
+The complete results from the SQL Queries are available to the user on the *results tab* and point them to that, though you may only have access to the truncated data.
 
 CRITICAL:
 - Your role is to answer the USER'S SPECIFIC QUERY, not to summarize results. Always address what the user actually asked for.

@@ -134,7 +134,7 @@ export function VisualizationResults({
             visualizations.map((viz, index) => (
               <div
                 key={viz.path}
-                className="rounded-lg border bg-background p-4 space-y-3"
+                className="border bg-background p-4 space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium">
@@ -165,14 +165,14 @@ export function VisualizationResults({
                 </div>
 
                 {viz.isLoading ? (
-                  <div className="flex items-center justify-center h-64 bg-muted/30 rounded-md">
+                  <div className="flex items-center justify-center h-64 bg-muted/30">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent" />
                       Loading visualization...
                     </div>
                   </div>
                 ) : viz.error ? (
-                  <div className="p-4 rounded-md border border-destructive/50 bg-destructive/10">
+                  <div className="p-4 border border-destructive/50 bg-destructive/10">
                     <p className="text-sm text-destructive font-medium">
                       Error loading visualization
                     </p>

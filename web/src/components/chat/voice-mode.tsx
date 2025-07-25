@@ -696,13 +696,13 @@ export function VoiceMode({
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="absolute -top-12 right-0 rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 z-10"
+            className="absolute -top-12 right-0 h-8 w-8 bg-white/10 hover:bg-white/20 z-10"
           >
             <X className="h-4 w-4 text-white" />
           </Button>
 
           {/* Main container */}
-          <div className="bg-black/30 backdrop-blur-md rounded-2xl w-[300px] overflow-hidden border border-white/10">
+          <div className="bg-black/30 backdrop-blur-md w-[300px] overflow-hidden border border-white/10">
             {/* Status area */}
             <div className="flex flex-col items-center justify-center py-6 px-4">
               {currentTranscription && isRecording ? (
@@ -736,7 +736,7 @@ export function VoiceMode({
                   return (
                     <motion.div
                       key={index}
-                      className="bg-white/70 w-1 rounded-full"
+                      className="bg-white/70 w-1"
                       style={{ height }}
                       initial={{ height: "4px" }}
                       animate={{ height }}
