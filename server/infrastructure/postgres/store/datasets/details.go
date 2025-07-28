@@ -72,16 +72,17 @@ func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string, o
 	}
 
 	return &models.Dataset{
-		ID:          d.ID,
-		Name:        d.Name,
-		Description: d.Description.String,
-		RowCount:    int(d.RowCount.Int32),
-		Size:        int(d.Size.Int64),
-		FilePath:    d.FilePath,
-		CreatedAt:   time.Time(d.CreatedAt.Time),
-		UpdatedAt:   time.Time(d.UpdatedAt.Time),
-		Columns:     columns,
-		OrgID:       d.OrgID.String,
+		ID:           d.ID,
+		Name:         d.Name,
+		Description:  d.Description.String,
+		RowCount:     int(d.RowCount.Int32),
+		Size:         int(d.Size.Int64),
+		FilePath:     d.FilePath,
+		CreatedAt:    time.Time(d.CreatedAt.Time),
+		UpdatedAt:    time.Time(d.UpdatedAt.Time),
+		Columns:      columns,
+		OrgID:        d.OrgID.String,
+		CustomPrompt: d.CustomPrompt.String,
 	}, nil
 }
 
