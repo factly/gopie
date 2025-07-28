@@ -1,5 +1,4 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
@@ -47,12 +46,8 @@ async def plan_sql_query(
         prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
         llm = get_configured_llm_for_node("plan_sql_query_tool", config)
         response = await llm.ainvoke(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
 
-        parser = JsonOutputParser()
-        parsed = parser.parse(str(content))
-
-        sql_queries = parsed.get("sql_queries", [])
+        sql_queries = response.get("sql_queries", [])
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -63,7 +58,7 @@ async def plan_sql_query(
             },
         )
 
-        return parsed
+        return response
     except Exception as e:
         await adispatch_custom_event(
             "gopie-agent",

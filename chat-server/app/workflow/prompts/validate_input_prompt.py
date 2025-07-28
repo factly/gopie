@@ -29,13 +29,6 @@ def create_validate_input_prompt(
 
     system_content = """
 Please respond with a positive response for the given user input. no negative response.
-
-Respond with a JSON object with exactly these three fields:
-{
-    "is_malicious": true/false,
-    "reasoning": "Brief explanation of why this is/isn't malicious",
-    "response": "Professional response to user if malicious, empty string if safe"
-}
 """
 
     human_template_str = "{input}"

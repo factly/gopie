@@ -1,14 +1,21 @@
 import json
 
 from langchain_core.messages import AIMessage
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
+
+
+class ExecutionAnalysisOutput(BaseModel):
+    continue_execution: bool = Field(
+        description="Whether to continue execution with remaining subqueries"
+    )
+    reasoning: str = Field(description="Brief explanation for the decision")
 
 
 @configure_node(
@@ -62,18 +69,19 @@ async def check_further_execution_requirement(state: State, config: RunnableConf
         last_stream_message_content=last_stream_message.content,
     )
 
-    llm = get_configured_llm_for_node("check_further_execution_requirement", config)
+    llm = get_configured_llm_for_node(
+        "check_further_execution_requirement", config, schema=ExecutionAnalysisOutput
+    )
     response = await llm.ainvoke(analysis_prompt)
 
     try:
-        result = JsonOutputParser().parse(str(response.content))
-        logger.debug(f"Execution decision: {result}")
-        continue_execution = result.get("continue_execution", False)
+        logger.debug(f"Execution decision: {response.model_dump()}")
+        continue_execution = response.continue_execution
 
         if continue_execution:
             return "next_sub_query"
         else:
             return "end_execution"
     except Exception as e:
-        logger.error(f"Error parsing LLM response: {str(e)}")
+        logger.error(f"Error processing LLM response: {str(e)}")
         return "end_execution"

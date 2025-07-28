@@ -108,12 +108,6 @@ Make a decision based on:
 2. If the message mentions or implies a critical failure
 3. If the message indicates an error that prevents further processing
 4. Whether the remaining subqueries can still provide value
-
-Return a JSON object with:
-{
-    "continue_execution": true/false,
-    "reasoning": "brief explanation"
-}
 """
 
     human_template_str = """

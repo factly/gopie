@@ -58,16 +58,6 @@ Your analysis should follow these key criteria:
 6. Summary of the context (`context_summary`)
   • Provide a summary of how the present query is related to the previous conversation history.
   • If the chat history is empty, then the context summary should be empty.
-
-RESPOND ONLY IN THIS JSON FORMAT:
-{
-  "is_follow_up": boolean,
-  "is_new_data_needed": boolean,
-  "is_visualization_query": boolean,
-  "relevant_sql_queries": string[],
-  "enhanced_query": string,
-  "context_summary": string,
-}
 """
     human_template_str = """
 Current user query: {current_query}

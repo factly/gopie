@@ -83,25 +83,6 @@ NODE MESSAGE:
 * If datasets from chat history were not selected, briefly explain why
 * Be concise but informative - this will help guide later processing
 
-FORMAT YOUR RESPONSE AS JSON:
-{
-    "selected_dataset": ["dataset_name1", "dataset_name2", ...],  // From BOTH relevant and semantic searched datasets
-    "reasoning": "1-2 sentences explaining why these specific datasets were selected from the available options",
-    "column_assumptions": [
-        {
-            "dataset": "dataset_name1",  // From your selected datasets
-            "columns": [
-                {
-                    "name": "column_name",
-                    "exact_values": ["value1", ...],  // Only for string columns
-                    "fuzzy_values": ["value2", ...]   // Only for string columns
-                }
-            ]
-        }
-    ],
-    "node_message": "Brief message about selected datasets, their sources (chat history/semantic search), and their relevance to the query"
-}
-
 IMPORTANT:
 * selected_dataset should contain the best datasets chosen from ALL available sources
 * column_assumptions should include ALL selected datasets

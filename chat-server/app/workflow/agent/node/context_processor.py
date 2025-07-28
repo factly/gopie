@@ -22,8 +22,6 @@ from ..types import AgentState
 
 
 class ProcessContextOutput(BaseModel):
-    """Structured output for process context node."""
-
     is_follow_up: bool = Field(
         description="Whether this is a follow-up query from conversation history"
     )

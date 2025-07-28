@@ -1,6 +1,6 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.message import ErrorMessage, IntermediateStep
@@ -9,6 +9,26 @@ from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
+
+
+class SqlQueryOutput(BaseModel):
+    sql_query: str = Field(description="SQL query without semicolon, compatible with DuckDB")
+    explanation: str = Field(
+        description="Query strategy, columns used, table metadata, expected results"
+    )
+    tables_used: list[str] = Field(description="List of table names used in the query")
+
+
+class PlanQueryOutput(BaseModel):
+    sql_queries: list[SqlQueryOutput] = Field(
+        description="List of SQL queries to execute", default=[]
+    )
+    response_for_no_sql: str = Field(
+        description="Clear explanation when SQL queries cannot be generated", default=""
+    )
+    limitations: str = Field(
+        description="Any constraints or assumptions in the analysis", default=""
+    )
 
 
 @configure_node(
@@ -62,82 +82,72 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             previous_sql_queries=previous_sql_queries,
         )
 
-        llm = get_configured_llm_for_node("plan_query", config)
+        llm = get_configured_llm_for_node("plan_query", config, schema=PlanQueryOutput)
         response = await llm.ainvoke(llm_prompt + [last_message])
-        response_content = str(response.content)
 
-        parser = JsonOutputParser()
-        try:
-            parsed_response = parser.parse(response_content)
+        sql_queries = response.sql_queries
+        response_for_no_sql = response.response_for_no_sql
+        limitations = response.limitations
 
-            sql_queries = parsed_response.get("sql_queries", [])
-            response_for_no_sql = parsed_response.get("response_for_no_sql", "")
-            limitations = parsed_response.get("limitations", "")
+        if response_for_no_sql:
+            query_result.subqueries[query_index].no_sql_response = response_for_no_sql
 
-            if response_for_no_sql:
-                query_result.subqueries[query_index].no_sql_response = response_for_no_sql
+            query_result.set_node_message(
+                "plan_query",
+                {
+                    "query_strategy": "no_sql_response",
+                    "no_sql_response": response_for_no_sql,
+                    "limitations": limitations,
+                },
+            )
+        elif sql_queries:
+            formatted_sql_queries = []
+            sql_queries_info = []
 
-                query_result.set_node_message(
-                    "plan_query",
-                    {
-                        "query_strategy": "no_sql_response",
-                        "no_sql_response": response_for_no_sql,
-                        "limitations": limitations,
-                    },
-                )
-            elif sql_queries:
-                formatted_sql_queries = []
-                sql_queries_info = []
-
-                for sql_query in sql_queries:
-                    sql_query_explanation = sql_query.get("explanation", "")
-                    sql_queries_info.append(
-                        SqlQueryInfo(
-                            sql_query=sql_query["sql_query"],
-                            explanation=sql_query_explanation,
-                        )
+            for sql_query in sql_queries:
+                sql_queries_info.append(
+                    SqlQueryInfo(
+                        sql_query=sql_query.sql_query,
+                        explanation=sql_query.explanation,
                     )
-
-                    formatted_sql_queries.append(sql_query["sql_query"])
-
-                query_result.subqueries[query_index].sql_queries = sql_queries_info
-
-                tables_used = []
-                for query in sql_queries:
-                    if "tables_used" in query:
-                        tables_used.extend(query["tables_used"])
-
-                query_result.set_node_message(
-                    "plan_query",
-                    {
-                        "query_strategy": (
-                            "single_query" if len(sql_queries) == 1 else "multiple_queries"
-                        ),
-                        "tables_used": list(set(tables_used)),
-                        "query_count": len(sql_queries),
-                        "limitations": limitations,
-                    },
-                )
-                await adispatch_custom_event(
-                    "gopie-agent",
-                    {
-                        "content": "Generated SQL query",
-                        "name": SQL_QUERIES_GENERATED,
-                        "values": {SQL_QUERIES_GENERATED_ARG: formatted_sql_queries},
-                    },
-                )
-            else:
-                raise Exception(
-                    "Invalid response: must contain either 'sql_queries' or 'response_for_no_sql'"
                 )
 
-            return {
-                "query_result": query_result,
-                "messages": [IntermediateStep.from_json(parsed_response)],
-            }
+                formatted_sql_queries.append(sql_query.sql_query)
 
-        except Exception as parse_error:
-            raise Exception(f"Failed to parse LLM response: {parse_error!s}") from parse_error
+            query_result.subqueries[query_index].sql_queries = sql_queries_info
+
+            tables_used = []
+            for query in sql_queries:
+                tables_used.extend(query.tables_used)
+
+            query_result.set_node_message(
+                "plan_query",
+                {
+                    "query_strategy": (
+                        "single_query" if len(sql_queries) == 1 else "multiple_queries"
+                    ),
+                    "tables_used": list(set(tables_used)),
+                    "query_count": len(sql_queries),
+                    "limitations": limitations,
+                },
+            )
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": "Generated SQL query",
+                    "name": SQL_QUERIES_GENERATED,
+                    "values": {SQL_QUERIES_GENERATED_ARG: formatted_sql_queries},
+                },
+            )
+        else:
+            raise Exception(
+                "Invalid response: must contain either 'sql_queries' or 'response_for_no_sql'"
+            )
+
+        return {
+            "query_result": query_result,
+            "messages": [IntermediateStep.from_json(response.model_dump())],
+        }
 
     except Exception as e:
         error_msg = f"Unexpected error in query planning: {e!s}"

@@ -47,20 +47,6 @@ Based on this internal validation, choose ONE response path:
 - Exclude 'Total' categories and state='All India' when filtering
 - Include units/unit columns when displaying values
 
-## RESPONSE FORMAT
-Use this single JSON format for the responses:
-{
-    "sql_queries": [
-        {
-            "sql_query": "SQL query without semicolon",
-            "explanation": "Query strategy, columns used, table metadata, expected results",
-            "tables_used": ["list of table names"],
-        }
-    ],
-    "response_for_no_sql": "Clear explanation when SQL queries cannot be generated",
-    "limitations": "Any constraints or assumptions in the analysis"
-}
-
 **Response Guidelines**:
 - If SQL can be generated: populate `sql_queries` array, leave `response_for_no_sql` empty
 - If SQL cannot be generated: populate `response_for_no_sql`, leave `sql_queries` array empty
