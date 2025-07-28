@@ -34,19 +34,20 @@ func (s *PgDatasetStore) Details(ctx context.Context, datasetID string, orgID st
 	}
 
 	return &models.Dataset{
-		ID:          d.ID,
-		Name:        d.Name,
-		Alias:       d.Alias.String,
-		Description: d.Description.String,
-		RowCount:    int(d.RowCount.Int32),
-		Size:        int(d.Size.Int64),
-		FilePath:    d.FilePath,
-		CreatedAt:   time.Time(d.CreatedAt.Time),
-		CreatedBy:   d.CreatedBy.String,
-		UpdatedAt:   time.Time(d.UpdatedAt.Time),
-		UpdatedBy:   d.UpdatedBy.String,
-		Columns:     columns,
-		OrgID:       d.OrgID.String,
+		ID:           d.ID,
+		Name:         d.Name,
+		Alias:        d.Alias.String,
+		Description:  d.Description.String,
+		RowCount:     int(d.RowCount.Int32),
+		Size:         int(d.Size.Int64),
+		FilePath:     d.FilePath,
+		CreatedAt:    time.Time(d.CreatedAt.Time),
+		CreatedBy:    d.CreatedBy.String,
+		UpdatedAt:    time.Time(d.UpdatedAt.Time),
+		UpdatedBy:    d.UpdatedBy.String,
+		Columns:      columns,
+		OrgID:        d.OrgID.String,
+		CustomPrompt: d.CustomPrompt.String,
 	}, nil
 }
 
@@ -124,18 +125,19 @@ func (s *PgDatasetStore) GetDatasetByID(ctx context.Context, datasetID string) (
 	}
 
 	return &models.Dataset{
-		ID:          d.ID,
-		Name:        d.Name,
-		Alias:       d.Alias.String,
-		Description: d.Description.String,
-		RowCount:    int(d.RowCount.Int32),
-		Size:        int(d.Size.Int64),
-		FilePath:    d.FilePath,
-		CreatedAt:   time.Time(d.CreatedAt.Time),
-		CreatedBy:   d.CreatedBy.String,
-		UpdatedAt:   time.Time(d.UpdatedAt.Time),
-		UpdatedBy:   d.UpdatedBy.String,
-		Columns:     columns,
-		OrgID:       d.OrgID.String,
+		ID:           d.ID,
+		Name:         d.Name,
+		Alias:        d.Alias.String,
+		Description:  d.Description.String,
+		RowCount:     int(d.RowCount.Int32),
+		Size:         int(d.Size.Int64),
+		FilePath:     d.FilePath,
+		CreatedAt:    time.Time(d.CreatedAt.Time),
+		CreatedBy:    d.CreatedBy.String,
+		UpdatedAt:    time.Time(d.UpdatedAt.Time),
+		UpdatedBy:    d.UpdatedBy.String,
+		Columns:      columns,
+		OrgID:        d.OrgID.String,
+		CustomPrompt: d.CustomPrompt.String,
 	}, nil
 }

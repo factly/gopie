@@ -26,19 +26,20 @@ func (s *PgDatasetStore) List(ctx context.Context, projectID string, pagination 
 		_ = json.Unmarshal([]byte(d.Columns), &columns)
 
 		datasets = append(datasets, &models.Dataset{
-			ID:          d.ID,
-			Name:        d.Name,
-			Alias:       d.Alias.String,
-			Description: d.Description.String,
-			CreatedAt:   d.CreatedAt.Time,
-			CreatedBy:   d.CreatedBy.String,
-			UpdatedAt:   d.UpdatedAt.Time,
-			UpdatedBy:   d.UpdatedBy.String,
-			Columns:     columns,
-			RowCount:    int(d.RowCount.Int32),
-			Size:        int(d.Size.Int64),
-			FilePath:    d.FilePath,
-			OrgID:       d.OrgID.String,
+			ID:           d.ID,
+			Name:         d.Name,
+			Alias:        d.Alias.String,
+			Description:  d.Description.String,
+			CreatedAt:    d.CreatedAt.Time,
+			CreatedBy:    d.CreatedBy.String,
+			UpdatedAt:    d.UpdatedAt.Time,
+			UpdatedBy:    d.UpdatedBy.String,
+			Columns:      columns,
+			RowCount:     int(d.RowCount.Int32),
+			Size:         int(d.Size.Int64),
+			FilePath:     d.FilePath,
+			OrgID:        d.OrgID.String,
+			CustomPrompt: d.CustomPrompt.String,
 		})
 	}
 
@@ -73,7 +74,6 @@ func (s *PgDatasetStore) ListFailedUploads(ctx context.Context) ([]*models.Faile
 }
 
 func (s *PgDatasetStore) ListAllDatasets(ctx context.Context) ([]*models.Dataset, error) {
-
 	ds, err := s.q.ListAllDatasets(ctx)
 	if err != nil {
 		s.logger.Error("Error fetching datasets", zap.Error(err))
@@ -85,19 +85,20 @@ func (s *PgDatasetStore) ListAllDatasets(ctx context.Context) ([]*models.Dataset
 		columns := make([]map[string]any, 0)
 		_ = json.Unmarshal([]byte(d.Columns), &columns)
 		datasets = append(datasets, &models.Dataset{
-			ID:          d.ID,
-			Name:        d.Name,
-			Alias:       d.Alias.String,
-			Description: d.Description.String,
-			CreatedAt:   d.CreatedAt.Time,
-			CreatedBy:   d.CreatedBy.String,
-			UpdatedAt:   d.UpdatedAt.Time,
-			UpdatedBy:   d.UpdatedBy.String,
-			Columns:     columns,
-			RowCount:    int(d.RowCount.Int32),
-			Size:        int(d.Size.Int64),
-			FilePath:    d.FilePath,
-			OrgID:       d.OrgID.String,
+			ID:           d.ID,
+			Name:         d.Name,
+			Alias:        d.Alias.String,
+			Description:  d.Description.String,
+			CreatedAt:    d.CreatedAt.Time,
+			CreatedBy:    d.CreatedBy.String,
+			UpdatedAt:    d.UpdatedAt.Time,
+			UpdatedBy:    d.UpdatedBy.String,
+			Columns:      columns,
+			RowCount:     int(d.RowCount.Int32),
+			Size:         int(d.Size.Int64),
+			FilePath:     d.FilePath,
+			OrgID:        d.OrgID.String,
+			CustomPrompt: d.CustomPrompt.String,
 		})
 	}
 
