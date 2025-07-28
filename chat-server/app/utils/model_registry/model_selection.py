@@ -1,47 +1,96 @@
+from dataclasses import dataclass
+
 from app.core.config import settings
-from app.models.provider import ModelCategory
+from app.models.provider import ModelCategory, TemperatureCategory
 
-NODE_TO_COMPLEXITY = {
-    "analyze_query": ModelCategory.FAST,
-    "route_query_replan": ModelCategory.FAST,
-    "generate_subqueries": ModelCategory.ADVANCED,
-    "identify_datasets": ModelCategory.BALANCED,
-    "plan_query": ModelCategory.ADVANCED,
-    "generate_result": ModelCategory.BALANCED,
-    "stream_updates": ModelCategory.BALANCED,
-    "check_further_execution_requirement": ModelCategory.FAST,
-    "process_query": ModelCategory.ADVANCED,
-    "check_visualization": ModelCategory.FAST,
-    "response": ModelCategory.BALANCED,
-    "visualize_data": ModelCategory.FAST,
-    "process_context": ModelCategory.BALANCED,
-    "plan_sql_query_tool": ModelCategory.ADVANCED,
-    "generate_col_descriptions": ModelCategory.FAST,
-    "validate_result": ModelCategory.BALANCED,
-    "validate_input": ModelCategory.FAST,
+
+@dataclass
+class NodeConfig:
+    """Configuration for a workflow node's LLM settings"""
+
+    complexity: ModelCategory
+    temperature: TemperatureCategory
+    json_mode: bool = False
+
+    @property
+    def model_id(self) -> str:
+        """Get the model ID based on complexity"""
+        match self.complexity:
+            case ModelCategory.FAST:
+                return settings.FAST_MODEL or settings.DEFAULT_LLM_MODEL
+            case ModelCategory.BALANCED:
+                return settings.BALANCED_MODEL or settings.DEFAULT_LLM_MODEL
+            case ModelCategory.ADVANCED:
+                return settings.ADVANCED_MODEL or settings.DEFAULT_LLM_MODEL
+            case _:
+                return settings.DEFAULT_LLM_MODEL
+
+
+NODE_CONFIGS = {
+    "analyze_query": NodeConfig(
+        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "route_query_replan": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
+    "validate_input": NodeConfig(
+        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "validate_result": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "check_further_execution_requirement": NodeConfig(
+        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "check_visualization": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
+    "identify_datasets": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "plan_query": NodeConfig(
+        ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
+    ),
+    "plan_sql_query_tool": NodeConfig(
+        ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
+    ),
+    "generate_col_descriptions": NodeConfig(
+        ModelCategory.FAST, TemperatureCategory.LOW_VARIATION, json_mode=True
+    ),
+    "visualize_data": NodeConfig(ModelCategory.FAST, TemperatureCategory.LOW_VARIATION),
+    "process_query": NodeConfig(
+        ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
+    ),
+    "process_context": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=True
+    ),
+    "generate_subqueries": NodeConfig(
+        ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
+    ),
+    "generate_result": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
+    "stream_updates": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.CREATIVE, json_mode=True
+    ),
+    "response": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
 }
 
-COMPLEXITY_TO_MODEL = {
-    ModelCategory.FAST: settings.FAST_MODEL,
-    ModelCategory.BALANCED: settings.BALANCED_MODEL,
-    ModelCategory.ADVANCED: settings.ADVANCED_MODEL,
-}
+NODE_TO_COMPLEXITY = {node_name: config.complexity for node_name, config in NODE_CONFIGS.items()}
+
+
+def get_node_config(node_name: str) -> NodeConfig:
+    return NODE_CONFIGS.get(
+        node_name,
+        NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=False),
+    )
 
 
 def get_node_complexity(node_name: str) -> ModelCategory:
-    return NODE_TO_COMPLEXITY.get(node_name, ModelCategory.BALANCED)
+    return get_node_config(node_name).complexity
+
+
+def get_node_temperature(node_name: str) -> float:
+    return get_node_config(node_name).temperature.value
+
+
+def requires_json_mode(node_name: str) -> bool:
+    return get_node_config(node_name).json_mode
 
 
 def get_node_model(node_name: str) -> str:
-    complexity = get_node_complexity(node_name)
-    model_id = COMPLEXITY_TO_MODEL[complexity]
-
-    if not model_id:
-        model_id = settings.DEFAULT_LLM_MODEL
-        if not model_id:
-            raise ValueError(
-                f"No model configured for {complexity.value} complexity "
-                f"and no default model available"
-            )
-
-    return model_id
+    return get_node_config(node_name).model_id

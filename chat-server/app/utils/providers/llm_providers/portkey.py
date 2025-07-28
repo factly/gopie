@@ -46,16 +46,30 @@ class PortkeyLLMProvider(BaseLLMProvider):
             **headers,
         )
 
-    def get_llm_model(self, model_name: str, streaming: bool = True) -> ChatOpenAI:
+    def get_llm_model(
+        self,
+        model_name: str,
+        streaming: bool = True,
+        temperature: float | None = None,
+        json_mode: bool = False,
+    ):
         headers = self.get_headers()
         if self.self_hosted:
             provider_api_key = self.provider_api_key
         else:
             provider_api_key = "X"
-        return ChatOpenAI(
-            api_key=provider_api_key,  # type: ignore
-            base_url=self.base_url,
-            default_headers=headers,
-            model=model_name,
-            streaming=streaming,
-        )
+
+        kwargs = {
+            "api_key": provider_api_key,
+            "base_url": self.base_url,
+            "default_headers": headers,
+            "model": model_name,
+            "streaming": streaming,
+        }
+
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+
+        llm = ChatOpenAI(**kwargs)
+
+        return llm.with_structured_output(method="json_mode") if json_mode else llm

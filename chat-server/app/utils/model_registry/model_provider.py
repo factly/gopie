@@ -4,7 +4,11 @@ from langchain_core.runnables import RunnableConfig
 from app.core.config import settings
 from app.models.provider import EmbeddingProvider, LLMProvider
 from app.tool_utils.tools import ToolNames, get_tools
-from app.utils.model_registry.model_selection import get_node_model
+from app.utils.model_registry.model_selection import (
+    get_node_model,
+    get_node_temperature,
+    requires_json_mode,
+)
 from app.utils.providers.embedding_providers import (
     BaseEmbeddingProvider,
     CustomEmbeddingProvider,
@@ -54,16 +58,26 @@ class ModelProvider:
     def __init__(
         self,
         metadata: dict[str, str],
+        json_mode: bool = False,
+        temperature: float | None = None,
     ):
         self.metadata = metadata
         self.llm_provider = get_llm_provider(metadata)
         self.embedding_provider = get_embedding_provider(metadata)
+        self.json_mode = json_mode
+        self.temperature = temperature
 
     def _create_llm(self, model_id: str):
-        model = self.llm_provider.get_llm_model(model_id)
+        model = self.llm_provider.get_llm_model(
+            model_id, temperature=self.temperature, json_mode=self.json_mode
+        )
         return model
 
-    def _create_llm_with_tools(self, model_id: str, tool_names: list[ToolNames]):
+    def _create_llm_with_tools(
+        self,
+        model_id: str,
+        tool_names: list[ToolNames],
+    ):
         tools = get_tools(tool_names)
         tool_functions = [tool for tool, _ in tools.values()]
         llm = self._create_llm(model_id)
@@ -84,21 +98,27 @@ class ModelProvider:
 
     def get_llm_for_node(self, node_name: str, tool_names: list[ToolNames] | None = None):
         model_id = get_node_model(node_name)
-        if tool_names:
-            return self.get_llm_with_tools(model_id, tool_names)
-        return self.get_llm(model_id)
+        return (
+            self.get_llm_with_tools(node_name, tool_names) if tool_names else self.get_llm(model_id)
+        )
 
 
 def get_model_provider(
     config: RunnableConfig = RunnableConfig(),
-):
+    json_mode: bool = False,
+    temperature: float | None = None,
+) -> ModelProvider:
     metadata = config.get("configurable", {}).get("metadata", {})
-    return ModelProvider(metadata=metadata)
-
-
-def get_custom_model(model_id: str):
-    return ModelProvider(metadata={}).get_llm(model_id=model_id)
+    return ModelProvider(metadata=metadata, json_mode=json_mode, temperature=temperature)
 
 
 def get_chat_history(config: RunnableConfig) -> list[BaseMessage]:
     return config.get("configurable", {}).get("chat_history", [])
+
+
+def get_configured_llm_for_node(node_name: str, config: RunnableConfig, tool_names=None):
+    json_mode = requires_json_mode(node_name)
+    temperature = get_node_temperature(node_name)
+
+    model_provider = get_model_provider(config, json_mode=json_mode, temperature=temperature)
+    return model_provider.get_llm_for_node(node_name, tool_names)
