@@ -6,7 +6,6 @@ from langchain_core.runnables import RunnableConfig
 from app.core.log import logger
 from app.models.schema import DatasetSchema
 from app.utils.model_registry.model_provider import get_model_provider
-from app.utils.model_registry.model_selection import get_node_model
 
 # fmt: off
 COLUMNS_PROMPT = """\
@@ -37,14 +36,14 @@ Example format:
 
 def _get_chain():
     """Get the LLM chain for generating column descriptions."""
-    model_id = get_node_model("generate_col_descriptions")
     prompt = ChatPromptTemplate.from_template(COLUMNS_PROMPT)
     config = RunnableConfig(
         configurable={
             "metadata": {"type": "col_description_generator"},
         }
     )
-    llm = get_model_provider(config).get_llm(model_id)
+    # Get fully configured LLM with temperature and JSON mode
+    llm = get_model_provider().get_llm
     return prompt | llm | JsonOutputParser()
 
 

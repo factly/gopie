@@ -17,7 +17,7 @@ from app.models.query import (
 from app.services.gopie.sql_executor import execute_sql_with_limit
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
@@ -133,7 +133,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             previous_sql_queries=previous_sql_queries,
         )
 
-        llm = get_model_provider(config).get_llm_for_node("process_query")
+        llm = get_configured_llm_for_node("process_query", config)
         parser = JsonOutputParser()
 
         llm_response = await llm.ainvoke(prompt_messages + [last_message])

@@ -5,8 +5,7 @@ from langchain_core.tools import tool
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
-from app.utils.model_registry.model_selection import get_node_model
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
 
 @tool
@@ -46,8 +45,7 @@ async def plan_sql_query(
     """
     try:
         prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
-        model_id = get_node_model("plan_sql_query_tool")
-        llm = get_model_provider(config).get_llm(model_id=model_id)
+        llm = get_configured_llm_for_node("plan_sql_query_tool", config)
         response = await llm.ainvoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
 

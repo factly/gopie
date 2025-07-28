@@ -3,7 +3,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
 from ...visualize_data_graph.types import State
 
@@ -14,7 +14,7 @@ async def call_model(state: State, config: RunnableConfig) -> dict:
     """
     Invokes the language model for the "visualize_data" node using the current message history.
     """
-    llm = get_model_provider(config).get_llm_for_node("visualize_data", tool_names)
+    llm = get_configured_llm_for_node("visualize_data", config, tool_names)
     response = await llm.ainvoke(state["messages"])
     return {"messages": [response]}
 

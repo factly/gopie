@@ -14,7 +14,7 @@ from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import (
     get_chat_history,
-    get_model_provider,
+    get_configured_llm_for_node,
 )
 from app.workflow.events.event_utils import configure_node
 
@@ -105,7 +105,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         formatted_chat_history=formatted_chat_history,
     )
 
-    llm = get_model_provider(config).get_llm_for_node("process_context")
+    llm = get_configured_llm_for_node("process_context", config)
     response = await llm.ainvoke(prompt_messages)
 
     try:

@@ -1,6 +1,6 @@
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 
 from ...visualize_data_graph.types import State
@@ -11,7 +11,7 @@ from ...visualize_data_graph.types import State
     progress_message="",
 )
 async def respond(state: State, config: RunnableConfig) -> dict:
-    llm = get_model_provider(config).get_llm_for_node("visualize_data")
+    llm = get_configured_llm_for_node("visualize_data", config)
 
     prompt = """
 You are a data visualization assistant. Your task is to provide a concise, natural response about the visualization results.

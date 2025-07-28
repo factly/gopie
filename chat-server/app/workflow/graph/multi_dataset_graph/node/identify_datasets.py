@@ -8,7 +8,10 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.get_schema import get_schema_by_dataset_ids
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import (
+    get_configured_llm_for_node,
+    get_model_provider,
+)
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo, State
 
@@ -45,7 +48,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
     try:
-        llm = get_model_provider(config).get_llm_for_node("identify_datasets")
+        llm = get_configured_llm_for_node("identify_datasets", config)
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
         relevant_dataset_schemas = await get_schema_by_dataset_ids(

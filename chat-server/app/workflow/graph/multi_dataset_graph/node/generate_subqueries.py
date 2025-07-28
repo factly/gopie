@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -17,7 +17,7 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             "assess_query_complexity",
             user_input=user_input,
         )
-        llm = get_model_provider(config).get_llm_for_node("generate_subqueries")
+        llm = get_configured_llm_for_node("generate_subqueries", config)
         assessment_response = await llm.ainvoke(assessment_prompt)
 
         parser = JsonOutputParser()

@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -40,7 +40,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         subquery_messages=subquery_messages,
     )
 
-    llm = get_model_provider(config).get_llm_for_node("stream_updates")
+    llm = get_configured_llm_for_node("stream_updates", config)
     response = await llm.ainvoke(stream_update_prompt)
 
     logger.debug(f"Stream updates response: {response.content}")
@@ -62,7 +62,7 @@ async def check_further_execution_requirement(state: State, config: RunnableConf
         last_stream_message_content=last_stream_message.content,
     )
 
-    llm = get_model_provider(config).get_llm_for_node("check_further_execution_requirement")
+    llm = get_configured_llm_for_node("check_further_execution_requirement", config)
     response = await llm.ainvoke(analysis_prompt)
 
     try:

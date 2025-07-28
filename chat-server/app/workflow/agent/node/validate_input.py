@@ -3,7 +3,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.models.message import IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 
 from ..types import AgentState
@@ -30,8 +30,7 @@ async def validate_input(state: AgentState, config: RunnableConfig):
             user_input=user_input,
         )
 
-        model_provider = get_model_provider(config)
-        llm = model_provider.get_llm_for_node("validate_input")
+        llm = get_configured_llm_for_node("validate_input", config)
 
         response = await llm.ainvoke(prompt_messages)
 
