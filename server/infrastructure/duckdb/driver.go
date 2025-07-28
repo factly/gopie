@@ -19,8 +19,7 @@ import (
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
-	"github.com/marcboeker/go-duckdb"
-	_ "github.com/marcboeker/go-duckdb" // DB driver
+	"github.com/marcboeker/go-duckdb/v2"
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"go.uber.org/zap"
 	"vitess.io/vitess/go/vt/sqlparser"
