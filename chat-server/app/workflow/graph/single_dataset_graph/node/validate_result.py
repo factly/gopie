@@ -1,5 +1,7 @@
-from langchain_core.output_parsers import JsonOutputParser
+from typing import Literal
+
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.models.message import AIMessage, ErrorMessage
@@ -9,6 +11,15 @@ from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 
 RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
+
+
+class ValidateResultOutput(BaseModel):
+    """Structured output for validate result node."""
+
+    recommendation: Literal["pass_on_results", "rerun_query"] = Field(
+        description="Recommendation based on validation"
+    )
+    response: str = Field(description="Brief reasoning-based explanation of what to do next")
 
 
 @configure_node(
@@ -37,13 +48,11 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
             prev_query_result=query_result,
         )
 
-        llm = get_configured_llm_for_node("validate_result", config)
-        parser = JsonOutputParser()
-        response = await llm.ainvoke(prompt_messages)
-        parsed_response = parser.parse(str(response.content))
+        llm = get_configured_llm_for_node("validate_result", config, schema=ValidateResultOutput)
+        parsed_response = await llm.ainvoke(prompt_messages)
 
-        recommendation = parsed_response["recommendation"]
-        response = parsed_response["response"]
+        recommendation = parsed_response.recommendation
+        response = parsed_response.response
 
         if recommendation not in RECOMMENDATION_LIST:
             raise ValueError(f"Invalid recommendation: {recommendation}")

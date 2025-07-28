@@ -1,6 +1,8 @@
 import json
+from typing import Type
 
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from app.core.config import settings
 
@@ -26,6 +28,7 @@ class CloudflareLLMProvider(BaseLLMProvider):
         streaming: bool = True,
         temperature: float | None = None,
         json_mode: bool = False,
+        schema: Type[BaseModel] | None = None,
     ):
         base_url = self.openai_compat_url
 
@@ -53,4 +56,10 @@ class CloudflareLLMProvider(BaseLLMProvider):
 
         llm = ChatOpenAI(**kwargs)
 
-        return llm.with_structured_output(method="json_mode") if json_mode else llm
+        if json_mode:
+            if schema:
+                return llm.with_structured_output(schema)
+            else:
+                return llm.with_structured_output(method="json_mode")
+        else:
+            return llm

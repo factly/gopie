@@ -1,4 +1,7 @@
+from typing import Type
+
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from app.core.config import settings
 
@@ -15,6 +18,7 @@ class OpenRouterLLMProvider(BaseLLMProvider):
         streaming: bool = True,
         temperature: float | None = None,
         json_mode: bool = False,
+        schema: Type[BaseModel] | None = None,
     ):
         kwargs = {
             "api_key": settings.OPENROUTER_API_KEY,
@@ -31,4 +35,10 @@ class OpenRouterLLMProvider(BaseLLMProvider):
 
         llm = ChatOpenAI(**kwargs)
 
-        return llm.with_structured_output(method="json_mode") if json_mode else llm
+        if json_mode:
+            if schema:
+                return llm.with_structured_output(schema)
+            else:
+                return llm.with_structured_output(method="json_mode")
+        else:
+            return llm

@@ -1,5 +1,5 @@
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.models.message import IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -7,6 +7,14 @@ from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 
 from ..types import AgentState
+
+
+class ValidateInputOutput(BaseModel):
+    is_malicious: bool = Field(description="Whether the input is malicious")
+    reasoning: str = Field(description="Brief explanation of why this is/isn't malicious")
+    response: str = Field(
+        description="Professional response to user if malicious, empty string if safe"
+    )
 
 
 @configure_node(
@@ -30,16 +38,13 @@ async def validate_input(state: AgentState, config: RunnableConfig):
             user_input=user_input,
         )
 
-        llm = get_configured_llm_for_node("validate_input", config)
+        llm = get_configured_llm_for_node("validate_input", config, schema=ValidateInputOutput)
 
-        response = await llm.ainvoke(prompt_messages)
+        validation_result = await llm.ainvoke(prompt_messages)
 
-        parser = JsonOutputParser()
-        validation_result = parser.parse(str(response.content))
-
-        invalid_input = validation_result.get("is_malicious", False)
-        reasoning = validation_result.get("reasoning", "No reasoning provided")
-        user_response = validation_result.get("response", "Request cannot be processed.")
+        invalid_input = validation_result.is_malicious
+        reasoning = validation_result.reasoning
+        user_response = validation_result.response
 
         if invalid_input:
             print(f"Malicious prompt detected: {reasoning}")

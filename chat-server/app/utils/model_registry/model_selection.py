@@ -27,9 +27,7 @@ class NodeConfig:
 
 
 NODE_CONFIGS = {
-    "analyze_query": NodeConfig(
-        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
-    ),
+    "analyze_query": NodeConfig(ModelCategory.FAST, TemperatureCategory.NONE, json_mode=True),
     "route_query_replan": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
     "validate_input": NodeConfig(
         ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
@@ -70,8 +68,6 @@ NODE_CONFIGS = {
     "response": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
 }
 
-NODE_TO_COMPLEXITY = {node_name: config.complexity for node_name, config in NODE_CONFIGS.items()}
-
 
 def get_node_config(node_name: str) -> NodeConfig:
     return NODE_CONFIGS.get(
@@ -80,11 +76,7 @@ def get_node_config(node_name: str) -> NodeConfig:
     )
 
 
-def get_node_complexity(node_name: str) -> ModelCategory:
-    return get_node_config(node_name).complexity
-
-
-def get_node_temperature(node_name: str) -> float:
+def get_node_temperature(node_name: str) -> float | None:
     return get_node_config(node_name).temperature.value
 
 

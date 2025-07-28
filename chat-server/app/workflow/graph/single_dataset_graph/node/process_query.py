@@ -5,8 +5,8 @@ from datetime import datetime
 
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.query import (
@@ -20,6 +20,16 @@ from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
+
+
+class ProcessQueryOutput(BaseModel):
+    """Structured output for process query node."""
+
+    sql_queries: list[str] = Field(description="SQL queries without semicolon", default=[])
+    explanations: list[str] = Field(description="Concise explanation for each query", default=[])
+    response_for_non_sql: str = Field(
+        description="Brief explanation for non-sql response", default=""
+    )
 
 
 def convert_rows_to_csv(rows: list[dict]) -> str:
@@ -133,17 +143,13 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             previous_sql_queries=previous_sql_queries,
         )
 
-        llm = get_configured_llm_for_node("process_query", config)
-        parser = JsonOutputParser()
+        llm = get_configured_llm_for_node("process_query", config, schema=ProcessQueryOutput)
 
-        llm_response = await llm.ainvoke(prompt_messages + [last_message])
+        parsed_response = await llm.ainvoke(prompt_messages + [last_message])
 
-        response_content = str(llm_response.content)
-        parsed_response = parser.parse(response_content)
-
-        sql_queries = parsed_response.get("sql_queries", [])
-        explanations = parsed_response.get("explanations", [])
-        response_for_non_sql = parsed_response.get("response_for_non_sql", "")
+        sql_queries = parsed_response.sql_queries
+        explanations = parsed_response.explanations
+        response_for_non_sql = parsed_response.response_for_non_sql
 
         query_result.single_dataset_query_result.user_friendly_dataset_name = (
             user_provided_dataset_name

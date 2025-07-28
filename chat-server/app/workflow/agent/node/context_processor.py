@@ -1,6 +1,6 @@
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.constants import (
     DATASETS_USED,
@@ -19,6 +19,29 @@ from app.utils.model_registry.model_provider import (
 from app.workflow.events.event_utils import configure_node
 
 from ..types import AgentState
+
+
+class ProcessContextOutput(BaseModel):
+    """Structured output for process context node."""
+
+    is_follow_up: bool = Field(
+        description="Whether this is a follow-up query from conversation history"
+    )
+    is_new_data_needed: bool = Field(
+        description="Whether new data retrieval is needed to answer the query"
+    )
+    is_visualization_query: bool = Field(
+        description="Whether the query is related to visualization"
+    )
+    relevant_sql_queries: list[str] = Field(
+        description="Most relevant SQL queries from previously used queries", default=[]
+    )
+    enhanced_query: str = Field(
+        description="Self-contained and unambiguous rewritten query with context"
+    )
+    context_summary: str = Field(
+        description="Summary of how the present query relates to previous conversation", default=""
+    )
 
 
 def get_all_tool_calls(chat_history: list[BaseMessage]) -> list[ToolCall]:
@@ -105,19 +128,17 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         formatted_chat_history=formatted_chat_history,
     )
 
-    llm = get_configured_llm_for_node("process_context", config)
-    response = await llm.ainvoke(prompt_messages)
+    llm = get_configured_llm_for_node("process_context", config, schema=ProcessContextOutput)
 
     try:
-        parser = JsonOutputParser()
-        parsed_response = parser.parse(str(response.content))
+        parsed_response = await llm.ainvoke(prompt_messages)
 
-        is_follow_up = parsed_response.get("is_follow_up", False)
-        is_new_data_needed = parsed_response.get("is_new_data_needed", False)
-        needs_visualization = parsed_response.get("is_visualization_query", False)
-        relevant_sql_queries = parsed_response.get("relevant_sql_queries", [])
-        enhanced_query = parsed_response.get("enhanced_query", user_input)
-        context_summary = parsed_response.get("context_summary", "")
+        is_follow_up = parsed_response.is_follow_up
+        is_new_data_needed = parsed_response.is_new_data_needed
+        needs_visualization = parsed_response.is_visualization_query
+        relevant_sql_queries = parsed_response.relevant_sql_queries
+        enhanced_query = parsed_response.enhanced_query
+        context_summary = parsed_response.context_summary
         if is_follow_up:
             final_query = f"""
             This is a follow-up question to a previous query.

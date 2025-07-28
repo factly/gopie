@@ -1,6 +1,6 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.constants import DATASETS_USED, DATASETS_USED_ARG
 from app.core.log import logger
@@ -13,7 +13,22 @@ from app.utils.model_registry.model_provider import (
     get_model_provider,
 )
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo, State
+from app.workflow.graph.multi_dataset_graph.types import (
+    ColumnAssumptions,
+    DatasetsInfo,
+    State,
+)
+
+
+class IdentifyDatasetsOutput(BaseModel):
+    selected_dataset: list[str] = Field(
+        description="Selected dataset names from available options", default=[]
+    )
+    reasoning: str = Field(description="Explanation why these specific datasets were selected")
+    column_assumptions: list[ColumnAssumptions] = Field(
+        description="Column assumptions for selected datasets", default=[]
+    )
+    node_message: str = Field(description="Brief message about selected datasets and their sources")
 
 
 @configure_node(
@@ -93,17 +108,17 @@ async def identify_datasets(state: State, config: RunnableConfig):
             semantic_searched_datasets=semantic_searched_datasets,
         )
 
+        llm = get_configured_llm_for_node(
+            "identify_datasets", config, schema=IdentifyDatasetsOutput
+        )
         response = await llm.ainvoke(llm_prompt + [last_message])
 
-        response_content = str(response.content)
-        parser = JsonOutputParser()
-        parsed_content = parser.parse(response_content)
+        selected_datasets = response.selected_dataset
+        if query_result.subqueries and len(query_result.subqueries) > query_index:
+            query_result.subqueries[query_index].tables_used = selected_datasets
 
-        selected_datasets = parsed_content.get("selected_dataset", [])
-        query_result.subqueries[query_index].tables_used = selected_datasets
-
-        column_assumptions = parsed_content.get("column_assumptions", [])
-        node_message = parsed_content.get("node_message")
+        column_assumptions = response.column_assumptions
+        node_message = response.node_message
 
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
@@ -135,7 +150,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "query_result": query_result,
             "datasets_info": datasets_info,
             "identified_datasets": selected_datasets,
-            "messages": [IntermediateStep.from_json(parsed_content)],
+            "messages": [IntermediateStep(content=f"Selected datasets: {selected_datasets}")],
         }
 
     except Exception as e:
@@ -150,6 +165,11 @@ async def identify_datasets(state: State, config: RunnableConfig):
         return {
             "query_result": query_result,
             "identified_datasets": None,
+            "datasets_info": DatasetsInfo(
+                schemas=[],
+                column_assumptions=None,
+                correct_column_requirements=None,
+            ),
             "messages": [ErrorMessage(content=error_msg)],
         }
 
