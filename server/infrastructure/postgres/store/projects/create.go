@@ -12,11 +12,12 @@ import (
 
 func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateProjectParams) (*models.Project, error) {
 	p, err := s.q.CreateProject(ctx, gen.CreateProjectParams{
-		Name:        params.Name,
-		Description: pgtype.Text{String: params.Description, Valid: true},
-		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
-		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
-		OrgID:       pgtype.Text{String: params.OrgID, Valid: true},
+		Name:         params.Name,
+		Description:  pgtype.Text{String: params.Description, Valid: true},
+		UpdatedBy:    pgtype.Text{String: params.CreatedBy, Valid: true},
+		CreatedBy:    pgtype.Text{String: params.CreatedBy, Valid: true},
+		OrgID:        pgtype.Text{String: params.OrgID, Valid: true},
+		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
 	})
 	if err != nil {
 		s.logger.Error("Error creating project", zap.Error(err))
@@ -24,13 +25,14 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 	}
 
 	return &models.Project{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description.String,
-		CreatedAt:   time.Time(p.CreatedAt.Time),
-		UpdatedAt:   time.Time(p.UpdatedAt.Time),
-		CreatedBy:   p.CreatedBy.String,
-		UpdatedBy:   p.UpdatedBy.String,
-		OrgID:       p.OrgID.String,
+		ID:           p.ID,
+		Name:         p.Name,
+		Description:  p.Description.String,
+		CreatedAt:    time.Time(p.CreatedAt.Time),
+		UpdatedAt:    time.Time(p.UpdatedAt.Time),
+		CreatedBy:    p.CreatedBy.String,
+		UpdatedBy:    p.UpdatedBy.String,
+		OrgID:        p.OrgID.String,
+		CustomPrompt: p.CustomPrompt.String,
 	}, nil
 }

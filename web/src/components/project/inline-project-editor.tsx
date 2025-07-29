@@ -30,6 +30,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
+  const [customPrompt, setCustomPrompt] = useState(project.custom_prompt || "");
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -44,6 +45,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       await updateProject(project.id, {
         name,
         description,
+        custom_prompt: customPrompt,
         updated_by: "gopie-web-ui",
       });
 
@@ -73,6 +75,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   const handleCancel = () => {
     setName(project.name);
     setDescription(project.description || "");
+    setCustomPrompt(project.custom_prompt || "");
     setIsEditing(false);
   };
 
@@ -134,6 +137,13 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
               className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
               rows={3}
             />
+            <Textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Enter a custom prompt to guide AI interactions with this project's datasets..."
+              className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
+              rows={3}
+            />
           </div>
         </CardContent>
       </Card>
@@ -180,6 +190,15 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
               </p>
             )}
           </div>
+
+          {project.custom_prompt && (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Custom Prompt:</p>
+              <p className="text-sm text-muted-foreground/90 line-clamp-2">
+                {project.custom_prompt}
+              </p>
+            </div>
+          )}
         </div>
 
         <Button

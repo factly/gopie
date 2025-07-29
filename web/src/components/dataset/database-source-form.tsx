@@ -34,6 +34,7 @@ export function DatabaseSourceForm({
 }: DatabaseSourceFormProps) {
   const [datasetAlias, setDatasetAlias] = useState("");
   const [datasetDescription, setDatasetDescription] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [connectionString, setConnectionString] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function DatabaseSourceForm({
       const response = await sourceDatabaseDataset.mutateAsync({
         alias: datasetAlias,
         description: datasetDescription.trim() || undefined,
+        custom_prompt: customPrompt.trim() || undefined,
         connection_string: connectionString,
         sql_query: sqlQuery,
         driver,
@@ -155,6 +157,16 @@ export function DatabaseSourceForm({
             placeholder="SELECT id, name, order_date FROM orders WHERE order_date > '2024-01-01';"
             rows={5}
             required
+          />
+        </div>
+        <div>
+          <Label htmlFor="customPrompt">Custom Prompt (Optional)</Label>
+          <Textarea
+            id="customPrompt"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder="Enter a custom prompt to guide AI interactions with this dataset..."
+            rows={3}
           />
         </div>
         <DialogFooter className="pt-4">

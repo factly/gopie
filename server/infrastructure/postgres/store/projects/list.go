@@ -34,6 +34,7 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 			CreatedBy:    p.CreatedBy.String,
 			UpdatedBy:    p.UpdatedBy.String,
 			OrgID:        p.OrgID.String,
+			CustomPrompt: p.CustomPrompt.String,
 		})
 	}
 	count, err := s.q.GetProjectsCount(ctx, pgtype.Text{String: orgID, Valid: true})
@@ -56,14 +57,15 @@ func (s *PostgresProjectStore) ListAllProjects(ctx context.Context) ([]*models.P
 	var projects []*models.Project
 	for _, p := range ps {
 		projects = append(projects, &models.Project{
-			ID:          p.ID,
-			Name:        p.Name,
-			Description: p.Description.String,
-			CreatedAt:   p.CreatedAt.Time,
-			UpdatedAt:   p.UpdatedAt.Time,
-			CreatedBy:   p.CreatedBy.String,
-			UpdatedBy:   p.UpdatedBy.String,
-			OrgID:       p.OrgID.String,
+			ID:           p.ID,
+			Name:         p.Name,
+			Description:  p.Description.String,
+			CreatedAt:    p.CreatedAt.Time,
+			UpdatedAt:    p.UpdatedAt.Time,
+			CreatedBy:    p.CreatedBy.String,
+			UpdatedBy:    p.UpdatedBy.String,
+			OrgID:        p.OrgID.String,
+			CustomPrompt: p.CustomPrompt.String,
 		})
 	}
 

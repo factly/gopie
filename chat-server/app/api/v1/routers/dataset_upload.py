@@ -1,8 +1,10 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
-from app.services.gopie.dataset_info import get_dataset_info
+from app.services.gopie.dataset_info import get_dataset_info, get_project_info
 from app.services.gopie.generate_schema import generate_summary
 from app.services.qdrant.schema_vectorization import (
     delete_schema_from_qdrant,
@@ -25,16 +27,17 @@ async def upload_schema(payload: UploadSchemaRequest):
     try:
         project_id = payload.project_id
         dataset_id = payload.dataset_id
-
-        dataset_details = await get_dataset_info(dataset_id, project_id)
+        dataset_details, project_details = await asyncio.gather(
+            get_dataset_info(dataset_id, project_id),
+            get_project_info(project_id),
+        )
         dataset_summary, sample_data = await generate_summary(dataset_details.name)
 
         success = await store_schema_in_qdrant(
             dataset_summary=dataset_summary,
             sample_data=sample_data,
             dataset_details=dataset_details,
-            dataset_id=dataset_id,
-            project_id=project_id,
+            project_details=project_details,
         )
         if not success:
             raise HTTPException(

@@ -12,7 +12,8 @@ create table if not exists datasets(
     size bigint,
     file_path text not null,
     columns jsonb,
-    org_id text
+    org_id text,
+    custom_prompt text default null
 );
 
 create table if not exists projects(
@@ -23,7 +24,8 @@ create table if not exists projects(
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now(),
     created_by text default null,
-    updated_by text default null
+    updated_by text default null,
+    custom_prompt text default null
 );
 
 create table if not exists project_datasets(
@@ -71,7 +73,6 @@ create index idx_chats_created_by on chats(created_by);
 
 create table if not exists chat_messages (
     id uuid primary key default uuid_generate_v4(),
-
     chat_id text not null references chats(id) on delete cascade,
     choices jsonb not null,
     object text not null,

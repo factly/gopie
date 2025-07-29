@@ -14,7 +14,8 @@ type updateProjectBody struct {
 	// Name of the project
 	Name string `json:"name,omitempty" validate:"required,min=3,max=50" example:"Updated Project Name"`
 	// Description of the project
-	Description string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
+	Description  string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // @Summary Update a project
@@ -53,10 +54,11 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 
 	project, err := h.projectSvc.Update(projectID, &models.UpdateProjectParams{
-		Name:        body.Name,
-		Description: body.Description,
-		UpdatedBy:   userID,
-		OrgID:       orgID,
+		Name:         body.Name,
+		Description:  body.Description,
+		UpdatedBy:    userID,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -73,7 +75,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.JSON(map[string]interface{}{
+	return ctx.JSON(map[string]any{
 		"data": project,
 	})
 }

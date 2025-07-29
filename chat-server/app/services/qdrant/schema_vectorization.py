@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 
 from app.core.config import settings
 from app.core.log import logger
-from app.models.data import DatasetDetails
+from app.models.data import DatasetDetails, ProjectDetails
 from app.models.schema import DatasetSummary
 from app.services.gopie.dataset_info import (
     create_dataset_schema,
@@ -20,16 +20,14 @@ async def store_schema_in_qdrant(
     dataset_summary: DatasetSummary,
     sample_data: SQL_RESPONSE_TYPE,
     dataset_details: DatasetDetails,
-    dataset_id: str,
-    project_id: str,
+    project_details: ProjectDetails,
 ) -> bool:
     try:
         dataset_schema = create_dataset_schema(
             dataset_summary=dataset_summary,
             sample_data=sample_data,
-            project_id=project_id,
-            dataset_id=dataset_id,
             dataset_details=dataset_details,
+            project_details=project_details,
         )
 
         column_descriptions = await generate_column_descriptions(dataset_schema)

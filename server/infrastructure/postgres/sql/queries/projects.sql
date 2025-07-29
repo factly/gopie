@@ -4,8 +4,9 @@ insert into projects (
     description,
     created_by,
     updated_by,
-    org_id
-) values ($1, $2, $3, $4, $5)
+    org_id,
+    custom_prompt
+) values ($1, $2, $3, $4, $5, $6)
 returning *;
 
 -- name: ListAllProjects :many
@@ -26,8 +27,9 @@ update projects
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by)
-where id = $4 and org_id = $5
+    updated_by = coalesce($3, updated_by),
+    custom_prompt = coalesce($4, custom_prompt)
+where id = $5 and org_id = $6
 returning *;
 
 -- name: DeleteProject :exec

@@ -27,14 +27,15 @@ func (s *PostgresProjectStore) Details(ctx context.Context, id, orgID string) (*
 	}
 
 	return &models.Project{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description.String,
-		CreatedAt:   time.Time(p.CreatedAt.Time),
-		UpdatedAt:   time.Time(p.UpdatedAt.Time),
-		CreatedBy:   p.CreatedBy.String,
-		UpdatedBy:   p.UpdatedBy.String,
-		OrgID:       p.OrgID.String,
+		ID:           p.ID,
+		Name:         p.Name,
+		Description:  p.Description.String,
+		CreatedAt:    time.Time(p.CreatedAt.Time),
+		UpdatedAt:    time.Time(p.UpdatedAt.Time),
+		CreatedBy:    p.CreatedBy.String,
+		UpdatedBy:    p.UpdatedBy.String,
+		OrgID:        p.OrgID.String,
+		CustomPrompt: p.CustomPrompt.String,
 	}, nil
 }
 
@@ -49,13 +50,14 @@ func (s *PostgresProjectStore) GetProjectByID(ctx context.Context, id string) (*
 	}
 
 	return &models.Project{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description.String,
-		CreatedAt:   time.Time(p.CreatedAt.Time),
-		UpdatedAt:   time.Time(p.UpdatedAt.Time),
-		CreatedBy:   p.CreatedBy.String,
-		UpdatedBy:   p.UpdatedBy.String,
-		OrgID:       p.OrgID.String,
+		ID:           p.ID,
+		Name:         p.Name,
+		Description:  p.Description.String,
+		CreatedAt:    time.Time(p.CreatedAt.Time),
+		UpdatedAt:    time.Time(p.UpdatedAt.Time),
+		CreatedBy:    p.CreatedBy.String,
+		UpdatedBy:    p.UpdatedBy.String,
+		OrgID:        p.OrgID.String,
+		CustomPrompt: p.CustomPrompt.String,
 	}, nil
 }

@@ -4,6 +4,7 @@ export interface UpdateProjectBody {
   name: string;
   description?: string;
   updated_by: string;
+  custom_prompt?: string;
 }
 
 export const updateProject = async (

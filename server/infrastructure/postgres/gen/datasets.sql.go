@@ -22,22 +22,24 @@ insert into datasets (
     alias,
     created_by,
     updated_by,
-    org_id
-) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
+    org_id,
+    custom_prompt
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt
 `
 
 type CreateDatasetParams struct {
-	Name        string
-	Description pgtype.Text
-	RowCount    pgtype.Int4
-	Size        pgtype.Int8
-	FilePath    string
-	Columns     []byte
-	Alias       pgtype.Text
-	CreatedBy   pgtype.Text
-	UpdatedBy   pgtype.Text
-	OrgID       pgtype.Text
+	Name         string
+	Description  pgtype.Text
+	RowCount     pgtype.Int4
+	Size         pgtype.Int8
+	FilePath     string
+	Columns      []byte
+	Alias        pgtype.Text
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	OrgID        pgtype.Text
+	CustomPrompt pgtype.Text
 }
 
 func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (Dataset, error) {
@@ -52,6 +54,7 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		arg.CreatedBy,
 		arg.UpdatedBy,
 		arg.OrgID,
+		arg.CustomPrompt,
 	)
 	var i Dataset
 	err := row.Scan(
@@ -68,6 +71,7 @@ func (q *Queries) CreateDataset(ctx context.Context, arg CreateDatasetParams) (D
 		&i.FilePath,
 		&i.Columns,
 		&i.OrgID,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
@@ -87,7 +91,7 @@ func (q *Queries) DeleteDataset(ctx context.Context, arg DeleteDatasetParams) er
 }
 
 const getDataset = `-- name: GetDataset :one
-select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1 and org_id = $2
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets where id = $1 and org_id = $2
 `
 
 type GetDatasetParams struct {
@@ -112,12 +116,13 @@ func (q *Queries) GetDataset(ctx context.Context, arg GetDatasetParams) (Dataset
 		&i.FilePath,
 		&i.Columns,
 		&i.OrgID,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
 
 const getDatasetByID = `-- name: GetDatasetByID :one
-select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where id = $1
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets where id = $1
 `
 
 func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error) {
@@ -137,12 +142,13 @@ func (q *Queries) GetDatasetByID(ctx context.Context, id string) (Dataset, error
 		&i.FilePath,
 		&i.Columns,
 		&i.OrgID,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
 
 const getDatasetByName = `-- name: GetDatasetByName :one
-select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets where name = $1 and org_id = $2
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets where name = $1 and org_id = $2
 `
 
 type GetDatasetByNameParams struct {
@@ -167,12 +173,13 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 		&i.FilePath,
 		&i.Columns,
 		&i.OrgID,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
 
 const listAllDatasets = `-- name: ListAllDatasets :many
-select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets
 `
 
 func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
@@ -198,6 +205,7 @@ func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
 			&i.FilePath,
 			&i.Columns,
 			&i.OrgID,
+			&i.CustomPrompt,
 		); err != nil {
 			return nil, err
 		}
@@ -210,7 +218,7 @@ func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
 }
 
 const searchDatasets = `-- name: SearchDatasets :many
-select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id from datasets
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets
 where
     org_id = $1 and
     (name ilike concat('%', $2, '%') or
@@ -262,6 +270,7 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 			&i.FilePath,
 			&i.Columns,
 			&i.OrgID,
+			&i.CustomPrompt,
 		); err != nil {
 			return nil, err
 		}
@@ -282,21 +291,23 @@ set
     file_path = coalesce($4, file_path),
     columns = coalesce($5, columns),
     alias = coalesce($6, alias),
-    updated_by = coalesce($7, updated_by)
-where id = $8 and org_id = $9
-returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id
+    updated_by = coalesce($7, updated_by),
+    custom_prompt = coalesce($8, custom_prompt)
+where id = $9 and org_id = $10
+returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt
 `
 
 type UpdateDatasetParams struct {
-	Description pgtype.Text
-	RowCount    pgtype.Int4
-	Size        pgtype.Int8
-	FilePath    string
-	Columns     []byte
-	Alias       pgtype.Text
-	UpdatedBy   pgtype.Text
-	ID          string
-	OrgID       pgtype.Text
+	Description  pgtype.Text
+	RowCount     pgtype.Int4
+	Size         pgtype.Int8
+	FilePath     string
+	Columns      []byte
+	Alias        pgtype.Text
+	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
+	ID           string
+	OrgID        pgtype.Text
 }
 
 func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (Dataset, error) {
@@ -308,6 +319,7 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		arg.Columns,
 		arg.Alias,
 		arg.UpdatedBy,
+		arg.CustomPrompt,
 		arg.ID,
 		arg.OrgID,
 	)
@@ -326,6 +338,7 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		&i.FilePath,
 		&i.Columns,
 		&i.OrgID,
+		&i.CustomPrompt,
 	)
 	return i, err
 }

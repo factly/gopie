@@ -22,7 +22,6 @@ definitions:
     description: Request body for executing a SQL query
     properties:
       query:
-        description: SQL query to execute (only SELECT statements are allowed)
         example: SELECT * FROM sales_data WHERE value > 1000
         minLength: 1
         type: string
@@ -40,41 +39,6 @@ definitions:
     required:
     - visibility
     type: object
-  chats.chatRequestBody:
-    description: Request body for creating or continuing a chat conversation
-    properties:
-      chat_id:
-        description: Unique identifier of an existing chat (optional for new chats)
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      created_by:
-        description: User ID of the creator
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      dataset_id:
-        description: ID of the dataset to analyze
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      messages:
-        description: Array of chat messages
-        items:
-          properties:
-            content:
-              description: Message content
-              example: Show me the total sales by region
-              type: string
-            role:
-              description: Message role (user/assistant)
-              example: user
-              type: string
-          required:
-          - content
-          - role
-          type: object
-        type: array
-    required:
-    - messages
-    type: object
   chats.chatWithAgentRequestBody:
     description: Request body for creating a streaming chat conversation with an AI
       agent - OpenAI compatible
@@ -85,8 +49,6 @@ definitions:
         items:
           $ref: '#/definitions/models.AIChatMessage'
         type: array
-      model:
-        type: string
       stream:
         default: true
         type: boolean
@@ -110,6 +72,8 @@ definitions:
       created_by:
         description: User ID of the creator
         example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      custom_prompt:
         type: string
       description:
         description: Description of the dataset
@@ -144,12 +108,10 @@ definitions:
     properties:
       alias:
         type: string
+      custom_prompt:
+        type: string
       description:
         type: string
-      updated_by:
-        type: string
-    required:
-    - updated_by
     type: object
   models.AIChatMessage:
     properties:
@@ -157,6 +119,9 @@ definitions:
         type: string
       role:
         type: string
+      tool_calls:
+        items: {}
+        type: array
     type: object
   models.ChatMessage:
     properties:
@@ -173,27 +138,6 @@ definitions:
       model:
         type: string
       object:
-        type: string
-    type: object
-  models.ChatWithMessages:
-    properties:
-      created_at:
-        type: string
-      created_by:
-        type: string
-      id:
-        type: string
-      messages:
-        items:
-          $ref: '#/definitions/models.ChatMessage'
-        type: array
-      organization_id:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
-      visibility:
         type: string
     type: object
   models.Choice:
@@ -213,6 +157,8 @@ definitions:
       created_at:
         type: string
       id:
+        type: string
+      organization_id:
         type: string
       sql_query:
         type: string
@@ -240,6 +186,8 @@ definitions:
         description: CreatedBy represents the user who created the dataset
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
+      custom_prompt:
+        type: string
       description:
         description: Description of the dataset
         example: Sales data for Q1 2024
@@ -248,10 +196,6 @@ definitions:
         description: File path of the dataset
         example: /data/sales_data.csv
         type: string
-      format:
-        description: Format of the dataset (e.g., csv, parquet)
-        example: csv
-        type: string
       id:
         description: Unique identifier of the dataset
         example: 550e8400-e29b-41d4-a716-446655440000
@@ -259,6 +203,10 @@ definitions:
       name:
         description: Name of the dataset
         example: gp_Dh790Asdf17kd
+        type: string
+      org_id:
+        description: Organization ID to which the dataset belongs
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       row_count:
         description: Number of rows in the dataset
@@ -287,8 +235,7 @@ definitions:
       role:
         type: string
       tool_calls:
-        items:
-          $ref: '#/definitions/models.ToolCall'
+        items: {}
         type: array
     type: object
   models.FunctionCall:
@@ -307,6 +254,8 @@ definitions:
       createdAt:
         description: Creation timestamp
         example: "2024-02-05T12:00:00Z"
+        type: string
+      custom_prompt:
         type: string
       description:
         description: Description of the project
@@ -331,27 +280,11 @@ definitions:
         example: "2024-02-05T12:00:00Z"
         type: string
     type: object
-  models.ToolCall:
-    properties:
-      function:
-        $ref: '#/definitions/models.ToolFunction'
-      id:
-        type: string
-      index:
-        type: integer
-      type:
-        type: string
-    type: object
-  models.ToolFunction:
-    properties:
-      arguments:
-        type: string
-      name:
-        type: string
-    type: object
   projects.createRequestBody:
     description: Request body for creating a new project
     properties:
+      custom_prompt:
+        type: string
       description:
         description: Description of the project
         example: This is a detailed description of my new project
@@ -371,6 +304,8 @@ definitions:
   projects.updateProjectBody:
     description: Request body for updating an existing project
     properties:
+      custom_prompt:
+        type: string
       description:
         description: Description of the project
         example: Updated project description
@@ -382,12 +317,8 @@ definitions:
         maxLength: 50
         minLength: 3
         type: string
-      updated_by:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
     required:
     - name
-    - updated_by
     type: object
   responses.ErrorResponse:
     description: Error response structure
@@ -419,6 +350,13 @@ definitions:
           type: string
         description: Column names to be altered (optional)
         type: object
+      column_descriptions:
+        additionalProperties:
+          type: string
+        description: Column descriptions
+        type: object
+      custom_prompt:
+        type: string
       dataset:
         description: Name of the dataset to update
         example: sales_data_table
@@ -434,13 +372,21 @@ definitions:
         example: my-bucket/data/updated_sales.csv
         minLength: 1
         type: string
+      ignore_errors:
+        type: boolean
+      project_id:
+        description: Project ID of the dataset
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       updated_by:
         description: User ID of the updater
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     required:
     - alter_column_names
+    - column_descriptions
     - dataset
+    - project_id
     - updated_by
     type: object
   s3.uploadRequestBody:
@@ -465,6 +411,8 @@ definitions:
         description: User ID of the creator
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
+      custom_prompt:
+        type: string
       description:
         description: Description of the dataset
         example: Sales data for Q1 2024
@@ -476,6 +424,8 @@ definitions:
         example: my-bucket/data/sales.csv
         minLength: 1
         type: string
+      ignore_errors:
+        type: boolean
       project_id:
         description: ID of the project to add the dataset to
         example: 550e8400-e29b-41d4-a716-446655440000
@@ -834,44 +784,6 @@ paths:
             additionalProperties: true
             type: object
       summary: List user chats
-      tags:
-      - chat
-    post:
-      consumes:
-      - application/json
-      description: Create a new chat or continue an existing chat conversation with
-        AI about a dataset
-      parameters:
-      - description: Chat request parameters
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/chats.chatRequestBody'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Chat created/continued successfully" // Ensure models.ChatWithMessages
-            is the correct response structure
-          schema:
-            $ref: '#/definitions/models.ChatWithMessages'
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Dataset not found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Create or continue chat
       tags:
       - chat
   /v1/api/chat/{chatID}:
