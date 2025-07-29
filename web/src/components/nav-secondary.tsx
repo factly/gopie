@@ -24,15 +24,20 @@ export function NavSecondary({
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   
-  const handleFeedbackClick = (e: React.MouseEvent) => {
+  const handleFeedbackClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Get the feedback integration and create/show the widget
+    // Get the feedback integration
     const feedback = Sentry.getFeedback();
     if (feedback) {
-      // Create and show the feedback widget
-      feedback.createWidget();
-      // The widget will automatically show when created
+      try {
+        // Create and open the form directly
+        const form = await feedback.createForm();
+        form.appendToDom();
+        form.open();
+      } catch (error) {
+        console.error("Error opening feedback form:", error);
+      }
     } else {
       // Fallback: use captureFeedback API if the widget is not available
       console.warn("Sentry feedback widget not available, please check configuration");
@@ -45,23 +50,26 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
-                asChild={item.title !== "Feedback"} 
-                size="sm"
-                onClick={item.title === "Feedback" ? handleFeedbackClick : undefined}
-              >
-                {item.title === "Feedback" ? (
-                  <button className="flex items-center gap-2 w-full">
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </button>
-                ) : (
+              {item.title === "Report Bug/Feedback" ? (
+                <SidebarMenuButton 
+                  asChild={false} 
+                  size="sm"
+                  onClick={handleFeedbackClick}
+                >
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton 
+                  asChild
+                  size="sm"
+                >
                   <Link href={item.url}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>
-                )}
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

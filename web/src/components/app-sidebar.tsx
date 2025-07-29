@@ -135,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: LifeBuoy,
     },
     {
-      title: "Feedback",
+      title: "Report Bug/Feedback",
       url: "#",
       icon: Send,
     },
