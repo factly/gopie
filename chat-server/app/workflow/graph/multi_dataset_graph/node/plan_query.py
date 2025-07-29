@@ -54,15 +54,20 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
     Returns:
         Updated state with the planned SQL query/queries
     """
-    try:
-        identified_datasets = state.get("identified_datasets", [])
-        query_index = state.get("subquery_index", 0)
-        user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
-        query_result = state.get("query_result", {})
-        datasets_info = state.get("datasets_info", {})
-        previous_sql_queries = state.get("previous_sql_queries", [])
-        last_message = state.get("messages", [])[-1]
 
+    identified_datasets = state.get("identified_datasets", [])
+    query_index = state.get("subquery_index", 0)
+    user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
+    query_result = state.get("query_result", {})
+    datasets_info = state.get("datasets_info", {})
+    previous_sql_queries = state.get("previous_sql_queries", [])
+    last_message = state.get("messages", [])[-1]
+
+    # Reset the SQL queries and tables used for the current subquery (due to validation logic)
+    query_result.subqueries[query_index].sql_queries = []
+    query_result.subqueries[query_index].tables_used = None
+
+    try:
         if not identified_datasets:
             raise Exception("No dataset selected for query planning")
 
@@ -73,7 +78,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             raise Exception("No dataset selected for query planning")
 
         if not datasets_info:
-            raise Exception("Could not get preview information for any of the selected " "datasets")
+            raise Exception("Could not get preview information for any of the selected datasets")
 
         llm_prompt = get_prompt(
             "plan_query",
