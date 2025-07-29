@@ -543,59 +543,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "description": "Create a new chat or continue an existing chat conversation with AI about a dataset",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chat"
-                ],
-                "summary": "Create or continue chat",
-                "parameters": [
-                    {
-                        "description": "Chat request parameters",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/chats.chatRequestBody"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Chat created/continued successfully\" // Ensure models.ChatWithMessages is the correct response structure",
-                        "schema": {
-                            "$ref": "#/definitions/models.ChatWithMessages"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Dataset not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
             }
         },
         "/v1/api/chat/completions": {
@@ -1669,7 +1616,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "query": {
-                    "description": "SQL query to execute (only SELECT statements are allowed)",
                     "type": "string",
                     "minLength": 1,
                     "example": "SELECT * FROM sales_data WHERE value \u003e 1000"
@@ -1692,53 +1638,6 @@ const docTemplate = `{
                 }
             }
         },
-        "chats.chatRequestBody": {
-            "description": "Request body for creating or continuing a chat conversation",
-            "type": "object",
-            "required": [
-                "messages"
-            ],
-            "properties": {
-                "chat_id": {
-                    "description": "Unique identifier of an existing chat (optional for new chats)",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "created_by": {
-                    "description": "User ID of the creator",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "dataset_id": {
-                    "description": "ID of the dataset to analyze",
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "messages": {
-                    "description": "Array of chat messages",
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "required": [
-                            "content",
-                            "role"
-                        ],
-                        "properties": {
-                            "content": {
-                                "description": "Message content",
-                                "type": "string",
-                                "example": "Show me the total sales by region"
-                            },
-                            "role": {
-                                "description": "Message role (user/assistant)",
-                                "type": "string",
-                                "example": "user"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "chats.chatWithAgentRequestBody": {
             "description": "Request body for creating a streaming chat conversation with an AI agent - OpenAI compatible",
             "type": "object",
@@ -1754,9 +1653,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.AIChatMessage"
                     }
-                },
-                "model": {
-                    "type": "string"
                 },
                 "stream": {
                     "type": "boolean",
@@ -1795,6 +1691,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
+                "custom_prompt": {
+                    "type": "string"
+                },
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",
@@ -1825,17 +1724,14 @@ const docTemplate = `{
         },
         "datasets.updateDatasetParams": {
             "type": "object",
-            "required": [
-                "updated_by"
-            ],
             "properties": {
                 "alias": {
                     "type": "string"
                 },
-                "description": {
+                "custom_prompt": {
                     "type": "string"
                 },
-                "updated_by": {
+                "description": {
                     "type": "string"
                 }
             }
@@ -1848,6 +1744,10 @@ const docTemplate = `{
                 },
                 "role": {
                     "type": "string"
+                },
+                "tool_calls": {
+                    "type": "array",
+                    "items": {}
                 }
             }
         },
@@ -1877,38 +1777,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ChatWithMessages": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "messages": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ChatMessage"
-                    }
-                },
-                "organization_id": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "visibility": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Choice": {
             "type": "object",
             "properties": {
@@ -1934,6 +1802,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "organization_id": {
                     "type": "string"
                 },
                 "sql_query": {
@@ -1971,6 +1842,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
+                "custom_prompt": {
+                    "type": "string"
+                },
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",
@@ -1981,11 +1855,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "/data/sales_data.csv"
                 },
-                "format": {
-                    "description": "Format of the dataset (e.g., csv, parquet)",
-                    "type": "string",
-                    "example": "csv"
-                },
                 "id": {
                     "description": "Unique identifier of the dataset",
                     "type": "string",
@@ -1995,6 +1864,11 @@ const docTemplate = `{
                     "description": "Name of the dataset",
                     "type": "string",
                     "example": "gp_Dh790Asdf17kd"
+                },
+                "org_id": {
+                    "description": "Organization ID to which the dataset belongs",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "row_count": {
                     "description": "Number of rows in the dataset",
@@ -2033,9 +1907,7 @@ const docTemplate = `{
                 },
                 "tool_calls": {
                     "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ToolCall"
-                    }
+                    "items": {}
                 }
             }
         },
@@ -2062,6 +1934,9 @@ const docTemplate = `{
                 "created_by": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "custom_prompt": {
+                    "type": "string"
                 },
                 "description": {
                     "description": "Description of the project",
@@ -2093,34 +1968,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ToolCall": {
-            "type": "object",
-            "properties": {
-                "function": {
-                    "$ref": "#/definitions/models.ToolFunction"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "index": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ToolFunction": {
-            "type": "object",
-            "properties": {
-                "arguments": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "projects.createRequestBody": {
             "description": "Request body for creating a new project",
             "type": "object",
@@ -2129,6 +1976,9 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "custom_prompt": {
+                    "type": "string"
+                },
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
@@ -2149,10 +1999,12 @@ const docTemplate = `{
             "description": "Request body for updating an existing project",
             "type": "object",
             "required": [
-                "name",
-                "updated_by"
+                "name"
             ],
             "properties": {
+                "custom_prompt": {
+                    "type": "string"
+                },
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
@@ -2165,10 +2017,6 @@ const docTemplate = `{
                     "maxLength": 50,
                     "minLength": 3,
                     "example": "Updated Project Name"
-                },
-                "updated_by": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -2207,7 +2055,9 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "alter_column_names",
+                "column_descriptions",
                 "dataset",
+                "project_id",
                 "updated_by"
             ],
             "properties": {
@@ -2217,6 +2067,16 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "string"
                     }
+                },
+                "column_descriptions": {
+                    "description": "Column descriptions",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "custom_prompt": {
+                    "type": "string"
                 },
                 "dataset": {
                     "description": "Name of the dataset to update",
@@ -2235,6 +2095,14 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 1,
                     "example": "my-bucket/data/updated_sales.csv"
+                },
+                "ignore_errors": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "description": "Project ID of the dataset",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "updated_by": {
                     "description": "User ID of the updater",
@@ -2280,6 +2148,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
+                "custom_prompt": {
+                    "type": "string"
+                },
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",
@@ -2292,6 +2163,9 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 1,
                     "example": "my-bucket/data/sales.csv"
+                },
+                "ignore_errors": {
+                    "type": "boolean"
                 },
                 "project_id": {
                     "description": "ID of the project to add the dataset to",
