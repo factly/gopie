@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ColumnDetails(BaseModel):
@@ -10,6 +10,14 @@ class ColumnDetails(BaseModel):
     extra: Optional[Any] = None
     key: Optional[Any] = None
     null: str
+
+
+class ProjectDetails(BaseModel):
+    id: str
+    name: str
+    description: str
+    custom_prompt: Optional[str] = None
+    model_config = ConfigDict(extra="ignore")
 
 
 class DatasetDetails(BaseModel):
@@ -25,8 +33,9 @@ class DatasetDetails(BaseModel):
     updated_at: str
     created_by: str
     updated_by: str
-    dataset_custom_prompt: Optional[str] = None
-    project_custom_prompt: Optional[str] = None
+    custom_prompt: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class ColumnValueMatching(BaseModel):
