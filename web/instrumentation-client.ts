@@ -32,6 +32,23 @@ Sentry.init({
     Sentry.extraErrorDataIntegration({
       depth: 10,
     }),
+    // User feedback integration
+    Sentry.feedbackIntegration({
+      // Use system color scheme (light/dark mode)
+      colorScheme: "system",
+      // Show name and email fields
+      showName: true,
+      showEmail: true,
+      // Email is required for better follow-up
+      isEmailRequired: true,
+      // Use Sentry user context for pre-filling
+      useSentryUser: {
+        email: "email",
+        name: "username",
+      },
+      // Don't auto-inject the widget, we'll control it manually
+      autoInject: false,
+    }),
   ],
 
   // Capture Replay for 10% of all sessions,

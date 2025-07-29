@@ -4,7 +4,13 @@ import * as Sentry from "@sentry/nextjs";
 import { useState, useEffect } from "react";
 
 export default function SentryDebugPage() {
-  const [sentryStatus, setSentryStatus] = useState<any>({});
+  const [sentryStatus, setSentryStatus] = useState<{
+    clientExists?: boolean;
+    enabled?: boolean;
+    dsn?: string;
+    environment?: string;
+    debug?: boolean;
+  }>({});
 
   useEffect(() => {
     // Check Sentry client status
@@ -45,7 +51,7 @@ export default function SentryDebugPage() {
   const testException = () => {
     console.log("Testing exception capture...");
     try {
-      // @ts-ignore - Intentionally call undefined function
+      // @ts-expect-error - Intentionally call undefined function
       nonExistentFunction();
     } catch (error) {
       console.log("Caught error:", error);
@@ -75,6 +81,35 @@ export default function SentryDebugPage() {
       Sentry.captureMessage("Test Message with Rich Context", "warning");
     });
     alert("Message with context sent to Sentry!");
+  };
+
+  const testFeedback = () => {
+    console.log("Testing feedback widget...");
+    const feedback = Sentry.getFeedback();
+    if (feedback) {
+      // Create and show the feedback widget
+      feedback.createWidget();
+      console.log("Feedback widget created successfully");
+    } else {
+      console.error("Sentry feedback integration not available");
+      alert("Feedback integration not available. Check Sentry configuration.");
+    }
+  };
+
+  const testFeedbackAPI = () => {
+    console.log("Testing feedback API...");
+    // Capture a test event first to get an event ID
+    const eventId = Sentry.captureMessage("Test event for feedback association", "info");
+    
+    // Send feedback programmatically
+    Sentry.captureFeedback({
+      message: "This is a test feedback message sent via API",
+      name: "Test User",
+      email: "test@example.com",
+      associatedEventId: eventId,
+    });
+    
+    alert("Feedback sent via API! Check your Sentry dashboard.");
   };
 
   return (
@@ -142,6 +177,25 @@ export default function SentryDebugPage() {
             </button>
           </div>
         </div>
+
+        <div className="border rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">User Feedback</h2>
+          <div className="space-y-3">
+            <button
+              onClick={testFeedback}
+              className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+            >
+              Show Feedback Widget
+            </button>
+            
+            <button
+              onClick={testFeedbackAPI}
+              className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+            >
+              Send Feedback via API
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Explanations */}
@@ -161,6 +215,12 @@ export default function SentryDebugPage() {
             <div>
               <strong>Test with Context:</strong> Sends a message with rich metadata (tags, user info, custom context)
             </div>
+            <div>
+              <strong>Show Feedback Widget:</strong> Opens the Sentry feedback widget for users to submit feedback
+            </div>
+            <div>
+              <strong>Send Feedback via API:</strong> Programmatically sends feedback using the Sentry API
+            </div>
           </div>
         </div>
 
@@ -168,10 +228,11 @@ export default function SentryDebugPage() {
           <h3 className="text-lg font-semibold mb-3">Expected Results in Sentry:</h3>
           <ul className="list-disc list-inside space-y-1 text-sm">
             <li><strong>Issues Tab:</strong> All errors and messages appear here</li>
-            <li><strong>Messages:</strong> Show up as "Non-Error" issues</li>
-            <li><strong>Exceptions:</strong> Show up as "Error" issues with stack traces</li>
+            <li><strong>Messages:</strong> Show up as &quot;Non-Error&quot; issues</li>
+            <li><strong>Exceptions:</strong> Show up as &quot;Error&quot; issues with stack traces</li>
             <li><strong>Context:</strong> Additional data visible in issue details</li>
             <li><strong>Tags:</strong> Filterable metadata in the issue</li>
+            <li><strong>Feedback:</strong> User feedback appears in the &quot;User Feedback&quot; section of your Sentry project</li>
           </ul>
         </div>
       </div>
