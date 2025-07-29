@@ -1,5 +1,5 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
-import * as XLSX from "xlsx";
+import * as XLSX from "sheetjs-ce-unofficial";
 
 export type SupportedFileFormat =
   | "csv"
