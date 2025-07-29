@@ -263,3 +263,6 @@ config-noauth.env
 agent_test.ipynb
 test_cases.py
 /*/dataful
+
+
+chat-server/tests/generate_cases
