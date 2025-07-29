@@ -6,9 +6,6 @@ from langchain_core.prompts import (
 
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
 from app.workflow.prompts.formatters.format_query_result import (
     format_query_result,
 )
@@ -50,15 +47,7 @@ RULES FOR SQL QUERIES (when needed):
 - Generate only read queries (SELECT)
 - Pay careful attention to exact column names from the schema
 - Use the TABLE NAME provided in the input for forming SQL queries
-
-RESPONSE FORMAT:
-Return a JSON object in one of these formats:
-{
-    "sql_queries": ["<SQL query here without semicolon>", ...],
-    "explanations": ["<Concise explanation for each query including: Query strategy (what data is being retrieved and how), table metadata (table name and content type), key columns and their data types, any aggregations/calculations, and expected output format>", ...],
-    "response_for_non_sql": "<Brief explanation for non-sql response>"
-}
-Always respond with valid JSON only."""
+"""
 
     human_template_str = """
 {input}
@@ -67,7 +56,7 @@ Always respond with valid JSON only."""
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

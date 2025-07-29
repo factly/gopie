@@ -5,9 +5,6 @@ from langchain_core.prompts import (
 )
 
 from app.models.schema import DatasetSchema
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
 
 
 def create_identify_datasets_prompt(
@@ -99,7 +96,7 @@ IMPORTANT:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

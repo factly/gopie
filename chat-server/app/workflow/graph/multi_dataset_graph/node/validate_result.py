@@ -15,12 +15,12 @@ RECOMMENDATION_LIST = ["route_response", "replan", "reidentify_datasets"]
 
 
 class ValidateResultOutput(BaseModel):
-    """Structured output for validate result node."""
-
     recommendation: Literal["route_response", "replan", "reidentify_datasets"] = Field(
         description="Recommendation based on validation"
     )
-    response: str = Field(description="Brief reasoning-based explanation of what to do next")
+    response: str = Field(
+        description="A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
+    )
 
 
 @configure_node(

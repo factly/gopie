@@ -16,6 +16,7 @@ def create_result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptT
 
     If `prompt_template` is True, returns a `ChatPromptTemplate` with system and human message templates; otherwise, returns a list of message objects with the system message and a human message containing the provided input.
     """
+
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 

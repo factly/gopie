@@ -4,10 +4,6 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
-
 
 def create_process_context_prompt(
     **kwargs,
@@ -70,7 +66,7 @@ Analyze the above and return ONLY a single JSON response with the specified fiel
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

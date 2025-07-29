@@ -5,9 +5,6 @@ from langchain_core.prompts import (
 )
 
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
 
 
 def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
@@ -22,7 +19,6 @@ Before deciding on your response, internally validate:
 1. **Data Compatibility**: Can the available datasets answer the user's question?
 2. **Column Availability**: Are required columns present in the datasets?
 3. **Join Feasibility**: If multiple datasets are needed, can they be properly joined?
-4. **Data Quality**: Is there sufficient sample data to understand the structure?
 
 Based on this internal validation, choose ONE response path:
 
@@ -61,7 +57,7 @@ Based on this internal validation, choose ONE response path:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

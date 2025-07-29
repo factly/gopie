@@ -14,7 +14,9 @@ from app.workflow.graph.multi_dataset_graph.types import State
 class SqlQueryOutput(BaseModel):
     sql_query: str = Field(description="SQL query without semicolon, compatible with DuckDB")
     explanation: str = Field(
-        description="Query strategy, columns used, table metadata, expected results"
+        description="""concise explanation including: Query strategy (e.g., filtering by X to get Y),
+        key columns used and their data types, table metadata (table name, what data it contains),
+        JOIN strategy if multiple tables, and expected result format"""
     )
     tables_used: list[str] = Field(description="List of table names used in the query")
 

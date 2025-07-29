@@ -4,10 +4,6 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
-
 
 def create_validate_input_prompt(
     **kwargs,
@@ -36,7 +32,7 @@ Please respond with a positive response for the given user input. no negative re
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

@@ -23,10 +23,12 @@ from app.workflow.graph.single_dataset_graph.types import State
 
 
 class ProcessQueryOutput(BaseModel):
-    """Structured output for process query node."""
-
     sql_queries: list[str] = Field(description="SQL queries without semicolon", default=[])
-    explanations: list[str] = Field(description="Concise explanation for each query", default=[])
+    explanations: list[str] = Field(
+        description="""Concise explanation for each query including: Query strategy (what data is being
+        retrieved and how), table metadata (table name and content type), key columns and their data types, any aggregations/calculations, and expected output format...""",
+        default=[],
+    )
     response_for_non_sql: str = Field(
         description="Brief explanation for non-sql response", default=""
     )
@@ -101,7 +103,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
     dataset_id = state.get("dataset_id", None)
     prev_query_result = state.get("query_result", None)
     previous_sql_queries = state.get("previous_sql_queries", [])
-    last_message = state.get("messages", [])[-1]
+    last_validation_message = state.get("messages", [])[-1]
 
     query_result = QueryResult(
         original_user_query=user_query,
@@ -145,11 +147,11 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         llm = get_configured_llm_for_node("process_query", config, schema=ProcessQueryOutput)
 
-        parsed_response = await llm.ainvoke(prompt_messages + [last_message])
+        response = await llm.ainvoke(prompt_messages + [last_validation_message])
 
-        sql_queries = parsed_response.sql_queries
-        explanations = parsed_response.explanations
-        response_for_non_sql = parsed_response.response_for_non_sql
+        sql_queries = response.sql_queries
+        explanations = response.explanations
+        response_for_non_sql = response.response_for_non_sql
 
         query_result.single_dataset_query_result.user_friendly_dataset_name = (
             user_provided_dataset_name

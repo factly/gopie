@@ -14,12 +14,12 @@ RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
 
 
 class ValidateResultOutput(BaseModel):
-    """Structured output for validate result node."""
-
     recommendation: Literal["pass_on_results", "rerun_query"] = Field(
         description="Recommendation based on validation"
     )
-    response: str = Field(description="Brief reasoning-based explanation of what to do next")
+    response: str = Field(
+        description="A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
+    )
 
 
 @configure_node(
