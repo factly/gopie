@@ -20,6 +20,7 @@ const (
 	astKeyRight        string = "right"
 	astKeyCTE          string = "cte_map"
 	astKeyPosition     string = "position"
+	astKeyOrderBys     string = "order_bys"
 )
 
 func toBoolean(a astNode, k string) bool {
