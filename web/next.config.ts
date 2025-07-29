@@ -52,7 +52,9 @@ export default withSentryConfig(nextConfig, {
   tunnelRoute: "/monitoring",
 
   // Hide source maps from generated client bundles
-  hideSourceMaps: true,
+  sourcemaps: {
+    disable: true,
+  },
 
   // Automatically instrument Vercel cron jobs
   automaticVercelMonitors: true,
