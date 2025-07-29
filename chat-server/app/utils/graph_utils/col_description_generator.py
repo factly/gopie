@@ -34,15 +34,18 @@ Example format:
 """
 # fmt: on
 
-model_id = get_node_model("generate_col_descriptions")
-prompt = ChatPromptTemplate.from_template(COLUMNS_PROMPT)
-config = RunnableConfig(
-    configurable={
-        "metadata": {"type": "col_description_generator"},
-    }
-)
-llm = get_model_provider(config).get_llm(model_id)
-chain = prompt | llm | JsonOutputParser()
+
+def _get_chain():
+    """Get the LLM chain for generating column descriptions."""
+    model_id = get_node_model("generate_col_descriptions")
+    prompt = ChatPromptTemplate.from_template(COLUMNS_PROMPT)
+    config = RunnableConfig(
+        configurable={
+            "metadata": {"type": "col_description_generator"},
+        }
+    )
+    llm = get_model_provider(config).get_llm(model_id)
+    return prompt | llm | JsonOutputParser()
 
 
 async def generate_column_descriptions(
@@ -58,6 +61,7 @@ async def generate_column_descriptions(
         Dictionary mapping column names to their generated descriptions
     """
     try:
+        chain = _get_chain()
         response = await chain.ainvoke(
             {
                 "dataset_schema": schema.model_dump(exclude_defaults=True),

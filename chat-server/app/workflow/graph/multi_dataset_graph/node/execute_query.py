@@ -13,14 +13,16 @@ async def execute_query(state: State) -> dict:
     Each SQL query is executed asynchronously, and the outcome (success or failure) is recorded in the state.
     On completion, the function dispatches a custom event and returns the updated state along with a message summarizing the results.
     If an error occurs during execution, the error is recorded, the retry count is incremented, and an error message is returned.
+    If no SQL queries are present (no-SQL response case), the function skips execution and returns the state unchanged.
     """
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
 
     try:
         sql_queries = query_result.subqueries[query_index].sql_queries
+
         if not sql_queries:
-            raise ValueError("No SQL query/queries found in plan")
+            pass
 
         sql_results: list[SqlQueryInfo] = []
 

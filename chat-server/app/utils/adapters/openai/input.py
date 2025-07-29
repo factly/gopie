@@ -27,7 +27,12 @@ def from_openai_format(
     messages_dict = []
     for msg in raw_messages:
         if isinstance(msg, dict):
-            messages_dict.append(msg)
+            # Convert content to string if it's not already a string
+            msg_copy = msg.copy()
+            content = msg_copy.get("content")
+            if content is not None and not isinstance(content, str):
+                msg_copy["content"] = str(content)
+            messages_dict.append(msg_copy)
         else:
             messages_dict.append(msg.model_dump() if hasattr(msg, "model_dump") else dict(msg))
     messages = convert_openai_messages(messages_dict)

@@ -129,6 +129,7 @@ class TerminalFormatter:
         datasets: List[str],
         sql_queries: List[str],
         tool_messages: List[str],
+        visualization_results: Optional[List[str]] = None,
     ) -> None:
         """
         Prints a detailed summary of the AI response, including a preview of the response, datasets used, SQL queries executed, and processing steps.
@@ -162,9 +163,23 @@ class TerminalFormatter:
                 query_preview = query[:80] + "..." if len(query) > 80 else query
                 print(f"{self.Colors.GRAY}│  {i}. {query_preview}{self.Colors.ENDC}")
 
-        print(
-            f"{self.Colors.GRAY}└─ Processing Steps:{self.Colors.ENDC} {self.Colors.LIGHT_YELLOW}{len(tool_messages)} step(s){self.Colors.ENDC}"
-        )
+        # Check if we have visualization results to show
+        if visualization_results:
+            print(
+                f"{self.Colors.GRAY}├─ Visualizations:{self.Colors.ENDC} {self.Colors.PURPLE}{len(visualization_results)} result(s){self.Colors.ENDC}"
+            )
+            for i, viz_result in enumerate(visualization_results, 1):
+                viz_preview = viz_result[:80] + "..." if len(viz_result) > 80 else viz_result
+                print(f"{self.Colors.GRAY}│  {i}. {viz_preview}{self.Colors.ENDC}")
+
+            print(
+                f"{self.Colors.GRAY}└─ Processing Steps:{self.Colors.ENDC} {self.Colors.LIGHT_YELLOW}{len(tool_messages)} step(s){self.Colors.ENDC}"
+            )
+        else:
+            print(
+                f"{self.Colors.GRAY}└─ Processing Steps:{self.Colors.ENDC} {self.Colors.LIGHT_YELLOW}{len(tool_messages)} step(s){self.Colors.ENDC}"
+            )
+
         if tool_messages:
             for i, message in enumerate(tool_messages, 1):
                 print(f"{self.Colors.GRAY}   {i}. {message}{self.Colors.ENDC}")

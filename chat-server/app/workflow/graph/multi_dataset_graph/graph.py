@@ -40,7 +40,7 @@ graph_builder.add_conditional_edges(
     "analyze_query",
     route_from_analysis,
     {
-        "identify_datasets": "identify_datasets",
+        "generate_subqueries": "generate_subqueries",
         "basic_conversation": "route_response",
         "tools": "tools",
     },
@@ -79,12 +79,12 @@ graph_builder.add_conditional_edges(
     check_further_execution_requirement,
     {
         "end_execution": END,
-        "next_sub_query": "analyze_query",
+        "next_sub_query": "identify_datasets",
     },
 )
 
-graph_builder.add_edge(START, "generate_subqueries")
-graph_builder.add_edge("generate_subqueries", "analyze_query")
+graph_builder.add_edge(START, "analyze_query")
+graph_builder.add_edge("generate_subqueries", "identify_datasets")
 graph_builder.add_edge("analyze_dataset", "plan_query")
 graph_builder.add_edge("tools", "analyze_query")
 graph_builder.add_edge("plan_query", "execute_query")
