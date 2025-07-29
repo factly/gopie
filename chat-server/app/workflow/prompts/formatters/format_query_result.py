@@ -1,11 +1,163 @@
-from app.models.query import QueryResult, SingleDatasetQueryResult
+from app.models.query import (
+    AnalyzeQueryResult,
+    QueryResult,
+    SingleDatasetQueryResult,
+    SqlQueryInfo,
+    SubQueryInfo,
+)
+
+
+def format_sql_query_info(sql_info: SqlQueryInfo, query_number: int) -> str:
+    """
+    Format a single SQL query information object into a readable string.
+
+    Args:
+        sql_info: The SQL query information to format
+        query_number: The number/index of this query
+
+    Returns:
+        str: Formatted SQL query information
+    """
+    sql_section = [f"\nSQL Query {query_number}:"]
+    sql_section.append(f"Query: {sql_info.sql_query}")
+    sql_section.append(f"Explanation: {sql_info.explanation}")
+
+    if sql_info.sql_query_result is not None:
+        sql_section.append(f"Result: {sql_info.sql_query_result}")
+    else:
+        sql_section.append("Result: No data returned")
+
+    if not sql_info.success and sql_info.error:
+        sql_section.append(f"Error: {sql_info.error}")
+
+    return "\n".join(sql_section)
+
+
+def format_successful_sql_results(sql_results: list[SqlQueryInfo]) -> str:
+    """
+    Format successful SQL query results for single dataset queries.
+
+    Args:
+        sql_results: List of successful SQL query results
+
+    Returns:
+        str: Formatted successful results section
+    """
+    sections = ["\n\n=== QUERY RESULTS ==="]
+
+    for i, result in enumerate(sql_results, 1):
+        if result.sql_query_result:
+            sections.append(f"\n\n--- SQL Query {i} ---")
+            if result.explanation:
+                sections.append(f"\nPurpose: {result.explanation}")
+            if result.sql_query:
+                sections.append(f"\nSQL: {result.sql_query}")
+            sections.append(f"\nData: {result.sql_query_result}")
+
+    return "".join(sections)
+
+
+def format_failed_sql_results(sql_results: list[SqlQueryInfo]) -> str:
+    """
+    Format failed SQL query results for single dataset queries.
+
+    Args:
+        sql_results: List of failed SQL query results
+
+    Returns:
+        str: Formatted failed results section
+    """
+    sections = ["\n\n=== FAILED QUERIES ==="]
+    sections.append("\nSome SQL queries were not successful:")
+
+    for i, result in enumerate(sql_results, 1):
+        sections.append(f"\n\n--- Failed Query {i} ---")
+        if result.explanation:
+            sections.append(f"\nPurpose: {result.explanation}")
+        if result.sql_query:
+            sections.append(f"\nSQL: {result.sql_query}")
+        sections.append(f"\nError: {result.error}")
+
+    return "".join(sections)
+
+
+def format_analyze_query_result(analyze_result: AnalyzeQueryResult) -> str:
+    """
+    Format the analyze query result into a readable string.
+
+    Args:
+        analyze_result: The analyze query result to format
+
+    Returns:
+        str: Formatted analyze query result
+    """
+    sections = []
+
+    if analyze_result.query_type:
+        sections.append(f"Query Type: {analyze_result.query_type}")
+
+    if analyze_result.response:
+        sections.append(f"Analysis Response: {analyze_result.response}")
+
+    if analyze_result.tool_used_result:
+        sections.append("Tool Results:")
+        for tool_result in analyze_result.tool_used_result:
+            tool_name = tool_result.get("name", "Unknown Tool")
+            tool_content = tool_result.get("content", "No content")
+            tool_call_id = tool_result.get("tool_call_id", "Unknown ID")
+            sections.append(f"  - {tool_name} (ID: {tool_call_id}): {tool_content}")
+
+    if analyze_result.confidence_score != 5:
+        sections.append(f"Confidence Score: {analyze_result.confidence_score}/10")
+
+    return "\n".join(sections) if sections else "No analysis result available"
+
+
+def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[str]:
+    """
+    Format a single subquery information object into readable sections.
+
+    Args:
+        subquery: The subquery information to format
+        subquery_number: The number/index of this subquery
+
+    Returns:
+        list[str]: List of formatted sections for the subquery
+    """
+    subquery_section = [f"\n--- SUBQUERY {subquery_number} ---"]
+    subquery_section.append(f"Query: {subquery.query_text}")
+
+    if subquery.tables_used:
+        subquery_section.append(f"Tables: {subquery.tables_used}")
+
+    if subquery.sql_queries:
+        subquery_section.append(f"SQL Queries Executed: {len(subquery.sql_queries)}")
+        for j, sql_info in enumerate(subquery.sql_queries, 1):
+            sql_formatted = format_sql_query_info(sql_info, j)
+            subquery_section.append(sql_formatted)
+
+    if subquery.no_sql_response:
+        subquery_section.append(f"No SQL Response: {subquery.no_sql_response}")
+
+    if subquery.error_message:
+        subquery_section.append("Errors encountered:")
+        for error in subquery.error_message:
+            for error_type, error_msg in error.items():
+                subquery_section.append(f"- {error_type}: {error_msg}")
+
+    if subquery.node_messages:
+        subquery_section.append("Additional Context:")
+        for node, message in subquery.node_messages.items():
+            subquery_section.append(f"- {node}: {message}")
+
+    return subquery_section
 
 
 def format_query_result(query_result: QueryResult) -> str:
     """
     Format a comprehensive query result into a detailed, human-readable multi-line string.
 
-    The output includes the original user query, execution time, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, type, tables used, executed SQL queries (including their explanations and results), tool results, error messages, confidence scores (if not default), and any additional context messages. If no subqueries are present, the output notes this explicitly.
+    The output includes the original user query, execution time, analyze query result, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, tables used, executed SQL queries (including their explanations and results), error messages, and any additional context messages. If no subqueries are present, the output notes this explicitly.
 
     Parameters:
         query_result (QueryResult): The query result object to format.
@@ -20,6 +172,10 @@ def format_query_result(query_result: QueryResult) -> str:
         f"EXECUTION TIME: {query_result.execution_time:.2f}s",
     ]
 
+    if query_result.analyze_query_result:
+        input_parts.append("\n=== QUERY ANALYSIS ===")
+        input_parts.append(format_analyze_query_result(query_result.analyze_query_result))
+
     if query_result.single_dataset_query_result:
         input_parts.append("\n=== SINGLE DATASET QUERY RESULT ===")
         input_parts.append(
@@ -30,49 +186,8 @@ def format_query_result(query_result: QueryResult) -> str:
         input_parts.append(f"SUBQUERIES PROCESSED: {len(query_result.subqueries)}")
 
         for i, subquery in enumerate(query_result.subqueries, 1):
-            subquery_section = [f"\n--- SUBQUERY {i} ---"]
-            subquery_section.append(f"Query: {subquery.query_text}")
-
-            if subquery.query_type:
-                subquery_section.append(f"Type: {subquery.query_type}")
-
-            if subquery.tables_used:
-                subquery_section.append(f"Tables: {subquery.tables_used}")
-
-            if subquery.sql_queries:
-                subquery_section.append(f"SQL Queries Executed: {len(subquery.sql_queries)}")
-                for j, sql_info in enumerate(subquery.sql_queries, 1):
-                    sql_section = [f"\nSQL Query {j}:"]
-                    sql_section.append(f"Query: {sql_info.sql_query}")
-                    sql_section.append(f"Explanation: {sql_info.explanation}")
-
-                    sql_result = sql_info.sql_query_result
-
-                    if sql_result is not None:
-                        sql_section.append(f"Result: {sql_result}")
-                    else:
-                        sql_section.append("Result: No data returned")
-
-                    subquery_section.extend(sql_section)
-
-            if subquery.tool_used_result is not None:
-                subquery_section.append(f"Tool Result: {subquery.tool_used_result}")
-
-            if subquery.error_message:
-                subquery_section.append("Errors encountered:")
-                for error in subquery.error_message:
-                    for error_type, error_msg in error.items():
-                        subquery_section.append(f"- {error_type}: {error_msg}")
-
-            if subquery.confidence_score != 5:
-                subquery_section.append(f"Confidence: {subquery.confidence_score}/10")
-
-            if subquery.node_messages:
-                subquery_section.append("Additional Context:")
-                for node, message in subquery.node_messages.items():
-                    subquery_section.append(f"- {node}: {message}")
-
-            input_parts.extend(subquery_section)
+            subquery_sections = format_subquery_info(subquery, i)
+            input_parts.extend(subquery_sections)
     else:
         input_parts.append("No subqueries were processed")
 
@@ -109,33 +224,9 @@ def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) 
         failed_results = [r for r in sql_results if not r.success]
 
         if successful_results:
-            input_str += "\n\n=== QUERY RESULTS ==="
-            for i, result in enumerate(successful_results, 1):
-                if result.sql_query_result:
-                    explanation = result.explanation
-                    sql_query = result.sql_query
-                    data_preview = result.sql_query_result
-
-                    input_str += f"\n\n--- SQL Query {i} ---"
-                    if explanation:
-                        input_str += f"\nPurpose: {explanation}"
-                    if sql_query:
-                        input_str += f"\nSQL: {sql_query}"
-                    input_str += f"\nData: {data_preview}"
+            input_str += format_successful_sql_results(successful_results)
 
         if failed_results:
-            input_str += "\n\n=== FAILED QUERIES ==="
-            input_str += "\nSome SQL queries were not successful:"
-            for i, result in enumerate(failed_results, 1):
-                sql_query = result.sql_query
-                error = result.error
-                explanation = result.explanation
-
-                input_str += f"\n\n--- Failed Query {i} ---"
-                if explanation:
-                    input_str += f"\nPurpose: {explanation}"
-                if sql_query:
-                    input_str += f"\nSQL: {sql_query}"
-                input_str += f"\nError: {error}"
+            input_str += format_failed_sql_results(failed_results)
 
     return input_str

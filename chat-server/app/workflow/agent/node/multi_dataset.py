@@ -33,8 +33,8 @@ def query_result_to_datasets(query_result: QueryResult) -> list[Dataset]:
         for sql_query_info in subquery.sql_queries:
             description = f"Query: {sql_query_info.sql_query}\n\n"
             description += f"Explanation: {sql_query_info.explanation}\n\n"
-            if sql_query_info.sql_query_result:
-                data = list_of_dict_to_list_of_lists(sql_query_info.sql_query_result)
+            if sql_query_info.full_sql_result:
+                data = list_of_dict_to_list_of_lists(sql_query_info.full_sql_result)
                 datasets.append(Dataset(data=data, description=description))
                 dataset_count += 1
     return datasets

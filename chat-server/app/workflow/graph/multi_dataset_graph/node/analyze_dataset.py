@@ -14,13 +14,14 @@ async def analyze_dataset(state: State) -> dict:
     - Finds exact matches for assumed column values
     - Suggests similar values when exact matches aren't found
     """
+
+    query_result = state["query_result"]
+    datasets_info = state["datasets_info"]
+    last_message = state["messages"][-1]
+
     try:
-        last_message = state["messages"][-1]
         if isinstance(last_message, ErrorMessage):
             pass
-
-        query_result = state.get("query_result", {})
-        datasets_info = state.get("datasets_info", {})
 
         column_assumptions = datasets_info.get("column_assumptions", [])
         if not column_assumptions:
@@ -37,11 +38,10 @@ async def analyze_dataset(state: State) -> dict:
         }
 
     except Exception as e:
-        error_message = f"Error analyzing dataset: {e!s}"
-        query_result = state.get("query_result", {})
-        query_result.add_error_message(str(e), "Error analyzing dataset")
+        error_msg = f"Error analyzing dataset: {e!s}"
+        query_result.add_error_message(error_msg, "Error analyzing dataset")
 
         return {
             "query_result": query_result,
-            "messages": [ErrorMessage.from_json({"error": error_message})],
+            "messages": [ErrorMessage(content=error_msg)],
         }

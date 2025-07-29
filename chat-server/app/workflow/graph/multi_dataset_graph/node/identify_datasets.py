@@ -44,9 +44,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
-    query_type = query_result.subqueries[query_index].query_type
-    confidence_score = query_result.subqueries[query_index].confidence_score
-
     try:
         llm = get_model_provider(config).get_llm_for_node("identify_datasets")
         embeddings_model = get_model_provider(config).get_embeddings_model()
@@ -70,8 +67,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
             query_result.set_node_message(
                 "identify_datasets",
                 {
-                    "No relevant datasets found by doing semantic search. This query is "
-                    "not relavant to any datasets. Treating as conversational query."
+                    "No relevant datasets found by doing semantic search. This subquery is "
+                    "not relevant to any datasets. Treating as conversational query."
                 },
             )
 
@@ -80,22 +77,10 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 {"content": "No relevant datasets found"},
             )
 
-            # convert data_query to conversational if no datasets found
-            if query_type == "data_query":
-                query_result.subqueries[query_index].query_type = "conversational"
-
             return {
                 "query_result": query_result,
                 "identified_datasets": None,
-                "messages": [
-                    IntermediateStep.from_json(
-                        {
-                            "error": (
-                                "No relevant datasets found. " "Treating as conversational query."
-                            )
-                        }
-                    )
-                ],
+                "messages": [IntermediateStep(content="No relevant datasets found")],
             }
 
         llm_prompt = get_prompt(
@@ -103,8 +88,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
             user_query=user_query,
             relevant_dataset_schemas=relevant_dataset_schemas,
             semantic_searched_datasets=semantic_searched_datasets,
-            confidence_score=confidence_score,
-            query_type=query_type,
         )
 
         response = await llm.ainvoke(llm_prompt + [last_message])
@@ -118,10 +101,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
 
         column_assumptions = parsed_content.get("column_assumptions", [])
         node_message = parsed_content.get("node_message")
-
-        # Convert conversational query to data_query if relevant datasets found
-        if query_type == "conversational" and selected_datasets:
-            query_result.subqueries[query_index].query_type = "data_query"
 
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
@@ -168,7 +147,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
         return {
             "query_result": query_result,
             "identified_datasets": None,
-            "messages": [ErrorMessage.from_json({"error": error_msg})],
+            "messages": [ErrorMessage(content=error_msg)],
         }
 
 
@@ -180,17 +159,13 @@ def route_from_datasets(state: State) -> str:
     route directly to response generation for conversational queries.
     """
 
-    query_result = state.get("query_result")
-    query_index = state.get("subquery_index", 0)
     last_message = state.get("messages", [])[-1] if state.get("messages") else None
-
-    query_type = query_result.subqueries[query_index].query_type
     identified_datasets = state.get("identified_datasets")
 
     if isinstance(last_message, ErrorMessage):
         return "analyze_dataset"
 
-    if query_type == "conversational" or not identified_datasets:
+    if not identified_datasets:
         return "no_datasets_found"
     else:
         return "analyze_dataset"

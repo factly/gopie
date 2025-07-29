@@ -45,7 +45,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
     logger.debug(f"Stream updates response: {response.content}")
 
-    return {"messages": [AIMessage(content=response.content)]}
+    return {"messages": [AIMessage(content=response.content)], "subquery_index": query_index + 1}
 
 
 async def check_further_execution_requirement(state: State, config: RunnableConfig) -> str:

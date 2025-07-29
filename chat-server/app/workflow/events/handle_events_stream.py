@@ -122,6 +122,10 @@ class EventStreamHandler:
         return content, extra_data
 
     def _handle_tool_events(self, event: StreamEvent) -> tuple[str, str, bool]:
+        event_type = event.get("event", "")
+        if event_type != "on_tool_start":
+            return "", "", False
+
         content = event.get("metadata", {}).get("tool_text", "Using Tool")
         category = event.get("metadata", {}).get("tool_category", "")
         should_display_tool = event.get("metadata", {}).get("should_display_tool", False)

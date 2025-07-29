@@ -31,7 +31,17 @@ Your analysis should follow these key criteria:
   • If the previously used sql queries would not have all the sufficient data to answer the user query, then the answer should be true.
 
 3. is the query related to visualization? (`is_visualization_query`)
-  • Determine if the query is related to visualization.
+  • Determine if the query is related to visualization based on the following criteria:
+  • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart", or "show"
+  • IMPLICIT VISUALIZATION NEEDS: Queries that would benefit from visualization even without explicitly requesting it:
+    - COMPARISONS: "compare", "vs", "versus", "difference between", "contrast"
+    - TRENDS AND PATTERNS: "trends", "over time", "from X to Y", "patterns", "growth", "decline", "changes over"
+    - DISTRIBUTIONS: "distribution", "breakdown", "share", "percentage", "proportion", "split"
+    - RANKINGS: "top", "bottom", "highest", "lowest", "rank", "best", "worst"
+    - CORRELATIONS: "relationship", "correlation", "impact of", "effect of"
+    - MULTI-DIMENSIONAL DATA: Queries involving multiple categories, time periods, or groupings that would be clearer with visual representation
+  • Consider the enhanced query context - if data involves multiple time periods, categories, or comparative analysis, it likely benefits from visualization
+  • Return true if the query falls into any of these categories, even if visualization is not explicitly mentioned
 
 4. relevant sql queries (`relevant_sql_queries`)
   • Select the most relevant sql queries from the previously selected sql queries based on the user query.

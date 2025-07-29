@@ -101,6 +101,9 @@ export function DatasetHeader({
   const [editedDescription, setEditedDescription] = useState(
     dataset.description || ""
   );
+  const [editedCustomPrompt, setEditedCustomPrompt] = useState(
+    dataset.custom_prompt || ""
+  );
 
   const handleUpdate = async () => {
     if (editedDescription.length < 10) {
@@ -117,6 +120,7 @@ export function DatasetHeader({
       await updateDataset(projectId, dataset.id, {
         alias: editedAlias,
         description: editedDescription,
+        custom_prompt: editedCustomPrompt,
         updated_by: "gopie-web-ui",
       });
 
@@ -159,6 +163,7 @@ export function DatasetHeader({
   const handleCancel = () => {
     setEditedAlias(dataset.alias || "");
     setEditedDescription(dataset.description || "");
+    setEditedCustomPrompt(dataset.custom_prompt || "");
     setIsEditing(false);
   };
 
@@ -212,6 +217,13 @@ export function DatasetHeader({
                     className="resize-none min-h-[100px]"
                     placeholder="Enter a description..."
                     rows={4}
+                  />
+                  <Textarea
+                    value={editedCustomPrompt}
+                    onChange={(e) => setEditedCustomPrompt(e.target.value)}
+                    className="resize-none min-h-[80px]"
+                    placeholder="Enter a custom prompt to guide AI interactions with this dataset..."
+                    rows={3}
                   />
                   <div className="flex gap-2">
                     <Button
@@ -267,6 +279,28 @@ export function DatasetHeader({
                     </Button>
                   </div>
                 </div>
+
+                {/* Custom Prompt */}
+                {dataset.custom_prompt && (
+                  <div className="group">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 pr-8">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Custom Prompt:</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {dataset.custom_prompt}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <PencilIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Quick Stats */}
                 <div className="flex items-center justify-between gap-4 text-sm">

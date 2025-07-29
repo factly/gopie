@@ -33,8 +33,14 @@ class TestLLMProvider:
         """
         Test that `get_llm_provider` returns a `LiteLLMProvider` instance when the LLM gateway provider is set to 'litellm'.
         """
-        with patch("app.utils.model_registry.model_provider.settings") as mock_settings:
+        with (
+            patch("app.utils.model_registry.model_provider.settings") as mock_settings,
+            patch("app.utils.providers.llm_providers.litellm.settings") as mock_litellm_settings,
+        ):
             mock_settings.LLM_GATEWAY_PROVIDER = "litellm"
+            mock_litellm_settings.LITELLM_MASTER_KEY = "test_master_key"
+            mock_litellm_settings.LITELLM_VIRTUAL_KEY = None
+            mock_litellm_settings.LITELLM_KEY_HEADER_NAME = None
 
             provider = get_llm_provider(sample_metadata)
 

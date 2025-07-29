@@ -39,6 +39,10 @@ const formSchema = z.object({
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(500, "Description must be less than 500 characters"),
+  custom_prompt: z
+    .string()
+    .max(2000, "Custom prompt must be less than 2000 characters")
+    .optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,7 +54,7 @@ export function CreateProjectDialog() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      description: "",
+      custom_prompt: "",
     },
   });
 
@@ -132,6 +136,23 @@ export function CreateProjectDialog() {
                     <Textarea
                       placeholder="Optional description of your project"
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="custom_prompt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Custom Prompt (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter a custom prompt to guide AI interactions with this project's datasets..."
+                      {...field}
+                      rows={3}
                     />
                   </FormControl>
                   <FormMessage />

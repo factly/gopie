@@ -1,11 +1,8 @@
-from datetime import datetime
-
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.models.query import QueryResult
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.graph.multi_dataset_graph.types import State
@@ -13,13 +10,7 @@ from app.workflow.graph.multi_dataset_graph.types import State
 
 async def generate_subqueries(state: State, config: RunnableConfig):
     user_input = state.get("user_query", "")
-
-    query_result_object = QueryResult(
-        original_user_query=user_input,
-        timestamp=datetime.now(),
-        execution_time=0,
-        subqueries=[],
-    )
+    query_result = state.get("query_result")
 
     try:
         assessment_prompt = get_prompt(
@@ -54,6 +45,8 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             for i, subquery in enumerate(subqueries, 1):
                 subqueries_message += f"\n\nStep {i}: {subquery}"
 
+            subqueries_message += "\n\nPlease wait while I process these steps."
+
             await adispatch_custom_event(
                 "gopie-agent",
                 {
@@ -72,15 +65,22 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             await adispatch_custom_event(
                 "gopie-agent",
                 {
-                    "content": "Analyzing query...",
+                    "content": "Checking query complexity...",
                 },
+            )
+
+        for subquery_text in subqueries:
+            query_result.add_subquery(
+                query_text=subquery_text,
+                sql_queries=[],
+                tables_used=None,
             )
 
         return {
             "user_query": user_input,
-            "subquery_index": -1,
+            "subquery_index": 0,
             "subqueries": subqueries,
-            "query_result": query_result_object,
+            "query_result": query_result,
             "messages": [
                 IntermediateStep.from_json(
                     {
@@ -96,10 +96,16 @@ async def generate_subqueries(state: State, config: RunnableConfig):
         error_msg = f"Error in subquery generation: {e!s}"
         default_subqueries = [user_input]
 
+        query_result.add_subquery(
+            query_text=user_input,
+            sql_queries=[],
+            tables_used=None,
+        )
+
         return {
             "user_query": user_input,
-            "subquery_index": -1,
+            "subquery_index": 0,
             "subqueries": default_subqueries,
-            "query_result": query_result_object,
-            "messages": [ErrorMessage.from_json({"error": error_msg})],
+            "query_result": query_result,
+            "messages": [ErrorMessage(content=error_msg)],
         }

@@ -5,6 +5,7 @@ export interface UpdateS3DatasetBody {
   description?: string;
   file_path?: string;
   updated_by: string;
+  custom_prompt?: string;
 }
 
 export const updateS3Dataset = async (

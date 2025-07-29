@@ -21,6 +21,7 @@ export const useSourceDataset = createMutation({
     description,
     alter_column_names,
     column_descriptions,
+    custom_prompt,
   }: {
     datasetUrl: string;
     projectId: string;
@@ -29,6 +30,7 @@ export const useSourceDataset = createMutation({
     description?: string;
     alter_column_names?: Record<string, string>;
     column_descriptions: Record<string, string>;
+    custom_prompt?: string;
   }) => {
     const res = await apiClient.post("source/s3/upload", {
       body: JSON.stringify({
@@ -40,6 +42,7 @@ export const useSourceDataset = createMutation({
         alter_column_names: alter_column_names,
         column_descriptions: column_descriptions,
         ignore_errors: true,
+        custom_prompt: custom_prompt,
       }),
     });
 

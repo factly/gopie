@@ -27,16 +27,21 @@ class ModifiedToolNode(ToolNode):
         tool_name = call.get("name")
         tool_args = call.get("args")
         metadata = self.tool_metadatas.get(tool_name, {})
+
         tool_text = f"Using {tool_name}"
         get_dynamic_tool_text = metadata.get("get_dynamic_tool_text", None)
+
         if get_dynamic_tool_text and callable(get_dynamic_tool_text):
             tool_text = get_dynamic_tool_text(tool_args)
         tool_category = metadata.get("tool_category", tool_name)
+        should_display_tool = metadata.get("should_display_tool", False)
+
         return RunnableConfig(
             tags=["chain_tool", "display"],
             metadata={
                 "tool_text": tool_text,
                 "tool_category": tool_category,
+                "should_display_tool": should_display_tool,
             },
         )
 
