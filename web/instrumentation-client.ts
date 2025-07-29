@@ -89,6 +89,36 @@ Sentry.init({
       if (error && error.toString().includes("ResizeObserver")) {
         return null;
       }
+
+      // Show crash report modal for exceptions with event ID
+      // ONLY if Sentry is properly configured with a DSN
+      if (event.event_id && typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+        // Use setTimeout to avoid blocking the error capture
+        setTimeout(() => {
+          // Double-check that Sentry client exists and is enabled
+          const client = Sentry.getCurrentScope().getClient();
+          if (client && client.getOptions().enabled !== false) {
+            Sentry.showReportDialog({
+              eventId: event.event_id,
+              title: "Something went wrong!",
+              subtitle: "Our team has been notified about this error.",
+              subtitle2: "If you'd like to help, please tell us what happened below.",
+              labelName: "Your Name",
+              labelEmail: "Your Email",
+              labelComments: "What were you doing when this error occurred?",
+              labelClose: "Close",
+              labelSubmit: "Send Report",
+              successMessage: "Thank you for your feedback! This helps us improve Gopie.",
+              onLoad: () => {
+                console.log("Crash report dialog opened for event:", event.event_id);
+              },
+              onClose: () => {
+                console.log("Crash report dialog closed for event:", event.event_id);
+              },
+            });
+          }
+        }, 100);
+      }
     }
 
     return event;

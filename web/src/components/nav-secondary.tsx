@@ -24,23 +24,35 @@ export function NavSecondary({
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   
-  const handleFeedbackClick = async (e: React.MouseEvent) => {
+  const handleReportIssueClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Get the feedback integration
-    const feedback = Sentry.getFeedback();
-    if (feedback) {
-      try {
-        // Create and open the form directly
-        const form = await feedback.createForm();
-        form.appendToDom();
-        form.open();
-      } catch (error) {
-        console.error("Error opening feedback form:", error);
+    // Check if Sentry is configured and enabled
+    const sentryDSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
+    const client = Sentry.getCurrentScope().getClient();
+    const isSentryEnabled = sentryDSN && client && client.getOptions().enabled !== false;
+    
+    if (isSentryEnabled) {
+      // Use Sentry feedback if available
+      const feedback = Sentry.getFeedback();
+      if (feedback) {
+        try {
+          // Create and open the form directly
+          const form = await feedback.createForm();
+          form.appendToDom();
+          form.open();
+        } catch (error) {
+          console.error("Error opening feedback form:", error);
+          // Fallback to GitHub if Sentry feedback fails
+          window.open("https://github.com/factly/gopie/issues", "_blank");
+        }
+      } else {
+        // Fallback to GitHub if feedback widget is not available
+        window.open("https://github.com/factly/gopie/issues", "_blank");
       }
     } else {
-      // Fallback: use captureFeedback API if the widget is not available
-      console.warn("Sentry feedback widget not available, please check configuration");
+      // Open GitHub issues in a new tab when Sentry is not enabled
+      window.open("https://github.com/factly/gopie/issues", "_blank");
     }
   };
 
@@ -50,11 +62,11 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              {item.title === "Report Bug/Feedback" ? (
+              {item.title === "Report Issue" ? (
                 <SidebarMenuButton 
                   asChild={false} 
                   size="sm"
-                  onClick={handleFeedbackClick}
+                  onClick={handleReportIssueClick}
                 >
                   <item.icon />
                   <span>{item.title}</span>

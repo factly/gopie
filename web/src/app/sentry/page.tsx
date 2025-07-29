@@ -112,6 +112,46 @@ export default function SentryDebugPage() {
     alert("Feedback sent via API! Check your Sentry dashboard.");
   };
 
+  const testCrashReportModal = () => {
+    console.log("Testing crash report modal...");
+    try {
+      // Create an error that will trigger the crash report modal
+      const error = new Error("Test crash for crash report modal");
+      error.name = "TestCrashError";
+      
+      // This will trigger the beforeSend hook and show the crash report modal
+      Sentry.captureException(error, {
+        tags: { 
+          test: "crash-report-modal",
+          source: "manual-test"
+        },
+        level: "error"
+      });
+      
+      console.log("Crash report modal should appear shortly...");
+    } catch (e) {
+      console.error("Error testing crash report:", e);
+    }
+  };
+
+  const testManualCrashReportDialog = () => {
+    console.log("Testing manual crash report dialog...");
+    // Capture an error first to get an event ID
+    const eventId = Sentry.captureException(new Error("Manual crash report test"), {
+      tags: { test: "manual-crash-report" }
+    });
+    
+    // Show the crash report dialog manually
+    setTimeout(() => {
+      Sentry.showReportDialog({
+        eventId: eventId,
+        title: "Manual Crash Report Test",
+        subtitle: "This is a test of the manual crash report dialog.",
+        subtitle2: "Please provide feedback about this test error.",
+      });
+    }, 500);
+  };
+
   return (
     <div className="container mx-auto p-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-8">Sentry Debug & Status Page</h1>
@@ -196,6 +236,25 @@ export default function SentryDebugPage() {
             </button>
           </div>
         </div>
+
+        <div className="border rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Crash Reports</h2>
+          <div className="space-y-3">
+            <button
+              onClick={testCrashReportModal}
+              className="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+            >
+              Test Auto Crash Report
+            </button>
+            
+            <button
+              onClick={testManualCrashReportDialog}
+              className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition-colors"
+            >
+              Test Manual Crash Dialog
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Explanations */}
@@ -221,6 +280,12 @@ export default function SentryDebugPage() {
             <div>
               <strong>Send Feedback via API:</strong> Programmatically sends feedback using the Sentry API
             </div>
+            <div>
+              <strong>Test Auto Crash Report:</strong> Triggers an error that automatically shows the crash report modal via beforeSend hook
+            </div>
+            <div>
+              <strong>Test Manual Crash Dialog:</strong> Manually opens the crash report dialog using Sentry.showReportDialog()
+            </div>
           </div>
         </div>
 
@@ -233,6 +298,18 @@ export default function SentryDebugPage() {
             <li><strong>Context:</strong> Additional data visible in issue details</li>
             <li><strong>Tags:</strong> Filterable metadata in the issue</li>
             <li><strong>Feedback:</strong> User feedback appears in the &quot;User Feedback&quot; section of your Sentry project</li>
+            <li><strong>Crash Reports:</strong> User feedback from crash report modals is linked to the specific error event</li>
+          </ul>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-3">Crash Report Modal Features:</h3>
+          <ul className="list-disc list-inside space-y-1 text-sm">
+            <li><strong>Automatic Triggering:</strong> Shows whenever an unhandled exception occurs</li>
+            <li><strong>User Context:</strong> Pre-fills name and email if available from localStorage</li>
+            <li><strong>Event Association:</strong> Links user feedback directly to the specific error event</li>
+            <li><strong>Customizable:</strong> Title, labels, and messages can be customized</li>
+            <li><strong>Non-blocking:</strong> Uses setTimeout to avoid interfering with error capture</li>
           </ul>
         </div>
       </div>
