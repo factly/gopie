@@ -52,3 +52,33 @@ func (h *httpHandler) list(ctx *fiber.Ctx) error {
 	}
 	return ctx.JSON(datasets)
 }
+
+func (h *httpHandler) listAllDatasets(ctx *fiber.Ctx) error {
+	projectID := ctx.Params("projectID")
+
+	datasets, err := h.datasetsSvc.ListALlDatasestFromProject(projectID)
+	if err != nil {
+		if domain.IsStoreError(err) {
+			switch err {
+			case domain.ErrRecordNotFound:
+				return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"error":   "No datasets found",
+					"message": "No datasets exist for this project",
+					"code":    fiber.StatusNotFound,
+				})
+			case domain.ErrInvalidData:
+				return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error":   "Invalid query parameters",
+					"message": "The provided search parameters are invalid",
+					"code":    fiber.StatusBadRequest,
+				})
+			}
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching datasets",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+	return ctx.JSON(datasets)
+}

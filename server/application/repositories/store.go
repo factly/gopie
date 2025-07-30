@@ -40,6 +40,7 @@ type DatasetStoreRepository interface {
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
 	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
 	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
+	ListALlDatasestFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error)
 }
 
 type ChatStoreRepository interface {

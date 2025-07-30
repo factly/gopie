@@ -73,8 +73,38 @@ func (s *PgDatasetStore) ListFailedUploads(ctx context.Context) ([]*models.Faile
 }
 
 func (s *PgDatasetStore) ListAllDatasets(ctx context.Context) ([]*models.Dataset, error) {
-
 	ds, err := s.q.ListAllDatasets(ctx)
+	if err != nil {
+		s.logger.Error("Error fetching datasets", zap.Error(err))
+		return nil, err
+	}
+
+	var datasets []*models.Dataset
+	for _, d := range ds {
+		columns := make([]map[string]any, 0)
+		_ = json.Unmarshal([]byte(d.Columns), &columns)
+		datasets = append(datasets, &models.Dataset{
+			ID:          d.ID,
+			Name:        d.Name,
+			Alias:       d.Alias.String,
+			Description: d.Description.String,
+			CreatedAt:   d.CreatedAt.Time,
+			CreatedBy:   d.CreatedBy.String,
+			UpdatedAt:   d.UpdatedAt.Time,
+			UpdatedBy:   d.UpdatedBy.String,
+			Columns:     columns,
+			RowCount:    int(d.RowCount.Int32),
+			Size:        int(d.Size.Int64),
+			FilePath:    d.FilePath,
+			OrgID:       d.OrgID.String,
+		})
+	}
+
+	return datasets, nil
+}
+
+func (s *PgDatasetStore) ListALlDatasestFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error) {
+	ds, err := s.q.ListAllDatasetsFromProject(ctx, projectID)
 	if err != nil {
 		s.logger.Error("Error fetching datasets", zap.Error(err))
 		return nil, err

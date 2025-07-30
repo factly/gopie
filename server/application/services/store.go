@@ -124,3 +124,7 @@ func (services *DatasetService) GetDatasetByID(datasetID string) (*models.Datase
 func (service *DatasetService) ListAllDatasets() ([]*models.Dataset, error) {
 	return service.datasetRepo.ListAllDatasets(context.Background())
 }
+
+func (service *DatasetService) ListALlDatasestFromProject(projectID string) ([]*models.Dataset, error) {
+	return service.datasetRepo.ListALlDatasestFromProject(context.Background(), projectID)
+}

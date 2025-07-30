@@ -74,7 +74,7 @@ var reindexSchemasCmd = &cobra.Command{
 			var wg sync.WaitGroup
 
 			// Start the worker pool with a fixed number of workers
-			for i := 0; i < numWorkers; i++ {
+			for i := range numWorkers {
 				wg.Add(1)
 				go func(workerID int) {
 					defer wg.Done()
