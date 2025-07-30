@@ -117,19 +117,20 @@ func (s *PgDatasetStore) ListALlDatasetsFromProject(ctx context.Context, project
 		columns := make([]map[string]any, 0)
 		_ = json.Unmarshal([]byte(d.Columns), &columns)
 		datasets = append(datasets, &models.Dataset{
-			ID:          d.ID,
-			Name:        d.Name,
-			Alias:       d.Alias.String,
-			Description: d.Description.String,
-			CreatedAt:   d.CreatedAt.Time,
-			CreatedBy:   d.CreatedBy.String,
-			UpdatedAt:   d.UpdatedAt.Time,
-			UpdatedBy:   d.UpdatedBy.String,
-			Columns:     columns,
-			RowCount:    int(d.RowCount.Int32),
-			Size:        int(d.Size.Int64),
-			FilePath:    d.FilePath,
-			OrgID:       d.OrgID.String,
+			ID:           d.ID,
+			Name:         d.Name,
+			Alias:        d.Alias.String,
+			Description:  d.Description.String,
+			CreatedAt:    d.CreatedAt.Time,
+			CreatedBy:    d.CreatedBy.String,
+			UpdatedAt:    d.UpdatedAt.Time,
+			UpdatedBy:    d.UpdatedBy.String,
+			Columns:      columns,
+			RowCount:     int(d.RowCount.Int32),
+			Size:         int(d.Size.Int64),
+			FilePath:     d.FilePath,
+			OrgID:        d.OrgID.String,
+			CustomPrompt: d.CustomPrompt.String,
 		})
 	}
 
