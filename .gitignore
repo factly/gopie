@@ -265,4 +265,5 @@ test_cases.py
 /*/dataful
 
 
-chat-server/tests/generate_cases
+chat-server/tests/evaluator
+chat-server/tests/csv_test_cases
