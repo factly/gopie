@@ -263,7 +263,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: project.ID,
 	})

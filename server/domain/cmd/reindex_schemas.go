@@ -81,7 +81,7 @@ var reindexSchemasCmd = &cobra.Command{
 					for dataset := range jobs {
 						appLogger.Info("Indexing dataset...", zap.Int("workerID", workerID), zap.String("datasetID", dataset.ID))
 
-						err := aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
+						err := aiAgentRepo.UploadSchema(&models.SchemaParams{
 							ProjectID: project.ID,
 							DatasetID: dataset.ID,
 						})

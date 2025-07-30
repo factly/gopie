@@ -10,15 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
-func (a *aiAgent) UploadSchema(params *models.SchemaParams) error {
+func (a *aiAgent) DeleteSchema(params *models.SchemaParams) error {
 	bodyBuf, err := json.Marshal(params)
 	if err != nil {
 		a.logger.Error("Error in marshalling params to JSON", zap.Error(err))
 		return err
 	}
 
-	url := a.buildUrl("/api/v1/upload_schema")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBuf))
+	url := a.buildUrl("/api/v1/delete_schema")
+	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(bodyBuf))
 	if err != nil {
 		a.logger.Error("Error in creating request to AI agent", zap.Error(err))
 		return err
@@ -54,7 +54,7 @@ func (a *aiAgent) UploadSchema(params *models.SchemaParams) error {
 		return fmt.Errorf("error in response from AI agent: %s", respBody.Message)
 	}
 
-	a.logger.Debug("Schema uploaded successfully", zap.String("message", respBody.Message))
+	a.logger.Debug("Schema deleted successfully", zap.String("message", respBody.Message))
 
 	return nil
 }

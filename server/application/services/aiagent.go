@@ -17,8 +17,16 @@ func NewAIService(repository repositories.AIAgentRepository) *AIService {
 	}
 }
 
-func (s *AIService) UploadSchema(params *models.UploadSchemaParams) error {
+func (s *AIService) UploadSchema(params *models.SchemaParams) error {
 	err := s.repository.UploadSchema(params)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AIService) DeleteSchema(params *models.SchemaParams) error {
+	err := s.repository.DeleteSchema(params)
 	if err != nil {
 		return err
 	}

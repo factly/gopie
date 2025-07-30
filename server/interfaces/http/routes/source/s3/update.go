@@ -210,7 +210,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 
 	// Update schema in AI agent if needed
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: body.ProjectID,
 	})

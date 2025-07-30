@@ -228,7 +228,7 @@ func limitsTransformer(query string, db any) (string, error) {
 	}
 	rewriteSql, err := ast.Format()
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return rewriteSql, nil
 }
