@@ -199,9 +199,9 @@ func parseColumns(columnsStr string) []string {
 
 func removeComments(query string) string {
 	var result strings.Builder
-	lines := strings.Split(query, "\n")
+	lines := strings.SplitSeq(query, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		// Remove inline comments
 		if idx := strings.Index(line, "--"); idx != -1 {
 			line = line[:idx]
