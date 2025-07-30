@@ -56,7 +56,7 @@ func (h *httpHandler) list(ctx *fiber.Ctx) error {
 func (h *httpHandler) listAllDatasets(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 
-	datasets, err := h.datasetsSvc.ListALlDatasestFromProject(projectID)
+	datasets, err := h.datasetsSvc.ListALlDatasetsFromProject(projectID)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {

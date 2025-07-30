@@ -103,7 +103,7 @@ func (s *PgDatasetStore) ListAllDatasets(ctx context.Context) ([]*models.Dataset
 	return datasets, nil
 }
 
-func (s *PgDatasetStore) ListALlDatasestFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error) {
+func (s *PgDatasetStore) ListALlDatasetsFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error) {
 	ds, err := s.q.ListAllDatasetsFromProject(ctx, projectID)
 	if err != nil {
 		s.logger.Error("Error fetching datasets", zap.Error(err))
