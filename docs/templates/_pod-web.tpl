@@ -4,7 +4,7 @@
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-serviceAccountName: {{ include "gopie-web.serviceAccountName" . }}
+serviceAccountName: {{ include "web.serviceAccountName" . }}
 securityContext:
   {{- toYaml .Values.web.podSecurityContext | nindent 2 }}
 containers:
@@ -25,10 +25,13 @@ containers:
     readinessProbe:
       {{- toYaml .Values.web.readinessProbe | nindent 6 }}
     {{- end }}
-    {{- if .Values.web.env }}
-    {{- with .Values.web.env }}
     env:
-    {{- toYaml . | nindent 6 }}
+      - name: GOPIE_API_URL
+        value: {{ printf "http://%s-server:%v" .Release.Name (.Values.service.portNumber | default 8000) }}
+    {{- if .Values.web.env }}
+    {{- range .Values.web.env }}
+      - name: {{ .name }}
+        value: {{ .value | quote }}
     {{- end }}
     {{- end }}
     resources:

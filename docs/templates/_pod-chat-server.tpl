@@ -27,10 +27,31 @@ containers:
     readinessProbe:
       {{- toYaml .Values.chatserver.readinessProbe | nindent 6 }}
     {{- end }}
-    {{- if .Values.chatserver.env }}
-    {{- with .Values.chatserver.env }}
     env:
-    {{- toYaml . | nindent 6 }}
+      - name: S3_HOST
+        value: minio
+      - name: S3_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" .Release.Name }}
+            key: root-user
+      - name: S3_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" .Release.Name }}
+            key: root-password
+      - name: S3_BUCKET
+        value: {{ .Values.minio.defaultBuckets }}
+      - name: S3_REGION
+        value: {{ .Values.minio.region | default "us-east-1" }}
+      - name: QDRANT_HOST
+        value: {{ printf "%s-qdrant" .Release.Name }}
+      - name: QDRANT_PORT
+        value: {{ .Values.qdrant.service.port | default "6333" | quote }}
+    {{- if .Values.chatserver.env }}
+    {{- range .Values.chatserver.env }}
+      - name: {{ .name }}
+        value: {{ .value | quote }}
     {{- end }}
     {{- end }}
     resources:

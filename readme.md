@@ -103,3 +103,73 @@ To add other users, select the Users tab at the top and add users from that page
    - For users assigned as members, provide the `Org User Self Manager` grant
    - For service user account, provide the `Org User Self Manager` grant
    - For admins, provide the `Org User Manager` grant
+
+# Sentry Error Tracking Setup
+
+Sentry is integrated into the web application for error tracking and performance monitoring.
+
+## Prerequisites
+
+1. Create a Sentry account at [sentry.io](https://sentry.io)
+2. Create a new project for your web application
+3. Obtain the following from your Sentry project:
+   - DSN (Data Source Name)
+   - Organization slug
+   - Project slug
+   - Auth token (for source maps and releases)
+
+## Environment Configuration
+
+Add the following environment variables to `web/.env.local`:
+
+```env
+# Sentry Configuration
+NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn_here
+SENTRY_ORG=your_organization_slug
+SENTRY_PROJECT_WEB=your_project_slug
+SENTRY_AUTH_TOKEN=your_auth_token_here
+```
+
+**Note:** The `NEXT_PUBLIC_SENTRY_DSN` must be prefixed with `NEXT_PUBLIC_` to be available in the browser.
+
+## Features Enabled
+
+- **Error Tracking**: Automatic capture of JavaScript errors and unhandled promise rejections
+- **Performance Monitoring**: Transaction tracing for API calls and page loads
+- **Session Replay**: Records user sessions for debugging (enabled in development and on errors in production)
+- **Source Maps**: Uploaded automatically for better error stack traces
+- **Release Tracking**: Integrates with your deployment process
+
+## Testing the Integration
+
+1. Start the development server:
+   ```bash
+   cd web
+   bun run dev
+   ```
+
+2. Navigate to `/sentry` in your browser
+
+3. Test different error scenarios:
+   - **Client-side errors**: Click "Test Client Error" button
+   - **Server-side errors**: Click "Test Server Error" button
+   - **Custom messages**: Click "Capture Message" button
+   - **Context data**: Click "Test with Context" button
+
+4. Check your Sentry dashboard to verify errors are being captured
+
+## Configuration Details
+
+- **Environment**: Automatically set based on `NODE_ENV`
+- **Sample Rates**: 
+  - Production: 10% for performance traces
+  - Development: 100% for all traces
+- **Debug Mode**: Enabled in development for troubleshooting
+- **Error Filtering**: Common browser extension and network errors are filtered out
+
+## Production Considerations
+
+- Source maps are automatically uploaded and hidden in production
+- Performance monitoring sample rate is reduced to 10% in production
+- Session replay is limited to 10% of sessions and 100% of error sessions
+- Debug logging is disabled in production

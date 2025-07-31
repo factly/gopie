@@ -36,7 +36,7 @@ func (r *Result) MapScan(des map[string]any) error {
 
 type ColScanner interface {
 	Columns() ([]string, error)
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 	Err() error
 }
 
@@ -47,9 +47,9 @@ func MapScan(r ColScanner, dest map[string]any) error {
 		return err
 	}
 
-	values := make([]interface{}, len(columns))
+	values := make([]any, len(columns))
 	for i := range values {
-		values[i] = new(interface{})
+		values[i] = new(any)
 	}
 
 	err = r.Scan(values...)
@@ -58,7 +58,7 @@ func MapScan(r ColScanner, dest map[string]any) error {
 	}
 
 	for i, column := range columns {
-		dest[column] = *(values[i].(*interface{}))
+		dest[column] = *(values[i].(*any))
 	}
 
 	return r.Err()

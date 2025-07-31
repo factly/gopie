@@ -28,8 +28,9 @@ type Dataset struct {
 	// CreatedBy represents the user who created the dataset
 	CreatedBy string `json:"created_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// UpdatedBy represents the user who last updated the dataset
-	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
-	OrgID     string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
+	UpdatedBy    string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID        string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // ListProjectDatasetsResults represents a dataset in project listing
@@ -59,6 +60,8 @@ type ListProjectDatasetsResults struct {
 	AddedAt time.Time `json:"addedAt" example:"2024-02-05T12:00:00Z"`
 	// File path of the dataset
 	FilePath string `json:"file_path" example:"/data/sales_data.csv"`
+
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // UploadDatasetResult represents the result of a dataset upload
@@ -94,8 +97,9 @@ type CreateDatasetParams struct {
 	// Column definitions
 	Columns []map[string]any `json:"columns"`
 	// Size of the dataset in bytes
-	Size  int    `json:"size" example:"1048576"`
-	OrgID string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
+	Size         int    `json:"size" example:"1048576"`
+	OrgID        string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // UpdateDatasetParams represents parameters for updating a dataset
@@ -114,8 +118,9 @@ type UpdateDatasetParams struct {
 	// User ID of the updater
 	UpdatedBy string `json:"updated_by" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
-	Alias string `json:"alias" example:"sales_data_alias"`
-	OrgID string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Alias        string `json:"alias" example:"sales_data_alias"`
+	OrgID        string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // FailedDatasetUpload represents a failed dataset upload

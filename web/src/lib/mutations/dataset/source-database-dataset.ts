@@ -9,6 +9,7 @@ interface SourceDatabaseDatasetParams {
   project_id: string;
   sql_query: string;
   description?: string;
+  custom_prompt?: string;
 }
 
 interface SourceDatabaseDatasetResponse {
@@ -47,6 +48,7 @@ export const useSourceDatabaseDataset = createMutation({
         driver: params.driver,
         project_id: params.project_id,
         sql_query: params.sql_query,
+        custom_prompt: params.custom_prompt,
       },
     });
 

@@ -1,4 +1,3 @@
-{{- if .Values.web.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,4 +14,3 @@ spec:
       name: {{ .Values.web.service.portName }}
   selector:
     {{- include "web.selectorLabels" . | nindent 4 }}
-{{- end }}

@@ -17,17 +17,19 @@ insert into projects (
     description,
     created_by,
     updated_by,
-    org_id
-) values ($1, $2, $3, $4, $5)
-returning id, name, org_id, description, created_at, updated_at, created_by, updated_by
+    org_id,
+    custom_prompt
+) values ($1, $2, $3, $4, $5, $6)
+returning id, name, org_id, description, created_at, updated_at, created_by, updated_by, custom_prompt
 `
 
 type CreateProjectParams struct {
-	Name        string
-	Description pgtype.Text
-	CreatedBy   pgtype.Text
-	UpdatedBy   pgtype.Text
-	OrgID       pgtype.Text
+	Name         string
+	Description  pgtype.Text
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	OrgID        pgtype.Text
+	CustomPrompt pgtype.Text
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -37,6 +39,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.CreatedBy,
 		arg.UpdatedBy,
 		arg.OrgID,
+		arg.CustomPrompt,
 	)
 	var i Project
 	err := row.Scan(
@@ -48,6 +51,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
@@ -68,7 +72,7 @@ func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) er
 
 const getProject = `-- name: GetProject :one
 select 
-    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
+    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by, p.custom_prompt,
     array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
     count(pd.dataset_id) as dataset_count
 from projects p
@@ -91,6 +95,7 @@ type GetProjectRow struct {
 	UpdatedAt    pgtype.Timestamptz
 	CreatedBy    pgtype.Text
 	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
 	DatasetIds   interface{}
 	DatasetCount int64
 }
@@ -107,6 +112,7 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProj
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.CustomPrompt,
 		&i.DatasetIds,
 		&i.DatasetCount,
 	)
@@ -114,7 +120,7 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProj
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-select id, name, org_id, description, created_at, updated_at, created_by, updated_by from projects where id = $1
+select id, name, org_id, description, created_at, updated_at, created_by, updated_by, custom_prompt from projects where id = $1
 `
 
 func (q *Queries) GetProjectByID(ctx context.Context, id string) (Project, error) {
@@ -129,6 +135,7 @@ func (q *Queries) GetProjectByID(ctx context.Context, id string) (Project, error
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.CustomPrompt,
 	)
 	return i, err
 }
@@ -145,7 +152,7 @@ func (q *Queries) GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int6
 }
 
 const listAllProjects = `-- name: ListAllProjects :many
-select id, name, org_id, description, created_at, updated_at, created_by, updated_by from projects
+select id, name, org_id, description, created_at, updated_at, created_by, updated_by, custom_prompt from projects
 `
 
 func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
@@ -166,6 +173,7 @@ func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
 			&i.UpdatedAt,
 			&i.CreatedBy,
 			&i.UpdatedBy,
+			&i.CustomPrompt,
 		); err != nil {
 			return nil, err
 		}
@@ -179,7 +187,7 @@ func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
 
 const searchProjects = `-- name: SearchProjects :many
 SELECT 
-    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by,
+    p.id, p.name, p.org_id, p.description, p.created_at, p.updated_at, p.created_by, p.updated_by, p.custom_prompt,
     count(pd.dataset_id) as dataset_count
 FROM projects p
 LEFT JOIN project_datasets pd ON p.id = pd.project_id
@@ -214,6 +222,7 @@ type SearchProjectsRow struct {
 	UpdatedAt    pgtype.Timestamptz
 	CreatedBy    pgtype.Text
 	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
 	DatasetCount int64
 }
 
@@ -240,6 +249,7 @@ func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) 
 			&i.UpdatedAt,
 			&i.CreatedBy,
 			&i.UpdatedBy,
+			&i.CustomPrompt,
 			&i.DatasetCount,
 		); err != nil {
 			return nil, err
@@ -257,17 +267,19 @@ update projects
 set 
     name = coalesce($1, name),
     description = coalesce($2, description),
-    updated_by = coalesce($3, updated_by)
-where id = $4 and org_id = $5
-returning id, name, org_id, description, created_at, updated_at, created_by, updated_by
+    updated_by = coalesce($3, updated_by),
+    custom_prompt = coalesce($4, custom_prompt)
+where id = $5 and org_id = $6
+returning id, name, org_id, description, created_at, updated_at, created_by, updated_by, custom_prompt
 `
 
 type UpdateProjectParams struct {
-	Name        string
-	Description pgtype.Text
-	UpdatedBy   pgtype.Text
-	ID          string
-	OrgID       pgtype.Text
+	Name         string
+	Description  pgtype.Text
+	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
+	ID           string
+	OrgID        pgtype.Text
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -275,6 +287,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.Name,
 		arg.Description,
 		arg.UpdatedBy,
+		arg.CustomPrompt,
 		arg.ID,
 		arg.OrgID,
 	)
@@ -288,6 +301,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.CustomPrompt,
 	)
 	return i, err
 }

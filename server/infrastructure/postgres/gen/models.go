@@ -84,19 +84,20 @@ type DatabaseSource struct {
 }
 
 type Dataset struct {
-	ID          string
-	Name        string
-	Description pgtype.Text
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	RowCount    pgtype.Int4
-	Alias       pgtype.Text
-	CreatedBy   pgtype.Text
-	UpdatedBy   pgtype.Text
-	Size        pgtype.Int8
-	FilePath    string
-	Columns     []byte
-	OrgID       pgtype.Text
+	ID           string
+	Name         string
+	Description  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	RowCount     pgtype.Int4
+	Alias        pgtype.Text
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	Size         pgtype.Int8
+	FilePath     string
+	Columns      []byte
+	OrgID        pgtype.Text
+	CustomPrompt pgtype.Text
 }
 
 type DatasetSummary struct {
@@ -112,12 +113,13 @@ type FailedDatasetUpload struct {
 }
 
 type Project struct {
-	ID          string
-	Name        string
-	OrgID       pgtype.Text
-	Description pgtype.Text
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	CreatedBy   pgtype.Text
-	UpdatedBy   pgtype.Text
+	ID           string
+	Name         string
+	OrgID        pgtype.Text
+	Description  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
 }

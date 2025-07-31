@@ -85,9 +85,47 @@ func (q *Queries) GetProjectDatasetsCount(ctx context.Context, projectID string)
 	return count, err
 }
 
+const listAllDatasetsFromProject = `-- name: ListAllDatasetsFromProject :many
+select d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.size, d.file_path, d.columns, d.org_id from datasets d join project_datasets pd on d.id = pd.dataset_id where pd.project_id = $1
+`
+
+func (q *Queries) ListAllDatasetsFromProject(ctx context.Context, projectID string) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, listAllDatasetsFromProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectDatasets = `-- name: ListProjectDatasets :many
 select 
-    d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.size, d.file_path, d.columns, d.org_id,
+    d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.size, d.file_path, d.columns, d.org_id, d.custom_prompt,
     pd.created_at as added_at
 from datasets d
 join project_datasets pd on d.id = pd.dataset_id
@@ -103,20 +141,21 @@ type ListProjectDatasetsParams struct {
 }
 
 type ListProjectDatasetsRow struct {
-	ID          string
-	Name        string
-	Description pgtype.Text
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	RowCount    pgtype.Int4
-	Alias       pgtype.Text
-	CreatedBy   pgtype.Text
-	UpdatedBy   pgtype.Text
-	Size        pgtype.Int8
-	FilePath    string
-	Columns     []byte
-	OrgID       pgtype.Text
-	AddedAt     pgtype.Timestamptz
+	ID           string
+	Name         string
+	Description  pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	RowCount     pgtype.Int4
+	Alias        pgtype.Text
+	CreatedBy    pgtype.Text
+	UpdatedBy    pgtype.Text
+	Size         pgtype.Int8
+	FilePath     string
+	Columns      []byte
+	OrgID        pgtype.Text
+	CustomPrompt pgtype.Text
+	AddedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error) {
@@ -142,6 +181,7 @@ func (q *Queries) ListProjectDatasets(ctx context.Context, arg ListProjectDatase
 			&i.FilePath,
 			&i.Columns,
 			&i.OrgID,
+			&i.CustomPrompt,
 			&i.AddedAt,
 		); err != nil {
 			return nil, err

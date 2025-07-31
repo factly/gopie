@@ -37,5 +37,6 @@ func Routes(router fiber.Router, params RouterParams) {
 
 func InternalRoutes(router fiber.Router, params RouterParams) {
 	httpHandler := httpHandler{logger: params.Logger, datasetsSvc: params.DatasetSvc, olapSvc: params.OlapService, aiAgentSvc: params.AiAgentSvc}
+	router.Get("/", httpHandler.listAllDatasets)
 	router.Get("/:datasetID", httpHandler.getByID)
 }

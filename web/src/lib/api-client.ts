@@ -92,6 +92,7 @@ export interface ProjectInput {
   name: string;
   description: string;
   created_by: string;
+  custom_prompt?: string;
 }
 
 export interface Project extends ProjectInput {
@@ -101,6 +102,7 @@ export interface Project extends ProjectInput {
   datasetCount: number;
   createdBy: string;
   updatedBy: string;
+  custom_prompt?: string;
 }
 
 // Dataset Types
@@ -117,6 +119,7 @@ export interface Dataset {
   updated_at: string;
   created_by: string;
   updated_by: string;
+  custom_prompt?: string;
 }
 
 // Chat Types

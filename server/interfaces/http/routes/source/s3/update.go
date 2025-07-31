@@ -29,6 +29,7 @@ type updateRequestBody struct {
 	// Project ID of the dataset
 	ProjectID    string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	IgnoreErrors bool   `json:"ignore_errors"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // @Summary Update dataset from S3
@@ -139,12 +140,13 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 
 	// update dataset entry for successful upload
 	dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
-		Description: body.Description,
-		FilePath:    filePath,
-		RowCount:    int(count),
-		Size:        res.Size,
-		Columns:     columns,
-		UpdatedBy:   body.UpdatedBy,
+		Description:  body.Description,
+		FilePath:     filePath,
+		RowCount:     int(count),
+		Size:         res.Size,
+		Columns:      columns,
+		UpdatedBy:    body.UpdatedBy,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		h.logger.Error("Error updating dataset record", zap.Error(err))
@@ -210,7 +212,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 
 	// Update schema in AI agent if needed
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: body.ProjectID,
 	})

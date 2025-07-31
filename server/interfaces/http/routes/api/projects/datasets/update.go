@@ -10,8 +10,9 @@ import (
 )
 
 type updateDatasetParams struct {
-	Description string `json:"description,omitempty"`
-	Alias       string `json:"alias,omitempty"`
+	Description  string `json:"description,omitempty"`
+	Alias        string `json:"alias,omitempty"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // @Summary Update dataset
@@ -69,14 +70,15 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	}
 
 	dataset, err := h.datasetsSvc.Update(datasetID, &models.UpdateDatasetParams{
-		Description: body.Description,
-		Alias:       body.Alias,
-		UpdatedBy:   userID,
-		Columns:     existingDataset.Columns,
-		FilePath:    existingDataset.FilePath,
-		RowCount:    existingDataset.RowCount,
-		Size:        existingDataset.Size,
-		OrgID:       orgID,
+		Description:  body.Description,
+		Alias:        body.Alias,
+		UpdatedBy:    userID,
+		Columns:      existingDataset.Columns,
+		FilePath:     existingDataset.FilePath,
+		RowCount:     existingDataset.RowCount,
+		Size:         existingDataset.Size,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -86,11 +88,10 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: projectID,
 	})
-
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

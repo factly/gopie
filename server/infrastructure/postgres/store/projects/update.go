@@ -11,11 +11,12 @@ import (
 
 func (s *PostgresProjectStore) Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error) {
 	p, err := s.q.UpdateProject(ctx, gen.UpdateProjectParams{
-		ID:          projectID,
-		Name:        params.Name,
-		Description: pgtype.Text{String: params.Description, Valid: true},
-		UpdatedBy:   pgtype.Text{String: params.UpdatedBy, Valid: true},
-		OrgID:       pgtype.Text{String: params.OrgID, Valid: true},
+		ID:           projectID,
+		Name:         params.Name,
+		Description:  pgtype.Text{String: params.Description, Valid: true},
+		UpdatedBy:    pgtype.Text{String: params.UpdatedBy, Valid: true},
+		OrgID:        pgtype.Text{String: params.OrgID, Valid: true},
+		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
 	})
 	if err != nil {
 		s.logger.Error("Error updating project", zap.Error(err))
@@ -23,13 +24,14 @@ func (s *PostgresProjectStore) Update(ctx context.Context, projectID string, par
 	}
 
 	return &models.Project{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description.String,
-		CreatedAt:   p.CreatedAt.Time,
-		UpdatedAt:   p.UpdatedAt.Time,
-		CreatedBy:   p.CreatedBy.String,
-		UpdatedBy:   p.UpdatedBy.String,
-		OrgID:       p.OrgID.String,
+		ID:           p.ID,
+		Name:         p.Name,
+		Description:  p.Description.String,
+		CreatedAt:    p.CreatedAt.Time,
+		UpdatedAt:    p.UpdatedAt.Time,
+		CreatedBy:    p.CreatedBy.String,
+		UpdatedBy:    p.UpdatedBy.String,
+		OrgID:        p.OrgID.String,
+		CustomPrompt: p.CustomPrompt.String,
 	}, nil
 }

@@ -27,16 +27,17 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		return nil, err
 	}
 	d, err := s.q.CreateDataset(ctx, gen.CreateDatasetParams{
-		Name:        params.Name,
-		Description: pgtype.Text{String: params.Description, Valid: true},
-		RowCount:    pgtype.Int4{Int32: int32(params.RowCount), Valid: true},
-		Size:        pgtype.Int8{Int64: int64(params.Size), Valid: true},
-		FilePath:    params.FilePath,
-		Columns:     columns,
-		Alias:       pgtype.Text{String: params.Alias, Valid: true},
-		CreatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
-		UpdatedBy:   pgtype.Text{String: params.CreatedBy, Valid: true},
-		OrgID:       pgtype.Text{String: params.OrgID, Valid: true},
+		Name:         params.Name,
+		Description:  pgtype.Text{String: params.Description, Valid: true},
+		RowCount:     pgtype.Int4{Int32: int32(params.RowCount), Valid: true},
+		Size:         pgtype.Int8{Int64: int64(params.Size), Valid: true},
+		FilePath:     params.FilePath,
+		Columns:      columns,
+		Alias:        pgtype.Text{String: params.Alias, Valid: true},
+		CreatedBy:    pgtype.Text{String: params.CreatedBy, Valid: true},
+		UpdatedBy:    pgtype.Text{String: params.CreatedBy, Valid: true},
+		OrgID:        pgtype.Text{String: params.OrgID, Valid: true},
+		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
 	})
 	if err != nil {
 		s.logger.Error("Error creating dataset", zap.Error(err))
@@ -53,19 +54,20 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 	_ = json.Unmarshal(d.Columns, &columnsMap)
 
 	return &models.Dataset{
-		ID:          d.ID,
-		Name:        d.Name,
-		Description: d.Description.String,
-		CreatedAt:   d.CreatedAt.Time,
-		UpdatedAt:   d.UpdatedAt.Time,
-		RowCount:    int(d.RowCount.Int32),
-		Size:        int(d.Size.Int64),
-		FilePath:    d.FilePath,
-		Columns:     columnsMap,
-		Alias:       d.Alias.String,
-		CreatedBy:   d.CreatedBy.String,
-		UpdatedBy:   d.UpdatedBy.String,
-		OrgID:       d.OrgID.String,
+		ID:           d.ID,
+		Name:         d.Name,
+		Description:  d.Description.String,
+		CreatedAt:    d.CreatedAt.Time,
+		UpdatedAt:    d.UpdatedAt.Time,
+		RowCount:     int(d.RowCount.Int32),
+		Size:         int(d.Size.Int64),
+		FilePath:     d.FilePath,
+		Columns:      columnsMap,
+		Alias:        d.Alias.String,
+		CreatedBy:    d.CreatedBy.String,
+		UpdatedBy:    d.UpdatedBy.String,
+		OrgID:        d.OrgID.String,
+		CustomPrompt: d.CustomPrompt.String,
 	}, nil
 }
 

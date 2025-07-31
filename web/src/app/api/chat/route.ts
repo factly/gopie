@@ -8,7 +8,8 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
+    const isAuthEnabled =
+      String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
     // Retrieve session only when auth is enabled
     const session = isAuthEnabled ? await getSession() : null;
@@ -224,6 +225,11 @@ export async function POST(req: Request) {
       onError: (error) => {
         console.error("Data stream error:", error);
         return error instanceof Error ? error.message : String(error);
+      },
+      headers: {
+        "Transfer-Encoding": "chunked",
+        Connection: "keep-alive",
+        "Content-Encoding": "none",
       },
     });
   } catch (error) {

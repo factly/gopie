@@ -7,6 +7,7 @@ import (
 )
 
 type AIAgentRepository interface {
-	UploadSchema(params *models.UploadSchemaParams) error
+	UploadSchema(params *models.SchemaParams) error
 	Chat(ctx context.Context, params *models.AIAgentChatParams)
+	DeleteSchema(params *models.SchemaParams) error
 }

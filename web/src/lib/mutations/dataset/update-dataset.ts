@@ -4,6 +4,7 @@ export interface UpdateDatasetBody {
   description?: string;
   alias?: string;
   updated_by: string;
+  custom_prompt?: string;
 }
 
 export const updateDataset = async (

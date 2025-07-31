@@ -109,15 +109,21 @@ web/
 - **Mutations** (`src/lib/mutations/`): Data modifications
 - All use React Query for state management
 
-## Environment Configuration
+### Environment Variables
 
-Required environment variables in `.env.local`:
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_CHAT_API_URL=http://localhost:8001
-NEXT_PUBLIC_ZITADEL_REDIRECT_URI=http://localhost:3000/api/auth/oauth/callback
-NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
-```
+Required environment variables:
+- `NEXT_PUBLIC_COMPANION_URL`: Companion server URL for file uploads (e.g., http://localhost:3020)
+- `NEXT_PUBLIC_GOPIE_API_URL`: Main API server URL (e.g., http://localhost:8000)
+- `GOPIE_API_URL`: Internal API server URL (e.g., http://localhost:8000)
+- `NEXT_PUBLIC_ENABLE_AUTH`: Enable/disable authentication ("true" or "false")
+
+When authentication is enabled (NEXT_PUBLIC_ENABLE_AUTH="true"), these Zitadel variables are required:
+- `ZITADEL_AUTHORITY`: Zitadel authority URL
+- `ZITADEL_CLIENT_ID`: OAuth client ID for the web application
+- `ZITADEL_CLIENT_SECRET`: OAuth client secret
+- `ZITADEL_PROJECT_ID`: Zitadel project ID
+- `ZITADEL_PAT`: Personal Access Token for Zitadel API
+- `ZITADEL_IDP_ID`: Identity Provider ID
 
 ## Testing Approach
 

@@ -74,14 +74,14 @@ var reindexSchemasCmd = &cobra.Command{
 			var wg sync.WaitGroup
 
 			// Start the worker pool with a fixed number of workers
-			for i := 0; i < numWorkers; i++ {
+			for i := range numWorkers {
 				wg.Add(1)
 				go func(workerID int) {
 					defer wg.Done()
 					for dataset := range jobs {
 						appLogger.Info("Indexing dataset...", zap.Int("workerID", workerID), zap.String("datasetID", dataset.ID))
 
-						err := aiAgentRepo.UploadSchema(&models.UploadSchemaParams{
+						err := aiAgentRepo.UploadSchema(&models.SchemaParams{
 							ProjectID: project.ID,
 							DatasetID: dataset.ID,
 						})

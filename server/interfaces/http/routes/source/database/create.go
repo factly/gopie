@@ -31,7 +31,8 @@ type createRequestBody struct {
 	// User ID of the creator
 	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
-	Alias string `json:"alias" validate:"required,min=3" example:"users_data"`
+	Alias        string `json:"alias" validate:"required,min=3" example:"users_data"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // @Summary Create dataset from Postgres
@@ -178,15 +179,16 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:        tableName,
-		Description: body.Description,
-		ProjectID:   project.ID,
-		Columns:     columns,
-		RowCount:    count,
-		Alias:       body.Alias,
-		CreatedBy:   body.CreatedBy,
-		UpdatedBy:   body.CreatedBy,
-		OrgID:       orgID,
+		Name:         tableName,
+		Description:  body.Description,
+		ProjectID:    project.ID,
+		Columns:      columns,
+		RowCount:     count,
+		Alias:        body.Alias,
+		CreatedBy:    body.CreatedBy,
+		UpdatedBy:    body.CreatedBy,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		h.logger.Error("Error creating dataset record", zap.Error(err))
@@ -263,7 +265,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: project.ID,
 	})
@@ -320,7 +322,8 @@ func (h *httpHandler) parseSQLQuery(sqlQuery, driver string) error {
 		return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
 	}
 
-	if driver == "postgres" {
+	switch driver {
+	case "postgres":
 		parseResult, err := pg_query.Parse(sqlQuery)
 		if err != nil {
 			h.logger.Error("Error parsing PostgreSQL query", zap.Error(err))
@@ -340,7 +343,7 @@ func (h *httpHandler) parseSQLQuery(sqlQuery, driver string) error {
 		}
 
 		return nil
-	} else if driver == "mysql" {
+	case "mysql":
 		// For MySQL, use the vitess parser
 		parser, err := sqlparser.New(sqlparser.Options{})
 		if err != nil {

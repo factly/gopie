@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (a *aiAgent) UploadSchema(params *models.UploadSchemaParams) error {
+func (a *aiAgent) UploadSchema(params *models.SchemaParams) error {
 	bodyBuf, err := json.Marshal(params)
 	if err != nil {
 		a.logger.Error("Error in marshalling params to JSON", zap.Error(err))

@@ -36,3 +36,6 @@ on conflict do nothing;
 -- name: BatchRemoveDatasetsFromProject :exec
 delete from project_datasets
 where project_id = $1 and dataset_id = any($2::uuid[]);
+
+-- name: ListAllDatasetsFromProject :many
+select d.* from datasets d join project_datasets pd on d.id = pd.dataset_id where pd.project_id = $1;

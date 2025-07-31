@@ -199,9 +199,9 @@ func parseColumns(columnsStr string) []string {
 
 func removeComments(query string) string {
 	var result strings.Builder
-	lines := strings.Split(query, "\n")
+	lines := strings.SplitSeq(query, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		// Remove inline comments
 		if idx := strings.Index(line, "--"); idx != -1 {
 			line = line[:idx]
@@ -228,6 +228,54 @@ func removeComments(query string) string {
 	return strings.TrimSpace(queryStr)
 }
 
+func escapeIdentifierPart(part string) string {
+	trimmedPart := strings.TrimSpace(part)
+
+	if trimmedPart == "*" {
+		return trimmedPart
+	}
+
+	if strings.HasPrefix(trimmedPart, `"`) && strings.HasSuffix(trimmedPart, `"`) {
+		return trimmedPart
+	}
+
+	return fmt.Sprintf(`"%s"`, trimmedPart)
+}
+
+func escapeColumn(col string) string {
+	trimmedCol := strings.TrimSpace(col)
+
+	if strings.Contains(strings.ToUpper(trimmedCol), " AS ") {
+		asIndex := strings.Index(strings.ToUpper(trimmedCol), " AS ")
+		if asIndex != -1 {
+			beforeAs := trimmedCol[:asIndex]
+			afterAs := trimmedCol[asIndex+4:] // len(" AS ") is 4
+			return fmt.Sprintf("%s AS %s", escapeColumn(beforeAs), escapeIdentifierPart(afterAs))
+		}
+	}
+
+	if strings.Contains(trimmedCol, "(") && strings.Contains(trimmedCol, ")") {
+		return trimmedCol
+	}
+
+	parts := strings.Split(trimmedCol, ".")
+	escapedParts := make([]string, len(parts))
+
+	for i, part := range parts {
+		escapedParts[i] = escapeIdentifierPart(part)
+	}
+
+	return strings.Join(escapedParts, ".")
+}
+
+func escapeColumns(columns []string) []string {
+	escaped := make([]string, len(columns))
+	for i, col := range columns {
+		escaped[i] = escapeColumn(col)
+	}
+	return escaped
+}
+
 var filterKeyRegex = regexp.MustCompile(`^filter\[([^\]]+)\]([a-z]+)?$`)
 
 // BuildSelectQueryFromRestParams converts REST parameters to a SQL query
@@ -236,7 +284,7 @@ func BuildSelectQueryFromRestParams(params models.RestParams) (string, error) {
 
 	// SELECT clause
 	if len(params.Cols) > 0 {
-		queryParts = append(queryParts, "SELECT "+strings.Join(params.Cols, ", "))
+		queryParts = append(queryParts, "SELECT "+strings.Join(escapeColumns(params.Cols), ", "))
 	} else {
 		queryParts = append(queryParts, "SELECT *")
 	}

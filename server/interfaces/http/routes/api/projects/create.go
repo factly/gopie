@@ -13,7 +13,8 @@ type createRequestBody struct {
 	// Name of the project
 	Name string `json:"name" validate:"required,min=3,max=50" example:"My New Project"`
 	// Description of the project
-	Description string `json:"description" validate:"required,min=10,max=500" example:"This is a detailed description of my new project"`
+	Description  string `json:"description" validate:"required,min=10,max=500" example:"This is a detailed description of my new project"`
+	CustomPrompt string `json:"custom_prompt"`
 }
 
 // @Summary Create a new project
@@ -49,10 +50,11 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	project, err := h.projectSvc.Create(models.CreateProjectParams{
-		Name:        body.Name,
-		Description: body.Description,
-		CreatedBy:   userID,
-		OrgID:       orgID,
+		Name:         body.Name,
+		Description:  body.Description,
+		CreatedBy:    userID,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

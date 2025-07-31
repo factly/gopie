@@ -19,8 +19,7 @@ import (
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
-	"github.com/marcboeker/go-duckdb"
-	_ "github.com/marcboeker/go-duckdb" // DB driver
+	"github.com/marcboeker/go-duckdb/v2"
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"go.uber.org/zap"
 	"vitess.io/vitess/go/vt/sqlparser"
@@ -470,13 +469,37 @@ func (m *OlapDBDriver) CreateTableFromS3(s3Path, tableName, format string, alter
 	return m.createTableInternal(s3Path, tableName, format, alterColumnNames, true, ignoreErrors)
 }
 
+func (m *OlapDBDriver) GetDB() any {
+	return m.db
+}
+
+func (m *OlapDBDriver) GetHelperDB() any {
+	switch m.olapType {
+	case "duckdb":
+		return m.db
+	case "motherduck":
+		return m.helperDB
+	}
+	return nil
+}
+
 // Query executes a given SQL query string against the database.
-func (m *OlapDBDriver) Query(query string) (*models.Result, error) {
+func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTransformer) (*models.Result, error) {
 	queryID, _ := uuid.NewV7() // Ignoring error for UUID generation as it's highly unlikely
 	start := time.Now()
 	m.logger.Debug("executing user query", zap.String("query_id", queryID.String()), zap.String("query", query))
 
-	rows, err := m.db.Query(query)
+	transformedQuery := query
+	var err error
+	for _, transform := range transformers {
+		transformedQuery, err = transform(transformedQuery, m.GetHelperDB())
+		if err != nil {
+			return nil, fmt.Errorf("error transforming sql query: %w", err)
+		}
+		m.logger.Debug("Transformed query: ", zap.String("query_id", queryID.String()), zap.String("query", transformedQuery))
+	}
+
+	rows, err := m.db.Query(transformedQuery)
 	latencyInMs := time.Since(start).Milliseconds()
 
 	if err != nil {

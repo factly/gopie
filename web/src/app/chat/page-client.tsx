@@ -1240,25 +1240,8 @@ function ChatPageClient() {
                       size="sm"
                       className="mr-2"
                       onClick={() => {
-                        selectChatForDataset(null, null, null);
-                        setLinkedDatasetId(null);
-                        setActiveTab("chat");
-                        setSelectedContexts([]);
-                        updateUrlWithContext([]);
-
-                    // Clear results when starting a new chat
-                    resetExecutedQueries();
-                    clearVisualizationPaths();
-                    setIsOpen(false);
-                    setVisualizationOpen(false);
-
-                        // Clear URL parameters when starting a new chat
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.delete("chatId");
-                        params.delete("initialMessage");
-                        params.delete("contextData");
-                        params.delete("contexts");
-                        router.replace(`/chat?${params.toString()}`);
+                        // Use window.location for a hard navigation to bypass all React state/effects
+                        window.location.href = '/chat';
                       }}
                     >
                       <MessageSquarePlus className="h-4 w-4" />

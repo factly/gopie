@@ -29,6 +29,7 @@ type uploadRequestBody struct {
 	// Column descriptions
 	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
 	IgnoreErrors       bool              `json:"ignore_errors"`
+	CustomPrompt       string            `json:"custom_prompt"`
 }
 
 // @Summary Upload file from S3
@@ -101,15 +102,16 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", body.FilePath))
 
 		dataset, e := h.datasetSvc.Create(&models.CreateDatasetParams{
-			Name:        res.TableName,
-			Description: body.Description,
-			ProjectID:   project.ID,
-			FilePath:    res.FilePath,
-			Size:        res.Size,
-			UpdatedBy:   body.CreatedBy,
-			CreatedBy:   body.CreatedBy,
-			Alias:       body.Alias,
-			OrgID:       orgID,
+			Name:         res.TableName,
+			Description:  body.Description,
+			ProjectID:    project.ID,
+			FilePath:     res.FilePath,
+			Size:         res.Size,
+			UpdatedBy:    body.CreatedBy,
+			CreatedBy:    body.CreatedBy,
+			Alias:        body.Alias,
+			OrgID:        orgID,
+			CustomPrompt: body.CustomPrompt,
 		})
 		if e != nil {
 			h.logger.Error("Error creating dataset record", zap.Error(e))
@@ -155,17 +157,18 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	}
 
 	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:        res.TableName,
-		Description: body.Description,
-		ProjectID:   project.ID,
-		Columns:     columns,
-		FilePath:    res.FilePath,
-		RowCount:    count,
-		Size:        res.Size,
-		Alias:       body.Alias,
-		CreatedBy:   body.CreatedBy,
-		UpdatedBy:   body.CreatedBy,
-		OrgID:       orgID,
+		Name:         res.TableName,
+		Description:  body.Description,
+		ProjectID:    project.ID,
+		Columns:      columns,
+		FilePath:     res.FilePath,
+		RowCount:     count,
+		Size:         res.Size,
+		Alias:        body.Alias,
+		CreatedBy:    body.CreatedBy,
+		UpdatedBy:    body.CreatedBy,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
 	})
 	if err != nil {
 		h.logger.Error("Error creating dataset record", zap.Error(err))
@@ -234,7 +237,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.aiAgentSvc.UploadSchema(&models.UploadSchemaParams{
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
 		ProjectID: project.ID,
 	})

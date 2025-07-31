@@ -1,6 +1,6 @@
 package models
 
-type UploadSchemaParams struct {
+type SchemaParams struct {
 	ProjectID string `json:"project_id"`
 	DatasetID string `json:"dataset_id"`
 }
