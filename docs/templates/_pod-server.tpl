@@ -167,9 +167,11 @@ containers:
     image: "{{ .Values.stateful.image.repository }}:{{ .Values.stateful.image.tag | default .Chart.AppVersion }}"
     imagePullPolicy: {{ .Values.stateful.image.pullPolicy }}
     ports:
-      - name: {{ .Values.service.portName }}
-        containerPort: {{ .Values.service.portNumber }}
+      {{- range .Values.service.ports }}
+      - name: {{ .name }}
+        containerPort: {{ .port }}
         protocol: TCP
+      {{- end }}
     {{- if .Values.stateful.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.stateful.livenessProbe | nindent 6 }}
