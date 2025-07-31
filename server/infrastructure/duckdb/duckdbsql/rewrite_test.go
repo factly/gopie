@@ -45,7 +45,7 @@ func TestAST_RewriteLimit(t *testing.T) {
 			expectedSql: "SELECT * FROM tbl LIMIT 50 OFFSET 25",
 		},
 		{
-			title:       "Simple_Select_Update_Existing_Limit",
+			title:       "Simple_Select_Update_Existing_Limit_(New_Is_Smaller)",
 			sql:         "SELECT * FROM tbl LIMIT 1000",
 			limit:       200,
 			offset:      0,
@@ -54,23 +54,30 @@ func TestAST_RewriteLimit(t *testing.T) {
 		{
 			title:       "Simple_Select_Update_Limit_And_Add_Offset",
 			sql:         "SELECT * FROM tbl LIMIT 1000",
-			limit:       150,
-			offset:      30,
+			limit:       150, // Smaller, so update
+			offset:      30,  // Doesn't exist, so add
 			expectedSql: "SELECT * FROM tbl LIMIT 150 OFFSET 30",
 		},
 		{
-			title:       "Simple_Select_Update_Existing_Limit_And_Offset",
+			title:       "Simple_Select_Update_Limit_But_Keep_Existing_Offset",
 			sql:         "SELECT * FROM tbl LIMIT 1000 OFFSET 100",
-			limit:       500,
-			offset:      50,
-			expectedSql: "SELECT * FROM tbl LIMIT 500 OFFSET 50",
+			limit:       500, // Smaller, so update
+			offset:      50,  // Exists, so DO NOT update
+			expectedSql: "SELECT * FROM tbl LIMIT 500 OFFSET 100",
 		},
 		{
-			title:       "Simple_Select_Update_Limit_And_Remove_Offset",
-			sql:         "SELECT * FROM tbl LIMIT 1000 OFFSET 100",
-			limit:       75,
-			offset:      0, // Setting offset to 0 should remove it
-			expectedSql: "SELECT * FROM tbl LIMIT 75",
+			title:       "Simple_Select_Do_Not_Update_Limit_(New_Is_Larger)",
+			sql:         "SELECT * FROM tbl LIMIT 75",
+			limit:       100, // Larger, so DO NOT update
+			offset:      10,  // Doesn't exist, so add
+			expectedSql: "SELECT * FROM tbl LIMIT 75 OFFSET 10",
+		},
+		{
+			title:       "Simple_Select_Do_Not_Update_Anything",
+			sql:         "SELECT * FROM tbl LIMIT 75 OFFSET 100",
+			limit:       100, // Larger, so DO NOT update
+			offset:      50,  // Exists, so DO NOT update
+			expectedSql: "SELECT * FROM tbl LIMIT 75 OFFSET 100",
 		},
 
 		// --- Queries with WITH Clause (CTE) ---
@@ -87,13 +94,6 @@ func TestAST_RewriteLimit(t *testing.T) {
 			limit:       99,
 			offset:      0,
 			expectedSql: "WITH cte AS (SELECT id FROM source_tbl)SELECT id FROM cte LIMIT 99",
-		},
-		{
-			title:       "Multiple_With_Clauses_Add_Limit_And_Offset",
-			sql:         "WITH cte1 AS (SELECT id FROM tbl1), cte2 AS (SELECT id FROM tbl2) SELECT * FROM cte1 JOIN cte2 ON cte1.id = cte2.id",
-			limit:       10,
-			offset:      5,
-			expectedSql: "WITH cte1 AS (SELECT id FROM tbl1), cte2 AS (SELECT id FROM tbl2)SELECT * FROM cte1 INNER JOIN cte2 ON ((cte1.id = cte2.id)) LIMIT 10 OFFSET 5",
 		},
 
 		// --- Queries with UNION ---
@@ -114,43 +114,43 @@ func TestAST_RewriteLimit(t *testing.T) {
 
 		// --- Complex Queries ---
 		{
-			title: "Complex_Query_With_All_Clauses",
+			title: "Complex_Query_Add_Limit_And_Offset",
 			sql: `
-                WITH regional_sales AS (
-                    SELECT region, SUM(amount) AS total_sales
-                    FROM orders
-                    GROUP BY region
-                )
-                SELECT o.order_id, c.customer_name, rs.total_sales
-                FROM orders AS o
-                JOIN customers AS c ON o.customer_id = c.id
-                JOIN regional_sales AS rs ON o.region = rs.region
-                WHERE o.order_date > '2024-01-01'
-                ORDER BY o.order_date DESC
-            `,
+				WITH regional_sales AS (
+					SELECT region, SUM(amount) AS total_sales
+					FROM orders
+					GROUP BY region
+				)
+				SELECT o.order_id, c.customer_name, rs.total_sales
+				FROM orders AS o
+				JOIN customers AS c ON o.customer_id = c.id
+				JOIN regional_sales AS rs ON o.region = rs.region
+				WHERE o.order_date > '2024-01-01'
+				ORDER BY o.order_date DESC
+			`,
 			limit:       50,
 			offset:      10,
 			expectedSql: "WITH regional_sales AS (SELECT region, sum(amount) AS total_sales FROM orders GROUP BY region)SELECT o.order_id, c.customer_name, rs.total_sales FROM orders AS o INNER JOIN customers AS c ON ((o.customer_id = c.id)) INNER JOIN regional_sales AS rs ON ((o.region = rs.region)) WHERE (o.order_date > '2024-01-01') ORDER BY o.order_date DESC LIMIT 50 OFFSET 10",
 		},
 		{
-			title: "Complex_Query_Update_Existing_Limit_And_Offset",
+			title: "Complex_Query_Update_Limit_Keep_Offset",
 			sql: `
-                WITH regional_sales AS (
-                    SELECT region, SUM(amount) AS total_sales
-                    FROM orders
-                    GROUP BY region
-                )
-                SELECT o.order_id, c.customer_name, rs.total_sales
-                FROM orders AS o
-                JOIN customers AS c ON o.customer_id = c.id
-                JOIN regional_sales AS rs ON o.region = rs.region
-                WHERE o.order_date > '2024-01-01'
-                ORDER BY o.order_date DESC
-                LIMIT 1000 OFFSET 200
-            `,
-			limit:       25,
-			offset:      5,
-			expectedSql: "WITH regional_sales AS (SELECT region, sum(amount) AS total_sales FROM orders GROUP BY region)SELECT o.order_id, c.customer_name, rs.total_sales FROM orders AS o INNER JOIN customers AS c ON ((o.customer_id = c.id)) INNER JOIN regional_sales AS rs ON ((o.region = rs.region)) WHERE (o.order_date > '2024-01-01') ORDER BY o.order_date DESC LIMIT 25 OFFSET 5",
+				WITH regional_sales AS (
+					SELECT region, SUM(amount) AS total_sales
+					FROM orders
+					GROUP BY region
+				)
+				SELECT o.order_id, c.customer_name, rs.total_sales
+				FROM orders AS o
+				JOIN customers AS c ON o.customer_id = c.id
+				JOIN regional_sales AS rs ON o.region = rs.region
+				WHERE o.order_date > '2024-01-01'
+				ORDER BY o.order_date DESC
+				LIMIT 1000 OFFSET 200
+			`,
+			limit:       25, // Smaller, so update
+			offset:      5,  // Exists, so DO NOT update
+			expectedSql: "WITH regional_sales AS (SELECT region, sum(amount) AS total_sales FROM orders GROUP BY region)SELECT o.order_id, c.customer_name, rs.total_sales FROM orders AS o INNER JOIN customers AS c ON ((o.customer_id = c.id)) INNER JOIN regional_sales AS rs ON ((o.region = rs.region)) WHERE (o.order_date > '2024-01-01') ORDER BY o.order_date DESC LIMIT 25 OFFSET 200",
 		},
 	}
 

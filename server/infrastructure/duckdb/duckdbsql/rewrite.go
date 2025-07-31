@@ -7,41 +7,59 @@ import (
 
 func (sn *selectNode) rewriteLimit(limit, offset int) error {
 	modifiersNode := toNodeArray(sn.ast, astKeyModifiers)
-	updated := false
-	for _, v := range modifiersNode {
-		if toString(v, astKeyType) != "LIMIT_MODIFIER" {
-			continue
-		}
+	var limitModifier astNode
 
-		// Always update the limit value
-		limitObject, err := createConstantLimit(limit)
-		if err != nil {
-			return err
+	for _, mod := range modifiersNode {
+		if toString(mod, astKeyType) == "LIMIT_MODIFIER" {
+			limitModifier = mod
+			break
 		}
-		v[astKeyLimit] = limitObject
-
-		// Add or update the offset value if it's greater than 0
-		if offset > 0 {
-			offsetObject, err := createConstantLimit(offset)
-			if err != nil {
-				return err
-			}
-			v[astKeyOffset] = offsetObject
-		} else {
-			// Ensure offset is set to null if not provided
-			v[astKeyOffset] = nil
-		}
-
-		updated = true
 	}
 
-	if !updated {
-		// If no limit modifier existed, create a new one
-		v, err := createLimitModifier(limit, offset)
+	if limitModifier == nil {
+		newModifier, err := createLimitModifier(limit, offset)
 		if err != nil {
 			return err
 		}
-		sn.ast[astKeyModifiers] = append(sn.ast[astKeyModifiers].([]any), v)
+		if _, ok := sn.ast[astKeyModifiers]; !ok {
+			sn.ast[astKeyModifiers] = make([]any, 0)
+		}
+		sn.ast[astKeyModifiers] = append(sn.ast[astKeyModifiers].([]any), newModifier)
+		return nil
+	}
+
+	existingLimitNode := toNode(limitModifier, astKeyLimit)
+	existingOffsetNode := toNode(limitModifier, astKeyOffset)
+
+	shouldUpdateLimit := false
+	if existingLimitNode == nil {
+		shouldUpdateLimit = true
+	} else {
+		valueNode := toNode(existingLimitNode, astKeyValue)
+		if valueNode != nil {
+			existingLimitVal := forceConvertToNum[int64](valueNode[astKeyValue])
+			if existingLimitVal == 0 || int64(limit) < existingLimitVal {
+				shouldUpdateLimit = true
+			}
+		} else {
+			shouldUpdateLimit = true
+		}
+	}
+
+	if shouldUpdateLimit {
+		newLimitObject, err := createConstantLimit(limit)
+		if err != nil {
+			return err
+		}
+		limitModifier[astKeyLimit] = newLimitObject
+	}
+
+	if existingOffsetNode == nil && offset > 0 {
+		newOffsetObject, err := createConstantLimit(offset)
+		if err != nil {
+			return err
+		}
+		limitModifier[astKeyOffset] = newOffsetObject
 	}
 
 	return nil
@@ -50,19 +68,19 @@ func (sn *selectNode) rewriteLimit(limit, offset int) error {
 func createConstantLimit(limit int) (astNode, error) {
 	var n astNode
 	err := json.Unmarshal(fmt.Appendf(nil, `
-    {
-       "class":"CONSTANT",
-       "type":"VALUE_CONSTANT",
-       "alias":"",
-       "value":{
-          "type":{
-             "id":"INTEGER",
-             "type_info":null
-          },
-          "is_null":false,
-          "value":%d
-       }
-    }
+	{
+		"class":"CONSTANT",
+		"type":"VALUE_CONSTANT",
+		"alias":"",
+		"value":{
+			"type":{
+				"id":"INTEGER",
+				"type_info":null
+			},
+			"is_null":false,
+			"value":%d
+		}
+	}
 `, limit), &n)
 	return n, err
 }
@@ -71,9 +89,9 @@ func createLimitModifier(limit, offset int) (astNode, error) {
 	var n astNode
 	err := json.Unmarshal([]byte(`
 {
-    "type":"LIMIT_MODIFIER",
-    "limit": null,
-    "offset": null
+	"type":"LIMIT_MODIFIER",
+	"limit": null,
+	"offset": null
 }
 `), &n)
 	if err != nil {
