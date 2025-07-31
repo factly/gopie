@@ -1,6 +1,18 @@
 apiVersion: v2
 name: gopie
-description: A Helm chart for Kubernetes
+description: A comprehensive Helm chart for deploying Gopie - an AI-powered data analysis and chat platform
+home: https://github.com/factly/gopie
+sources:
+  - https://github.com/factly/gopie
+keywords:
+  - ai
+  - data-analysis
+  - chat
+  - analytics
+  - self-hosted
+maintainers:
+  - name: Factly
+    url: https://factly.in
 
 # A chart can be either an 'application' or a 'library' chart.
 #

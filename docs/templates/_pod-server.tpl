@@ -13,10 +13,29 @@ initContainers:
   - name: {{ .name }}
     image: {{ .image }}
     imagePullPolicy: {{ .imagePullPolicy | default "IfNotPresent" }}
+    {{- if .command }}
     command: {{- toYaml .command | nindent 6 }}
+    {{- end }}
+    {{- if .args }}
     args: {{- toYaml .args | nindent 6 }}
+    {{- end }}
     env:
-      {{- toYaml .env | nindent 6 }}
+      - name: GOOSE_DBSTRING
+        valueFrom:
+          secretKeyRef:
+            name: {{ include "gopie.fullname" $root }}-goose
+            key: goose-dbstring-template
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-postgresql" $root.Release.Name }}
+            key: postgres-password
+      {{- if .env }}
+      {{- range .env }}
+      - name: {{ .name }}
+        value: {{ .value | quote }}
+      {{- end }}
+      {{- end }}
     volumeMounts:
       {{- range .volumeMounts }}
       - name: {{ .name }}
@@ -33,9 +52,11 @@ containers:
     image: "{{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag | default .Chart.AppVersion }}"
     imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
     ports:
-      - name: {{ .Values.service.portName }}
-        containerPort: {{ .Values.service.portNumber }}
-        protocol: TCP
+      {{- range .Values.service.ports }}
+      - name: {{ .name }}
+        containerPort: {{ .port }}
+        protocol: {{ .protocol }}
+      {{- end }}
     {{- if .Values.deployment.livenessProbe }}
     livenessProbe:
       {{- toYaml .Values.deployment.livenessProbe | nindent 6 }}
@@ -44,8 +65,6 @@ containers:
     readinessProbe:
       {{- toYaml .Values.deployment.readinessProbe | nindent 6 }}
     {{- end }}
-    {{- if .Values.deployment.env }}
-    {{- with .Values.deployment.env }}
     env:
       - name: GOPIE_POSTGRES_HOST
         value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
@@ -57,8 +76,29 @@ containers:
         valueFrom:
           secretKeyRef:
             name: {{ printf "%s-postgresql" $root.Release.Name }}
-            key: postgresql-password
-    {{- toYaml . | nindent 6 }}
+            key: postgres-password
+      - name: GOPIE_S3_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" $root.Release.Name }}
+            key: root-user
+      - name: GOPIE_S3_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" $root.Release.Name }}
+            key: root-password
+      - name: GOPIE_S3_ENDPOINT
+        value: {{ printf "http://%s-minio:9000" $root.Release.Name }}
+      - name: GOPIE_S3_SSL
+        value: {{ $root.Values.minio.tls.enabled | default "false" | quote }}
+      - name: GOPIE_S3_REGION
+        value: {{ $root.Values.minio.region | default "us-east-1" }}
+      - name: GOPIE_AIAGENT_URL
+        value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
+    {{- if .Values.deployment.env }}
+    {{- range .Values.deployment.env }}
+      - name: {{ .name }}
+        value: {{ .value | quote }}
     {{- end }}
     {{- end }}
     resources:
@@ -138,16 +178,45 @@ containers:
     readinessProbe:
       {{- toYaml .Values.stateful.readinessProbe | nindent 6 }}
     {{- end }}
-    {{- if .Values.stateful.env }}
-    {{- with .Values.stateful.env }}
     env:
-    {{- toYaml . | nindent 6 }}
+      - name: GOPIE_POSTGRES_HOST
+        value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
+      - name: GOPIE_POSTGRES_DB
+        value: {{ $root.Values.postgresql.auth.database }}
+      - name: GOPIE_POSTGRES_USER
+        value: {{ $root.Values.postgresql.auth.username }}
+      - name: GOPIE_POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-postgresql" $root.Release.Name }}
+            key: postgres-password
+      - name: GOPIE_S3_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" $root.Release.Name }}
+            key: root-user
+      - name: GOPIE_S3_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-minio" $root.Release.Name }}
+            key: root-password
+      - name: GOPIE_S3_ENDPOINT
+        value: {{ printf "http://%s-minio:9000" $root.Release.Name }}
+      - name: GOPIE_S3_SSL
+        value: {{ $root.Values.minio.tls.enabled | default "false" | quote }}
+      - name: GOPIE_S3_REGION
+        value: {{ $root.Values.minio.region | default "us-east-1" }}
+      - name: GOPIE_AIAGENT_URL
+        value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
+    {{- if .Values.stateful.env }}
+    {{- range .Values.stateful.env }}
+      - name: {{ .name }}
+        value: {{ .value | quote }}
     {{- end }}
     {{- end }}
-    resources:
-      {{- toYaml .Values.stateful.resources | nindent 6 }}
+    resources: {{- toYaml .Values.stateful.resources | nindent 6 }}
     volumeMounts:
-      {{- range .Values.stateful.extraVolumeMounts }}
+      {{- range .Values.deployment.extraVolumeMounts }}
       - name: {{ .name }}
         mountPath: {{ .mountPath }}
         subPath: {{ .subPath | default "" }}

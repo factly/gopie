@@ -12,7 +12,7 @@ fullnameOverride: "gopie"  # Override the full name of the chart resources
 deployment:
   name: server  # Name of the server deployment
   image:
-    repository: ""  # Docker image repository for the main application
+    repository: ""  # Docker image repository for the main application (e.g., your-registry/gopie)
     pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
     tag: ""  # Image tag to use; defaults to chart appVersion if empty
 
@@ -22,7 +22,31 @@ deployment:
   annotations: {}  # Annotations for deployment resources
   Podannotations: {}  # Annotations for pods
 
-  env: []
+  env: 
+    - name: GOPIE_API_SERVER_HOST
+      value: localhost
+    - name: GOPIE_API_SERVER_PORT
+      value: "8000"
+    - name: GOPIE_LOGGER_LEVEL
+      value: info
+    - name: GOPIE_LOGGER_FILE
+      value: gopie.log
+    - name: GOPIE_LOGGER_MODE
+      value: dev
+    - name: GOPIE_PORTKEY_APIKEY
+      value: ""
+    - name: GOPIE_PORTKEY_BASEURL
+      value: ""
+    - name: GOPIE_PORTKEY_MODEL
+      value: ""
+    - name: GOPIE_PORTKEY_VIRTUALKEY
+      value: ""
+    - name: GOPIE_DUCKDB_PATH
+      value: "./dataful/gopie.duckdb"
+    - name: GOPIE_OLAPDB_DBTYPE
+      value: duckdb
+    - name: GOPIE_OLAPDB_ACCESS_MODE
+      value: read_write
     # Environment variables for the container
     # Example:
     # - name: GOPIE_API_SERVER_HOST
@@ -30,7 +54,7 @@ deployment:
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
-    image: ""  # Image for the init container
+    image: "gopie/gopie-migrate:latest"  # Image for the init container (e.g., your-registry/gopie-migrate:tag)
     env: []  # Environment variables for the init container
 
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
@@ -42,13 +66,13 @@ deployment:
     # runAsUser: 1000
 
 
-  resources:  # Pod resource requests and limits
-    limits:
-      cpu: 200m
-      memory: 1Gi
-    requests:
-      cpu: 100m
-      memory: 100Mi
+  resources: {}  # Pod resource requests and limits
+    # limits:
+    #   cpu: 200m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 100m
+    #   memory: 100Mi
 
   autoscaling:
     enabled: false  # Enable Horizontal Pod Autoscaler
@@ -118,13 +142,13 @@ stateful:
     # Example:
     # runAsUser: 1000
 
-  resources:  # Pod resource requests and limits
-    limits:
-      cpu: 200m
-      memory: 1Gi
-    requests:
-      cpu: 100m
-      memory: 100Mi
+  resources: {}  # Pod resource requests and limits
+    # limits:
+    #   cpu: 200m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 100m
+    #   memory: 100Mi
 
   # Uncomment and configure liveness/readiness probes if needed
   livenessProbe: {}
@@ -181,15 +205,37 @@ serviceAccount:
   name: ""  # Existing service account name to use
 
 service:
-  portName: http  # Name of the service port
+  ports:
+    - port: 8000
+      targetPort: http
+      protocol: TCP
+      name: http
   type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
-  portNumber: 8000  # Service port number
+
+ingress:
+  enabled: true  # Enable ingress for external access
+  className: ""  # Ingress class name (e.g., nginx, traefik)
+  annotations: {}  # Ingress annotations
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: gopie.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: gopie-tls
+    #   hosts:
+    #     - gopie.example.com
 
 reIndexingJob:  # Re-indexing job configuration
   enabled: true  # Enable the re-indexing job
   image:
     repository: ""  # Docker image repository for re-indexing job
     tag: ""  # Image tag for the re-indexing job
+  command: []  # Command to run for the re-indexing job
+  args: []  # Arguments to pass to the re-indexing job
   env: []  # Environment variables for the re-indexing job
   volumeMounts: []  # Additional volume mounts for the re-indexing job
   volumes: []  # Additional volumes for the re-indexing job
@@ -198,7 +244,7 @@ reIndexingJob:  # Re-indexing job configuration
 web:
   # Container image configuration for the web component
   image:
-    repository: "asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-migrate"  # The Docker image repository to use for the web container (e.g., nginx, myapp/web)
+    repository: ""  # The Docker image repository to use for the web container (e.g., your-registry/gopie-web)
     pullPolicy: IfNotPresent  # Image pull policy (Always, IfNotPresent, Never)
     tag: "0.0.1"  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
 
@@ -211,7 +257,11 @@ web:
   annotations: {}  # Annotations to add to the Deployment
   Podannotations: {}  # Annotations to add to the pods
 
-  env: []
+  env: 
+    - name: NEXT_PUBLIC_ENABLE_AUTH
+      value: "false"
+    # - name: NEXT_PUBLIC_GOPIE_API_URL
+    #   value: https://server.example.com # public_url
     # Define environment variables for the container
     # Example:
     # - name: NEXT_PUBLIC_ENABLE_AUTH
@@ -252,14 +302,14 @@ web:
     type: ClusterIP  # Kubernetes Service type (ClusterIP, NodePort, LoadBalancer)
     portNumber: 3000  # Port the container listens on
 
-  resources:
+  resources: {}
     # Resource requests and limits for the web container
-    limits:
-      cpu: 1000m
-      memory: 1000Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
+    # limits:
+    #   cpu: 1000m
+    #   memory: 1000Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
 
   # Probes to check container health
   # livenessProbe:
@@ -301,6 +351,22 @@ web:
     #     path: /usr/shared/
     #     type: ""
   volumes: []
+  ingress:
+    enabled: true  # Enable ingress for external access
+    className: ""  # Ingress class name (e.g., nginx, traefik)
+    annotations: {}  # Ingress annotations
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+      # cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: gopie.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+      # - secretName: gopie-tls
+      #   hosts:
+      #     - gopie.example.com
 
 chatserver:
   name: chatserver  # Name identifier for the chatserver deployment
@@ -350,14 +416,14 @@ chatserver:
     type: ClusterIP  # Service type
     portNumber: 8000  # Port the container listens on
 
-  resources:
+  resources: {}
     # Resource requests and limits for the chatserver container
-    limits:
-      cpu: 1000m
-      memory: 1000Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
+    # limits:
+    #   cpu: 1000m
+    #   memory: 1000Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
 
   livenessProbe: {}
     # httpGet:
@@ -399,13 +465,13 @@ chatserver:
 
 
 postgresql:
-  enabled: false  # Enable or disable the bundled PostgreSQL chart
+  enabled: true  # Enable or disable the bundled PostgreSQL chart
   auth:
     username: default  # Database username for the PostgreSQL instance
     database: gopie     # Name of the default database to create
 
 minio:
-  enabled: false  # Enable or disable the bundled MinIO chart
+  enabled: true  # Enable or disable the bundled MinIO chart
   defaultBuckets: "gopie"  # Comma-separated list of default buckets to create in MinIO
 
 companion:
