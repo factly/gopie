@@ -26,6 +26,8 @@ Update the `.env` file with the correct values for the services.
 
 #### 2. Basic Usage
 
+Navigate to the main gopie directory before running docker commands:
+
 **Start core services only:**
 
 ```bash
@@ -45,8 +47,32 @@ docker compose --profile litellm up -d
 docker compose --profile portkey --profile litellm up -d
 ```
 
+#### 3. No Authentication Mode
+
+For development or testing without authentication services, use the noauth configuration:
+
+```bash
+# Start with noauth configuration
+docker compose -f docker-compose-noauth.yaml up -d
+
+# With specific AI gateway profiles
+docker compose -f docker-compose-noauth.yaml --profile portkey up -d
+docker compose -f docker-compose-noauth.yaml --profile litellm up -d
+```
+
+**Note**: The noauth configuration uses `config-noauth.env` instead of `config.env` for environment variables.
+
 ### File Requirements
 
+**For standard setup:**
+
 - `.env` file with environment variables
-- `./google/service-account.json` (for Google services)
-- `./gateways/litellm/litellm_config.yaml` (for LiteLLM)
+
+**For noauth setup:**
+
+- `config-noauth.env` file with environment variables (located in main gopie directory)
+
+**Optional (only if using specific services):**
+
+- `./google/service-account.json` (required only for Google services)
+- `./gateways/litellm/litellm_config.yaml` (required only when using LiteLLM profile)
