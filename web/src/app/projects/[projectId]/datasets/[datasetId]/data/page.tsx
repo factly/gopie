@@ -3,7 +3,7 @@
 import "regenerator-runtime/runtime";
 import * as React from "react";
 import { motion } from "framer-motion";
-import { useDatasetSql } from "@/lib/mutations/dataset/sql";
+import { useDatasetSql, SqlQueryParams } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
 import {
   PlayIcon,
@@ -58,6 +58,7 @@ export default function SqlPage({
   const [results, setResults] = React.useState<
     Record<string, unknown>[] | null
   >(null);
+  const [totalCount, setTotalCount] = React.useState<number>(0);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
   const [naturalQuery, setNaturalQuery] = React.useState("");
@@ -69,6 +70,7 @@ export default function SqlPage({
   >(null);
   const [isResizing, setIsResizing] = React.useState(false);
   const [previewRowLimit] = React.useState(100);
+  const [currentQuery, setCurrentQuery] = React.useState<string>("");
 
   const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
@@ -85,6 +87,26 @@ export default function SqlPage({
     setOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const executeQueryWithPagination = React.useCallback(async (
+    queryToExecute: string, 
+    page: number = 1, 
+    limit: number = 10
+  ) => {
+    const offset = (page - 1) * limit;
+    
+    const response = await executeSql.mutateAsync({
+      query: queryToExecute,
+      limit,
+      offset
+    });
+    
+    setResults(response.data);
+    setTotalCount(response.count);
+    setCurrentQuery(queryToExecute);
+    
+    return response;
+  }, [executeSql]);
 
   const handleExecuteSql = React.useCallback(async () => {
     if (!query.trim()) {
@@ -109,15 +131,22 @@ export default function SqlPage({
       // Continue with original query if formatting fails
     }
 
-    toast.promise(executeSql.mutateAsync(formattedQuery), {
+    toast.promise(executeQueryWithPagination(formattedQuery, 1, 10), {
       loading: "Executing SQL query...",
-      success: (response) => {
-        setResults(response.data);
-        return "Query executed successfully";
-      },
+      success: () => "Query executed successfully",
       error: (err) => `Failed to execute query: ${err.message}`,
     });
-  }, [query, executeSql, setQuery]);
+  }, [query, executeQueryWithPagination, setQuery]);
+
+  const handlePageChange = React.useCallback((page: number, limit: number) => {
+    if (!currentQuery) return;
+    
+    toast.promise(executeQueryWithPagination(currentQuery, page, limit), {
+      loading: "Loading page...",
+      success: () => `Loaded page ${page}`,
+      error: (err) => `Failed to load page: ${err.message}`,
+    });
+  }, [currentQuery, executeQueryWithPagination]);
 
 
   React.useEffect(() => {
@@ -125,17 +154,14 @@ export default function SqlPage({
       // Mark this dataset as initialized
       initializedDatasetRef.current = dataset.name;
       
-      const initialQuery = `SELECT * FROM ${dataset.name} LIMIT 10`;
+      const initialQuery = `SELECT * FROM ${dataset.name}`;
       setQuery(initialQuery);
       
-      // Execute the initial query directly
+      // Execute the initial query with pagination
       if (initialQuery.trim()) {
-        toast.promise(executeSql.mutateAsync(initialQuery), {
+        toast.promise(executeQueryWithPagination(initialQuery, 1, 10), {
           loading: "Executing SQL query...",
-          success: (response) => {
-            setResults(response.data);
-            return "Query executed successfully";
-          },
+          success: () => "Query executed successfully",
           error: (err) => `Failed to execute query: ${err.message}`,
         });
       }
@@ -153,7 +179,7 @@ export default function SqlPage({
           setDatasetRows(null);
         });
     }
-  }, [dataset?.name, executeSql, previewRowLimit]);
+  }, [dataset?.name, executeSql, previewRowLimit, executeQueryWithPagination]);
 
   const handleGenerateAndExecute = async () => {
     if (!naturalQuery.trim()) {
@@ -192,8 +218,7 @@ export default function SqlPage({
       setQuery(formattedSQL);
 
       toast.loading("Executing generated SQL...", { id: promiseId });
-      const response = await executeSql.mutateAsync(formattedSQL);
-      setResults(response.data);
+      await executeQueryWithPagination(formattedSQL, 1, 10);
 
       toast.success("Query executed successfully", { id: promiseId });
     } catch (error) {
@@ -369,7 +394,12 @@ export default function SqlPage({
           {/* Results Content */}
           <div className="mt-4 ml-4 flex-1 min-h-0 overflow-auto">
             {results ? (
-              <ResultsTable results={results} />
+              <ResultsTable 
+                results={results} 
+                total={totalCount}
+                onPageChange={handlePageChange}
+                loading={executeSql.isPending}
+              />
             ) : (
               <div className="p-4 text-center text-muted-foreground">
                 No results to display. Execute a query to see results.

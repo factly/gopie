@@ -31,16 +31,25 @@ import { downloadCsv } from "@/lib/utils";
 
 interface ResultsTableProps {
   results: Record<string, unknown>[];
+  total?: number; // Total number of records (for server-side pagination)
+  onPageChange?: (page: number, limit: number) => void; // Callback for server-side pagination
+  loading?: boolean; // Loading state for server-side pagination
 }
 
-export function ResultsTable({ results }: ResultsTableProps) {
+export function ResultsTable({ results, total, onPageChange, loading = false }: ResultsTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
 
   const handleRowsPerPageChange = (value: string) => {
-    setRowsPerPage(Number(value));
+    const newRowsPerPage = Number(value);
+    setRowsPerPage(newRowsPerPage);
     setCurrentPage(1);
+    
+    // Trigger server-side pagination if callback is provided
+    if (onPageChange) {
+      onPageChange(1, newRowsPerPage);
+    }
   };
 
   const handleDownload = () => {
@@ -51,11 +60,24 @@ export function ResultsTable({ results }: ResultsTableProps) {
     );
   };
 
-  const totalPages = Math.ceil(results.length / rowsPerPage);
-  const paginatedResults = results.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage,
-  );
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    
+    // Trigger server-side pagination if callback is provided
+    if (onPageChange) {
+      onPageChange(newPage, rowsPerPage);
+    }
+  };
+
+  // Use server-side pagination if total is provided, otherwise client-side
+  const isServerSidePagination = total !== undefined && onPageChange !== undefined;
+  const totalPages = isServerSidePagination 
+    ? Math.ceil(total / rowsPerPage)
+    : Math.ceil(results.length / rowsPerPage);
+  
+  const paginatedResults = isServerSidePagination 
+    ? results // Server already returned paginated results
+    : results.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
   const columns = results.length > 0 ? Object.keys(results[0]) : [];
 
   return (
@@ -117,7 +139,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
                 </Select>
               </div>
               <p className="text-sm text-muted-foreground">
-                Showing {paginatedResults.length} of {results.length} rows
+                Showing {paginatedResults.length} of {isServerSidePagination ? total : results.length} rows
               </p>
             </>
           )}
@@ -136,15 +158,23 @@ export function ResultsTable({ results }: ResultsTableProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedResults.map((row, idx) => (
-                  <TableRow key={idx}>
-                    {columns.map((column) => (
-                      <TableCell key={column}>
-                        {row[column]?.toString() ?? "NULL"}
-                      </TableCell>
-                    ))}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="text-center py-8">
+                      Loading...
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  paginatedResults.map((row, idx) => (
+                    <TableRow key={idx}>
+                      {columns.map((column) => (
+                        <TableCell key={column}>
+                          {row[column]?.toString() ?? "NULL"}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -154,7 +184,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                     className={`cursor-pointer ${
                       currentPage === 1 ? "pointer-events-none opacity-50" : ""
                     }`}
