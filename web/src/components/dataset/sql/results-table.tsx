@@ -38,7 +38,7 @@ interface ResultsTableProps {
 
 export function ResultsTable({ results, total, onPageChange, loading = false }: ResultsTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rowsPerPage, setRowsPerPage] = React.useState(20);
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
 
   const handleRowsPerPageChange = (value: string) => {

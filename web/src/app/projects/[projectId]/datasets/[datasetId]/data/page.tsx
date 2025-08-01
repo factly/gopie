@@ -137,7 +137,7 @@ export default function SqlPage({
       // Continue with original query if formatting fails
     }
 
-    toast.promise(executeQueryWithPagination(formattedQuery, 1, 10), {
+    toast.promise(executeQueryWithPagination(formattedQuery, 1, 20), {
       loading: "Executing SQL query...",
       success: () => "Query executed successfully",
       error: (err) => `Failed to execute query: ${err.message}`,
@@ -165,7 +165,7 @@ export default function SqlPage({
       
       // Execute the initial query with pagination
       if (initialQuery.trim()) {
-        toast.promise(executeQueryWithPagination(initialQuery, 1, 10), {
+        toast.promise(executeQueryWithPagination(initialQuery, 1, 20), {
           loading: "Executing SQL query...",
           success: () => "Query executed successfully",
           error: (err) => `Failed to execute query: ${err.message}`,
@@ -224,7 +224,7 @@ export default function SqlPage({
       setQuery(formattedSQL);
 
       toast.loading("Executing generated SQL...", { id: promiseId });
-      await executeQueryWithPagination(formattedSQL, 1, 10);
+      await executeQueryWithPagination(formattedSQL, 1, 20);
 
       toast.success("Query executed successfully", { id: promiseId });
     } catch (error) {
