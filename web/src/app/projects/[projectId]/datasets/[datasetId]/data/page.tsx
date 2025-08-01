@@ -59,6 +59,7 @@ export default function SqlPage({
     Record<string, unknown>[] | null
   >(null);
   const [totalCount, setTotalCount] = React.useState<number>(0);
+  const [isExecuting, setIsExecuting] = React.useState(false);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
   const [naturalQuery, setNaturalQuery] = React.useState("");
@@ -95,17 +96,22 @@ export default function SqlPage({
   ) => {
     const offset = (page - 1) * limit;
     
-    const response = await executeSql.mutateAsync({
-      query: queryToExecute,
-      limit,
-      offset
-    });
-    
-    setResults(response.data);
-    setTotalCount(response.count);
-    setCurrentQuery(queryToExecute);
-    
-    return response;
+    setIsExecuting(true);
+    try {
+      const response = await executeSql.mutateAsync({
+        query: queryToExecute,
+        limit,
+        offset
+      });
+      
+      setResults(response.data);
+      setTotalCount(response.count);
+      setCurrentQuery(queryToExecute);
+      
+      return response;
+    } finally {
+      setIsExecuting(false);
+    }
   }, [executeSql]);
 
   const handleExecuteSql = React.useCallback(async () => {
@@ -274,7 +280,7 @@ export default function SqlPage({
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
-  const isPending = executeSql.isPending || nl2Sql.isPending;
+  const isPending = isExecuting || nl2Sql.isPending;
 
   if (datasetLoading) {
     return <div>Loading dataset...</div>;
@@ -348,7 +354,7 @@ export default function SqlPage({
                     variant="ghost"
                     className="absolute right-2 bottom-2 z-10 bg-transparent hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary"
                   >
-                    {executeSql.isPending ? (
+                    {isExecuting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <PlayIcon className="h-4 w-4" />
@@ -398,7 +404,7 @@ export default function SqlPage({
                 results={results} 
                 total={totalCount}
                 onPageChange={handlePageChange}
-                loading={executeSql.isPending}
+                loading={isExecuting}
               />
             ) : (
               <div className="p-4 text-center text-muted-foreground">
