@@ -43,6 +43,11 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         executed_python_code = state["executed_python_code"]
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
+        # removing the default config
+        result_data.pop("config", None)
+        # set the width and height to responsive
+        result_data["width"] = "container"
+        result_data["height"] = "container"
         python_code_with_context = await add_context_to_python_code(
             python_code=executed_python_code, datasets=datasets
         )
