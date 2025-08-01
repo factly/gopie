@@ -121,7 +121,7 @@ func parseFilepath(filepath string) (string, string, error) {
 	return bucket, path, nil
 }
 
-func (d *OlapService) SqlQuery(sql string, imposeLimits bool) (map[string]any, error) {
+func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
 	if strings.Contains(sql, `""`) && !strings.Contains(sql, `"""`) {
 		parts := strings.Split(sql, `"`)
@@ -153,7 +153,7 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool) (map[string]any, e
 		return nil, domain.ErrNotSelectStatement
 	}
 
-	queryResult, err := d.getResultsWithCount(sql, imposeLimits)
+	queryResult, err := d.getResultsWithCount(sql, limit, offset, imposeLimits)
 	if err != nil {
 		d.logger.Error("Query execution failed", zap.Error(err))
 		return nil, err
@@ -217,27 +217,29 @@ func countTransformer(query string, db any) (string, error) {
 	return countSql, nil
 }
 
-func limitsTransformer(query string, db any) (string, error) {
-	ast, err := duckdbsql.Parse(db.(*sql.DB), query)
-	if err != nil {
-		return "", err
+func limitsTransformer(limit, offset int) func(query string, db any) (string, error) {
+	return func(query string, db any) (string, error) {
+		ast, err := duckdbsql.Parse(db.(*sql.DB), query)
+		if err != nil {
+			return "", err
+		}
+		err = ast.RewriteLimit(limit, offset)
+		if err != nil {
+			return "", err
+		}
+		rewriteSql, err := ast.Format()
+		if err != nil {
+			return "", err
+		}
+		return rewriteSql, nil
 	}
-	err = ast.RewriteLimit(1000, 0)
-	if err != nil {
-		return "", err
-	}
-	rewriteSql, err := ast.Format()
-	if err != nil {
-		return "", err
-	}
-	return rewriteSql, nil
 }
 
-func (d *OlapService) getResultsWithCount(sql string, imposeLim bool) (*queryResult, error) {
+func (d *OlapService) getResultsWithCount(sql string, limit, offest int, imposeLim bool) (*queryResult, error) {
 	countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
-	go d.executeDataQuery(sql, rowsChan, imposeLim)
+	go d.executeDataQuery(sql, limit, offest, rowsChan, imposeLim)
 	go d.executeCountQuery(sql, countChan)
 
 	countResult := <-countChan
@@ -306,13 +308,13 @@ func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResul
 	resultChan <- result
 }
 
-func (d *OlapService) executeDataQuery(sql string, resultChan chan<- asyncResult[*[]map[string]any], imposeLimits bool) {
+func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan chan<- asyncResult[*[]map[string]any], imposeLimits bool) {
 	var result asyncResult[*[]map[string]any]
 	var queryResult *models.Result
 	var err error
 
 	if imposeLimits {
-		queryResult, err = d.olap.Query(sql, limitsTransformer)
+		queryResult, err = d.olap.Query(sql, limitsTransformer(limit, offset))
 	} else {
 		queryResult, err = d.olap.Query(sql)
 	}
@@ -341,7 +343,12 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 		return nil, err
 	}
 
-	result, err := d.getResultsWithCount(sql, params.ImposeLimits)
+	offset := 0
+	if params.Page > 1 {
+		offset = (params.Page - 1) * params.Limit
+	}
+
+	result, err := d.getResultsWithCount(sql, params.Limit, offset, params.ImposeLimits)
 	if err != nil {
 		return nil, err
 	}
