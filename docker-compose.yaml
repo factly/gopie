@@ -198,48 +198,6 @@ services:
       - minio
 
   #########################################################################
-  #####                        LIVEKIT SERVICES                        #####
-  #########################################################################
-  # livekit-server:
-  #   image: livekit/livekit-server:latest
-  #   ports:
-  #     - "7880:7880" # WebRTC traffic
-  #     - "7881:7881" # RTMP traffic
-  #     - "7882:7882" # WHIP/WHEP
-  #   environment:
-  #     - "LIVEKIT_KEYS=devkey: secret"
-  #     - LIVEKIT_REDIS_HOST=livekit-redis
-  #     - LIVEKIT_TURN_HTTPS=false
-  #   networks:
-  #     - gopie
-  #   depends_on:
-  #     - livekit-redis
-
-  # livekit-redis:
-  #   image: redis:alpine
-  #   command: redis-server --save 60 1 --loglevel warning
-  #   volumes:
-  #     - ./volumes/livekit/redis:/data
-  #   networks:
-  #     - gopie
-
-  # livekit-py:
-  #   build:
-  #     context: ./livekit-py
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - ./livekit-py:/app
-  #   environment:
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
-  #     - LIVEKIT_API_KEY=devkey
-  #     - LIVEKIT_API_SECRET=secret
-  #     - LIVEKIT_URL=ws://livekit-server:7880
-  #   depends_on:
-  #     - livekit-server
-  #   networks:
-  #     - gopie
-
-  #########################################################################
   #####                        CHAT SERVER SERVICES                   #####
   #########################################################################
 
