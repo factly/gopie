@@ -37,9 +37,14 @@ func TestAST_ToCountQuery(t *testing.T) {
 			expectedSql: "SELECT count(*) FROM (SELECT col1, col2 FROM tbl WHERE (col1 > 100))",
 		},
 		{
-			title:       "Select_With_All_Clauses_To_Strip",
+			title:       "Select_With_Order_By_And_Limit",
 			sql:         "SELECT * FROM tbl WHERE id = 1 ORDER BY name ASC LIMIT 50 OFFSET 10",
-			expectedSql: "SELECT count(*) FROM (SELECT * FROM tbl WHERE (id = 1))",
+			expectedSql: "SELECT count(*) FROM (SELECT * FROM tbl WHERE (id = 1) LIMIT 50 OFFSET 10)",
+		},
+		{
+			title:       "Select_With_Limit_Only",
+			sql:         "SELECT * FROM gp_GAYulCGSRMkNV LIMIT 1000",
+			expectedSql: "SELECT count(*) FROM (SELECT * FROM gp_GAYulCGSRMkNV LIMIT 1000)",
 		},
 		{
 			title:       "Select_With_Group_By",
@@ -54,7 +59,7 @@ func TestAST_ToCountQuery(t *testing.T) {
 		{
 			title:       "Union_All_With_Limit_And_Order_By",
 			sql:         "SELECT id FROM tbl1 UNION ALL SELECT id FROM tbl2 ORDER BY id LIMIT 100",
-			expectedSql: "SELECT count(*) FROM ((SELECT id FROM tbl1) UNION ALL (SELECT id FROM tbl2))",
+			expectedSql: "SELECT count(*) FROM ((SELECT id FROM tbl1) UNION ALL (SELECT id FROM tbl2) LIMIT 100)",
 		},
 		{
 			title: "Complex_Query_With_Joins_And_CTE",
