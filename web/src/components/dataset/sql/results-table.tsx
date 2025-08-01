@@ -203,7 +203,7 @@ export function ResultsTable({ results, total, onPageChange, loading = false }: 
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => handlePageChange(page)}
                           isActive={isCurrentPage}
                           className="cursor-pointer"
                         >
@@ -226,9 +226,7 @@ export function ResultsTable({ results, total, onPageChange, loading = false }: 
 
                 <PaginationItem>
                   <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                     className={`cursor-pointer ${
                       currentPage === totalPages
                         ? "pointer-events-none opacity-50"
