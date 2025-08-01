@@ -235,11 +235,11 @@ func limitsTransformer(limit, offset int) func(query string, db any) (string, er
 	}
 }
 
-func (d *OlapService) getResultsWithCount(sql string, limit, offest int, imposeLim bool) (*queryResult, error) {
+func (d *OlapService) getResultsWithCount(sql string, limit, offset int, imposeLim bool) (*queryResult, error) {
 	countChan := make(chan asyncResult[int64], 1)
 	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
 
-	go d.executeDataQuery(sql, limit, offest, rowsChan, imposeLim)
+	go d.executeDataQuery(sql, limit, offset, rowsChan, imposeLim)
 	go d.executeCountQuery(sql, countChan)
 
 	countResult := <-countChan
