@@ -1,3 +1,4 @@
+import orjson
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -43,14 +44,25 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         executed_python_code = state["executed_python_code"]
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
+        final_result_data = []
+        for result in result_data:
+            result = orjson.loads(result)
+            # removing the default config
+            result.pop("config")
+            # set the width and height to responsive
+            result["width"] = "container"
+            result["height"] = "container"
+            # convert the result to string
+            result = orjson.dumps(result)
+            final_result_data.append(result)
         python_code_with_context = await add_context_to_python_code(
             python_code=executed_python_code, datasets=datasets
         )
         s3_paths = await upload_visualization_result_data(
-            data=result_data, python_code=python_code_with_context
+            data=final_result_data, python_code=python_code_with_context
         )
 
-        visualization_results.data = result_data
+        visualization_results.data = final_result_data
 
         await adispatch_custom_event(
             "gopie-agent",
