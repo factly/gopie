@@ -314,6 +314,9 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 	var err error
 
 	if imposeLimits {
+		if limit > 1000 {
+			limit = 1000
+		}
 		queryResult, err = d.olap.Query(sql, limitsTransformer(limit, offset))
 	} else {
 		queryResult, err = d.olap.Query(sql)
