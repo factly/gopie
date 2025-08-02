@@ -280,7 +280,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 alt="GoPie"
                                 width={100}
                                 height={50}
-                                className="h-10"
+                                className="h-7 w-auto"
                               />
                             </div>
                           </Link>
@@ -360,7 +360,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         alt="GoPie"
                         width={100}
                         height={50}
-                        className="h-10"
+                        className="h-7 w-auto"
                       />
                     </div>
                   </Link>
