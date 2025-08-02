@@ -232,6 +232,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 const relatedTarget = e.relatedTarget as HTMLElement;
                 if (
                   relatedTarget &&
+                  relatedTarget.closest &&
                   (relatedTarget.closest(
                     "[data-radix-popper-content-wrapper]"
                   ) ||
