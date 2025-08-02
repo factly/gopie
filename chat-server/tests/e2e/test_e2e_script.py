@@ -18,7 +18,7 @@ from .test_utils import (
     update_results_with_evaluation,
 )
 
-URL = "http://localhost:8001/api/v1/chat/completions"
+URL = "http://localhost:8000/api/v1/chat/completions"
 
 
 async def process_test_case(
