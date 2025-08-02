@@ -177,3 +177,13 @@ def get_configured_llm_for_node(
     llm = model_provider.get_llm_for_node(node_name, tool_names)
 
     return cast(StructuredLLM[T], llm)
+
+
+def get_llm_for_other_task(node_name: str, config: RunnableConfig):
+    json_mode = requires_json_mode(node_name)
+    temperature = get_node_temperature(node_name)
+    model_id = get_node_model(node_name)
+
+    model_provider = get_model_provider(config, json_mode=json_mode, temperature=temperature)
+
+    return model_provider.get_llm(model_id)

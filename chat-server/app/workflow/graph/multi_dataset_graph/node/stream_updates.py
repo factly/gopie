@@ -50,8 +50,6 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     llm = get_configured_llm_for_node("stream_updates", config)
     response = await llm.ainvoke(stream_update_prompt)
 
-    logger.debug(f"Stream updates response: {response.content}")
-
     return {"messages": [AIMessage(content=response.content)], "subquery_index": query_index + 1}
 
 

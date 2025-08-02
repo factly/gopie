@@ -48,9 +48,6 @@ NODE_CONFIGS = {
     "plan_sql_query_tool": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
     ),
-    "generate_col_descriptions": NodeConfig(
-        ModelCategory.FAST, TemperatureCategory.LOW_VARIATION, json_mode=True
-    ),
     "visualize_data": NodeConfig(ModelCategory.FAST, TemperatureCategory.LOW_VARIATION),
     "process_query": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
@@ -62,18 +59,25 @@ NODE_CONFIGS = {
         ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
     ),
     "generate_result": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
-    "stream_updates": NodeConfig(
-        ModelCategory.BALANCED, TemperatureCategory.CREATIVE, json_mode=True
-    ),
+    "stream_updates": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
     "response": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
+}
+
+EXTERNAL_FUNCTION_CONFIGS = {
+    "generate_col_descriptions": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=True
+    )
 }
 
 
 def get_node_config(node_name: str) -> NodeConfig:
-    return NODE_CONFIGS.get(
-        node_name,
-        NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=False),
-    )
+    if node_name in NODE_CONFIGS:
+        return NODE_CONFIGS[node_name]
+
+    if node_name in EXTERNAL_FUNCTION_CONFIGS:
+        return EXTERNAL_FUNCTION_CONFIGS[node_name]
+
+    return NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=False)
 
 
 def get_node_temperature(node_name: str) -> float | None:
