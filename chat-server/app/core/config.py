@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     CUSTOM_LLM_BASE_URL: str = ""
     CUSTOM_LLM_API_KEY: str = ""
 
+    CHAT_HISTORY_MAX_MESSAGES: int = 20
+    CHAT_HISTORY_MAX_TOKENS: int = 8000
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
 
 
