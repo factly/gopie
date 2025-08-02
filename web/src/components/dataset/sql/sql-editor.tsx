@@ -19,9 +19,14 @@ export function SqlEditor({
   datasetId,
 }: SqlEditorProps) {
   const { theme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
   const editorRef = React.useRef<monaco.editor.IStandaloneCodeEditor | null>(
     null,
   );
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -92,7 +97,7 @@ export function SqlEditor({
       defaultLanguage="sql"
       value={value}
       onChange={(value) => onChange(value || "")}
-      theme={theme === "dark" ? "vs-dark" : "vs-light"}
+      theme={mounted && theme === "dark" ? "vs-dark" : "vs-light"}
       options={{
         minimap: { enabled: false },
         fontSize: 14,

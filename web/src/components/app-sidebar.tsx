@@ -41,11 +41,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { theme } = useTheme();
   const { state } = useSidebar();
 
+  const [mounted, setMounted] = React.useState(false);
   const [isPeeking, setIsPeeking] = React.useState(false);
   const sidebarRef = React.useRef<HTMLDivElement>(null);
   const timeoutRef = React.useRef<NodeJS.Timeout>(null);
 
   const projectId = params?.projectId as string;
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     // Don't set up peek functionality on home page
@@ -274,7 +279,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <div className="flex items-center justify-start">
                               <Image
                                 src={
-                                  theme === "dark"
+                                  mounted && theme === "dark"
                                     ? "/GoPie_Logo_Dark.svg"
                                     : "/GoPie_Logo.svg"
                                 }
@@ -354,7 +359,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="flex items-center justify-start">
                       <Image
                         src={
-                          theme === "dark"
+                          mounted && theme === "dark"
                             ? "/GoPie_Logo_Dark.svg"
                             : "/GoPie_Logo.svg"
                         }
