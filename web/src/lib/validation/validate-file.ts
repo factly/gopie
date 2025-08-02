@@ -167,7 +167,9 @@ export async function validateFileWithDuckDb(
   if (formatInfo.requiresExtension) {
     // Extension loading will be handled in the specific validation function
     // This prevents premature failures and allows for better error handling
-    console.log(`File format ${format} requires ${formatInfo.requiresExtension} extension - will attempt to load during validation`);
+    console.log(
+      `File format ${format} requires ${formatInfo.requiresExtension} extension - will attempt to load during validation`
+    );
   }
 
   // Handle large files
@@ -217,7 +219,7 @@ async function validateCsvFile(
     );
 
     const tempTableName = `temp_validate_${Date.now()}`;
-    
+
     // Use IGNORE_ERRORS and STORE_REJECTS to handle data type mismatches
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
@@ -230,10 +232,10 @@ async function validateCsvFile(
     `);
 
     const result = await validateTableStructure(conn, tempTableName);
-    
+
     // Check for rejected rows
     const rejectedRowsResult = await getRejectedRows(conn);
-    
+
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
@@ -270,7 +272,7 @@ async function validateParquetFile(
     );
 
     const tempTableName = `temp_validate_${Date.now()}`;
-    
+
     // Try with IGNORE_ERRORS first, fallback to regular read if not supported
     try {
       await conn.query(`
@@ -290,11 +292,11 @@ async function validateParquetFile(
     }
 
     const result = await validateTableStructure(conn, tempTableName);
-    
+
     // For Parquet files, rejected rows are less common due to schema enforcement
     // But we'll still check if any reject_errors were created
     const rejectedRowsResult = await getRejectedRows(conn);
-    
+
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
@@ -335,7 +337,7 @@ async function validateJsonFile(
     // Try different JSON formats with IGNORE_ERRORS
     let createQuery = "";
     let lastError: Error | null = null;
-    
+
     try {
       // Try auto-detection first with IGNORE_ERRORS
       createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true, store_rejects=true)`;
@@ -359,16 +361,16 @@ async function validateJsonFile(
         }
       }
     }
-    
+
     if (lastError) {
       throw lastError;
     }
 
     const result = await validateTableStructure(conn, tempTableName);
-    
+
     // Check for rejected rows
     const rejectedRowsResult = await getRejectedRows(conn);
-    
+
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
@@ -398,11 +400,13 @@ async function validateExcelFile(
   fileArrayBuffer: ArrayBuffer
 ): Promise<ValidationResult> {
   try {
-    console.log(`Converting Excel file to CSV (${fileArrayBuffer.byteLength} bytes)`);
-    
+    console.log(
+      `Converting Excel file to CSV (${fileArrayBuffer.byteLength} bytes)`
+    );
+
     // Convert Excel to CSV using SheetJS
-    const workbook = XLSX.read(fileArrayBuffer, { type: 'array' });
-    
+    const workbook = XLSX.read(fileArrayBuffer, { type: "array" });
+
     // Get the first sheet
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
@@ -412,10 +416,10 @@ async function validateExcelFile(
         error: "Excel file contains no sheets or is corrupted.",
       };
     }
-    
+
     const worksheet = workbook.Sheets[firstSheetName];
     const csvData = XLSX.utils.sheet_to_csv(worksheet);
-    
+
     if (!csvData.trim()) {
       return {
         isValid: false,
@@ -423,15 +427,17 @@ async function validateExcelFile(
         error: "Excel file appears to be empty or contains no data.",
       };
     }
-    
-    console.log(`Excel to CSV conversion successful (${csvData.length} characters)`);
-    
+
+    console.log(
+      `Excel to CSV conversion successful (${csvData.length} characters)`
+    );
+
     // Convert CSV string to ArrayBuffer
     const csvBuffer = new TextEncoder().encode(csvData);
-    
+
     // Use the existing CSV validation function
     const result = await validateCsvFile(db, csvBuffer.buffer as ArrayBuffer);
-    
+
     // Return result with Excel format but CSV validation
     return {
       ...result,
@@ -440,19 +446,19 @@ async function validateExcelFile(
       rejectedRows: result.rejectedRows,
       rejectedRowCount: result.rejectedRowCount,
     };
-    
   } catch (error) {
     const errorMessage = (error as Error).message;
-    
+
     // Handle specific SheetJS errors
     if (errorMessage.includes("Unsupported file")) {
       return {
         isValid: false,
         format: "excel",
-        error: "Unsupported Excel file format. Please ensure the file is a valid .xlsx or .xls file.",
+        error:
+          "Unsupported Excel file format. Please ensure the file is a valid .xlsx or .xls file.",
       };
     }
-    
+
     if (errorMessage.includes("End of data")) {
       return {
         isValid: false,
@@ -460,7 +466,7 @@ async function validateExcelFile(
         error: "Excel file appears to be corrupted or incomplete.",
       };
     }
-    
+
     return {
       isValid: false,
       format: "excel",
@@ -599,9 +605,10 @@ async function getRejectedRows(
       FROM information_schema.tables 
       WHERE table_name = 'reject_errors'
     `);
-    
-    const tableExists = Number(tableExistsQuery.toArray()[0]?.table_count || 0) > 0;
-    
+
+    const tableExists =
+      Number(tableExistsQuery.toArray()[0]?.table_count || 0) > 0;
+
     if (!tableExists) {
       return {
         rejectedRows: [],
@@ -615,8 +622,10 @@ async function getRejectedRows(
       FROM information_schema.columns 
       WHERE table_name = 'reject_errors'
     `);
-    
-    const availableColumns = columnsQuery.toArray().map(row => row.column_name?.toString());
+
+    const availableColumns = columnsQuery
+      .toArray()
+      .map((row) => row.column_name?.toString());
     console.log("Available columns in reject_errors:", availableColumns);
 
     // Query the reject_errors table to get information about rejected rows
@@ -631,15 +640,16 @@ async function getRejectedRows(
     const rejectedData = rejectedQuery.toArray();
     console.log("Sample rejected row data:", rejectedData[0]);
     console.log("All rejected data keys:", Object.keys(rejectedData[0] || {}));
-    
+
     const rejectedRows: RejectedRow[] = rejectedData.map((row) => {
       // Debug each row to understand the data structure
       console.log("Processing row:", row);
-      
+
       // Try to extract meaningful information from available fields
       const rowNumber = Number(row.line || row.csv_line || row.row || 0);
-      const columnName = row.column_name?.toString() || row.column?.toString() || "unknown";
-      
+      const columnName =
+        row.column_name?.toString() || row.column?.toString() || "unknown";
+
       // For expected type, DuckDB might store this differently
       let expectedType = "unknown";
       if (row.expected_type) {
@@ -649,7 +659,7 @@ async function getRejectedRows(
       } else if (row.csv_type) {
         expectedType = row.csv_type.toString();
       }
-      
+
       // For actual value, try different possible column names
       let actualValue = "";
       if (row.actual_value !== undefined && row.actual_value !== null) {
@@ -659,13 +669,14 @@ async function getRejectedRows(
       } else if (row.csv_value !== undefined && row.csv_value !== null) {
         actualValue = row.csv_value.toString();
       }
-      
+
       // For error message
-      const errorMessage = row.error_message?.toString() || 
-                          row.error?.toString() || 
-                          row.message?.toString() || 
-                          "Data type mismatch";
-      
+      const errorMessage =
+        row.error_message?.toString() ||
+        row.error?.toString() ||
+        row.message?.toString() ||
+        "Data type mismatch";
+
       return {
         rowNumber,
         columnName,
@@ -676,7 +687,9 @@ async function getRejectedRows(
     });
 
     // Get total count of rejected rows
-    const countQuery = await conn.query(`SELECT COUNT(*) as total FROM reject_errors`);
+    const countQuery = await conn.query(
+      `SELECT COUNT(*) as total FROM reject_errors`
+    );
     const totalCount = Number(countQuery.toArray()[0]?.total || 0);
 
     return {
@@ -734,7 +747,7 @@ async function convertCsvWithTypes(
     );
 
     const tempTableName = `temp_convert_${Date.now()}`;
-    
+
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
       SELECT * FROM read_csv_auto('${sourceFileName}', header=true, IGNORE_ERRORS=true, STORE_REJECTS=true)
