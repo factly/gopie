@@ -244,7 +244,7 @@ export default function HomePage() {
                   alt="GoPie Logo"
                   width={130}
                   height={57}
-                  className="h-12 dark:hidden"
+                  className="h-8 w-auto dark:hidden"
                   priority
                 />
                 <Image
@@ -252,7 +252,7 @@ export default function HomePage() {
                   alt="GoPie Logo"
                   width={130}
                   height={57}
-                  className="h-12 hidden dark:block"
+                  className="h-8 w-auto hidden dark:block"
                   priority
                 />
               </Link>
