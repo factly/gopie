@@ -3,13 +3,9 @@
 import "regenerator-runtime/runtime";
 import * as React from "react";
 import { motion } from "framer-motion";
-import { useDatasetSql, SqlQueryParams } from "@/lib/mutations/dataset/sql";
+import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import {
-  PlayIcon,
-  Loader2,
-  Database,
-} from "lucide-react";
+import { PlayIcon, Loader2, Database } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +14,6 @@ import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { format } from "sql-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -89,30 +84,29 @@ export default function SqlPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const executeQueryWithPagination = React.useCallback(async (
-    queryToExecute: string, 
-    page: number = 1, 
-    limit: number = 10
-  ) => {
-    const offset = (page - 1) * limit;
-    
-    setIsExecuting(true);
-    try {
-      const response = await executeSql.mutateAsync({
-        query: queryToExecute,
-        limit,
-        offset
-      });
-      
-      setResults(response.data);
-      setTotalCount(response.count);
-      setCurrentQuery(queryToExecute);
-      
-      return response;
-    } finally {
-      setIsExecuting(false);
-    }
-  }, [executeSql]);
+  const executeQueryWithPagination = React.useCallback(
+    async (queryToExecute: string, page: number = 1, limit: number = 10) => {
+      const offset = (page - 1) * limit;
+
+      setIsExecuting(true);
+      try {
+        const response = await executeSql.mutateAsync({
+          query: queryToExecute,
+          limit,
+          offset,
+        });
+
+        setResults(response.data);
+        setTotalCount(response.count);
+        setCurrentQuery(queryToExecute);
+
+        return response;
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [executeSql]
+  );
 
   const handleExecuteSql = React.useCallback(async () => {
     if (!query.trim()) {
@@ -124,16 +118,16 @@ export default function SqlPage({
     let formattedQuery = query;
     try {
       formattedQuery = format(query, {
-        language: 'sql',
+        language: "sql",
         tabWidth: 2,
         useTabs: false,
-        keywordCase: 'lower',
+        keywordCase: "lower",
         linesBetweenQueries: 2,
       });
       // Update the query state with formatted version
       setQuery(formattedQuery);
     } catch (error) {
-      console.warn('Failed to format SQL:', error);
+      console.warn("Failed to format SQL:", error);
       // Continue with original query if formatting fails
     }
 
@@ -144,25 +138,27 @@ export default function SqlPage({
     });
   }, [query, executeQueryWithPagination, setQuery]);
 
-  const handlePageChange = React.useCallback((page: number, limit: number) => {
-    if (!currentQuery) return;
-    
-    toast.promise(executeQueryWithPagination(currentQuery, page, limit), {
-      loading: "Loading page...",
-      success: () => `Loaded page ${page}`,
-      error: (err) => `Failed to load page: ${err.message}`,
-    });
-  }, [currentQuery, executeQueryWithPagination]);
+  const handlePageChange = React.useCallback(
+    (page: number, limit: number) => {
+      if (!currentQuery) return;
 
+      toast.promise(executeQueryWithPagination(currentQuery, page, limit), {
+        loading: "Loading page...",
+        success: () => `Loaded page ${page}`,
+        error: (err) => `Failed to load page: ${err.message}`,
+      });
+    },
+    [currentQuery, executeQueryWithPagination]
+  );
 
   React.useEffect(() => {
     if (dataset?.name && dataset.name !== initializedDatasetRef.current) {
       // Mark this dataset as initialized
       initializedDatasetRef.current = dataset.name;
-      
+
       const initialQuery = `SELECT * FROM ${dataset.name}`;
       setQuery(initialQuery);
-      
+
       // Execute the initial query with pagination
       if (initialQuery.trim()) {
         toast.promise(executeQueryWithPagination(initialQuery, 1, 20), {
@@ -171,16 +167,19 @@ export default function SqlPage({
           error: (err) => `Failed to execute query: ${err.message}`,
         });
       }
-      
+
       // Fetch initial dataset rows for preview
-      executeSql.mutateAsync(`SELECT * FROM ${dataset.name} LIMIT ${previewRowLimit}`)
+      executeSql
+        .mutateAsync(`SELECT * FROM ${dataset.name} LIMIT ${previewRowLimit}`)
         .then((response) => {
           setDatasetRows(response.data);
         })
         .catch((error) => {
           console.error("Failed to fetch dataset rows:", error);
           toast.error(
-            `Failed to fetch dataset preview: ${(error as Error).message || "Unknown error occurred"}`
+            `Failed to fetch dataset preview: ${
+              (error as Error).message || "Unknown error occurred"
+            }`
           );
           setDatasetRows(null);
         });
@@ -194,7 +193,9 @@ export default function SqlPage({
     }
 
     if (!dataset?.name || dataset.name.trim() === "") {
-      toast.error("Dataset name is missing. Please refresh the page and try again.");
+      toast.error(
+        "Dataset name is missing. Please refresh the page and try again."
+      );
       return;
     }
 
@@ -211,14 +212,14 @@ export default function SqlPage({
       let formattedSQL = sqlQuery.sql;
       try {
         formattedSQL = format(sqlQuery.sql, {
-          language: 'sql',
+          language: "sql",
           tabWidth: 2,
           useTabs: false,
-          keywordCase: 'lower',
+          keywordCase: "lower",
           linesBetweenQueries: 2,
         });
       } catch (error) {
-        console.warn('Failed to format AI-generated SQL:', error);
+        console.warn("Failed to format AI-generated SQL:", error);
         // Use original SQL if formatting fails
       }
       setQuery(formattedSQL);
@@ -363,8 +364,6 @@ export default function SqlPage({
                   </Button>
                 </div>
               </div>
-
-
             </CardContent>
           </Card>
         </motion.div>
@@ -389,7 +388,6 @@ export default function SqlPage({
             onMouseDown={handleMouseDown}
           />
 
-
           {/* Results Header */}
           <div className="border-b bg-muted/50 p-3 ml-4 border">
             <div className="flex items-center">
@@ -400,8 +398,8 @@ export default function SqlPage({
           {/* Results Content */}
           <div className="mt-4 ml-4 flex-1 min-h-0 overflow-auto">
             {results ? (
-              <ResultsTable 
-                results={results} 
+              <ResultsTable
+                results={results}
                 total={totalCount}
                 onPageChange={handlePageChange}
                 loading={isExecuting}
