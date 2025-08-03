@@ -27,7 +27,7 @@ class NodeConfig:
 
 
 NODE_CONFIGS = {
-    "analyze_query": NodeConfig(ModelCategory.FAST, TemperatureCategory.NONE, json_mode=True),
+    "analyze_query": NodeConfig(ModelCategory.FAST, TemperatureCategory.NONE),
     "route_query_replan": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
     "validate_input": NodeConfig(
         ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
