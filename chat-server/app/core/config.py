@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     CUSTOM_LLM_BASE_URL: str = ""
     CUSTOM_LLM_API_KEY: str = ""
 
+    # LLM settings
+    MAX_TOKENS: int = 10000
+    MAX_RETRIES: int = 3
+    RATE_LIMITER: int = 60
+    TIMEOUT: int = 30
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
 
 

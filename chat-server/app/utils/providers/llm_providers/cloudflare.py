@@ -49,6 +49,9 @@ class CloudflareLLMProvider(BaseLLMProvider):
             "default_headers": headers,
             "model": model_name,
             "streaming": streaming,
+            "max_tokens": settings.MAX_TOKENS,
+            "max_retries": settings.MAX_RETRIES,
+            "timeout": settings.TIMEOUT,
         }
 
         if temperature is not None:
