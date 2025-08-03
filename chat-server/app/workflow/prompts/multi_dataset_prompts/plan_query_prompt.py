@@ -99,10 +99,25 @@ def format_plan_query_input(
                 for col_analysis in analysis.columns_analyzed:
                     col_name = col_analysis.column_name
                     verified_values = col_analysis.verified_values
+                    suggested_alternatives = col_analysis.suggested_alternatives
+
                     if verified_values:
                         exact_vals = [v.value for v in verified_values if v.found_in_database]
+                        not_found_vals = [
+                            v.value for v in verified_values if not v.found_in_database
+                        ]
+
                         if exact_vals:
-                            input_str += f"- {col_name}: {', '.join(exact_vals)}\n"
+                            input_str += f"- {col_name} (exact matches): {', '.join(exact_vals)}\n"
+                        if not_found_vals:
+                            input_str += f"- {col_name} (not found): {', '.join(not_found_vals)}\n"
+
+                    if suggested_alternatives:
+                        for suggestion in suggested_alternatives:
+                            if suggestion.found_similar_values and suggestion.similar_values:
+                                input_str += f"- {col_name} (alternatives for '{suggestion.requested_value}'): {', '.join(suggestion.similar_values)}\n"
+                            else:
+                                input_str += f"- {col_name} (no alternatives found for '{suggestion.requested_value}')\n"
 
     if error_messages and retry_count > 0:
         input_str += "\n⚠️ PREVIOUS ERRORS:\n"

@@ -1,6 +1,6 @@
 from app.core.log import logger
 from app.models.data import ColumnValueMatching
-from app.services.gopie.sql_executor import execute_sql_with_limit
+from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
 
 
@@ -135,7 +135,7 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
         FROM {table_name}
         WHERE LOWER({column_name}) = LOWER('{value}')
         """
-        result = await execute_sql_with_limit(query=query)
+        result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             logger.debug(f"Exact match found for '{value}' in '{column_name}'")
@@ -171,10 +171,10 @@ async def find_similar_values(value: str, column_name: str, table_name: str) -> 
         query = f"""
         SELECT DISTINCT {column_name}
         FROM {table_name}
-        WHERE {column_name} ILIKE '%{value}%'
+        WHERE LOWER({column_name}) LIKE '%' || LOWER('{value}') || '%'
         LIMIT 5
         """
-        result = await execute_sql_with_limit(query=query)
+        result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             similar_values = [str(row.get(column_name)) for row in result if row]
@@ -188,7 +188,7 @@ async def find_similar_values(value: str, column_name: str, table_name: str) -> 
             exc_info=True,
         )
 
-    # Fallback: (Levenshtein due duckdb incompatibility) Trigram similarity matching if no LIKE results found
+    # Fallback: (Levenshtein due to duckdb incompatibility) Trigram similarity matching if no LIKE results found
     if not similar_values:
         try:
             trigram_query = f"""
@@ -198,7 +198,7 @@ async def find_similar_values(value: str, column_name: str, table_name: str) -> 
             ORDER BY distance ASC
             LIMIT 5;
             """
-            trigram_result = await execute_sql_with_limit(query=trigram_query)
+            trigram_result = await execute_sql(query=trigram_query)
 
             if isinstance(trigram_result, list) and trigram_result:
                 similar_values = [str(row.get(column_name)) for row in trigram_result if row]
