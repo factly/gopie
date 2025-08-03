@@ -27,3 +27,4 @@ class AgentState(TypedDict):
     datasets: list[Dataset] | None
     invalid_input: bool | None
     query_result: QueryResult | None
+    continue_execution: bool | None

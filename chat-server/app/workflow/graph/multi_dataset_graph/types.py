@@ -36,6 +36,7 @@ class InputState(TypedDict):
 
 class OutputState(TypedDict):
     query_result: QueryResult
+    continue_execution: bool | None
 
 
 class State(TypedDict):
@@ -53,6 +54,7 @@ class State(TypedDict):
     previous_sql_queries: list[str] | None
     retry_count: int
     recommendation: str
+    continue_execution: bool | None
 
 
 class ConfigSchema(TypedDict):

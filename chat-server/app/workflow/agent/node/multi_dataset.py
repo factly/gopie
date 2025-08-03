@@ -47,18 +47,24 @@ def transform_output_state(
     """
     Convert a multi-dataset agent output state into a standardized response dictionary.
 
-    The response includes the original query result, a list of datasets derived from the query result, and a single AI message with a placeholder response.
+    The response includes the original query result, a list of datasets derived from the query result,
+    the continue_execution flag, and a single AI message with a placeholder response.
     """
     query_result = output_state.get("query_result", {})
+    continue_execution = output_state.get("continue_execution", True)
     datasets = state.get("datasets", []) or []
     datasets.extend(query_result_to_datasets(query_result))
-    return {
+
+    result = {
         "query_result": query_result,
         "datasets": datasets,
+        "continue_execution": continue_execution,
         "messages": [
             AIMessage(content="Successfully processed the user query with multi dataset agent.")
         ],
     }
+
+    return result
 
 
 async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) -> dict:

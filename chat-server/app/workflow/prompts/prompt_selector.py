@@ -19,7 +19,6 @@ from .multi_dataset_prompts.plan_query_prompt import (
     format_plan_query_input,
 )
 from .multi_dataset_prompts.stream_updates_prompt import (
-    create_execution_analysis_prompt,
     create_stream_update_prompt,
 )
 from .plan_sql_query_tool import (
@@ -76,7 +75,6 @@ class PromptSelector:
             "generate_subqueries": create_generate_subqueries_prompt,
             "assess_query_complexity": create_assess_query_complexity_prompt,
             "stream_updates": create_stream_update_prompt,
-            "execution_analysis": create_execution_analysis_prompt,
             "process_query": create_process_query_prompt,
             "generate_result": create_result_generation_prompt,
             "process_context": create_process_context_prompt,

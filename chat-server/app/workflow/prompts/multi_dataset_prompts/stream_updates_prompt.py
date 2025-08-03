@@ -7,9 +7,9 @@ from langchain_core.prompts import (
 
 def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
     """
-    Generate a prompt for summarizing the outcome of a subquery execution in user-friendly language.
+    Generate a prompt for analyzing subquery execution and determining next steps in JSON format.
 
-    Depending on the `prompt_template` flag, returns either a `ChatPromptTemplate` for dynamic prompt construction or a list of formatted `SystemMessage` and `HumanMessage` objects for immediate use. The prompt guides the AI to produce concise, actionable updates about subquery results, handling cases of success, failure, or truncated data, and explicitly instructs avoidance of technical jargon or error exposure.
+    Returns a structured JSON response with both stream update content and execution decision.
 
     Parameters:
         prompt_template (bool, optional): If True, returns a prompt template for dynamic use; otherwise, returns formatted messages.
@@ -26,40 +26,38 @@ def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
     subquery_messages = kwargs.get("subquery_messages", "")
 
     system_content = """
-I need to create a brief update about the execution of a subquery.
+You need to analyze the subquery execution and provide both a user-friendly update AND decide if execution should continue.
 
-INSTRUCTIONS:
-1. First, determine if this subquery was successful or failed by examining
-   the data.
+FOR THE STREAM UPDATE MESSAGE:
+1. First, determine if this subquery was successful or failed by examining the data.
 2. If the subquery FAILED:
    - Never expose technical errors, stack traces, or system messages
    - Identify the issue in user-friendly terms (e.g., "couldn't find the requested information", "data not available")
    - Focus on what this means for the user's query rather than technical details
-   - Analyze if this impacts the ability to answer the overall question
-   - Clearly state if execution should continue or stop
-   - Remain helpful and solution-oriented
-
 3. If the subquery was SUCCESSFUL:
    - Provide a clear and concise summary of the results
    - Focus on the actual data retrieved and its relevance to the user's question
    - Highlight any interesting patterns or insights
-   - Don't describe the execution process, focus on what was found
-
 4. If the subquery returned TRUNCATED RESULTS:
    - Acknowledge that this part returned a large dataset that was limited due to large result sizes
    - Note that the data is already displayed to the user for analysis
-   - Continue with execution as this is not a failure
-
 5. Keep your response concise (2-3 sentences)
-6. End by stating the next action (continue to next subquery, stopping execution, etc.)
-7. If the query is asking for visualizations, do not mention it as it is out of scope for you to answer. So, don't reply anything related to visualizations.
+6. If the query is asking for visualizations, do not mention it as it is out of scope for you to answer.
+
+FOR THE EXECUTION DECISION:
+1. Set continue_execution to false if:
+   - The subquery failed critically and prevents further processing
+   - The current results already provide sufficient information to answer the user's query
+   - There's an error that would affect remaining subqueries
+2. Set continue_execution to true if:
+   - The subquery was successful and more data is needed
+   - The failure doesn't prevent other subqueries from running
+   - Additional subqueries would provide valuable context
 
 WHAT TO AVOID:
 - Technical jargon, SQL errors, or system implementation details
 - Exposing errors or execution failures
 - Blame language about system or user mistakes
-
-Your response should be informative, actionable, and user-friendly.
 """
 
     human_template_str = """
@@ -83,43 +81,6 @@ Subquery Result Information:
         original_user_query=original_user_query,
         subquery_messages=subquery_messages,
         subquery_result=subquery_result,
-    )
-
-    return [
-        SystemMessage(content=system_content),
-        HumanMessage(content=human_content),
-    ]
-
-
-def create_execution_analysis_prompt(**kwargs) -> list | ChatPromptTemplate:
-    prompt_template = kwargs.get("prompt_template", False)
-    last_stream_message_content = kwargs.get("last_stream_message_content", "")
-
-    system_content = """
-Analyze this message about a subquery execution and determine if
-further execution should continue.
-
-Make a decision based on:
-1. If the message explicitly states to continue or stop
-2. If the message mentions or implies a critical failure
-3. If the message indicates an error that prevents further processing
-4. Whether the remaining subqueries can still provide value
-"""
-
-    human_template_str = """
-Message: {last_stream_message_content}
-"""
-
-    if prompt_template:
-        return ChatPromptTemplate.from_messages(
-            [
-                SystemMessage(content=system_content),
-                HumanMessagePromptTemplate.from_template(human_template_str),
-            ]
-        )
-
-    human_content = human_template_str.format(
-        last_stream_message_content=last_stream_message_content
     )
 
     return [

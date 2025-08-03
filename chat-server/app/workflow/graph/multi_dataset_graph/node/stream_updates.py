@@ -1,21 +1,23 @@
 import json
 
+from langchain_core.language_models.fake_chat_models import (
+    GenericFakeChatModel,
+)
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
-class ExecutionAnalysisOutput(BaseModel):
+class StreamUpdateResponse(BaseModel):
+    stream_update: str = Field(description="User-friendly message about the subquery execution")
     continue_execution: bool = Field(
-        description="Whether to continue execution with remaining subqueries"
+        description="Whether to continue execution with remaining subqueries", default=True
     )
-    reasoning: str = Field(description="Brief explanation for the decision")
 
 
 @configure_node(
@@ -47,39 +49,31 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         subquery_messages=subquery_messages,
     )
 
-    llm = get_configured_llm_for_node("stream_updates", config)
+    llm = get_configured_llm_for_node("stream_updates", config, schema=StreamUpdateResponse)
     response = await llm.ainvoke(stream_update_prompt)
 
-    return {"messages": [AIMessage(content=response.content)], "subquery_index": query_index + 1}
+    stream_message = response.stream_update
+    continue_execution = response.continue_execution
+
+    llm = GenericFakeChatModel(messages=iter([stream_message]), metadata=config.get("metadata", {}))
+    response = await llm.ainvoke(input=stream_message)
+
+    return {
+        "messages": [AIMessage(content=stream_message)],
+        "subquery_index": query_index + 1,
+        "continue_execution": continue_execution,
+    }
 
 
 async def check_further_execution_requirement(state: State, config: RunnableConfig) -> str:
     """
-    Determines if further execution is required based on the current state.
-    Returns a string indicating the next step: "next_sub_query" or
-    "end_execution".
+    Determines if further execution is required based on the continue_execution flag stored in state.
+    Returns a string indicating the next step: "next_sub_query" or "end_execution".
     """
 
-    last_stream_message = state.get("messages", [])[-1]
+    continue_execution = state.get("continue_execution", True)
 
-    analysis_prompt = get_prompt(
-        node_name="execution_analysis",
-        last_stream_message_content=last_stream_message.content,
-    )
-
-    llm = get_configured_llm_for_node(
-        "check_further_execution_requirement", config, schema=ExecutionAnalysisOutput
-    )
-    response = await llm.ainvoke(analysis_prompt)
-
-    try:
-        logger.debug(f"Execution decision: {response.model_dump()}")
-        continue_execution = response.continue_execution
-
-        if continue_execution:
-            return "next_sub_query"
-        else:
-            return "end_execution"
-    except Exception as e:
-        logger.error(f"Error processing LLM response: {str(e)}")
+    if continue_execution:
+        return "next_sub_query"
+    else:
         return "end_execution"

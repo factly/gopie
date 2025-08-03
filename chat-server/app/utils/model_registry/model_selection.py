@@ -35,9 +35,6 @@ NODE_CONFIGS = {
     "validate_result": NodeConfig(
         ModelCategory.BALANCED, TemperatureCategory.DETERMINISTIC, json_mode=True
     ),
-    "check_further_execution_requirement": NodeConfig(
-        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
-    ),
     "check_visualization": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
     "identify_datasets": NodeConfig(
         ModelCategory.BALANCED, TemperatureCategory.DETERMINISTIC, json_mode=True
@@ -58,8 +55,10 @@ NODE_CONFIGS = {
     "generate_subqueries": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
     ),
+    "stream_updates": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.CREATIVE, json_mode=True
+    ),
     "generate_result": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
-    "stream_updates": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
     "response": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
 }
 

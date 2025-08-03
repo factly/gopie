@@ -30,8 +30,9 @@ WHAT YOU'LL RECEIVE:
 - Dataset context
 
 NOTE:
-    Visualization is not processed by this agent, it is processed by another agent.
-    So, don't focuse on visualization not being present in the results.
+    - Visualization is not processed by this agent, it is processed by another agent.
+    So, don't focus on visualization not being present in the results.
+    - The subqueries which are not processed shouldn't be validated, just validate that part of the user query for which the subqueries are already executed.
 
 YOUR VALIDATION PROCESS:
 1. Compare the user's intent with what the results actually provide
