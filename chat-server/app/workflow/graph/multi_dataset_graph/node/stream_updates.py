@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
+from app.core.log import logger
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
@@ -20,43 +21,43 @@ class StreamUpdateResponse(BaseModel):
     )
 
 
-@configure_node(
-    role="ai",
-    progress_message="",
-)
 async def stream_updates(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
     subqueries = state.get("subqueries", [])
 
-    subquery_result = query_result.subqueries[query_index]
+    stream_message = ""
+    continue_execution = False
 
-    remaining_index = query_index + 1
-    remaining_subqueries = [sq for sq in subqueries[remaining_index:]]
+    try:
+        subquery_result = query_result.subqueries[query_index]
 
-    subquery_messages = f"""
-        This is subquery {query_index + 1} / {len(subqueries)}:\n
-        {subquery_result.query_text}\n\n
+        remaining_index = query_index + 1
+        remaining_subqueries = [sq for sq in subqueries[remaining_index:]]
 
-        Remaining subqueries:
-        {remaining_subqueries}
-    """
+        subquery_messages = f"""
+            This is subquery {query_index + 1} / {len(subqueries)}:\n
+            {subquery_result.query_text}\n\n
 
-    stream_update_prompt = get_prompt(
-        node_name="stream_updates",
-        subquery_result=json.dumps(subquery_result.to_dict()),
-        original_user_query=query_result.original_user_query,
-        subquery_messages=subquery_messages,
-    )
+            Remaining subqueries:
+            {remaining_subqueries}
+        """
 
-    llm = get_configured_llm_for_node("stream_updates", config, schema=StreamUpdateResponse)
-    response = await llm.ainvoke(stream_update_prompt)
+        stream_update_prompt = get_prompt(
+            node_name="stream_updates",
+            subquery_result=json.dumps(subquery_result.to_dict()),
+            original_user_query=query_result.original_user_query,
+            subquery_messages=subquery_messages,
+        )
 
-    stream_message = response.stream_update
-    continue_execution = response.continue_execution
+        llm = get_configured_llm_for_node("stream_updates", config, schema=StreamUpdateResponse)
+        response = await llm.ainvoke(stream_update_prompt)
 
-    llm = GenericFakeChatModel(messages=iter([stream_message]), metadata=config.get("metadata", {}))
-    response = await llm.ainvoke(input=stream_message)
+        stream_message = response.stream_update
+        continue_execution = response.continue_execution
+    except Exception as e:
+        stream_message = "Something went wrong while generating the subquery response"
+        logger.error(f"Error in stream_updates: {e}")
 
     return {
         "messages": [AIMessage(content=stream_message)],
@@ -65,6 +66,10 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
     }
 
 
+@configure_node(
+    role="ai",
+    progress_message="",
+)
 async def check_further_execution_requirement(state: State, config: RunnableConfig) -> str:
     """
     Determines if further execution is required based on the continue_execution flag stored in state.
@@ -72,6 +77,13 @@ async def check_further_execution_requirement(state: State, config: RunnableConf
     """
 
     continue_execution = state.get("continue_execution", True)
+    last_message = state["messages"][-1]
+
+    if isinstance(last_message, AIMessage):
+        llm = GenericFakeChatModel(
+            messages=iter([last_message]), metadata=config.get("metadata", {})
+        )
+        await llm.ainvoke(input=last_message.content)
 
     if continue_execution:
         return "next_sub_query"
