@@ -112,7 +112,7 @@ async def get_schema_by_dataset_ids(
 
 
 @traceable(run_type="tool", name="get_schema_by_dataset_ids")
-async def get_project_schema(project_id: str) -> list[DatasetSchema]:
+async def get_project_schema(project_id: str) -> Optional[DatasetSchema]:
     """
     Get the custom prompt for a list of datasets from Qdrant database.
 
@@ -131,25 +131,22 @@ async def get_project_schema(project_id: str) -> list[DatasetSchema]:
                 match=MatchValue(value=project_id),
             )
         ]
-        search_result = await client.scroll(
+        points, _ = await client.scroll(
             collection_name=settings.QDRANT_COLLECTION,
             scroll_filter=Filter(should=filter_conditions),
             limit=1,
         )
-        schemas = []
-        if search_result[0]:
-            for point in search_result[0]:
-                payload = point.payload
-                if payload:
-                    try:
-                        metadata = payload.get("metadata", {})
-                        dataset_schema = DatasetSchema(**metadata)
-                        schemas.append(dataset_schema)
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Error parsing schema JSON: {e}")
-                        continue
-        return schemas
+        for point in points:
+            payload = point.payload
+            if payload:
+                try:
+                    metadata = payload.get("metadata", {})
+                    dataset_schema = DatasetSchema(**metadata)
+                    return dataset_schema
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Error parsing schema JSON: {e}")
+                    continue
 
     except Exception as e:
         logger.error(f"Error retrieving schemas from Qdrant: {e}")
-        return []
+        return None
