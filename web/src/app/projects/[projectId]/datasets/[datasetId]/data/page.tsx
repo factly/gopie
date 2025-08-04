@@ -3,7 +3,7 @@
 import "regenerator-runtime/runtime";
 import * as React from "react";
 import { motion } from "framer-motion";
-import { useDatasetSql, SqlQueryParams } from "@/lib/mutations/dataset/sql";
+import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
 import {
   PlayIcon,
