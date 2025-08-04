@@ -79,23 +79,34 @@ export function VisualizationResults({
   useEffect(() => {
     visualizations.forEach((viz, index) => {
       if (viz.spec && !viz.isLoading && !viz.error && vizRefs.current[index]) {
-        vegaEmbed(vizRefs.current[index]!, viz.spec, {
+        // Create a copy of the spec and update schema to match our library version
+        const updatedSpec = {
+          ...viz.spec,
+          $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+        };
+
+        const embedOptions = {
           actions: {
             export: true,
             source: false,
             compiled: false,
             editor: false,
           },
-        }).catch((error) => {
-          console.error("Error rendering visualization:", error);
-          setVisualizations((prev) =>
-            prev.map((v, i) =>
-              i === index
-                ? { ...v, error: "Failed to render visualization" }
-                : v
-            )
-          );
-        });
+          renderer: "svg" as const,
+        };
+
+        vegaEmbed(vizRefs.current[index]!, updatedSpec, embedOptions).catch(
+          (error) => {
+            console.error("Error rendering visualization:", error);
+            setVisualizations((prev) =>
+              prev.map((v, i) =>
+                i === index
+                  ? { ...v, error: "Failed to render visualization" }
+                  : v
+              )
+            );
+          }
+        );
       }
     });
   }, [visualizations]);
@@ -181,12 +192,12 @@ export function VisualizationResults({
                     </p>
                   </div>
                 ) : (
-                  <div className="min-h-[300px]">
+                  <div className="h-[400px]">
                     <div
                       ref={(el) => {
                         vizRefs.current[index] = el;
                       }}
-                      className="w-full"
+                      className="w-full h-full"
                     />
                   </div>
                 )}

@@ -74,7 +74,10 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
   const { resetExecutedQueries, setIsOpen } = useSqlStore();
-  const { clearPaths: clearVisualizationPaths, setIsOpen: setVisualizationOpen } = useVisualizationStore();
+  const {
+    clearPaths: clearVisualizationPaths,
+    setIsOpen: setVisualizationOpen,
+  } = useVisualizationStore();
 
   const deleteChat = useDeleteChat();
 
@@ -209,8 +212,6 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
 
   return (
     <div className="flex flex-col">
-
-
       {allChats.length > 0 ? (
         <ScrollArea className="flex-1 pr-2">
           <div className="space-y-2">
@@ -494,7 +495,9 @@ function ChatPageClient() {
   const contextsFromUrl = searchParams.get("contexts");
   const chatIdFromUrl = searchParams.get("chatId");
   const tabFromUrl = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState(tabFromUrl === "history" ? "history" : "chat");
+  const [activeTab, setActiveTab] = useState(
+    tabFromUrl === "history" ? "history" : "chat"
+  );
   const queryClient = useQueryClient();
 
   // Get current user from auth store
@@ -636,24 +639,14 @@ function ChatPageClient() {
       // Pass the current chat ID if available
       chat_id: selectedChatId || undefined,
     },
-    onResponse: async (response) => {
-      console.log(
-        "Chat response received:",
-        response.status,
-        response.statusText
-      );
+    onResponse: async () => {
       // Switch to streaming messages when we start receiving a response
       setUseStreamingMessages(true);
       setIsStreaming(true);
       // Hide loading message once we start receiving the actual stream
       setShowLoadingMessage(false);
     },
-    onFinish: (message, { usage, finishReason }) => {
-      console.log("Chat message finished:", message);
-      console.log("Usage:", usage);
-      console.log("Finish reason:", finishReason);
-      console.log("Current selectedChatId when finishing:", selectedChatId);
-
+    onFinish: (message) => {
       // Update latest assistant message for voice mode
       if (message.role === "assistant") {
         // setLatestAssistantMessage(message.content); // Removed voice mode state
@@ -663,7 +656,6 @@ function ChatPageClient() {
 
       // If this was a new chat (no selectedChatId), invalidate chats list
       if (!selectedChatId) {
-        console.log("New chat completed, invalidating chats list");
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       }
 
@@ -687,7 +679,7 @@ function ChatPageClient() {
   // Determine which messages to display
   const displayMessages = useMemo(() => {
     let messages = [];
-    
+
     if (useStreamingMessages) {
       // When streaming, show streaming messages (which includes the user message immediately)
       // If we have a selectedChatId, prepend existing messages
@@ -701,40 +693,40 @@ function ChatPageClient() {
       // Otherwise, use query messages
       messages = allChatMessages;
     }
-    
+
     // Add optimistic loading message if needed
     if (showLoadingMessage && messages.length > 0) {
       // Check if the last message is from the user and there's no assistant message yet
       const lastMessage = messages[messages.length - 1];
-      const hasAssistantResponse = streamingMessages.some(msg => msg.role === 'assistant' && msg.content);
-      
-      if (lastMessage.role === 'user' && !hasAssistantResponse) {
+      const hasAssistantResponse = streamingMessages.some(
+        (msg) => msg.role === "assistant" && msg.content
+      );
+
+      if (lastMessage.role === "user" && !hasAssistantResponse) {
         // Add a loading assistant message
-        messages = [...messages, {
-          id: 'loading-' + Date.now(),
-          role: 'assistant' as const,
-          content: '',
-          createdAt: new Date()
-        } as UIMessage];
+        messages = [
+          ...messages,
+          {
+            id: "loading-" + Date.now(),
+            role: "assistant" as const,
+            content: "",
+            createdAt: new Date(),
+          } as UIMessage,
+        ];
       }
     }
-    
-    return messages;
-  }, [useStreamingMessages, streamingMessages, allChatMessages, selectedChatId, showLoadingMessage]);
 
-  // Log messages for debugging
-  useEffect(() => {
-    console.log("Messages updated:", displayMessages);
-  }, [displayMessages]);
+    return messages;
+  }, [
+    useStreamingMessages,
+    streamingMessages,
+    allChatMessages,
+    selectedChatId,
+    showLoadingMessage,
+  ]);
 
   // Log chat title state for debugging
   useEffect(() => {
-    console.log("Chat title state:", {
-      selectedChatTitle,
-      selectedChatId,
-      isLoadingChatDetails,
-      chatDetails: chatDetails?.title,
-    });
     if (chatDetails && chatDetails.title) {
       selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
       setSelectedChatTitle(chatDetails.title);
@@ -752,9 +744,6 @@ function ChatPageClient() {
   // Handle data stream for chat creation
   useEffect(() => {
     if (data && data.length > 0) {
-      console.log("Data stream received:", data);
-      console.log("Current selectedChatId in data effect:", selectedChatId);
-
       // Check for chat creation message - look for the most recent one
       const chatCreatedMessages = data.filter((item: unknown) => {
         return (
@@ -765,25 +754,12 @@ function ChatPageClient() {
         );
       }) as { type: string; chatId: string }[];
 
-      console.log("Found chat creation messages:", chatCreatedMessages);
-
       // Get the latest chat creation message
       const latestChatCreated =
         chatCreatedMessages[chatCreatedMessages.length - 1];
 
       if (latestChatCreated) {
-        console.log(
-          "Processing chat creation data:",
-          latestChatCreated,
-          "Current selectedChatId:",
-          selectedChatId
-        );
-
         if (!selectedChatId) {
-          console.log(
-            "New chat ID created via data stream:",
-            latestChatCreated.chatId
-          );
           // Update the chat store with the new chat ID and a default title
           const datasetContext = selectedContexts.find(
             (ctx) => ctx.type === "dataset"
@@ -804,10 +780,6 @@ function ChatPageClient() {
           queryClient.invalidateQueries({
             queryKey: ["chat-messages", { chatId: latestChatCreated.chatId }],
           });
-        } else {
-          console.log(
-            "Chat ID already set, ignoring data stream chat creation"
-          );
         }
       }
     }
@@ -849,19 +821,21 @@ function ChatPageClient() {
     (e: React.FormEvent) => {
       // Prevent submission if no context is selected
       if (selectedContexts.length === 0) {
-        toast.error("Please select at least one project or dataset before sending a message");
+        toast.error(
+          "Please select at least one project or dataset before sending a message"
+        );
         return;
       }
-      
+
       // For new chats, immediately switch to streaming messages to show the user message
       if (!selectedChatId && input.trim()) {
         setUseStreamingMessages(true);
       }
-      
+
       // Set loading state immediately
       setIsStreaming(true);
       setShowLoadingMessage(true);
-      
+
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
     [sdkHandleSubmit, selectedContexts, selectedChatId, input]
@@ -884,12 +858,16 @@ function ChatPageClient() {
   useEffect(() => {
     if (!contextInitialized && contextsFromUrl && !contextData) {
       try {
-        const parsedContexts = JSON.parse(decodeURIComponent(contextsFromUrl)) as ContextItem[];
+        const parsedContexts = JSON.parse(
+          decodeURIComponent(contextsFromUrl)
+        ) as ContextItem[];
         if (Array.isArray(parsedContexts) && parsedContexts.length > 0) {
           setSelectedContexts(parsedContexts);
-          
+
           // Set linked dataset if there's a dataset context
-          const datasetContext = parsedContexts.find(ctx => ctx.type === "dataset");
+          const datasetContext = parsedContexts.find(
+            (ctx) => ctx.type === "dataset"
+          );
           if (datasetContext) {
             setLinkedDatasetId(datasetContext.id);
           }
@@ -905,24 +883,21 @@ function ChatPageClient() {
 
   // Update chat title when chat details are loaded
   useEffect(() => {
-    console.log("Chat details effect:", {
-      chatDetails,
-      selectedChatId,
-      linkedDatasetId,
-      chatDetailsId: chatDetails?.id,
-      chatDetailsTitle: chatDetails?.title,
-    });
-
     if (
       chatDetails &&
       selectedChatId &&
       chatDetails.id === selectedChatId &&
       chatDetails.title
     ) {
-      console.log("Updating chat title to:", chatDetails.title);
       selectChatForDataset(linkedDatasetId, selectedChatId, chatDetails.title);
     }
-  }, [chatDetails, selectedChatId, linkedDatasetId, selectChatForDataset, setSelectedChatTitle]);
+  }, [
+    chatDetails,
+    selectedChatId,
+    linkedDatasetId,
+    selectChatForDataset,
+    setSelectedChatTitle,
+  ]);
 
   // Handle chat details loading error
   useEffect(() => {
@@ -990,7 +965,17 @@ function ChatPageClient() {
         console.error("Failed to parse context data:", error);
       }
     }
-  }, [contextData, resetExecutedQueries, clearVisualizationPaths, setIsOpen, setVisualizationOpen, selectChatForDataset, setLinkedDatasetId, searchParams, router]);
+  }, [
+    contextData,
+    resetExecutedQueries,
+    clearVisualizationPaths,
+    setIsOpen,
+    setVisualizationOpen,
+    selectChatForDataset,
+    setLinkedDatasetId,
+    searchParams,
+    router,
+  ]);
 
   useEffect(() => {
     resetExecutedQueries();
@@ -1008,7 +993,7 @@ function ChatPageClient() {
     ) {
       // Decode the initial message
       const decodedMessage = decodeURIComponent(initialMessage);
-      
+
       // Set the input value
       handleInputChange(decodedMessage);
 
@@ -1020,24 +1005,27 @@ function ChatPageClient() {
         // Another frame to ensure the input value is properly set
         requestAnimationFrame(() => {
           // Now submit the form
-          const form = document.querySelector('form');
+          const form = document.querySelector("form");
           if (form && form instanceof HTMLFormElement) {
             // Try using requestSubmit if available (modern browsers)
-            if ('requestSubmit' in form && typeof form.requestSubmit === 'function') {
+            if (
+              "requestSubmit" in form &&
+              typeof form.requestSubmit === "function"
+            ) {
               form.requestSubmit();
             } else {
               // Fallback for older browsers
-              const submitEvent = new Event('submit', { 
-                bubbles: true, 
-                cancelable: true 
+              const submitEvent = new Event("submit", {
+                bubbles: true,
+                cancelable: true,
               });
               form.dispatchEvent(submitEvent);
             }
           } else {
             // Direct fallback if form is not found
-            const submitEvent = new Event("submit", { 
-              bubbles: true, 
-              cancelable: true 
+            const submitEvent = new Event("submit", {
+              bubbles: true,
+              cancelable: true,
             });
             handleSubmit(submitEvent as unknown as React.FormEvent);
           }
@@ -1095,21 +1083,27 @@ function ChatPageClient() {
     }
   }, [displayMessages]);
 
-  const handleSelectContext = useCallback((context: ContextItem) => {
-    setSelectedContexts((prev) => {
-      const newContexts = [...prev, context];
-      updateUrlWithContext(newContexts);
-      return newContexts;
-    });
-  }, [updateUrlWithContext]);
+  const handleSelectContext = useCallback(
+    (context: ContextItem) => {
+      setSelectedContexts((prev) => {
+        const newContexts = [...prev, context];
+        updateUrlWithContext(newContexts);
+        return newContexts;
+      });
+    },
+    [updateUrlWithContext]
+  );
 
-  const handleRemoveContext = useCallback((contextId: string) => {
-    setSelectedContexts((prev) => {
-      const newContexts = prev.filter((c) => c.id !== contextId);
-      updateUrlWithContext(newContexts);
-      return newContexts;
-    });
-  }, [updateUrlWithContext]);
+  const handleRemoveContext = useCallback(
+    (contextId: string) => {
+      setSelectedContexts((prev) => {
+        const newContexts = prev.filter((c) => c.id !== contextId);
+        updateUrlWithContext(newContexts);
+        return newContexts;
+      });
+    },
+    [updateUrlWithContext]
+  );
 
   // const handleSendVoiceMessage = useCallback(
   //   async (message: string) => {
@@ -1139,12 +1133,8 @@ function ChatPageClient() {
   const isCurrentUserOwner =
     !chatDetails || chatDetails.created_by === currentUserId;
 
-  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
-
-  console.log("currentUserId", currentUserId);
-  console.log("chatDetails", chatDetails);
-  console.log("isCurrentUserOwner", isCurrentUserOwner);
-  console.log("chatDetails.created_by", chatDetails?.created_by);
+  const isAuthDisabled =
+    String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
   // Close sidebar when chat page opens
   useEffect(() => {
@@ -1176,121 +1166,126 @@ function ChatPageClient() {
                 }}
                 className="w-full h-full flex flex-col relative"
               >
-              <div className="flex w-full items-center border-b relative z-10">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mr-2 ml-2 p-1 h-10 w-8"
-                  onClick={() => {
-                    if (isMobile) {
-                      setOpenMobile(!isSidebarOpen);
-                    } else {
-                      setOpen(!isSidebarOpen);
-                    }
-                  }}
-                >
-                  <PanelLeft className="h-4 w-4" />
-                </Button>
-                <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
-                  <TabsTrigger
-                    value="chat"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
+                <div className="flex w-full items-center border-b relative z-10">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mr-2 ml-2 p-1 h-10 w-8"
+                    onClick={() => {
+                      if (isMobile) {
+                        setOpenMobile(!isSidebarOpen);
+                      } else {
+                        setOpen(!isSidebarOpen);
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-2 truncate">
-                      {chatDetails?.visibility && (
-                        <ChatVisibilityIndicator
-                          visibility={chatDetails.visibility}
-                        />
-                      )}
-                      <span className="truncate">
-                        {isLoadingChatDetails && selectedChatId
-                          ? "Loading..."
-                          : selectedChatTitle
-                          ? selectedChatTitle
-                          : "Chat"}
-                      </span>
-                    </div>
-                  </TabsTrigger>
-                </TabsList>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`mr-2 ${activeTab === "history" ? "bg-muted border-b-2 border-primary" : ""}`}
-                      onClick={() => {
-                        setActiveTab("history");
-                        // Update URL with tab parameter
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.set("tab", "history");
-                        router.replace(`/chat?${params.toString()}`);
-                      }}
+                    <PanelLeft className="h-4 w-4" />
+                  </Button>
+                  <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
+                    <TabsTrigger
+                      value="chat"
+                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
                     >
-                      <History className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>History</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => {
-                        // Use window.location for a hard navigation to bypass all React state/effects
-                        window.location.href = '/chat';
-                      }}
-                    >
-                      <MessageSquarePlus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>New Chat</p>
-                  </TooltipContent>
-                </Tooltip>
-                {selectedChatId && (
-                  <ShareChatDialog
-                    chatId={selectedChatId}
-                    currentVisibility={chatDetails?.visibility || "private"}
-                  />
-                )}
-
-              </div>
-
-              <TabsContent
-                value="chat"
-                className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
-              >
-                <div className="flex flex-col h-full min-h-0 relative">
-                  <ChatView
-                    scrollRef={scrollRef}
-                    handleScroll={handleScroll}
-                    isLoading={isLoading}
-                    messages={displayMessages}
-                    selectedChatId={selectedChatId}
-                    isLoadingChatMessages={isLoadingChatMessages}
-                    hasNextPage={hasNextPage}
-                    fetchNextPage={fetchNextPage}
-                    isFetchingNextPage={isFetchingNextPage}
-                  />
+                      <div className="flex items-center gap-2 truncate">
+                        {chatDetails?.visibility && (
+                          <ChatVisibilityIndicator
+                            visibility={chatDetails.visibility}
+                          />
+                        )}
+                        <span className="truncate">
+                          {isLoadingChatDetails && selectedChatId
+                            ? "Loading..."
+                            : selectedChatTitle
+                            ? selectedChatTitle
+                            : "Chat"}
+                        </span>
+                      </div>
+                    </TabsTrigger>
+                  </TabsList>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`mr-2 ${
+                          activeTab === "history"
+                            ? "bg-muted border-b-2 border-primary"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          setActiveTab("history");
+                          // Update URL with tab parameter
+                          const params = new URLSearchParams(
+                            searchParams.toString()
+                          );
+                          params.set("tab", "history");
+                          router.replace(`/chat?${params.toString()}`);
+                        }}
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>History</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mr-2"
+                        onClick={() => {
+                          // Use window.location for a hard navigation to bypass all React state/effects
+                          window.location.href = "/chat";
+                        }}
+                      >
+                        <MessageSquarePlus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>New Chat</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {selectedChatId && (
+                    <ShareChatDialog
+                      chatId={selectedChatId}
+                      currentVisibility={chatDetails?.visibility || "private"}
+                    />
+                  )}
                 </div>
-              </TabsContent>
 
-              <TabsContent
-                value="history"
-                className="flex-1 overflow-hidden p-4 flex flex-col data-[state=inactive]:hidden border-none"
-              >
-                <ChatHistoryList
-                  setActiveTab={setActiveTab}
-                  setSelectedContexts={setSelectedContexts}
-                  setLinkedDatasetId={setLinkedDatasetId}
-                  currentUserId={currentUserId}
-                  updateUrlWithContext={updateUrlWithContext}
-                />
-              </TabsContent>
+                <TabsContent
+                  value="chat"
+                  className="flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden p-0 border-none min-h-0"
+                >
+                  <div className="flex flex-col h-full min-h-0 relative">
+                    <ChatView
+                      scrollRef={scrollRef}
+                      handleScroll={handleScroll}
+                      isLoading={isLoading}
+                      messages={displayMessages}
+                      selectedChatId={selectedChatId}
+                      isLoadingChatMessages={isLoadingChatMessages}
+                      hasNextPage={hasNextPage}
+                      fetchNextPage={fetchNextPage}
+                      isFetchingNextPage={isFetchingNextPage}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="history"
+                  className="flex-1 overflow-hidden p-4 flex flex-col data-[state=inactive]:hidden border-none"
+                >
+                  <ChatHistoryList
+                    setActiveTab={setActiveTab}
+                    setSelectedContexts={setSelectedContexts}
+                    setLinkedDatasetId={setLinkedDatasetId}
+                    currentUserId={currentUserId}
+                    updateUrlWithContext={updateUrlWithContext}
+                  />
+                </TabsContent>
               </Tabs>
               {activeTab === "chat" && (
                 <>
@@ -1354,7 +1349,9 @@ function ChatPageClient() {
                           // isVoiceModeActive={isVoiceModeActive}
                           // setIsVoiceModeActive={setIsVoiceModeActive}
                           lockableContextIds={
-                            selectedChatId && linkedDatasetId ? [linkedDatasetId] : []
+                            selectedChatId && linkedDatasetId
+                              ? [linkedDatasetId]
+                              : []
                           }
                           hasContext={selectedContexts.length > 0}
                           input={input}

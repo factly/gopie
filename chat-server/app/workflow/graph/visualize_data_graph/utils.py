@@ -203,7 +203,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
             json_task = s3_client.put_object(
                 Bucket=bucket_name,
                 Key=json_file_key,
-                Body=item_data.encode("utf-8"),
+                Body=item_data,
             )
             upload_tasks.append(json_task)
             s3_path = f"{s3_host}/{bucket_name}/{json_file_key}"

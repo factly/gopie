@@ -12,13 +12,13 @@ func (a *AST) ToCountQuery() (string, error) {
 
 	rootNode := a.rootNodes[0].ast
 
-	// 1. Remove LIMIT, OFFSET, and ORDER BY from the modifiers array
+	// 1. Remove ORDER BY from the modifiers array (preserve LIMIT for accurate counts)
 	originalModifiers := toNodeArray(rootNode, astKeyModifiers)
 	newModifiers := make([]astNode, 0, len(originalModifiers))
 	for _, modifier := range originalModifiers {
 		modifierType := toString(modifier, astKeyType)
-		// Keep any modifier that is NOT for LIMIT or ORDER BY
-		if modifierType != "LIMIT_MODIFIER" && modifierType != "ORDER_MODIFIER" {
+		// Keep any modifier that is NOT for ORDER BY (preserve LIMIT for count accuracy)
+		if modifierType != "ORDER_MODIFIER" {
 			newModifiers = append(newModifiers, modifier)
 		}
 	}

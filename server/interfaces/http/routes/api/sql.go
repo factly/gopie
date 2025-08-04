@@ -14,7 +14,9 @@ import (
 // sqlRequestBody represents the request body for SQL query execution
 // @Description Request body for executing a SQL query
 type sqlRequestBody struct {
-	Query string `json:"query" validate:"required,min=1" example:"SELECT * FROM sales_data WHERE value > 1000"`
+	Query  string `json:"query" validate:"required,min=1" example:"SELECT * FROM sales_data WHERE value > 1000"`
+	Limit  int    `json:"limit"`
+	Offset int    `json:"offset"`
 }
 
 // @Summary Execute SQL query
@@ -59,7 +61,7 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 
 	}
 
-	result, err := h.driverSvc.SqlQuery(body.Query, imposeLimits)
+	result, err := h.driverSvc.SqlQuery(body.Query, imposeLimits, body.Limit, body.Offset)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 

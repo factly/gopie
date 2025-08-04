@@ -13,7 +13,7 @@ class Dataset(BaseModel):
 
 
 class VisualizationResult(BaseModel):
-    data: list[str]
+    data: list[bytes]
     errors: list[str] = []
 
 

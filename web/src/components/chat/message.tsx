@@ -241,7 +241,6 @@ export function ChatMessage({
       message.parts.forEach((part) => {
         if (part.type === "tool-invocation") {
           const { toolName, args } = part.toolInvocation;
-          console.log(toolName, args, part.toolInvocation);
 
           if (toolName === "datasets_used" && args.datasets) {
             // Handle datasets_used tool
@@ -358,7 +357,14 @@ export function ChatMessage({
       setDisplayDatasets(finalizedDatasets || []);
       setDisplaySqlQueries(finalizedSqlQuery ? [finalizedSqlQuery] : []);
     }
-  }, [message, content, finalizedDatasets, finalizedSqlQuery, chatId, setVisualizationPaths]);
+  }, [
+    message,
+    content,
+    finalizedDatasets,
+    finalizedSqlQuery,
+    chatId,
+    setVisualizationPaths,
+  ]);
 
   const handleRunQuery = useCallback(
     async (query: string) => {
@@ -656,7 +662,8 @@ export function ChatMessage({
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const queryToRun = editedQueries.get(index) ?? query;
+                            const queryToRun =
+                              editedQueries.get(index) ?? query;
                             handleRunQuery(queryToRun);
                           }}
                           disabled={isExecuting}
