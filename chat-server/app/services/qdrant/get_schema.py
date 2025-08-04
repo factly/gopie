@@ -1,9 +1,7 @@
-import asyncio
 import json
-from typing import Awaitable, Optional
+from typing import Optional
 
 from langsmith import traceable
-from qdrant_client.conversions import common_types as qdrant_types
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
@@ -114,7 +112,7 @@ async def get_schema_by_dataset_ids(
 
 
 @traceable(run_type="tool", name="get_schema_by_dataset_ids")
-async def get_project_schema(project_ids: list[str]) -> str:
+async def get_project_schema(project_id: str) -> list[DatasetSchema]:
     """
     Get the custom prompt for a list of datasets from Qdrant database.
 
@@ -127,30 +125,20 @@ async def get_project_schema(project_ids: list[str]) -> str:
     try:
         client = await QdrantSetup.get_async_client()
 
-        filter_conditions = []
-
-        tasks: list[
-            Awaitable[tuple[list[qdrant_types.Record], Optional[qdrant_types.PointId]]]
-        ] = []
-        for project_id in project_ids:
-            filter_conditions.append(
-                FieldCondition(
-                    key="metadata.project_id",
-                    match=MatchValue(value=project_id),
-                )
+        filter_conditions = [
+            FieldCondition(
+                key="metadata.project_id",
+                match=MatchValue(value=project_id),
             )
-            tasks.append(
-                client.scroll(
-                    collection_name=settings.QDRANT_COLLECTION,
-                    scroll_filter=Filter(should=filter_conditions),
-                    limit=1,
-                )
-            )
+        ]
+        search_result = await client.scroll(
+            collection_name=settings.QDRANT_COLLECTION,
+            scroll_filter=Filter(should=filter_conditions),
+            limit=1,
+        )
         schemas = []
-        if tasks:
-            search_results = await asyncio.gather(*tasks)
-            points = [result[0][0] for result in search_results]
-            for point in points:
+        if search_result[0]:
+            for point in search_result[0]:
                 payload = point.payload
                 if payload:
                     try:
