@@ -157,13 +157,17 @@ def format_query_result(query_result: QueryResult) -> str:
     """
     Format a comprehensive query result into a detailed, human-readable multi-line string.
 
-    The output includes the original user query, execution time, analyze query result, and, if present, a formatted summary of a single dataset query result. If subqueries exist, each is detailed with its query text, tables used, executed SQL queries (including their explanations and results), error messages, and any additional context messages. If no subqueries are present, the output notes this explicitly.
+    The output includes the original user query, execution time, analyze query result, and, if present, a formatted summary of a single dataset query result. If subqueries exist, they are categorized into two sections:
+    1. Executed subqueries: Detailed with their query text, tables used, executed SQL queries (including their explanations and results), error messages, and any additional context messages.
+    2. Pending subqueries: Listed with their query text and a note that they will be executed and processed further.
+
+    Only includes subqueries that have been executed (have SQL queries with results, have a no_sql_response, or have error messages) in the main results section.
 
     Parameters:
         query_result (QueryResult): The query result object to format.
 
     Returns:
-        str: A structured string summarizing the query result, including subqueries and their details.
+        str: A structured string summarizing the query result, including executed subqueries and pending subqueries.
     """
     user_query = query_result.original_user_query
 
@@ -183,11 +187,32 @@ def format_query_result(query_result: QueryResult) -> str:
         )
 
     if query_result.has_subqueries():
-        input_parts.append(f"SUBQUERIES PROCESSED: {len(query_result.subqueries)}")
+        executed_subqueries = [
+            subquery for subquery in query_result.subqueries if _is_subquery_executed(subquery)
+        ]
+        pending_subqueries = [
+            subquery for subquery in query_result.subqueries if not _is_subquery_executed(subquery)
+        ]
 
-        for i, subquery in enumerate(query_result.subqueries, 1):
-            subquery_sections = format_subquery_info(subquery, i)
-            input_parts.extend(subquery_sections)
+        if executed_subqueries:
+            input_parts.append(f"SUBQUERIES PROCESSED: {len(executed_subqueries)}")
+
+            for i, subquery in enumerate(executed_subqueries, 1):
+                subquery_sections = format_subquery_info(subquery, i)
+                input_parts.extend(subquery_sections)
+        else:
+            input_parts.append("No subqueries have been executed yet")
+
+        if pending_subqueries:
+            input_parts.append(
+                f"\nPENDING SUBQUERIES: {len(pending_subqueries)} remaining to be processed"
+            )
+            for i, subquery in enumerate(pending_subqueries, 1):
+                input_parts.append(f"\n--- PENDING SUBQUERY {i} ---")
+                input_parts.append(f"Query: {subquery.query_text}")
+                input_parts.append(
+                    "Status: Will be processed further so don't validate this subquery"
+                )
     else:
         input_parts.append("No subqueries were processed")
 
@@ -230,3 +255,17 @@ def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) 
             input_str += format_failed_sql_results(failed_results)
 
     return input_str
+
+
+def _is_subquery_executed(subquery: SubQueryInfo) -> bool:
+    """
+    Check if a subquery has been executed.
+    Args:
+        subquery: The subquery to check
+
+    Returns:
+        bool: True if the subquery has been executed, False otherwise
+    """
+    return (
+        bool(subquery.sql_queries) or bool(subquery.no_sql_response) or bool(subquery.error_message)
+    )

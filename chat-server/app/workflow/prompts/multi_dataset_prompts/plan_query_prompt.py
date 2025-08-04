@@ -5,9 +5,6 @@ from langchain_core.prompts import (
 )
 
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
 
 
 def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
@@ -22,7 +19,6 @@ Before deciding on your response, internally validate:
 1. **Data Compatibility**: Can the available datasets answer the user's question?
 2. **Column Availability**: Are required columns present in the datasets?
 3. **Join Feasibility**: If multiple datasets are needed, can they be properly joined?
-4. **Data Quality**: Is there sufficient sample data to understand the structure?
 
 Based on this internal validation, choose ONE response path:
 
@@ -47,20 +43,6 @@ Based on this internal validation, choose ONE response path:
 - Exclude 'Total' categories and state='All India' when filtering
 - Include units/unit columns when displaying values
 
-## RESPONSE FORMAT
-Use this single JSON format for the responses:
-{
-    "sql_queries": [
-        {
-            "sql_query": "SQL query without semicolon",
-            "explanation": "Query strategy, columns used, table metadata, expected results",
-            "tables_used": ["list of table names"],
-        }
-    ],
-    "response_for_no_sql": "Clear explanation when SQL queries cannot be generated",
-    "limitations": "Any constraints or assumptions in the analysis"
-}
-
 **Response Guidelines**:
 - If SQL can be generated: populate `sql_queries` array, leave `response_for_no_sql` empty
 - If SQL cannot be generated: populate `response_for_no_sql`, leave `sql_queries` array empty
@@ -75,7 +57,7 @@ Use this single JSON format for the responses:
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )
@@ -117,10 +99,25 @@ def format_plan_query_input(
                 for col_analysis in analysis.columns_analyzed:
                     col_name = col_analysis.column_name
                     verified_values = col_analysis.verified_values
+                    suggested_alternatives = col_analysis.suggested_alternatives
+
                     if verified_values:
                         exact_vals = [v.value for v in verified_values if v.found_in_database]
+                        not_found_vals = [
+                            v.value for v in verified_values if not v.found_in_database
+                        ]
+
                         if exact_vals:
-                            input_str += f"- {col_name}: {', '.join(exact_vals)}\n"
+                            input_str += f"- {col_name} (exact matches): {', '.join(exact_vals)}\n"
+                        if not_found_vals:
+                            input_str += f"- {col_name} (not found): {', '.join(not_found_vals)}\n"
+
+                    if suggested_alternatives:
+                        for suggestion in suggested_alternatives:
+                            if suggestion.found_similar_values and suggestion.similar_values:
+                                input_str += f"- {col_name} (alternatives for '{suggestion.requested_value}'): {', '.join(suggestion.similar_values)}\n"
+                            else:
+                                input_str += f"- {col_name} (no alternatives found for '{suggestion.requested_value}')\n"
 
     if error_messages and retry_count > 0:
         input_str += "\n⚠️ PREVIOUS ERRORS:\n"

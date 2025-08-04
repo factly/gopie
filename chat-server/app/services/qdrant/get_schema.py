@@ -1,7 +1,9 @@
+import asyncio
 import json
-from typing import Optional
+from typing import Awaitable, Optional
 
 from langsmith import traceable
+from qdrant_client.conversions import common_types as qdrant_types
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
@@ -40,7 +42,7 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
                 limit=1,
             )
 
-        if not search_result[0]:
+        if not search_result[0][0]:
             return None
 
         payload = search_result[0][0].payload
@@ -104,6 +106,60 @@ async def get_schema_by_dataset_ids(
                         logger.warning(f"Error parsing schema JSON: {e}")
                         continue
 
+        return schemas
+
+    except Exception as e:
+        logger.error(f"Error retrieving schemas from Qdrant: {e}")
+        return []
+
+
+@traceable(run_type="tool", name="get_schema_by_dataset_ids")
+async def get_project_schema(project_ids: list[str]) -> str:
+    """
+    Get the custom prompt for a list of datasets from Qdrant database.
+
+    Args:
+        project_ids: List of project IDs to retrieve schemas for.
+
+    Returns:
+        List of schema objects for the provided dataset IDs.
+    """
+    try:
+        client = await QdrantSetup.get_async_client()
+
+        filter_conditions = []
+
+        tasks: list[
+            Awaitable[tuple[list[qdrant_types.Record], Optional[qdrant_types.PointId]]]
+        ] = []
+        for project_id in project_ids:
+            filter_conditions.append(
+                FieldCondition(
+                    key="metadata.project_id",
+                    match=MatchValue(value=project_id),
+                )
+            )
+            tasks.append(
+                client.scroll(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    scroll_filter=Filter(should=filter_conditions),
+                    limit=1,
+                )
+            )
+        schemas = []
+        if tasks:
+            search_results = await asyncio.gather(*tasks)
+            points = [result[0][0] for result in search_results]
+            for point in points:
+                payload = point.payload
+                if payload:
+                    try:
+                        metadata = payload.get("metadata", {})
+                        dataset_schema = DatasetSchema(**metadata)
+                        schemas.append(dataset_schema)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Error parsing schema JSON: {e}")
+                        continue
         return schemas
 
     except Exception as e:

@@ -2,7 +2,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.agent.types import AgentState
 from app.workflow.events.event_utils import configure_node
 
@@ -20,9 +20,19 @@ async def generate_result(state: AgentState, config: RunnableConfig) -> dict:
     with a single AI message.
     """
 
+    continue_execution = state.get("continue_execution")
+    if continue_execution is False:
+        message_provided_stream_update = (
+            "I need more specific information to provide a comprehensive answer. "
+            "Could you please clarify your question or provide additional context?"
+        )
+        return {
+            "messages": [AIMessage(content=message_provided_stream_update)],
+        }
+
     query_result = state["query_result"]
 
-    llm = get_model_provider(config).get_llm_for_node("generate_result")
+    llm = get_configured_llm_for_node("generate_result", config)
     prompt = get_prompt("generate_result", query_result=query_result)
 
     response = await llm.ainvoke(prompt)

@@ -4,8 +4,8 @@ services:
     ports:
       - "8787:8787"
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - TZ=${TZ:-UTC}
+      NODE_ENV: ${NODE_ENV:-production}
+      TZ: ${TZ:-UTC}
     restart: unless-stopped
     networks:
       - gopie

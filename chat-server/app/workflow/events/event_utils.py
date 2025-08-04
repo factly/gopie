@@ -3,7 +3,7 @@ from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
-from app.models.chat import NodeConfig, Role
+from app.models.chat import NodeEventConfig, Role
 
 
 def configure_node(
@@ -13,7 +13,7 @@ def configure_node(
     def decorator(func):
         @wraps(func)
         async def wrapper(state: Any, config: RunnableConfig, *args, **kwargs):
-            metadata = NodeConfig(
+            metadata = NodeEventConfig(
                 role=Role(role),
                 progress_message=progress_message,
             )

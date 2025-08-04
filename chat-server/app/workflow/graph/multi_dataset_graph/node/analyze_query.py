@@ -10,7 +10,7 @@ from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -58,7 +58,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             ToolNames.PLAN_SQL_QUERY,
         ]
 
-        llm = get_model_provider(config).get_llm_with_tools("analyze_query", tools_names)
+        llm = get_configured_llm_for_node("analyze_query", config, tool_names=tools_names)
         response = await llm.ainvoke(prompt)
 
         if has_tool_calls(response):

@@ -10,7 +10,7 @@ class Role(str, Enum):
     INTERMEDIATE = "intermediate"
 
 
-class NodeConfig(BaseModel):
+class NodeEventConfig(BaseModel):
     role: Role = Role.INTERMEDIATE
     progress_message: str = "Processing..."
 

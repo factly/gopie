@@ -1,4 +1,7 @@
+from typing import Type
+
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from app.core.config import settings
 
@@ -33,16 +36,39 @@ class LiteLLMProvider(BaseLLMProvider):
                 self.litellm_key_header_name: self.litellm_virtual_key,
             }
 
-    def get_llm_model(self, model_name: str, streaming: bool = True) -> ChatOpenAI:
-        return ChatOpenAI(
-            api_key="X",  # type: ignore
-            base_url=settings.LITELLM_BASE_URL,
-            model=model_name,
-            default_headers=self.headers,
-            extra_body={
+    def get_llm_model(
+        self,
+        model_name: str,
+        streaming: bool = True,
+        temperature: float | None = None,
+        json_mode: bool = False,
+        schema: Type[BaseModel] | None = None,
+    ):
+        kwargs = {
+            "api_key": "X",
+            "base_url": settings.LITELLM_BASE_URL,
+            "model": model_name,
+            "default_headers": self.headers,
+            "extra_body": {
                 "metadata": {
                     **self.metadata,
                 },
             },
-            streaming=streaming,
-        )
+            "streaming": streaming,
+            "max_tokens": settings.MAX_TOKENS,
+            "max_retries": settings.MAX_RETRIES,
+            "timeout": settings.TIMEOUT,
+        }
+
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+
+        llm = ChatOpenAI(**kwargs)
+
+        if json_mode:
+            if schema:
+                return llm.with_structured_output(schema)
+            else:
+                return llm.with_structured_output(method="json_mode")
+        else:
+            return llm

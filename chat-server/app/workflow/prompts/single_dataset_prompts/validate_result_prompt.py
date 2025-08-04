@@ -5,9 +5,6 @@ from langchain_core.prompts import (
 )
 
 from app.models.query import QueryResult
-from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
-    langsmith_compatible,
-)
 from app.workflow.prompts.formatters.format_query_result import (
     format_query_result,
 )
@@ -33,8 +30,9 @@ WHAT YOU'LL RECEIVE:
 - Dataset context
 
 NOTE:
-    Visualization is not processed by this agent, it is processed by another agent.
-    So, don't focuse on visualization not being present in the results.
+    - Visualization is not processed by this agent, it is processed by another agent.
+    So, don't focus on visualization not being present in the results.
+    - The subqueries which are not processed shouldn't be validated, just validate that part of the user query for which the subqueries are already executed.
 
 YOUR VALIDATION PROCESS:
 1. Compare the user's intent with what the results actually provide
@@ -64,12 +62,6 @@ RECOMMENDATION FIELD (choose the most appropriate):
     - "reidentify_datasets": The selected datasets are wrong, insufficient, or do not match the user's intent; new datasets should be identified.
     - "route_response": Results are sufficient to answer the user's question.
 
-RESPONSE FORMAT (JSON only):
-{
-    "recommendation": "pass_on_results" | "rerun_query" | "replan" | "reidentify_datasets" | "route_response",
-    "response": "A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
-}
-
 KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection. Your response should be actionable and concise, providing clear reasoning and next steps based on your analysis."""
 
     human_template_str = "{input}"
@@ -77,7 +69,7 @@ KEY PRINCIPLE: Focus on whether the user can get meaningful value from these res
     if prompt_template:
         return ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=langsmith_compatible(system_content)),
+                SystemMessage(content=system_content),
                 HumanMessagePromptTemplate.from_template(human_template_str),
             ]
         )

@@ -1,15 +1,11 @@
-# flake8: noqa: E501
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
 from app.models.schema import DatasetSchema
-from app.utils.model_registry.model_provider import get_model_provider
-from app.utils.model_registry.model_selection import get_node_model
+from app.utils.model_registry.model_provider import get_llm_for_other_task
 
-# fmt: off
-COLUMNS_PROMPT = """\
+COLUMNS_PROMPT = """
 You are a data analyst assistant tasked with generating clear, concise
 descriptions for the columns in the dataset.
 
@@ -24,28 +20,23 @@ INSTRUCTIONS:
 3. Do NOT include data types, statistics, or null information
 
 Return your response as a JSON object with column names as keys and descriptions as values.
-{example_format}
-"""
-
-example_format = """
 Example format:
-{"column_name_1": "Description of what column_name_1 represents...",
-"column_name_2": "Description of what column_name_2 represents..."}
+{{
+    "column_name_1": "Description of what column_name_1 represents...",
+    "column_name_2": "Description of what column_name_2 represents..."
+}}
 """
-# fmt: on
 
 
 def _get_chain():
-    """Get the LLM chain for generating column descriptions."""
-    model_id = get_node_model("generate_col_descriptions")
     prompt = ChatPromptTemplate.from_template(COLUMNS_PROMPT)
     config = RunnableConfig(
         configurable={
             "metadata": {"type": "col_description_generator"},
         }
     )
-    llm = get_model_provider(config).get_llm(model_id)
-    return prompt | llm | JsonOutputParser()
+    llm = get_llm_for_other_task("generate_col_descriptions", config=config)
+    return prompt | llm
 
 
 async def generate_column_descriptions(
@@ -65,9 +56,12 @@ async def generate_column_descriptions(
         response = await chain.ainvoke(
             {
                 "dataset_schema": schema.model_dump(exclude_defaults=True),
-                "example_format": example_format,
             }
         )
+
+        if not isinstance(response, dict):
+            raise ValueError("Invalid response format")
+
         return response
     except Exception as e:
         logger.exception(

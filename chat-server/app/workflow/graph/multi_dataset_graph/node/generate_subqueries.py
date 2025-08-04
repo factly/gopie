@@ -1,11 +1,24 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_model_provider
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.graph.multi_dataset_graph.types import State
+
+
+class AssessQueryComplexityOutput(BaseModel):
+    needs_breakdown: bool = Field(
+        description="Whether the query needs to be broken down into subqueries"
+    )
+    explanation: str = Field(description="Brief explanation of the decision about query complexity")
+
+
+class GenerateSubqueriesOutput(BaseModel):
+    subqueries: list[str] = Field(
+        description="List of generated subqueries in natural language", min_length=2, max_length=2
+    )
 
 
 async def generate_subqueries(state: State, config: RunnableConfig):
@@ -17,14 +30,13 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             "assess_query_complexity",
             user_input=user_input,
         )
-        llm = get_model_provider(config).get_llm_for_node("generate_subqueries")
+        llm = get_configured_llm_for_node(
+            "generate_subqueries", config, schema=AssessQueryComplexityOutput
+        )
         assessment_response = await llm.ainvoke(assessment_prompt)
 
-        parser = JsonOutputParser()
-        assessment_parsed = parser.parse(str(assessment_response.content))
-
-        needs_breakdown = assessment_parsed.get("needs_breakdown", False)
-        explanation = assessment_parsed.get("explanation", "")
+        needs_breakdown = assessment_response.needs_breakdown
+        explanation = assessment_response.explanation
 
         subqueries = []
 
@@ -33,10 +45,12 @@ async def generate_subqueries(state: State, config: RunnableConfig):
                 "generate_subqueries",
                 user_input=user_input,
             )
-            subqueries_response = await llm.ainvoke(subqueries_prompt)
+            subqueries_llm = get_configured_llm_for_node(
+                "generate_subqueries", config, schema=GenerateSubqueriesOutput
+            )
+            subqueries_response = await subqueries_llm.ainvoke(subqueries_prompt)
 
-            subqueries_parsed = parser.parse(str(subqueries_response.content))
-            subqueries = subqueries_parsed.get("subqueries", [])
+            subqueries = subqueries_response.subqueries
 
             subqueries_message = (
                 "I'll break down your query into steps to give you a more complete answer:"

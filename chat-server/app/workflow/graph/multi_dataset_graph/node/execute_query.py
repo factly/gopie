@@ -15,8 +15,12 @@ async def execute_query(state: State) -> dict:
     If an error occurs during execution, the error is recorded, the retry count is incremented, and an error message is returned.
     If no SQL queries are present (no-SQL response case), the function skips execution and returns the state unchanged.
     """
+    last_message = state.get("messages", [])[-1]
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
+
+    if isinstance(last_message, ErrorMessage):
+        pass
 
     try:
         sql_queries = query_result.subqueries[query_index].sql_queries
