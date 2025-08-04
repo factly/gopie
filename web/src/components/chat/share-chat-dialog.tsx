@@ -23,10 +23,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Share2, Globe, Lock, Building2 } from "lucide-react";
+import { Share2, Globe, Lock, Building2, Copy } from "lucide-react";
 import { ChatVisibility, useUpdateChatVisibility } from "@/lib/mutations/chat";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 
 interface ShareChatDialogProps {
   chatId: string;
@@ -67,6 +68,24 @@ export function ShareChatDialog({
 
   const updateVisibility = useUpdateChatVisibility();
 
+  const getChatLink = () => {
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}/chat?chatId=${chatId}`;
+    }
+    return "";
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      const chatLink = getChatLink();
+      await navigator.clipboard.writeText(chatLink);
+      toast.success("Chat link copied to clipboard");
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      toast.error("Failed to copy chat link");
+    }
+  };
+
   const handleUpdateVisibility = async () => {
     try {
       await updateVisibility.mutateAsync({
@@ -96,9 +115,9 @@ export function ShareChatDialog({
   const triggerButton = (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="mr-2"
           onClick={() => setOpen(true)}
         >
@@ -163,6 +182,29 @@ export function ShareChatDialog({
               </Select>
             </div>
 
+            {(selectedVisibility === "public" ||
+              selectedVisibility === "organization") && (
+              <div className="space-y-2">
+                <Label htmlFor="chat-link">Chat Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="chat-link"
+                    value={getChatLink()}
+                    readOnly
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    className="shrink-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {selectedVisibility === "public" && (
               <div className="p-3 bg-muted/50 border">
                 <div className="flex items-center gap-2 text-sm">
@@ -172,6 +214,19 @@ export function ShareChatDialog({
                 <p className="text-xs text-muted-foreground mt-1">
                   Anyone with this link will be able to view the chat
                   conversation.
+                </p>
+              </div>
+            )}
+
+            {selectedVisibility === "organization" && (
+              <div className="p-3 bg-muted/50 border">
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Organization Link</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Anyone in your organization with this link will be able to
+                  view the chat conversation.
                 </p>
               </div>
             )}
