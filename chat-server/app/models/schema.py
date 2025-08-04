@@ -107,10 +107,7 @@ class DatasetSchema(BaseModel):
         text = f"- Name: {self.name}\n"
         text += f"- Table Name (for SQL): {self.dataset_name}\n"
         text += f"- Description: {self.dataset_description}\n"
-        # TODO: Change project_custom_prompt only once per project.
         custom_instructions = ""
-        if self.project_custom_prompt and "project_custom_prompt" not in fields_to_exclude:
-            custom_instructions += f"{self.project_custom_prompt}\n"
         if self.dataset_custom_prompt and "dataset_custom_prompt" not in fields_to_exclude:
             custom_instructions += f"{self.dataset_custom_prompt}\n"
         if custom_instructions:

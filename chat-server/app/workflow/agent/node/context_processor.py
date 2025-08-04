@@ -1,7 +1,13 @@
+import asyncio
+
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.core.log import logger
+from app.services.qdrant.get_schema import (
+    get_project_schema,
+    get_schema_from_qdrant,
+)
 from app.utils.chat_history.processor import ChatHistoryProcessor
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
@@ -31,6 +37,16 @@ class ProcessContextOutput(BaseModel):
     )
 
 
+async def get_project_custom_prompts(dataset_ids: list[str], project_ids: list[str]) -> list[str]:
+    tasks = [get_schema_from_qdrant(dataset_id) for dataset_id in dataset_ids]
+    tasks.extend([get_project_schema(project_id) for project_id in project_ids])
+    schemas = await asyncio.gather(*tasks)
+    project_custom_prompts = [
+        schema.project_custom_prompt for schema in schemas if schema.project_custom_prompt
+    ]
+    return list(set(project_custom_prompts))
+
+
 @configure_node(
     role="intermediate",
     progress_message="Processing chat context...",
@@ -44,11 +60,14 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     formatted_chat_history = history_context["formatted_history"]
     last_vizpaths = history_context["vizpaths"]
     relevant_datasets_ids = history_context["datasets_used"]
-
+    dataset_ids = state.get("dataset_ids", [])
+    project_ids = state.get("project_ids", [])
+    project_custom_prompts = await get_project_custom_prompts(dataset_ids, project_ids)
     prompt_messages = get_prompt(
         "process_context",
         current_query=user_input,
         formatted_chat_history=formatted_chat_history,
+        project_custom_prompts=project_custom_prompts,
     )
 
     llm = get_configured_llm_for_node("process_context", config, schema=ProcessContextOutput)
