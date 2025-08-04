@@ -15,7 +15,7 @@ export function SqlPreview({
   language = "sql",
   height = "150px",
 }: SqlPreviewProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {

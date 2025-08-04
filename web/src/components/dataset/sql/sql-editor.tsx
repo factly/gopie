@@ -18,10 +18,10 @@ export function SqlEditor({
   schema,
   datasetId,
 }: SqlEditorProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const editorRef = React.useRef<monaco.editor.IStandaloneCodeEditor | null>(
-    null,
+    null
   );
 
   React.useEffect(() => {
@@ -82,7 +82,7 @@ export function SqlEditor({
               insertText: col.column_name,
               detail: `Column (${col.column_type})`,
               range: range,
-            })),
+            }))
           );
         }
 

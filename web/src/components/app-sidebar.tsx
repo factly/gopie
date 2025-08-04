@@ -38,7 +38,7 @@ import {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams();
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
 
   const [mounted, setMounted] = React.useState(false);
@@ -279,7 +279,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <div className="flex items-center justify-start">
                               <Image
                                 src={
-                                  mounted && theme === "dark"
+                                  mounted && resolvedTheme === "dark"
                                     ? "/GoPie_Logo_Dark.svg"
                                     : "/GoPie_Logo.svg"
                                 }
@@ -359,7 +359,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="flex items-center justify-start">
                       <Image
                         src={
-                          mounted && theme === "dark"
+                          mounted && resolvedTheme === "dark"
                             ? "/GoPie_Logo_Dark.svg"
                             : "/GoPie_Logo.svg"
                         }
