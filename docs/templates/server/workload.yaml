@@ -10,7 +10,9 @@ metadata:
   annotations:
     {{ include "server.annotations" . | nindent 4 }}
 spec:
+{{- if not .Values.deployment.autoscaling.enabled }}
   replicas: {{ .Values.deployment.replicaCount }}
+{{- end }}
   selector:
     matchLabels:
       {{ include "server.selectorLabels" . | nindent 6 }}
