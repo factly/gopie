@@ -214,7 +214,7 @@ def format_query_result(query_result: QueryResult) -> str:
                     "Status: Will be processed further so don't validate this subquery"
                 )
     else:
-        input_parts.append("No subqueries were processed")
+        input_parts.append("No SQL queries were processed")
 
     input_str = "\n".join(input_parts)
 
@@ -242,7 +242,7 @@ def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) 
         input_str += f"\n\nERROR: {error}"
 
     if response_for_non_sql:
-        input_str += f"\n\nNON-SQL RESPONSE:\n{response_for_non_sql}"
+        input_str += f"\n\nNON-SQL INFORMATION:\n{response_for_non_sql}"
 
     if sql_results is not None:
         successful_results = [r for r in sql_results if r.success]
