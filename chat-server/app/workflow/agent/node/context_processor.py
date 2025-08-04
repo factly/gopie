@@ -39,7 +39,8 @@ class ProcessContextOutput(BaseModel):
 
 async def get_project_custom_prompts(dataset_ids: list[str], project_ids: list[str]) -> list[str]:
     tasks = [get_schema_from_qdrant(dataset_id) for dataset_id in dataset_ids]
-    tasks.extend([get_project_schema(project_id) for project_id in project_ids])
+    for project_id in project_ids:
+        tasks.append(get_project_schema(project_id))
     schemas = await asyncio.gather(*tasks)
     project_custom_prompts = [
         schema.project_custom_prompt for schema in schemas if schema.project_custom_prompt
