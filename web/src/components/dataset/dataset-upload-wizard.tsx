@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import { UppyFile, Meta } from "@uppy/core";
 import { toast } from "sonner";
 import {
@@ -685,9 +686,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   onClick={() => openDbDialog("postgres")}
                   className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-muted/10 dark:bg-muted/20 aspect-[2/1] min-h-[60px]"
                 >
-                  <img
+                  <Image
                     src="/images/databases/postgres.svg"
                     alt="PostgreSQL"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -695,9 +698,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   onClick={() => openDbDialog("mysql")}
                   className="cursor-pointer group relative flex items-center justify-center py-3 sm:py-4 px-3 border rounded-lg hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-muted/10 dark:bg-muted/20 aspect-[2/1] min-h-[60px]"
                 >
-                  <img
+                  <Image
                     src="/images/databases/mysql.svg"
                     alt="MySQL"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -705,9 +710,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/snowflake.svg"
                     alt="Snowflake"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -715,9 +722,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/google-big-query.svg"
                     alt="BigQuery"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -725,9 +734,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/amazon-redshift.svg"
                     alt="Redshift"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -735,9 +746,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/amazon-s3.svg"
                     alt="Amazon S3"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -745,9 +758,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/azure-blob-storage.svg"
                     alt="Azure Blob"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -755,9 +770,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/gcs.svg"
                     alt="Google Cloud Storage"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -765,9 +782,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/duckdb.svg"
                     alt="DuckDB"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>
@@ -775,9 +794,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   <div className="absolute top-1 left-1 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-md font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Coming Soon
                   </div>
-                  <img
+                  <Image
                     src="/images/databases/motherduck.svg"
                     alt="MotherDuck"
+                    width={80}
+                    height={60}
                     className="w-full h-3/4 object-contain dark:brightness-90"
                   />
                 </div>

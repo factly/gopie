@@ -15,7 +15,12 @@ export function SqlPreview({
   language = "sql",
   height = "150px",
 }: SqlPreviewProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="h-full w-full">
@@ -23,7 +28,7 @@ export function SqlPreview({
         height={height}
         defaultLanguage={language}
         value={value}
-        theme={theme === "dark" ? "vs-dark" : "vs-light"}
+        theme={mounted && theme === "dark" ? "vs-dark" : "vs-light"}
         options={{
           readOnly: true,
           minimap: { enabled: false },
