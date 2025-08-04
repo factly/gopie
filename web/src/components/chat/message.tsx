@@ -533,10 +533,10 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "flex flex-col items-start gap-2 px-4 py-3",
+          "flex flex-col items-start gap-2 px-4 py-3 min-w-0",
           styleRole === "user"
-            ? "w-fit max-w-[90%] min-w-0 bg-primary text-primary-foreground shadow-sm"
-            : "w-full min-w-0 bg-muted shadow-sm border border-border/10"
+            ? "w-fit max-w-[90%] bg-primary text-primary-foreground shadow-sm"
+            : "w-full bg-muted shadow-sm border border-border/10"
         )}
         id={`message-${id}`}
         data-message-role={role}
@@ -576,8 +576,8 @@ export function ChatMessage({
           </Collapsible>
         )}
 
-        <div className="flex-1 min-w-0 w-full pt-1">
-          <div className="text-sm break-words space-y-3">
+        <div className="flex-1 min-w-0 w-full pt-1 overflow-hidden">
+          <div className="text-sm break-words space-y-3 min-w-0">
             {/* AI SDK parts-based rendering for text content */}
             {message?.parts ? (
               <>
@@ -623,7 +623,7 @@ export function ChatMessage({
 
             {/* SQL Queries display */}
             {displaySqlQueries.length > 0 && (
-              <div className="min-w-[400px] w-full max-w-[800px] text-base pt-2 space-y-3">
+              <div className="w-full max-w-full lg:max-w-[800px] text-base pt-2 space-y-3">
                 <p className="text-xs text-muted-foreground font-medium mb-2">
                   Suggested SQL{" "}
                   {displaySqlQueries.length > 1 ? "Queries" : "Query"}:
@@ -633,7 +633,7 @@ export function ChatMessage({
                     key={index}
                     open={expandedQueries.has(index)}
                     onOpenChange={() => toggleQueryExpansion(index)}
-                    className="border border-border bg-card shadow-sm"
+                    className="border border-border bg-card shadow-sm min-w-0"
                   >
                     <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -643,9 +643,9 @@ export function ChatMessage({
                           <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <Database className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            <span className="text-foreground font-mono text-xs truncate">
+                            <span className="text-foreground font-mono text-xs break-words overflow-hidden">
                               {getQueryPreview(query)}
                             </span>
                           </div>
@@ -701,7 +701,7 @@ export function ChatMessage({
             {/* SQL content fallback when no specific SQL query is identified */}
             {displaySqlQueries.length === 0 &&
               parsedTextContent.type === "sql" && (
-                <div className="min-w-[400px] w-full max-w-[800px] text-base">
+                <div className="w-full max-w-full lg:max-w-[800px] text-base">
                   <div className="relative">
                     <SqlPreview value={parsedTextContent.content} />
                     {!isLoading && (
