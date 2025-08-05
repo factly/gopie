@@ -1,8 +1,5 @@
-from typing import Type
-
 from langchain_openai import ChatOpenAI
 from portkey_ai import PORTKEY_GATEWAY_URL, createHeaders
-from pydantic import BaseModel
 
 from app.core.config import settings
 
@@ -52,10 +49,6 @@ class PortkeyLLMProvider(BaseLLMProvider):
     def get_llm_model(
         self,
         model_name: str,
-        streaming: bool = True,
-        temperature: float | None = None,
-        json_mode: bool = False,
-        schema: Type[BaseModel] | None = None,
     ):
         headers = self.get_headers()
         if self.self_hosted:
@@ -68,21 +61,8 @@ class PortkeyLLMProvider(BaseLLMProvider):
             "base_url": self.base_url,
             "default_headers": headers,
             "model": model_name,
-            "streaming": streaming,
-            "max_tokens": settings.MAX_TOKENS,
-            "max_retries": settings.MAX_RETRIES,
-            "timeout": settings.TIMEOUT,
         }
-
-        if temperature is not None:
-            kwargs["temperature"] = temperature
 
         llm = ChatOpenAI(**kwargs)
 
-        if json_mode:
-            if schema:
-                return llm.with_structured_output(schema)
-            else:
-                return llm.with_structured_output(method="json_mode")
-        else:
-            return llm
+        return llm

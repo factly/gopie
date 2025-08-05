@@ -3,6 +3,8 @@ from typing import Literal, Optional, TypedDict, Union
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, field_validator
 
+from app.utils.prompts import escape_value
+
 
 class ConfigSchema(TypedDict):
     model_id: str
@@ -55,7 +57,7 @@ class ColumnSchema(ColumnSummary):
             sample_values = self.sample_values or []
             sample_str = ""
             if sample_values:
-                formatted_samples = [str(val) for val in sample_values[:5]]
+                formatted_samples = [escape_value(val) for val in sample_values[:5]]
                 sample_str = f" | Sample values: {', '.join(formatted_samples)}"
                 if len(sample_values) > 5:
                     sample_str += "..."
