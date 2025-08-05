@@ -144,7 +144,7 @@ export function NavProjects() {
               >
                 {projects?.results?.map((p) => (
                   <DropdownMenuItem asChild key={p.id}>
-                    <Link href={`/${p.id}`}>
+                    <Link href={`/${p.id}`} prefetch={false}>
                       <span className="truncate">{p.name}</span>
                       {p.id === project.id && (
                         <span className="ml-auto text-xs text-muted-foreground">
@@ -195,7 +195,7 @@ export function NavProjects() {
               >
                 {datasets.results.map((dataset) => (
                   <DropdownMenuItem asChild key={dataset.id}>
-                    <Link href={`/projects/${projectId}/datasets/${dataset.id}`}>
+                    <Link href={`/projects/${projectId}/datasets/${dataset.id}`} prefetch={false}>
                       <span className="truncate">
                         {dataset.alias || dataset.name}
                       </span>

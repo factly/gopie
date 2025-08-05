@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { NavigationProgress } from "@/components/navigation/navigation-progress";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Providers>
+            <NavigationProgress />
             <SidebarProvider>
               <AppSidebar />
               <SidebarInset>
