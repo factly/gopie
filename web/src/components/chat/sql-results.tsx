@@ -54,7 +54,7 @@ export function SqlResults() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    {Object.keys(results.data[0] || {}).map((key) => (
+                    {(results.columns || Object.keys(results.data[0] || {})).map((key) => (
                       <th
                         key={key}
                         className="whitespace-nowrap border-r px-4 py-2 text-left font-medium last:border-r-0"
@@ -73,12 +73,12 @@ export function SqlResults() {
                         i % 2 === 0 ? "bg-background" : "bg-muted/30"
                       )}
                     >
-                      {Object.values(row).map((value, j) => (
+                      {(results.columns || Object.keys(results.data[0] || {})).map((key, j) => (
                         <td
                           key={j}
                           className="whitespace-nowrap border-r px-4 py-2 last:border-r-0"
                         >
-                          {String(value)}
+                          {String(row[key])}
                         </td>
                       ))}
                     </tr>
