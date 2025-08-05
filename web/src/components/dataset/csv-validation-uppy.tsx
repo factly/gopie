@@ -77,6 +77,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
   const setSelectedFile = useUploadStore((state) => state.setSelectedFile);
   const setModifiedFile = useUploadStore((state) => state.setModifiedFile);
   const setDetectedFormat = useUploadStore((state) => state.setDetectedFormat);
+  const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
   
   // Local state for UI
   const [isUploading, setIsUploading] = useState(false);
@@ -373,6 +374,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     // Reset states and store the file
     console.log('Setting selected file in store:', file.name);
     setSelectedFile(file);
+    setOriginalFileName(file.name);
     setModifiedFile(null);
     setUploadError(null);
     setValidationResult(null);

@@ -24,6 +24,7 @@ import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
 import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
+import { useUploadStore } from "@/lib/stores/uploadStore";
 
 interface UrlUploaderProps {
   projectId: string;
@@ -74,6 +75,9 @@ export function UrlUploader({
 
   // Column description store integration
   const clearColumnDescriptions = useColumnDescriptionStore((state) => state.clearColumnDescriptions);
+  
+  // Upload store integration for filename tracking
+  const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
 
   // Calculate if all column names are valid
   const allColumnsValid = Array.from(columnMappings.values()).every(
@@ -318,6 +322,7 @@ export function UrlUploader({
       // Download the file
       const file = await downloadFileFromUrl(url);
       setDownloadedFile(file);
+      setOriginalFileName(file.name);
 
       // Detect file format
       const format = detectFileFormat(file.name, file.type);

@@ -101,6 +101,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   const datasetDescription = useUploadStore(
     (state) => state.datasetDescription
   );
+  const originalFileName = useUploadStore((state) => state.originalFileName);
   const setUploadedFile = useUploadStore((state) => state.setUploadedFile);
   const setUploadResponse = useUploadStore((state) => state.setUploadResponse);
   const setValidationResult = useUploadStore(
@@ -564,6 +565,19 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     validationResult?.columnTypes,
     setColumnMappings,
   ]);
+
+  // Pre-populate dataset name from filename when reaching step 4
+  React.useEffect(() => {
+    if (currentStep === 4 && originalFileName && !datasetName) {
+      // Remove file extension and clean up the filename
+      const nameWithoutExtension = originalFileName.replace(/\.[^/.]+$/, "");
+      // Replace underscores and hyphens with spaces, then capitalize words
+      const cleanedName = nameWithoutExtension
+        .replace(/[_-]/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+      setDatasetName(cleanedName);
+    }
+  }, [currentStep, originalFileName, datasetName, setDatasetName]);
 
   // Auto-generate descriptions when validation succeeds
   React.useEffect(() => {
