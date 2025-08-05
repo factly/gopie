@@ -87,7 +87,7 @@ class ModelProvider:
 
     def get_llm(self, model_id: str):
         model = self.llm_provider.get_llm_model(model_id)
-        return model.with_retry()
+        return model
 
     def get_llm_with_tools(
         self,
