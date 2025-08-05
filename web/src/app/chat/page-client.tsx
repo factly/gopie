@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { MessageSquarePlus, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Trash2, ChevronDown } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
 import { ResultsPanel } from "@/components/chat/results-panel";
 import {
@@ -67,6 +67,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   updateUrlWithContext,
   searchParams,
   router,
+  resetScrollStates,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
@@ -75,6 +76,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   updateUrlWithContext: (contexts: ContextItem[]) => void;
   searchParams: URLSearchParams;
   router: ReturnType<typeof useRouter>;
+  resetScrollStates: () => void;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -154,7 +156,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
         clearVisualizationPaths();
         setIsOpen(false);
         setVisualizationOpen(false);
-        setResultsPanelActiveTab('sql'); // Reset to SQL tab when deleting current chat
+        setResultsPanelActiveTab("sql"); // Reset to SQL tab when deleting current chat
         await queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId }],
         });
@@ -178,7 +180,9 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     clearVisualizationPaths();
     setIsOpen(false);
     setVisualizationOpen(false);
-    setResultsPanelActiveTab('sql'); // Reset to SQL tab when switching chats
+
+    // Reset scroll states for proper auto-scroll when switching chats
+    resetScrollStates();
 
     if (datasetId && datasetName && projectId) {
       const newContexts = [
@@ -202,10 +206,24 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setActiveTab("chat");
 
     // Remove the tab parameter from URL when switching to chat
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("tab");
-    params.set("chatId", chatId);
-    router.replace(`/chat?${params.toString()}`);
+    // Use setTimeout to ensure state updates happen first
+    setTimeout(() => {
+      const params = new URLSearchParams();
+      
+      // Only copy over params we want to keep (excluding 'tab')
+      searchParams.forEach((value, key) => {
+        if (key !== 'tab') {
+          params.set(key, value);
+        }
+      });
+      
+      if (chatId) {
+        params.set("chatId", chatId);
+      }
+      
+      const newUrl = params.toString() ? `/chat?${params.toString()}` : '/chat';
+      router.push(newUrl);
+    }, 0);
   };
 
   useEffect(() => {
@@ -392,7 +410,6 @@ ChatInput.displayName = "ChatInput";
 
 interface ChatViewProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
   isLoading: boolean;
   messages: UIMessage[];
   // selectedContexts: ContextItem[]; // Removed since not used in component
@@ -401,12 +418,13 @@ interface ChatViewProps {
   hasNextPage?: boolean;
   fetchNextPage?: () => void;
   isFetchingNextPage?: boolean;
+  showScrollButton: boolean;
+  onScrollToBottom: () => void;
 }
 
 const ChatView = React.memo(
   ({
     scrollRef,
-    handleScroll,
     isLoading,
     messages,
     // selectedContexts, // Removed since not used in component
@@ -415,6 +433,8 @@ const ChatView = React.memo(
     hasNextPage = false,
     fetchNextPage,
     isFetchingNextPage = false,
+    showScrollButton,
+    onScrollToBottom,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative min-h-0">
       <div
@@ -422,11 +442,7 @@ const ChatView = React.memo(
           messages.length > 0 ? "opacity-100" : "opacity-0"
         } transition-opacity duration-300`}
       />
-      <ScrollArea
-        ref={scrollRef}
-        className="h-full w-full"
-        onScroll={handleScroll}
-      >
+      <ScrollArea ref={scrollRef} className="h-full w-full">
         <div className="px-4 pb-32 pt-8">
           {/* Load more button for pagination */}
           {hasNextPage && selectedChatId && (
@@ -493,6 +509,17 @@ const ChatView = React.memo(
           )}
         </div>
       </ScrollArea>
+      {showScrollButton && (
+        <Button
+          onClick={onScrollToBottom}
+          className="absolute bottom-24 right-4 z-50 rounded-full h-10 w-10 p-0 shadow-lg bg-background border-2 border-border hover:bg-accent hover:border-accent transition-all"
+          variant="outline"
+          size="icon"
+          aria-label="Scroll to bottom"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </Button>
+      )}
       <div
         className={`z-10 absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none`}
       />
@@ -534,6 +561,9 @@ function ChatPageClient() {
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+  const previousMessageCountRef = useRef(0);
   const {
     isOpen: sqlIsOpen,
     setIsOpen,
@@ -851,6 +881,10 @@ function ChatPageClient() {
       setIsStreaming(true);
       setShowLoadingMessage(true);
 
+      // Reset scroll state to ensure auto-scroll works
+      setUserHasScrolled(false);
+      setShowScrollButton(false);
+
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
     [sdkHandleSubmit, selectedContexts, selectedChatId, input]
@@ -922,11 +956,16 @@ function ChatPageClient() {
     }
   }, [chatDetailsError]);
 
-  // Reset streaming state when switching chats
+  // Reset streaming and scroll states when switching chats
   useEffect(() => {
     setUseStreamingMessages(false);
     setShowLoadingMessage(false);
     setIsStreaming(false);
+    // Reset scroll states when switching chats
+    setUserHasScrolled(false);
+    setShowScrollButton(false);
+    // Reset message count for auto-scroll
+    previousMessageCountRef.current = 0;
   }, [selectedChatId]);
 
   // This logic is now handled by the useChatDetails hook above
@@ -971,7 +1010,7 @@ function ChatPageClient() {
           clearVisualizationPaths();
           setIsOpen(false);
           setVisualizationOpen(false);
-          setResultsPanelActiveTab('sql'); // Reset to SQL tab when navigating with new context
+          setResultsPanelActiveTab("sql"); // Reset to SQL tab when navigating with new context
           // Clear URL parameters to avoid re-applying context data
           const params = new URLSearchParams(searchParams.toString());
           params.delete("contextData");
@@ -1069,36 +1108,126 @@ function ChatPageClient() {
     isLoading,
   ]);
 
-  const handleScroll = useCallback(() => {
-    // Handle scroll - can be used for loading more messages if needed
+  // Function to reset scroll states
+  const resetScrollStates = useCallback(() => {
+    previousMessageCountRef.current = 0;
+    setUserHasScrolled(false);
+    setShowScrollButton(false);
   }, []);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLElement;
+
+      if (viewport) {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: "smooth",
+        });
+        setShowScrollButton(false);
+        setUserHasScrolled(false);
+      }
+    }
+  }, []);
+
+  // Set up scroll event listener on the viewport
+  useEffect(() => {
+    // Small delay to ensure DOM is ready after tab/chat switch
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector(
+          "[data-radix-scroll-area-viewport]"
+        ) as HTMLElement;
+
+        if (viewport) {
+          const scrollHandler = () => {
+            const isNearBottom =
+              viewport.scrollHeight -
+                viewport.scrollTop -
+                viewport.clientHeight <
+              100;
+
+            // Show scroll button when user is not near bottom
+            setShowScrollButton(!isNearBottom);
+
+            // Track if user has manually scrolled
+            if (!isNearBottom) {
+              setUserHasScrolled(true);
+            } else {
+              setUserHasScrolled(false);
+            }
+          };
+
+          viewport.addEventListener("scroll", scrollHandler);
+          // Initial check for scroll button visibility
+          scrollHandler();
+          return () => {
+            viewport.removeEventListener("scroll", scrollHandler);
+            clearTimeout(timer);
+          };
+        }
+      }
+    }, 150); // Delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
+  }, [selectedChatId, activeTab]); // Re-setup when switching chats or tabs
+
+  // Auto-scroll logic
   useLayoutEffect(() => {
+    // Only run auto-scroll when on the chat tab
+    if (activeTab !== "chat") return;
+    
     if (scrollRef.current && displayMessages.length > 0) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
-      );
+      ) as HTMLElement;
+
       if (viewport) {
-        const isNearBottom =
-          viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-          150;
-        // Only auto-scroll if user is near the bottom or if it's a new message being added
         const lastMessage = displayMessages[displayMessages.length - 1];
+        const isNewMessage =
+          displayMessages.length > previousMessageCountRef.current;
+        
+        // Check if we should auto-scroll
+        const isInitialLoad =
+          previousMessageCountRef.current === 0 && displayMessages.length > 0;
+        const isUserSending =
+          lastMessage?.role === "user" && (isStreaming || showLoadingMessage);
+        const isAssistantResponding =
+          lastMessage?.role === "assistant" && isStreaming;
+
         const shouldAutoScroll =
-          isNearBottom &&
-          (lastMessage?.role === "assistant" || lastMessage?.role === "user");
+          isInitialLoad || // Initial chat load or chat switch
+          isUserSending || // User just sent a message
+          isAssistantResponding || // Assistant is responding
+          (isNewMessage && !userHasScrolled); // New message arrived and user hasn't scrolled
 
         if (shouldAutoScroll) {
-          requestAnimationFrame(() => {
-            viewport.scrollTo({
-              top: viewport.scrollHeight,
-              behavior: "smooth",
-            });
-          });
+          // Use setTimeout to ensure DOM is updated
+          setTimeout(() => {
+            if (viewport && viewport.scrollHeight > 0) {
+              viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: isInitialLoad ? "auto" : "smooth",
+              });
+              // Update scroll button visibility after scroll
+              const isNearBottom =
+                viewport.scrollHeight -
+                  viewport.scrollTop -
+                  viewport.clientHeight <
+                100;
+              setShowScrollButton(!isNearBottom);
+            }
+          }, 100);
         }
+        
+        // Update the message count after processing
+        previousMessageCountRef.current = displayMessages.length;
       }
     }
-  }, [displayMessages]);
+  }, [displayMessages, isStreaming, userHasScrolled, showLoadingMessage, activeTab]);
 
   const handleSelectContext = useCallback(
     (context: ContextItem) => {
@@ -1178,6 +1307,24 @@ function ChatPageClient() {
                     params.set("tab", "history");
                   } else {
                     params.delete("tab");
+                    // When switching to chat tab, trigger a scroll check
+                    if (value === "chat" && selectedChatId) {
+                      // Small delay to let the tab content render
+                      setTimeout(() => {
+                        if (scrollRef.current) {
+                          const viewport = scrollRef.current.querySelector(
+                            "[data-radix-scroll-area-viewport]"
+                          ) as HTMLElement;
+                          if (viewport) {
+                            // Scroll to bottom for existing chat
+                            viewport.scrollTo({
+                              top: viewport.scrollHeight,
+                              behavior: "auto",
+                            });
+                          }
+                        }
+                      }, 50);
+                    }
                   }
                   router.replace(`/chat?${params.toString()}`);
                 }}
@@ -1279,7 +1426,6 @@ function ChatPageClient() {
                   <div className="flex flex-col h-full min-h-0 relative">
                     <ChatView
                       scrollRef={scrollRef}
-                      handleScroll={handleScroll}
                       isLoading={isLoading}
                       messages={displayMessages}
                       selectedChatId={selectedChatId}
@@ -1287,6 +1433,8 @@ function ChatPageClient() {
                       hasNextPage={hasNextPage}
                       fetchNextPage={fetchNextPage}
                       isFetchingNextPage={isFetchingNextPage}
+                      showScrollButton={showScrollButton}
+                      onScrollToBottom={scrollToBottom}
                     />
                   </div>
                 </TabsContent>
@@ -1303,6 +1451,7 @@ function ChatPageClient() {
                     updateUrlWithContext={updateUrlWithContext}
                     searchParams={searchParams}
                     router={router}
+                    resetScrollStates={resetScrollStates}
                   />
                 </TabsContent>
               </Tabs>
