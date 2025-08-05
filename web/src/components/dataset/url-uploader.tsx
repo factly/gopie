@@ -553,8 +553,9 @@ export function UrlUploader({
       .replace(/[^a-zA-Z0-9.-]/g, "_");
   };
 
+  // Don't show loading here - it's handled at the wizard level
   if (isInitializing) {
-    return <div>Initializing DuckDB for file validation...</div>;
+    return null;
   }
 
   if (duckDbError) {

@@ -634,8 +634,9 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     }
   };
 
+  // Don't show loading here - it's handled at the wizard level
   if (isInitializing) {
-    return <div>Initializing DuckDB for file validation...</div>;
+    return null;
   }
 
   if (duckDbError) {
