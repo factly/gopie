@@ -1,9 +1,12 @@
+from langsmith import traceable
+
 from app.core.log import logger
 from app.models.data import ColumnValueMatching
 from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
 
 
+@traceable(run_type="tool", name="match_column_values")
 async def match_column_values(
     column_assumptions: list[ColumnAssumptions],
 ) -> ColumnValueMatching:
@@ -73,6 +76,7 @@ async def match_column_values(
     return result
 
 
+@traceable(run_type="tool", name="verify_exact_values")
 async def verify_exact_values(
     column_entry: ColumnValueMatching.ColumnAnalysis,
     column_name: str,
@@ -102,6 +106,7 @@ async def verify_exact_values(
             )
 
 
+@traceable(run_type="tool", name="verify_fuzzy_values")
 async def verify_fuzzy_values(
     column_entry: ColumnValueMatching.ColumnAnalysis,
     column_name: str,
@@ -124,6 +129,7 @@ async def verify_fuzzy_values(
         column_entry.suggested_alternatives.append(suggestion)
 
 
+@traceable(run_type="tool", name="check_exact_match")
 async def check_exact_match(value: str, column_name: str, table_name: str) -> bool:
     """
     Check if the value exactly matches any value in the column.
@@ -150,6 +156,7 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
     return False
 
 
+@traceable(run_type="tool", name="find_similar_values")
 async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
     """
     Search for values in a database column that are similar to the specified value using a

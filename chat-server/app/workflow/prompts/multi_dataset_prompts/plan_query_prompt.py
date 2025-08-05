@@ -4,6 +4,7 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
 )
 
+from app.utils.prompts import escape_value
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
 
 
@@ -108,14 +109,21 @@ def format_plan_query_input(
                         ]
 
                         if exact_vals:
-                            input_str += f"- {col_name} (exact matches): {', '.join(exact_vals)}\n"
+                            escaped_vals = [escape_value(val) for val in exact_vals]
+                            input_str += (
+                                f"- {col_name} (exact matches): {', '.join(escaped_vals)}\n"
+                            )
                         if not_found_vals:
-                            input_str += f"- {col_name} (not found): {', '.join(not_found_vals)}\n"
+                            escaped_vals = [escape_value(val) for val in not_found_vals]
+                            input_str += f"- {col_name} (not found): {', '.join(escaped_vals)}\n"
 
                     if suggested_alternatives:
                         for suggestion in suggested_alternatives:
                             if suggestion.found_similar_values and suggestion.similar_values:
-                                input_str += f"- {col_name} (alternatives for '{suggestion.requested_value}'): {', '.join(suggestion.similar_values)}\n"
+                                escaped_vals = [
+                                    escape_value(val) for val in suggestion.similar_values
+                                ]
+                                input_str += f"- {col_name} (alternatives for '{suggestion.requested_value}'): {', '.join(escaped_vals)}\n"
                             else:
                                 input_str += f"- {col_name} (no alternatives found for '{suggestion.requested_value}')\n"
 

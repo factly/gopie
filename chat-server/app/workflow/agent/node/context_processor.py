@@ -42,9 +42,11 @@ async def get_project_custom_prompts(dataset_ids: list[str], project_ids: list[s
     for project_id in project_ids:
         tasks.append(get_project_schema(project_id))
     schemas = await asyncio.gather(*tasks)
-    project_custom_prompts = [
-        schema.project_custom_prompt for schema in schemas if schema.project_custom_prompt
-    ]
+    project_custom_prompts = []
+    for schema in schemas:
+        if schema:
+            if schema.project_custom_prompt:
+                project_custom_prompts.append(schema.project_custom_prompt)
     return list(set(project_custom_prompts))
 
 

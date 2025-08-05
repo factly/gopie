@@ -1,8 +1,11 @@
 import json
 
+from langsmith import traceable
+
 from app.core.log import logger
 
 
+@traceable(run_type="tool", name="is_result_too_large")
 def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
     """
     Determine if a SQL query result exceeds size limits for LLM processing.
@@ -34,6 +37,7 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
         return False, ""
 
 
+@traceable(run_type="tool", name="truncate_result_for_llm")
 def truncate_result_for_llm(result: list[dict] | None) -> list[dict] | None:
     """
     Truncates a SQL query result to a maximum of 10 records for LLM processing.

@@ -76,12 +76,6 @@ class Settings(BaseSettings):
 
     CHAT_HISTORY_MAX_MESSAGES: int = 20
     CHAT_HISTORY_MAX_TOKENS: int = 8000
-      
-    # LLM settings
-    MAX_TOKENS: int = 10000
-    MAX_RETRIES: int = 3
-    RATE_LIMITER: int = 60
-    TIMEOUT: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
 

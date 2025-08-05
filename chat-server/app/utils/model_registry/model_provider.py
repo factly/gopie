@@ -1,8 +1,10 @@
-from typing import Generic, Type, TypeVar, cast
+from typing import Generic, Optional, Type, TypeVar, Union
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
+from typing_extensions import overload
 
 from app.core.config import settings
 from app.models.provider import EmbeddingProvider, LLMProvider
@@ -28,20 +30,20 @@ from app.utils.providers.llm_providers import (
     PortkeyLLMProvider,
 )
 
-T = TypeVar("T", bound=BaseModel)
+StructuredOutputType = TypeVar("StructuredOutputType", bound=BaseModel)
 
 
-class StructuredLLM(Generic[T]):
+class StructuredLLM(Generic[StructuredOutputType]):
     """
     Type hint interface for LLMs that return structured Pydantic models.
     This provides clean type inference for the specific Pydantic model type.
     """
 
-    async def ainvoke(self, input) -> T:
+    async def ainvoke(self, input) -> StructuredOutputType:
         """Async invoke that returns the specified Pydantic model type."""
         ...
 
-    def invoke(self, input) -> T:
+    def invoke(self, input) -> StructuredOutputType:
         """Sync invoke that returns the specified Pydantic model type."""
         ...
 
@@ -78,71 +80,60 @@ class ModelProvider:
     def __init__(
         self,
         metadata: dict[str, str],
-        json_mode: bool = False,
-        temperature: float | None = None,
-        schema: Type[BaseModel] | None = None,
     ):
         self.metadata = metadata
         self.llm_provider = get_llm_provider(metadata)
         self.embedding_provider = get_embedding_provider(metadata)
-        self.json_mode = json_mode
-        self.temperature = temperature
-        self.schema = schema
 
-    def _create_llm(self, model_id: str):
-        model = self.llm_provider.get_llm_model(
-            model_id, temperature=self.temperature, json_mode=self.json_mode, schema=self.schema
-        )
-        return model
+    def get_llm(self, model_id: str):
+        model = self.llm_provider.get_llm_model(model_id)
+        return model.with_retry()
 
-    def _create_llm_with_tools(
+    def get_llm_with_tools(
         self,
         model_id: str,
         tool_names: list[ToolNames],
     ):
         tools = get_tools(tool_names)
         tool_functions = [tool for tool, _ in tools.values()]
-        llm = self._create_llm(model_id)
+        llm = self.get_llm(model_id)
         return llm.bind_tools(tool_functions)
 
-    def _create_embeddings_model(self):
-        return self.embedding_provider.get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
-
-    def get_llm(self, model_id: str):
-        return self._create_llm(model_id)
-
     def get_embeddings_model(self):
-        return self._create_embeddings_model()
-
-    def get_llm_with_tools(self, node_name: str, tool_names: list[ToolNames]):
-        model_id = get_node_model(node_name)
-        return self._create_llm_with_tools(model_id, tool_names)
-
-    def get_llm_for_node(
-        self,
-        node_name: str,
-        tool_names: list[ToolNames] | None = None,
-    ):
-        model_id = get_node_model(node_name)
-        return (
-            self.get_llm_with_tools(node_name, tool_names) if tool_names else self.get_llm(model_id)
-        )
+        return self.embedding_provider.get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
 
 
 def get_model_provider(
     config: RunnableConfig = RunnableConfig(),
-    json_mode: bool = False,
-    temperature: float | None = None,
-    schema: Type[BaseModel] | None = None,
 ) -> ModelProvider:
     metadata = config.get("configurable", {}).get("metadata", {})
-    return ModelProvider(
-        metadata=metadata, json_mode=json_mode, temperature=temperature, schema=schema
-    )
+    return ModelProvider(metadata=metadata)
 
 
 def get_chat_history(config: RunnableConfig) -> list[BaseMessage]:
     return config.get("configurable", {}).get("chat_history", [])
+
+
+@overload
+def get_configured_llm_for_node(
+    node_name: str,
+    config: RunnableConfig,
+    *,
+    tool_names: list[ToolNames] | None = None,
+    schema: None = None,
+) -> ChatOpenAI:
+    ...
+
+
+@overload
+def get_configured_llm_for_node(
+    node_name: str,
+    config: RunnableConfig,
+    *,
+    tool_names: list[ToolNames] | None = None,
+    schema: Type[StructuredOutputType],
+) -> StructuredLLM[StructuredOutputType]:
+    ...
 
 
 def get_configured_llm_for_node(
@@ -150,8 +141,8 @@ def get_configured_llm_for_node(
     config: RunnableConfig,
     *,
     tool_names: list[ToolNames] | None = None,
-    schema: Type[T] | None = None,
-) -> StructuredLLM[T]:
+    schema: Optional[Type[StructuredOutputType]] = None,
+) -> Union[ChatOpenAI, StructuredLLM[StructuredOutputType]]:
     """
     Get a configured LLM for a workflow node with type inference.
 
@@ -170,13 +161,21 @@ def get_configured_llm_for_node(
     """
     json_mode = requires_json_mode(node_name)
     temperature = get_node_temperature(node_name)
+    model_id = get_node_model(node_name)
 
-    model_provider = get_model_provider(
-        config, json_mode=json_mode, temperature=temperature, schema=schema
-    )
-    llm = model_provider.get_llm_for_node(node_name, tool_names)
-
-    return cast(StructuredLLM[T], llm)
+    model_provider = get_model_provider(config)
+    if tool_names:
+        llm = model_provider.get_llm_with_tools(model_id, tool_names)
+    else:
+        llm = model_provider.get_llm(model_id)
+    if temperature:
+        llm = llm.bind(temperature=temperature)
+    if schema:
+        structured_llm = llm.with_structured_output(schema=schema, method="json_schema")
+        return structured_llm
+    elif json_mode:
+        llm = llm.bind(response_format={"type": "json_object"})
+    return llm
 
 
 def get_llm_for_other_task(node_name: str, config: RunnableConfig):
@@ -184,6 +183,10 @@ def get_llm_for_other_task(node_name: str, config: RunnableConfig):
     temperature = get_node_temperature(node_name)
     model_id = get_node_model(node_name)
 
-    model_provider = get_model_provider(config, json_mode=json_mode, temperature=temperature)
-
+    model_provider = get_model_provider(config)
+    llm = model_provider.get_llm(model_id)
+    if temperature:
+        llm = llm.bind(temperature=temperature)
+    if json_mode:
+        llm = llm.bind(response_format={"type": "json_object"})
     return model_provider.get_llm(model_id)
