@@ -42,14 +42,10 @@ type OlapDBConfig struct {
 	DB         string
 	MotherDuck *MotherDuckConfig
 	DuckDB     *DuckDBConfig
-	AccessMode string
 }
 
 type DuckDBConfig struct {
-	Path         string
-	CPU          int
-	MemoryLimit  int
-	StorageLimit int
+	Path string
 }
 
 type MotherDuckConfig struct {
@@ -102,33 +98,12 @@ func validateConfig(config *Config) (*Config, error) {
 	switch config.OlapDB.DB {
 	case "duckdb":
 		config.OlapDB.DuckDB = &DuckDBConfig{
-			Path:         viper.GetString("GOPIE_DUCKDB_PATH"),
-			CPU:          viper.GetInt("GOPIE_DUCKDB_CPU"),
-			MemoryLimit:  viper.GetInt("GOPIE_DUCKDB_MEMORY_LIMIT"),
-			StorageLimit: viper.GetInt("GOPIE_DUCKDB_STORAGE_LIMIT"),
+			Path: viper.GetString("GOPIE_DUCKDB_PATH"),
 		}
 
 		// check it path exists
 		if config.OlapDB.DuckDB.Path == "" {
 			return nil, fmt.Errorf("missing DuckDB path")
-		}
-
-		// INFO: path should exist if access mode is read_only
-		// we create the directory if access mode is read_write
-		if config.OlapDB.AccessMode == "read_write" {
-			if err := ensureDirectoryExists(config.OlapDB.DuckDB.Path); err != nil {
-				return nil, err
-			}
-		}
-
-		if config.OlapDB.DuckDB.CPU <= 0 {
-			return nil, fmt.Errorf("DuckDB CPU must be greater than 0")
-		}
-		if config.OlapDB.DuckDB.MemoryLimit <= 0 {
-			return nil, fmt.Errorf("DuckDB memory limit must be greater than 0")
-		}
-		if config.OlapDB.DuckDB.StorageLimit <= 0 {
-			return nil, fmt.Errorf("DuckDB storage limit must be greater than 0")
 		}
 
 	case "motherduck":
@@ -216,8 +191,7 @@ func LoadConfig() (*Config, error) {
 			Mode:    viper.GetString("GOPIE_LOGGER_MODE"),
 		},
 		OlapDB: OlapDBConfig{
-			DB:         viper.GetString("GOPIE_OLAPDB_DBTYPE"),
-			AccessMode: viper.GetString("GOPIE_OLAPDB_ACCESS_MODE"),
+			DB: viper.GetString("GOPIE_OLAPDB_DBTYPE"),
 		},
 		Postgres: PostgresConfig{
 			Host:     viper.GetString("GOPIE_POSTGRES_HOST"),
