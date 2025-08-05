@@ -54,6 +54,7 @@ export default function SqlPage({
     Record<string, unknown>[] | null
   >(null);
   const [totalCount, setTotalCount] = React.useState<number>(0);
+  const [columns, setColumns] = React.useState<string[] | undefined>(undefined);
   const [isExecuting, setIsExecuting] = React.useState(false);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
@@ -98,6 +99,7 @@ export default function SqlPage({
 
         setResults(response.data);
         setTotalCount(response.count);
+        setColumns(response.columns);
         setCurrentQuery(queryToExecute);
 
         return response;
@@ -401,6 +403,7 @@ export default function SqlPage({
               <ResultsTable
                 results={results}
                 total={totalCount}
+                columns={columns}
                 onPageChange={handlePageChange}
                 loading={isExecuting}
               />
