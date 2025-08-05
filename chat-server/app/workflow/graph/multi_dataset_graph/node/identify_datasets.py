@@ -156,7 +156,6 @@ async def identify_datasets(state: State, config: RunnableConfig):
     except Exception as e:
         error_msg = f"Error identifying datasets: {e!s}"
         query_result.add_error_message(str(e), "Error identifying datasets")
-        raise e
         await adispatch_custom_event(
             "gopie-agent",
             {"content": "Error identifying datasets"},
