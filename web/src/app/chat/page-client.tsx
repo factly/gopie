@@ -1282,14 +1282,14 @@ function ChatPageClient() {
   const isAuthDisabled =
     String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
-  // Close sidebar when chat page opens
+  // Close sidebar when chat page opens (only on mount)
   useEffect(() => {
     if (isMobile) {
       setOpenMobile(false);
     } else {
       setOpen(false);
     }
-  }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
+  }, []); // Empty dependency array to run only once on mount
 
   return (
     <main className="flex flex-col w-full h-[calc(100vh-16px)]">
