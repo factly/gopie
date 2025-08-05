@@ -1,3 +1,4 @@
+from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
@@ -36,7 +37,7 @@ def _get_chain():
         }
     )
     llm = get_llm_for_other_task("generate_col_descriptions", config=config)
-    return prompt | llm
+    return prompt | llm | JsonOutputParser()
 
 
 async def generate_column_descriptions(
@@ -58,7 +59,7 @@ async def generate_column_descriptions(
                 "dataset_schema": schema.model_dump(exclude_defaults=True),
             }
         )
-
+        logger.info(f"Column descriptions response: {response}")
         if not isinstance(response, dict):
             raise ValueError("Invalid response format")
 
