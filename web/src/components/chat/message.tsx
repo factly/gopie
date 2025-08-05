@@ -374,6 +374,7 @@ export function ChatMessage({
         setResults({
           data: result.data ?? [],
           total: result.data?.length ?? 0,
+          columns: result.columns,
           query,
           chatId,
         });

@@ -3,6 +3,7 @@ import { create } from "zustand";
 interface SqlResult {
   data: Record<string, unknown>[];
   total: number;
+  columns?: string[];
   error?: string;
   query: string;
   chatId?: string;
