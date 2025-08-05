@@ -64,12 +64,16 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setLinkedDatasetId,
   currentUserId,
   updateUrlWithContext,
+  searchParams,
+  router,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
   currentUserId: string;
   updateUrlWithContext: (contexts: ContextItem[]) => void;
+  searchParams: URLSearchParams;
+  router: ReturnType<typeof useRouter>;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -192,6 +196,12 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       setLinkedDatasetId(null);
     }
     setActiveTab("chat");
+
+    // Remove the tab parameter from URL when switching to chat
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tab");
+    params.set("chatId", chatId);
+    router.replace(`/chat?${params.toString()}`);
   };
 
   useEffect(() => {
@@ -1284,6 +1294,8 @@ function ChatPageClient() {
                     setLinkedDatasetId={setLinkedDatasetId}
                     currentUserId={currentUserId}
                     updateUrlWithContext={updateUrlWithContext}
+                    searchParams={searchParams}
+                    router={router}
                   />
                 </TabsContent>
               </Tabs>
