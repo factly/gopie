@@ -78,7 +78,7 @@ class ChatHistoryProcessor:
             for tool_call in self.get_all_tool_calls():
                 if tool_call.get("name") == DATASETS_USED:
                     args = tool_call.get("args", {})
-                    datasets_used.append(args.get(DATASETS_USED_ARG, []))
+                    datasets_used.extend(args.get(DATASETS_USED_ARG, []))
             self._context_cache["datasets_used"] = datasets_used
         return self._context_cache["datasets_used"]
 
