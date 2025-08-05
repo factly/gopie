@@ -1542,7 +1542,7 @@ function ChatPageClient() {
           </ResizablePanel>
           {isResultsPanelOpen && (
             <>
-              <ResizableHandle />
+              <ResizableHandle withHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
                 <div ref={sqlPanelRef} className="h-[calc(100vh-16px)]">
                   <ResultsPanel
