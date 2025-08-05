@@ -177,6 +177,42 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 		toolCalls := []any{}
 		role := "user"
 		assistantRole := "assistant"
+		type contextArgs struct {
+			ProjectIDs []string `json:"project_ids,omitempty"`
+			DatasetIDs []string `json:"dataset_ids,omitempty"`
+		}
+
+		args := contextArgs{}
+		if projectIDs != "" {
+			args.ProjectIDs = strings.Split(projectIDs, ",")
+		}
+		if datasetIDs != "" {
+			args.DatasetIDs = strings.Split(datasetIDs, ",")
+		}
+
+		if len(args.ProjectIDs) > 0 || len(args.DatasetIDs) > 0 {
+			argsJSON, err := json.Marshal(args)
+			if err != nil {
+				h.logger.Error("Failed to marshal context tool call arguments", zap.Error(err), zap.String("session_id", sessionID))
+			} else {
+				type functionCall struct {
+					Name      string `json:"name"`
+					Arguments string `json:"arguments"`
+				}
+				type toolCall struct {
+					Type     string       `json:"type"`
+					Function functionCall `json:"function"`
+				}
+				contextToolCall := toolCall{
+					Type: "function",
+					Function: functionCall{
+						Name:      "set_context",
+						Arguments: string(argsJSON),
+					},
+				}
+				toolCalls = append(toolCalls, contextToolCall)
+			}
+		}
 		messages := []models.ChatMessage{
 			{
 				CreatedAt: time.Now(),
