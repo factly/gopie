@@ -23,6 +23,7 @@ import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
+import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
 import {
   Tooltip,
   TooltipContent,
@@ -185,6 +186,7 @@ export function ChatMessage({
   } = useSqlStore();
   const { setPaths: setVisualizationPaths, setIsOpen: setVisualizationOpen } =
     useVisualizationStore();
+  const { setActiveTab } = useResultsPanelStore();
   const [isExecuting, setIsExecuting] = useState(false);
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(
     role === "intermediate" && typeof content === "string" ? true : false
@@ -319,6 +321,7 @@ export function ChatMessage({
       if (newVisualizationResults.length > 0) {
         setDisplayVisualizationResults(newVisualizationResults);
         setVisualizationPaths(newVisualizationResults, chatId);
+        setActiveTab('visualizations'); // Auto-switch to visualizations tab when new visualizations are received
       }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
@@ -364,6 +367,7 @@ export function ChatMessage({
     finalizedSqlQuery,
     chatId,
     setVisualizationPaths,
+    setActiveTab,
   ]);
 
   const handleRunQuery = useCallback(
@@ -378,6 +382,7 @@ export function ChatMessage({
           chatId,
         });
         setSqlPanelOpen(true);
+        setActiveTab('sql'); // Switch to SQL tab when running a query
       } catch (error) {
         setResults({
           data: [],
@@ -388,11 +393,12 @@ export function ChatMessage({
           chatId,
         });
         setSqlPanelOpen(true);
+        setActiveTab('sql'); // Switch to SQL tab even on error
       } finally {
         setIsExecuting(false);
       }
     },
-    [executeSql, setResults, setSqlPanelOpen, chatId]
+    [executeSql, setResults, setSqlPanelOpen, chatId, setActiveTab]
   );
 
   useEffect(() => {
@@ -789,6 +795,7 @@ export function ChatMessage({
                             chatId
                           );
                           setVisualizationOpen(true);
+                          setActiveTab('visualizations'); // Switch to visualizations tab
                         }}
                       >
                         <BarChart3 className="h-3 w-3 mr-1" />

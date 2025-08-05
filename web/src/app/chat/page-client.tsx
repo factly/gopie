@@ -14,6 +14,7 @@ import { useDeleteChat } from "@/lib/mutations/chat";
 import { useChats } from "@/lib/queries/chat/list-chats";
 import { useChatMessages } from "@/lib/queries/chat/get-messages";
 import { useChatDetails } from "@/lib/queries/chat/get-chat";
+import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -82,6 +83,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     clearPaths: clearVisualizationPaths,
     setIsOpen: setVisualizationOpen,
   } = useVisualizationStore();
+  const { setActiveTab: setResultsPanelActiveTab } = useResultsPanelStore();
 
   const deleteChat = useDeleteChat();
 
@@ -152,6 +154,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
         clearVisualizationPaths();
         setIsOpen(false);
         setVisualizationOpen(false);
+        setResultsPanelActiveTab('sql'); // Reset to SQL tab when deleting current chat
         await queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId }],
         });
@@ -175,6 +178,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     clearVisualizationPaths();
     setIsOpen(false);
     setVisualizationOpen(false);
+    setResultsPanelActiveTab('sql'); // Reset to SQL tab when switching chats
 
     if (datasetId && datasetName && projectId) {
       const newContexts = [
@@ -509,6 +513,7 @@ function ChatPageClient() {
     tabFromUrl === "history" ? "history" : "chat"
   );
   const queryClient = useQueryClient();
+  const { setActiveTab: setResultsPanelActiveTab } = useResultsPanelStore();
 
   // Get current user from auth store
   const { user } = useAuthStore();
@@ -966,6 +971,7 @@ function ChatPageClient() {
           clearVisualizationPaths();
           setIsOpen(false);
           setVisualizationOpen(false);
+          setResultsPanelActiveTab('sql'); // Reset to SQL tab when navigating with new context
           // Clear URL parameters to avoid re-applying context data
           const params = new URLSearchParams(searchParams.toString());
           params.delete("contextData");
@@ -985,6 +991,7 @@ function ChatPageClient() {
     setLinkedDatasetId,
     searchParams,
     router,
+    setResultsPanelActiveTab,
   ]);
 
   useEffect(() => {
