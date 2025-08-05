@@ -11,6 +11,7 @@ import {
   ExternalLink,
   BarChart3,
 } from "lucide-react";
+import { format } from "sql-formatter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +56,23 @@ interface StreamEvent {
   generated_sql_query?: string;
 }
 
+// Helper function to format SQL queries safely
+function formatSqlQuery(sql: string): string {
+  try {
+    return format(sql, {
+      language: "sql",
+      tabWidth: 2,
+      useTabs: false,
+      keywordCase: "lower",
+      linesBetweenQueries: 2,
+    });
+  } catch (error) {
+    console.warn("Failed to format SQL:", error);
+    // Return original query if formatting fails
+    return sql;
+  }
+}
+
 function parseMessageContent(content: string): MessageContent {
   if (content.startsWith("---SQL---") && content.endsWith("---SQL---")) {
     return {
@@ -70,7 +88,7 @@ function parseMessageContent(content: string): MessageContent {
       type: "text",
       content: content
         .replace(/^---TEXT---/, "")
-        .replace(/---TEXT---$/, "")
+        .replace(/---SQL---$/, "")
         .trim(),
     };
   }
@@ -221,9 +239,11 @@ export function ChatMessage({
   };
 
   const getQueryPreview = (query: string) => {
-    const words = query.trim().split(/\s+/);
+    // Format the query first for a better preview
+    const formattedQuery = formatSqlQuery(query.trim());
+    const words = formattedQuery.split(/\s+/);
     const preview = words.slice(0, 4).join(" ");
-    return preview.length < query.length ? `${preview}...` : preview;
+    return preview.length < formattedQuery.length ? `${preview}...` : preview;
   };
 
   // Process message parts from AI SDK
@@ -670,7 +690,7 @@ export function ChatMessage({
                           onClick={(e) => {
                             e.stopPropagation();
                             const queryToRun =
-                              editedQueries.get(index) ?? query;
+                              editedQueries.get(index) ?? formatSqlQuery(query);
                             handleRunQuery(queryToRun);
                           }}
                           disabled={isExecuting}
@@ -688,7 +708,7 @@ export function ChatMessage({
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
                         <SqlEditor
-                          value={editedQueries.get(index) ?? query}
+                          value={editedQueries.get(index) ?? formatSqlQuery(query)}
                           onChange={(newValue) => {
                             setEditedQueries((prev) => {
                               const newMap = new Map(prev);
@@ -710,7 +730,7 @@ export function ChatMessage({
               parsedTextContent.type === "sql" && (
                 <div className="w-full max-w-full lg:max-w-[800px] text-base">
                   <div className="relative">
-                    <SqlPreview value={parsedTextContent.content} />
+                    <SqlPreview value={formatSqlQuery(parsedTextContent.content)} />
                     {!isLoading && (
                       <div className="absolute top-2 right-2 flex items-center gap-2">
                         {isExecuting && (
@@ -726,7 +746,7 @@ export function ChatMessage({
                               variant="ghost"
                               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() =>
-                                handleRunQuery(parsedTextContent.content)
+                                handleRunQuery(formatSqlQuery(parsedTextContent.content))
                               }
                               disabled={isExecuting}
                             >
