@@ -41,59 +41,57 @@ export function SqlResults() {
         </div>
       </div>
       <div className="flex-1 min-h-0 overflow-auto p-4">
-        <div className="flex h-full items-center justify-center">
-          {results?.error ? (
-            <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
-              <p className="text-sm text-destructive">{results.error}</p>
-              <pre className="mt-2 text-xs text-muted-foreground">
-                {results.query}
-              </pre>
-            </div>
-          ) : results?.data?.length ? (
-            <div className="w-full overflow-x-auto border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    {(results.columns || Object.keys(results.data[0] || {})).map((key) => (
-                      <th
-                        key={key}
-                        className="whitespace-nowrap border-r px-4 py-2 text-left font-medium last:border-r-0"
+        {results?.error ? (
+          <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
+            <p className="text-sm text-destructive">{results.error}</p>
+            <pre className="mt-2 text-xs text-muted-foreground">
+              {results.query}
+            </pre>
+          </div>
+        ) : results?.data?.length ? (
+          <div className="w-full overflow-x-auto border">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b bg-muted/50">
+                  {(results.columns || Object.keys(results.data[0] || {})).map((key) => (
+                    <th
+                      key={key}
+                      className="whitespace-nowrap border-r px-4 py-2 text-left font-medium last:border-r-0"
+                    >
+                      {key}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {results.data.map((row, i) => (
+                  <tr
+                    key={i}
+                    className={cn(
+                      "border-b last:border-b-0",
+                      i % 2 === 0 ? "bg-background" : "bg-muted/30"
+                    )}
+                  >
+                    {(results.columns || Object.keys(results.data[0] || {})).map((key, j) => (
+                      <td
+                        key={j}
+                        className="whitespace-nowrap border-r px-4 py-2 last:border-r-0"
                       >
-                        {key}
-                      </th>
+                        {String(row[key])}
+                      </td>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {results.data.map((row, i) => (
-                    <tr
-                      key={i}
-                      className={cn(
-                        "border-b last:border-b-0",
-                        i % 2 === 0 ? "bg-background" : "bg-muted/30"
-                      )}
-                    >
-                      {(results.columns || Object.keys(results.data[0] || {})).map((key, j) => (
-                        <td
-                          key={j}
-                          className="whitespace-nowrap border-r px-4 py-2 last:border-r-0"
-                        >
-                          {String(row[key])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-              <Database className="h-12 w-12 opacity-20" />
-              <p className="text-sm font-medium">No data to display yet</p>
-              <p className="text-xs">Run a query to see results here</p>
-            </div>
-          )}
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <Database className="h-12 w-12 opacity-20" />
+            <p className="text-sm font-medium">No data to display yet</p>
+            <p className="text-xs">Run a query to see results here</p>
+          </div>
+        )}
       </div>
     </div>
   );
