@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -23,6 +21,11 @@ type S3Config struct {
 	SSL       bool
 }
 
+type QueueConfig struct {
+	NumWorkers int
+	QueueSize  int
+}
+
 type LoggerConfig struct {
 	Level   string
 	LogFile string
@@ -37,6 +40,7 @@ type Config struct {
 	Postgres      PostgresConfig
 	EnableZitadel bool
 	EncryptionKey string
+	Queue         QueueConfig
 }
 
 type OlapDBConfig struct {
@@ -99,7 +103,7 @@ func validateConfig(config *Config) (*Config, error) {
 	switch config.OlapDB.DB {
 	case "duckdb":
 		config.OlapDB.DuckDB = &DuckDBConfig{
-			Path: viper.GetString("GOPIE_DUCKDB_PATH"),
+			Path: viper.GetString("GOPIE_DS_DUCKDB_PATH"),
 		}
 
 		// check it path exists
@@ -109,9 +113,9 @@ func validateConfig(config *Config) (*Config, error) {
 
 	case "motherduck":
 		config.OlapDB.MotherDuck = &MotherDuckConfig{
-			DBName:          viper.GetString("GOPIE_MOTHERDUCK_DB_NAME"),
-			Token:           viper.GetString("GOPIE_MOTHERDUCK_TOKEN"),
-			HelperDBDirPath: viper.GetString("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH"),
+			DBName:          viper.GetString("GOPIE_DS_MOTHERDUCK_DB_NAME"),
+			Token:           viper.GetString("GOPIE_DS_MOTHERDUCK_TOKEN"),
+			HelperDBDirPath: viper.GetString("GOPIE_DS_MOTHERDUCK_HELPER_DB_DIR_PATH"),
 		}
 		validations = append(validations,
 			validation{config.OlapDB.MotherDuck.DBName, "MotherDuck DB name"},
@@ -131,40 +135,17 @@ func validateConfig(config *Config) (*Config, error) {
 	return config, nil
 }
 
-func ensureDirectoryExists(path string) error {
-	dir := filepath.Dir(path)
-
-	_, err := os.Stat(dir)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-		log.Printf("Created directory: %s", dir)
-	} else if err != nil {
-		return fmt.Errorf("error checking directory %s: %w", dir, err)
-	}
-
-	return nil
-}
-
 func setDefaults() {
-	viper.SetDefault("GOPIE_SERVER_HOST", "localhost")
-	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
-	viper.SetDefault("GOPIE_INTERNAL_SERVER_HOST", "localhost")
-	viper.SetDefault("GOPIE_INTERNAL_SERVER_PORT", "8001")
-	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
-	viper.SetDefault("GOPIE_S3_SSL", false)
-	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
-	viper.SetDefault("GOPIE_LOGGER_FILE", "gopie.log")
-	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
-	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
-	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
-	viper.SetDefault("GOPIE_ENABLE_ZITADEL", false)
-	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
-	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
-	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
-	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH", "./motherduck")
+	viper.SetDefault("GOPIE_DS_SERVER_HOST", "localhost")
+	viper.SetDefault("GOPIE_DS_SERVER_PORT", "8000")
+	viper.SetDefault("GOPIE_DS_S3_REGION", "us-east-1")
+	viper.SetDefault("GOPIE_DS_S3_SSL", false)
+	viper.SetDefault("GOPIE_DS_LOGGER_LEVEL", "info")
+	viper.SetDefault("GOPIE_DS_LOGGER_FILE", "gopie.log")
+	viper.SetDefault("GOPIE_DS_LOGGER_MODE", "dev")
+	viper.SetDefault("GOPIE_DS_DUCKDB_PATH", "./duckdb/gopie.db")
+	viper.SetDefault("GOPIE_DS_QUEUE_SIZE", 1000)
+	viper.SetDefault("GOPIE_DS_QUEUE_WORKERS", 10)
 }
 
 func LoadConfig() (*Config, error) {
@@ -176,30 +157,34 @@ func LoadConfig() (*Config, error) {
 
 	config := &Config{
 		Server: ServerConfig{
-			Host: viper.GetString("GOPIE_SERVER_HOST"),
-			Port: viper.GetString("GOPIE_SERVER_PORT"),
+			Host: viper.GetString("GOPIE_DS_SERVER_HOST"),
+			Port: viper.GetString("GOPIE_DS_SERVER_PORT"),
 		},
 		S3: S3Config{
-			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
-			SecretKey: viper.GetString("GOPIE_S3_SECRET_KEY"),
-			Region:    viper.GetString("GOPIE_S3_REGION"),
-			Endpoint:  viper.GetString("GOPIE_S3_ENDPOINT"),
-			SSL:       viper.GetBool("GOPIE_S3_SSL"),
+			AccessKey: viper.GetString("GOPIE_DS_S3_ACCESS_KEY"),
+			SecretKey: viper.GetString("GOPIE_DS_S3_SECRET_KEY"),
+			Region:    viper.GetString("GOPIE_DS_S3_REGION"),
+			Endpoint:  viper.GetString("GOPIE_DS_S3_ENDPOINT"),
+			SSL:       viper.GetBool("GOPIE_DS_S3_SSL"),
 		},
 		Logger: LoggerConfig{
-			Level:   viper.GetString("GOPIE_LOGGER_LEVEL"),
-			LogFile: viper.GetString("GOPIE_LOGGER_FILE"),
-			Mode:    viper.GetString("GOPIE_LOGGER_MODE"),
+			Level:   viper.GetString("GOPIE_DS_LOGGER_LEVEL"),
+			LogFile: viper.GetString("GOPIE_DS_LOGGER_FILE"),
+			Mode:    viper.GetString("GOPIE_DS_LOGGER_MODE"),
 		},
 		OlapDB: OlapDBConfig{
-			DB: viper.GetString("GOPIE_OLAPDB_DBTYPE"),
+			DB: viper.GetString("GOPIE_DS_OLAPDB_DBTYPE"),
 		},
 		Postgres: PostgresConfig{
-			Host:     viper.GetString("GOPIE_POSTGRES_HOST"),
-			Port:     viper.GetString("GOPIE_POSTGRES_PORT"),
-			Database: viper.GetString("GOPIE_POSTGRES_DB"),
-			User:     viper.GetString("GOPIE_POSTGRES_USER"),
-			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
+			Host:     viper.GetString("GOPIE_DS_POSTGRES_HOST"),
+			Port:     viper.GetString("GOPIE_DS_POSTGRES_PORT"),
+			Database: viper.GetString("GOPIE_DS_POSTGRES_DB"),
+			User:     viper.GetString("GOPIE_DS_POSTGRES_USER"),
+			Password: viper.GetString("GOPIE_DS_POSTGRES_PASSWORD"),
+		},
+		Queue: QueueConfig{
+			NumWorkers: viper.GetInt("GOPIE_DS_QUEUE_WORKERS"),
+			QueueSize:  viper.GetInt("GOPIE_DS_QUEUE_SIZE"),
 		},
 	}
 

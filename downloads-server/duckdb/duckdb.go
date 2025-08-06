@@ -1,9 +1,12 @@
 package duckdb
 
 import (
+	"context"
 	"database/sql"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/factly/gopie/downlods-server/models"
@@ -123,4 +126,56 @@ func (m *OlapDBDriver) Close() error {
 		return m.db.Close()
 	}
 	return nil
+}
+
+func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string, writer io.Writer) error {
+	defer func() {
+		if closer, ok := writer.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	rows, err := m.db.QueryContext(ctx, sql)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	csvWriter := csv.NewWriter(writer)
+	defer csvWriter.Flush()
+
+	headers, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	if err := csvWriter.Write(headers); err != nil {
+		return err
+	}
+
+	values := make([]any, len(headers))
+	scanArgs := make([]any, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			return err
+		}
+
+		record := make([]string, len(values))
+		for i, val := range values {
+			if val == nil {
+				record[i] = ""
+			} else {
+				record[i] = fmt.Sprintf("%v", val)
+			}
+		}
+
+		if err := csvWriter.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
 }
