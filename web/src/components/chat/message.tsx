@@ -11,6 +11,7 @@ import {
   ExternalLink,
   BarChart3,
   FolderOpen,
+  Lightbulb,
 } from "lucide-react";
 import { format } from "sql-formatter";
 import {
@@ -408,7 +409,7 @@ export function ChatMessage({
 
       if (newIntermediateMessages.length > 0) {
         setDisplayIntermediateMessages(newIntermediateMessages);
-        setIsThoughtProcessOpen(true);
+        // Keep thought process collapsed by default - user can manually expand if needed
       }
 
       if (newVisualizationPaths.length > 0) {
@@ -465,7 +466,13 @@ export function ChatMessage({
     chatId,
     setVisualizationPaths,
     setActiveTab,
+    isLoading,
   ]);
+
+  // Extract text content from message or fallback to content (needed early for useEffect)
+  const textContent =
+    message?.content || (typeof content === "string" ? content : "");
+
 
   const handleRunQuery = useCallback(
     async (query: string) => {
@@ -540,9 +547,6 @@ export function ChatMessage({
   const styleRole =
     role === "ai" || role === "intermediate" ? "assistant" : role;
 
-  // Extract text content from message or fallback to content
-  const textContent =
-    message?.content || (typeof content === "string" ? content : "");
   const parsedTextContent = parseMessageContent(textContent);
 
   if (
@@ -606,7 +610,7 @@ export function ChatMessage({
                   Agent is thinking...
                 </CollapsibleTrigger>
               </div>
-              <CollapsibleContent className="pt-2">
+              <CollapsibleContent className="pt-2 pl-4">
                 <div
                   className={cn(
                     "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
@@ -651,16 +655,28 @@ export function ChatMessage({
             className="w-full"
           >
             <div className="flex items-center justify-between">
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1 -m-1 rounded hover:bg-accent">
                 {isThoughtProcessOpen ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
-                Agent thought process
+                {/* Show lightbulb icon while loading, otherwise show "Agent thought process" */}
+                {isLoading ? (
+                  <>
+                    <Lightbulb className="h-4 w-4 animate-pulse text-yellow-500 dark:text-yellow-400" />
+                    {!isThoughtProcessOpen && (
+                      <span className="text-xs italic text-muted-foreground truncate max-w-[400px]">
+                        {displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing..."}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "Agent thought process"
+                )}
               </CollapsibleTrigger>
             </div>
-            <CollapsibleContent className="pt-2">
+            <CollapsibleContent className="pt-2 pl-5">
               <div
                 className={cn(
                   "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
@@ -736,8 +752,8 @@ export function ChatMessage({
                     onOpenChange={() => toggleQueryExpansion(index)}
                     className="border border-border bg-card shadow-sm min-w-0"
                   >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
+                      <CollapsibleTrigger className="flex items-center gap-3 min-w-0 flex-1">
                         {expandedQueries.has(index) ? (
                           <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         ) : (
@@ -756,7 +772,7 @@ export function ChatMessage({
                             </div>
                           )}
                         </div>
-                      </div>
+                      </CollapsibleTrigger>
                       {!isLoading && (
                         <Button
                           size="sm"
@@ -778,7 +794,7 @@ export function ChatMessage({
                           Run
                         </Button>
                       )}
-                    </CollapsibleTrigger>
+                    </div>
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
                         <SqlEditor
