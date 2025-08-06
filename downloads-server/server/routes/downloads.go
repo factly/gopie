@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/factly/gopie/downlods-server/models"
 	"github.com/factly/gopie/downlods-server/queue"
@@ -14,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (h *httpHandler) downloadEvents(ctx *fiber.Ctx) error {
+func (h *httpHandler) createDownload(ctx *fiber.Ctx) error {
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	var req models.CreateDownloadRequest
@@ -80,4 +81,49 @@ func (h *httpHandler) downloadEvents(ctx *fiber.Ctx) error {
 	}))
 
 	return nil
+}
+
+// listDownloads retrieves a paginated list of all download jobs for the user.
+func (h *httpHandler) listDownloads(c *fiber.Ctx) error {
+	userID := c.Get("x-user-id")
+	orgID := c.Get("x-organization-id")
+
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
+
+	downloads, err := h.queue.DbStore.ListDownloadsByUser(c.Context(), userID, orgID, int32(limit), int32(offset))
+	if err != nil {
+		h.logger.Error("Failed to list downloads", zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not retrieve downloads"})
+	}
+
+	return c.JSON(downloads)
+}
+
+// getDownload retrieves the details of a single download job.
+func (h *httpHandler) getDownload(c *fiber.Ctx) error {
+	downloadID := c.Params("id")
+	orgID := c.Get("x-organization-id")
+
+	download, err := h.queue.DbStore.GetDownload(c.Context(), downloadID, orgID)
+	if err != nil {
+		h.logger.Error("Failed to get download", zap.String("id", downloadID), zap.Error(err))
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "download not found"})
+	}
+
+	return c.JSON(download)
+}
+
+// deleteDownload deletes a download job record.
+func (h *httpHandler) deleteDownload(c *fiber.Ctx) error {
+	downloadID := c.Params("id")
+	orgID := c.Get("x-organization-id")
+
+	err := h.queue.DbStore.DeleteDownload(c.Context(), downloadID, orgID)
+	if err != nil {
+		h.logger.Error("Failed to delete download", zap.String("id", downloadID), zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not delete download"})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
