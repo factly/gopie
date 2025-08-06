@@ -19,6 +19,7 @@ type S3Config struct {
 	SecretKey string
 	Region    string
 	Endpoint  string
+	Bucket    string
 	SSL       bool
 }
 
