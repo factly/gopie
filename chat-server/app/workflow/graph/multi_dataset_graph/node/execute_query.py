@@ -1,5 +1,6 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 
+from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.services.gopie.sql_executor import execute_sql_with_limit
@@ -41,6 +42,14 @@ async def execute_query(state: State) -> dict:
                         success=True,
                         error=None,
                     )
+                )
+                await adispatch_custom_event(
+                    "gopie-agent",
+                    {
+                        "content": "Executed SQL query",
+                        "name": SQL_QUERIES_GENERATED,
+                        "values": {SQL_QUERIES_GENERATED_ARG: [query_info.sql_query]},
+                    },
                 )
             except Exception as err:
                 error_str = str(err)

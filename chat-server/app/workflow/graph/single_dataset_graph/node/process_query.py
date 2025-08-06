@@ -159,17 +159,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": "SQL queries generated",
-                    "name": SQL_QUERIES_GENERATED,
-                    "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
-                },
-            )
-
             sql_results: list[SqlQueryInfo] = []
-
             for q, exp in zip(sql_queries, explanations):
                 try:
                     result_data = await execute_sql_with_limit(query=q)
@@ -181,6 +171,14 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             success=True,
                             error=None,
                         )
+                    )
+                    await adispatch_custom_event(
+                        "gopie-agent",
+                        {
+                            "content": "SQL queries executed",
+                            "name": SQL_QUERIES_GENERATED,
+                            "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
+                        },
                     )
                 except Exception as err:
                     error_str = str(err)

@@ -16,6 +16,11 @@ from app.workflow.events.event_utils import configure_node
 from ..types import AgentState
 
 
+class SQLQuery(BaseModel):
+    reasoning_for_relevance: str = Field(description="Reasoning why the query is relevant")
+    id: int = Field(description="ID of the query")
+
+
 class ProcessContextOutput(BaseModel):
     is_follow_up: bool = Field(
         description="Whether this is a follow-up query from conversation history"
@@ -26,7 +31,7 @@ class ProcessContextOutput(BaseModel):
     is_visualization_query: bool = Field(
         description="Whether the query is related to visualization"
     )
-    relevant_sql_queries: list[str] = Field(
+    relevant_sql_queries: list[SQLQuery] = Field(
         description="Most relevant SQL queries from previously used queries", default=[]
     )
     enhanced_query: str = Field(
@@ -81,7 +86,8 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         is_follow_up = parsed_response.is_follow_up
         is_new_data_needed = parsed_response.is_new_data_needed
         needs_visualization = parsed_response.is_visualization_query
-        relevant_sql_queries = parsed_response.relevant_sql_queries
+        relevant_sql_queries_ids = [query.id for query in parsed_response.relevant_sql_queries]
+        relevant_sql_queries = history_processor.ids_to_sql_queries(relevant_sql_queries_ids)
         enhanced_query = parsed_response.enhanced_query
         context_summary = parsed_response.context_summary
 
