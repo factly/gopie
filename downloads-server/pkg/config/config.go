@@ -33,14 +33,12 @@ type LoggerConfig struct {
 }
 
 type Config struct {
-	Server        ServerConfig
-	S3            S3Config
-	Logger        LoggerConfig
-	OlapDB        OlapDBConfig
-	Postgres      PostgresConfig
-	EnableZitadel bool
-	EncryptionKey string
-	Queue         QueueConfig
+	Server   ServerConfig
+	S3       S3Config
+	Logger   LoggerConfig
+	OlapDB   OlapDBConfig
+	Postgres PostgresConfig
+	Queue    QueueConfig
 }
 
 type OlapDBConfig struct {
@@ -93,7 +91,6 @@ func validateConfig(config *Config) (*Config, error) {
 		{config.Postgres.Database, "postgres database"},
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
-		{config.EncryptionKey, "encryption key"},
 	}
 
 	if config.OlapDB.DB == "" {

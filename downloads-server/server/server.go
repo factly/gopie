@@ -41,6 +41,11 @@ func ServeHttp() error {
 
 	s3 := s3.NewS3ObjectStore(cfg.S3, logger)
 	dbStore := postgres.NewPostgresStore(logger)
+	err = dbStore.Connect(&cfg.Postgres)
+	if err != nil {
+		logger.Error("Error connecting to postgres", zap.Error(err))
+		return err
+	}
 	olapStore, err := duckdb.NewOlapDBDriver(&cfg.OlapDB, logger)
 	if err != nil {
 		logger.Error("Error initializing olapStore", zap.Error(err))
