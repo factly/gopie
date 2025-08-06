@@ -1,5 +1,7 @@
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.tools import tool
 
+from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.services.gopie.sql_executor import execute_sql_with_limit
 
 
@@ -24,6 +26,14 @@ async def execute_sql_query(
         results = []
         for query in queries:
             result = await execute_sql_with_limit(query=query)
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": "SQL Execution tool",
+                    "name": SQL_QUERIES_GENERATED,
+                    "values": {SQL_QUERIES_GENERATED_ARG: [query]},
+                },
+            )
             results.append(result)
         return results
     except Exception as e:

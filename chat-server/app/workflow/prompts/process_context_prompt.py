@@ -46,12 +46,14 @@ Your analysis should follow these key criteria:
   • Be greedy in selecting the relevant sql queries.
   • Do not invent any sql queries. Only select from the previously used sql queries.
   • Do not modify the sql queries, only select from the previously used sql queries.
+  • Output the id of the selected sql queries.
 
 5. What is the enhanced query? (`enhanced_query`)
   • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history and special instructions.
   • Keep the user's intent and wording where possible.
   • Make it clear whether user needs more data, new datasets, or just visualization.
   • If the chat history is empty, then the enhanced query should be the user query enhanced with the special instructions.
+  • This must from the user perspective. 
 
 6. Summary of the context (`context_summary`)
   • Provide a summary of how the present query is related to the previous conversation history.
@@ -79,7 +81,7 @@ Analyze the above and return ONLY a single JSON response with the specified fiel
         )
 
     # TODO: Add multi project custom prompts is not implemented
-    project_custom_prompts = "\n\n".join(project_custom_prompts)
+    project_custom_prompts = "\n".join(project_custom_prompts)
 
     human_content = human_template_str.format(
         current_query=current_query,
