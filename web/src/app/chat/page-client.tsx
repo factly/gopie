@@ -1485,72 +1485,7 @@ function ChatPageClient() {
                   >
                     <PanelLeft className="h-4 w-4" />
                   </Button>
-                  <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
-                    <TabsTrigger
-                      value="chat"
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        {chatDetails?.visibility && (
-                          <ChatVisibilityIndicator
-                            visibility={chatDetails.visibility}
-                          />
-                        )}
-                        <span className="truncate">
-                          {isLoadingChatDetails && selectedChatId
-                            ? "Loading..."
-                            : selectedChatTitle
-                            ? selectedChatTitle
-                            : "Chat"}
-                        </span>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`mr-2 ${
-                          activeTab === "history"
-                            ? "bg-muted border-b-2 border-primary"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setActiveTab("history");
-                          // Update URL with tab parameter
-                          const params = new URLSearchParams(
-                            searchParams.toString()
-                          );
-                          params.set("tab", "history");
-                          router.replace(`/chat?${params.toString()}`);
-                        }}
-                      >
-                        <History className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>History</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mr-2"
-                        onClick={() => {
-                          // Use window.location for a hard navigation to bypass all React state/effects
-                          window.location.href = "/chat";
-                        }}
-                      >
-                        <MessageSquarePlus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>New Chat</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="flex-1"></div>
                   {selectedChatId && (
                     <ShareChatDialog
                       chatId={selectedChatId}
@@ -1601,12 +1536,33 @@ function ChatPageClient() {
                     <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
                       <div className="w-full max-w-2xl pointer-events-auto">
                         <div className="mb-6 text-center">
+                          <div className="flex justify-center mb-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
+                              <a
+                                href="/chat?tab=history"
+                                className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="h-4 w-4"
+                                >
+                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                  <path d="M3 3v5h5" />
+                                  <path d="M12 7v5l4 2" />
+                                </svg>
+                                Previous Chats
+                              </a>
+                            </div>
+                          </div>
                           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
                             Chat with your data
                           </h1>
-                          <p className="text-sm text-muted-foreground">
-                            Select contexts and ask questions about your data
-                          </p>
                         </div>
                         <div
                           className="bg-card dark:bg-card/90 border border-border shadow-lg 
