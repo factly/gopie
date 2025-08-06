@@ -19,7 +19,7 @@ type DownloadQueue struct {
 	olapStore     *duckdb.OlapDBDriver
 	logger        *logger.Logger
 	s3ObjectStore *s3.S3ObjectStore
-	manager       *SubscriptionManager
+	Manager       *SubscriptionManager
 	jobChannel    chan *models.Download
 	numWorkers    int
 }
@@ -30,7 +30,7 @@ func NewDownloadQueue(db *postgres.PostgresStore, olapStore *duckdb.OlapDBDriver
 		olapStore:     olapStore,
 		s3ObjectStore: s3,
 		logger:        log,
-		manager:       manager,
+		Manager:       manager,
 		jobChannel:    make(chan *models.Download, maxQueueSize),
 		numWorkers:    numWorkers,
 	}
@@ -78,7 +78,7 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 		q.logger.Error("Failed to set job to processing", zap.String("download_id", jobIDStr), zap.Error(err))
 		return
 	}
-	q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Processing query..."})
+	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Processing query..."})
 
 	pr, pw := io.Pipe()
 	s3Key := fmt.Sprintf("downloads/%s/%s.csv", job.OrgID, job.ID)
@@ -92,7 +92,7 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 		}
 	}()
 
-	q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Streaming data to storage..."})
+	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Streaming data to storage..."})
 	dbErr := q.olapStore.ExecuteQueryAndStreamCSV(ctx, job.SQL, pw)
 
 	if dbErr != nil {
@@ -100,28 +100,28 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 		q.logger.Error("Failed to execute and stream query", zap.String("download_id", jobIDStr), zap.Error(dbErr))
 		failReq := &models.SetDownloadFailedRequest{ErrorMessage: dbErr.Error()}
 		q.dbStore.SetDownloadAsFailed(ctx, jobIDStr, failReq)
-		q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to execute query: " + dbErr.Error()})
+		q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to execute query: " + dbErr.Error()})
 		return
 	}
 	pw.Close()
 
-	q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Generating secure download link..."})
+	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Generating secure download link..."})
 	expiresIn := 24 * time.Hour
 	url, err := q.s3ObjectStore.GetPresignedURL(ctx, s3Key, expiresIn)
 	if err != nil {
 		failReq := &models.SetDownloadFailedRequest{ErrorMessage: "Failed to generate download link."}
 		q.dbStore.SetDownloadAsFailed(ctx, jobIDStr, failReq)
-		q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to generate download link."})
+		q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to generate download link."})
 		return
 	}
 
 	completeReq := &models.SetDownloadCompletedRequest{PreSignedURL: url, ExpiresAt: time.Now().Add(expiresIn)}
 	_, err = q.dbStore.SetDownloadAsCompleted(ctx, jobIDStr, completeReq)
 	if err != nil {
-		q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to finalize job status."})
+		q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to finalize job status."})
 		return
 	}
 
-	q.manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "complete", Message: url})
+	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "complete", Message: url})
 	q.logger.Info("Successfully processed download job", zap.String("download_id", jobIDStr))
 }

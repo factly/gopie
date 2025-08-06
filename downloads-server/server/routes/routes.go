@@ -1,33 +1,29 @@
 package routes
 
 import (
-	"github.com/factly/gopie/downlods-server/duckdb"
 	"github.com/factly/gopie/downlods-server/pkg/logger"
-	"github.com/factly/gopie/downlods-server/postgres"
-	"github.com/factly/gopie/downlods-server/s3"
+	"github.com/factly/gopie/downlods-server/queue"
 	"github.com/gofiber/fiber/v2"
 )
 
 // httpHandler holds the dependencies for your API handlers.
 type httpHandler struct {
-	dbStore       *postgres.PostgresStore
-	olapStore     *duckdb.OlapDBDriver
-	logger        *logger.Logger
-	s3ObjectStore *s3.S3ObjectStore
+	logger *logger.Logger
+	queue  *queue.DownloadQueue
 }
 
-func NewHttpHandler(db *postgres.PostgresStore, s3 *s3.S3ObjectStore, olap *duckdb.OlapDBDriver, log *logger.Logger) *httpHandler {
+func NewHttpHandler(log *logger.Logger, queue *queue.DownloadQueue) *httpHandler {
 	return &httpHandler{
-		dbStore:       db,
-		s3ObjectStore: s3,
-		logger:        log,
-		olapStore:     olap,
+		logger: log,
+		queue:  queue,
 	}
 }
 
 // RegisterRoutes sets up all the application routes on the provided fiber router.
 func (h *httpHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/health", h.healthCheck)
+	router.Post("/downloads", h.createDownload)
+	router.Get("/downloads/:id/events", h.downloadEvents)
 }
 
 func (h *httpHandler) healthCheck(c *fiber.Ctx) error {

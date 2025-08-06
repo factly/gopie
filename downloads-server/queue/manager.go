@@ -30,7 +30,7 @@ func NewSubscriptionManager(log *logger.Logger) *SubscriptionManager {
 	manager := &SubscriptionManager{
 		logger:       log,
 		clients:      make(map[string]map[chan string]bool),
-		broadcastCh:  make(chan ProgressEvent, 100),
+		broadcastCh:  make(chan ProgressEvent),
 		registerCh:   make(chan *clientSubscription),
 		unregisterCh: make(chan *clientSubscription),
 	}
