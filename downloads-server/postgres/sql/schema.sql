@@ -1,6 +1,4 @@
--- +goose Up
--- +goose StatementBegin
-create type if not exists download_status as enum (
+create type download_status as enum (
   'pending',
   'processing',
   'completed',
@@ -8,7 +6,7 @@ create type if not exists download_status as enum (
   'expired'
 );
 
-create table if not exists downloads(
+create table downloads(
   id uuid primary key default uuid_generate_v4(),
   sql text not null,
   dataset_id text not null,
@@ -23,13 +21,3 @@ create table if not exists downloads(
   user_id text not null,
   org_id text not null
 );
-
-create index if not exists idx_downloads_dataset_id on downloads(dataset_id);
-create index if not exists idx_downloads_status on downloads(status);
--- +goose StatementEnd
-
--- +goose Down
--- +goose StatementBegin
-drop table if exists downloads;
-drop type if exists download_status;
--- +goose StatementEnd
