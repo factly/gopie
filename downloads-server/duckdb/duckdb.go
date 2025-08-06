@@ -24,16 +24,13 @@ type OlapDBDriver struct {
 	logger   *logger.Logger
 	olapType string // "duckdb" or "motherduck"
 	dbName   string
-	// S3 configuration to reapply for each S3 operation
-	s3Config *config.S3Config
 }
 
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 // It assumes access_mode is always read_only.
-func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (*OlapDBDriver, error) {
+func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger) (*OlapDBDriver, error) {
 	olap := OlapDBDriver{
-		logger:   logger,
-		s3Config: s3Cfg, // Store S3 config for later use
+		logger: logger,
 	}
 	logger.Info("initializing duckdb driver",
 		zap.String("db_type", cfg.DB),

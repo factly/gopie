@@ -20,7 +20,7 @@ type PostgresStore struct {
 	q      *gen.Queries
 }
 
-func NewPostgresStoreRepository(logger *logger.Logger) *PostgresStore {
+func NewPostgresStore(logger *logger.Logger) *PostgresStore {
 	return &PostgresStore{
 		logger: logger,
 	}

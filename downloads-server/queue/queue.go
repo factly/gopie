@@ -8,6 +8,7 @@ import (
 
 	"github.com/factly/gopie/downlods-server/duckdb"
 	"github.com/factly/gopie/downlods-server/models"
+	"github.com/factly/gopie/downlods-server/pkg/config"
 	"github.com/factly/gopie/downlods-server/pkg/logger"
 	"github.com/factly/gopie/downlods-server/postgres"
 	"github.com/factly/gopie/downlods-server/s3"
@@ -24,15 +25,15 @@ type DownloadQueue struct {
 	numWorkers    int
 }
 
-func NewDownloadQueue(db *postgres.PostgresStore, olapStore *duckdb.OlapDBDriver, s3 *s3.S3ObjectStore, log *logger.Logger, manager *SubscriptionManager, maxQueueSize int, numWorkers int) *DownloadQueue {
+func NewDownloadQueue(db *postgres.PostgresStore, olapStore *duckdb.OlapDBDriver, s3 *s3.S3ObjectStore, log *logger.Logger, manager *SubscriptionManager, cfg *config.QueueConfig) *DownloadQueue {
 	return &DownloadQueue{
 		dbStore:       db,
 		olapStore:     olapStore,
 		s3ObjectStore: s3,
 		logger:        log,
 		Manager:       manager,
-		jobChannel:    make(chan *models.Download, maxQueueSize),
-		numWorkers:    numWorkers,
+		jobChannel:    make(chan *models.Download, cfg.QueueSize),
+		numWorkers:    cfg.NumWorkers,
 	}
 }
 
