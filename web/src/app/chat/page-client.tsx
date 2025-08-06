@@ -39,6 +39,7 @@ import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { ReadOnlyMessage } from "@/components/chat/read-only-message";
+import { ContextSelectionHelper } from "@/components/chat/context-selection-helper";
 import {
   Tooltip,
   TooltipContent,
@@ -589,6 +590,7 @@ function ChatPageClient() {
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [contextInitialized, setContextInitialized] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
 
@@ -1236,6 +1238,8 @@ function ChatPageClient() {
         updateUrlWithContext(newContexts);
         return newContexts;
       });
+      // Stop flashing when context is selected
+      setIsInputFocused(false);
     },
     [updateUrlWithContext]
   );
@@ -1461,7 +1465,7 @@ function ChatPageClient() {
                     <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
                       <div className="w-full max-w-2xl pointer-events-auto">
                         <div className="mb-6 text-center">
-                          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
                             Chat with your data
                           </h1>
                           <p className="text-sm text-muted-foreground">
@@ -1469,7 +1473,7 @@ function ChatPageClient() {
                           </p>
                         </div>
                         <div
-                          className="bg-card border border-border shadow-lg 
+                          className="bg-card dark:bg-card/90 border border-border shadow-lg 
                           ring-[1.5px] ring-foreground/10 
                           hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
                           focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
@@ -1481,7 +1485,12 @@ function ChatPageClient() {
                                 selectedContexts={selectedContexts}
                                 onSelectContext={handleSelectContext}
                                 onRemoveContext={handleRemoveContext}
-                                triggerClassName="flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 bg-muted/70"
+                                triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
+                                  isInputFocused && selectedContexts.length === 0
+                                    ? "animate-slow-pulse bg-muted/90"
+                                    : "bg-muted/70"
+                                }`}
+                                shouldFlash={isInputFocused && selectedContexts.length === 0}
                               />
                             </div>
                             <MentionInput
@@ -1493,16 +1502,21 @@ function ChatPageClient() {
                               selectedContexts={selectedContexts}
                               onSelectContext={handleSelectContext}
                               onRemoveContext={handleRemoveContext}
-                              className="flex-1"
+                              className="flex-1 dark-input"
                               showSendButton={true}
                               isSending={isLoading}
                               isStreaming={isStreaming}
                               stopMessageStream={handleStop}
                               lockableContextIds={[]}
                               hasContext={selectedContexts.length > 0}
+                              onFocus={() => setIsInputFocused(true)}
+                              onBlur={() => setIsInputFocused(false)}
                             />
                           </div>
                         </div>
+                        <ContextSelectionHelper 
+                          isVisible={isInputFocused && selectedContexts.length === 0}
+                        />
                       </div>
                     </div>
                   ) : (
