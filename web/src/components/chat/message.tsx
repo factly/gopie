@@ -661,18 +661,20 @@ export function ChatMessage({
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
-                {/* Show lightbulb icon while loading, otherwise show "Agent thought process" */}
-                {isLoading ? (
-                  <>
-                    <Lightbulb className="h-4 w-4 animate-pulse text-yellow-500 dark:text-yellow-400" />
-                    {!isThoughtProcessOpen && (
-                      <span className="text-xs italic text-muted-foreground truncate max-w-[400px]">
-                        {displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing..."}
-                      </span>
-                    )}
-                  </>
-                ) : (
+                {/* Always show lightbulb icon, animate it while loading */}
+                <Lightbulb className={cn(
+                  "h-4 w-4",
+                  isLoading 
+                    ? "animate-pulse text-yellow-500 dark:text-yellow-400" 
+                    : "text-muted-foreground"
+                )} />
+                {/* Show title when expanded or not loading, show latest message when collapsed and loading */}
+                {isThoughtProcessOpen || !isLoading ? (
                   "Agent thought process"
+                ) : (
+                  <span className="text-xs italic text-muted-foreground truncate max-w-[400px]">
+                    {displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing..."}
+                  </span>
                 )}
               </CollapsibleTrigger>
             </div>
