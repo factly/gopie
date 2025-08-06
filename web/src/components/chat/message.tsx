@@ -506,14 +506,37 @@ export function ChatMessage({
     [executeSql, setResults, setSqlPanelOpen, chatId, setActiveTab]
   );
 
+  // Execute SQL queries as soon as they appear (even while streaming)
   useEffect(() => {
-    if (!isLoading && (role === "assistant" || role === "ai") && isLatest) {
+    if ((role === "assistant" || role === "ai") && isLatest && displaySqlQueries.length > 0) {
+      // Execute the last query by default
+      const sqlToExecute = displaySqlQueries[displaySqlQueries.length - 1];
+      
+      if (sqlToExecute) {
+        const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
+        if (shouldExecute) {
+          // Execute query asynchronously without blocking UI thread
+          setTimeout(() => {
+            handleRunQuery(sqlToExecute);
+          }, 0);
+        }
+      }
+    }
+  }, [
+    role,
+    isLatest,
+    handleRunQuery,
+    id,
+    markQueryAsExecuted,
+    displaySqlQueries,
+  ]);
+
+  // Fallback for legacy SQL content (when not using displaySqlQueries)
+  useEffect(() => {
+    if (!isLoading && (role === "assistant" || role === "ai") && isLatest && displaySqlQueries.length === 0) {
       let sqlToExecute: string | null = null;
 
-      if (displaySqlQueries.length > 0) {
-        // Execute the last query by default
-        sqlToExecute = displaySqlQueries[displaySqlQueries.length - 1];
-      } else if (typeof content === "string") {
+      if (typeof content === "string") {
         const parsed = parseMessageContent(content);
         if (parsed.type === "sql") {
           sqlToExecute = parsed.content;
@@ -528,7 +551,10 @@ export function ChatMessage({
       if (sqlToExecute) {
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
-          handleRunQuery(sqlToExecute);
+          // Execute query asynchronously without blocking UI thread
+          setTimeout(() => {
+            handleRunQuery(sqlToExecute);
+          }, 0);
         }
       }
     }
