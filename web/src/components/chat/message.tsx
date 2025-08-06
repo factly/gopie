@@ -167,35 +167,21 @@ function ProjectItem({ projectId }: ProjectItemProps) {
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge
-          variant="secondary"
-          className="text-xs font-normal"
-        >
-          <Link
-            href={`/projects/${projectId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:underline"
-          >
-            <FolderOpen className="h-3 w-3" />
-            {project.name}
-            <ExternalLink className="h-3 w-3 ml-0.5" />
-          </Link>
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent className="w-60">
-        <div className="space-y-1.5">
-          <p className="font-medium">{project.name}</p>
-          {project.description && (
-            <p className="text-xs text-muted-foreground">
-              {project.description}
-            </p>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+    <Badge
+      variant="secondary"
+      className="text-xs font-normal"
+    >
+      <Link
+        href={`/projects/${projectId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:underline"
+      >
+        <FolderOpen className="h-3 w-3" />
+        {project.name}
+        <ExternalLink className="h-3 w-3 ml-0.5" />
+      </Link>
+    </Badge>
   );
 }
 
@@ -232,48 +218,21 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge
-          variant="secondary"
-          className="text-xs font-normal"
-        >
-          {projectId ? (
-            <Link
-              href={`/projects/${projectId}/datasets/${datasetId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:underline"
-            >
-              <Database className="h-3 w-3" />
-              {dataset.alias}
-              <ExternalLink className="h-3 w-3 ml-0.5" />
-            </Link>
-          ) : (
-            <span className="flex items-center gap-1">
-              <Database className="h-3 w-3" />
-              {dataset.alias}
-            </span>
-          )}
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent className="w-60">
-        <div className="space-y-1.5">
-          <p className="font-medium">{dataset.name}</p>
-          {dataset.description && (
-            <p className="text-xs text-muted-foreground">
-              {dataset.description}
-            </p>
-          )}
-          <div className="text-xs">
-            <span className="text-muted-foreground">Rows:</span>{" "}
-            <span className="font-medium">
-              {dataset.row_count.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      </TooltipContent>
-    </Tooltip>
+    <Badge
+      variant="secondary"
+      className="text-xs font-normal"
+    >
+      <Link
+        href={projectId ? `/projects/${projectId}/datasets/${datasetId}` : `/datasets/${datasetId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:underline"
+      >
+        <Database className="h-3 w-3" />
+        {dataset.alias}
+        <ExternalLink className="h-3 w-3 ml-0.5" />
+      </Link>
+    </Badge>
   );
 }
 
@@ -646,9 +605,6 @@ export function ChatMessage({
                   )}
                   Agent is thinking...
                 </CollapsibleTrigger>
-                <span className="text-[11px] text-muted-foreground">
-                  {new Date(createdAt).toLocaleTimeString()}
-                </span>
               </div>
               <CollapsibleContent className="pt-2">
                 <div
@@ -971,6 +927,8 @@ export function ChatMessage({
                     projectId={
                       datasetId && datasetId.includes("/")
                         ? datasetId.split("/")[0]
+                        : contextProjectIds.length > 0
+                        ? contextProjectIds[0]
                         : undefined
                     }
                   />
@@ -1003,20 +961,9 @@ export function ChatMessage({
             <ContextDisplay projectIds={contextProjectIds} datasetIds={contextDatasetIds} />
           )}
 
-          {/* Message footer: timestamp, TTS button, and delete option */}
-          {!isLoading && (styleRole === "user" || textContent) && (
+          {/* Message footer: delete option */}
+          {!isLoading && (styleRole === "user" || textContent) && onDelete && chatId && (
             <div className="flex items-center gap-2 mt-2">
-              <span
-                className={cn(
-                  "text-[11px]",
-                  styleRole === "user"
-                    ? "text-primary-foreground/70"
-                    : "text-muted-foreground"
-                )}
-              >
-                {new Date(createdAt).toLocaleTimeString()}
-              </span>
-
               {/* <div id={`tts-button-container-${id}`} data-tts-message-id={id}>
                 <TTSButton
                   text={textContent}
@@ -1025,33 +972,31 @@ export function ChatMessage({
                 />
               </div> */}
 
-              {onDelete && chatId && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100",
-                        styleRole === "user"
-                          ? "hover:bg-primary-foreground/10 text-primary-foreground"
-                          : "hover:bg-muted"
-                      )}
-                    >
-                      <MoreVertical className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => onDelete(id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100",
+                      styleRole === "user"
+                        ? "hover:bg-primary-foreground/10 text-primary-foreground"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => onDelete(id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
