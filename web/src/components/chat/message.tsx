@@ -10,6 +10,7 @@ import {
   Database,
   ExternalLink,
   BarChart3,
+  FolderOpen,
 } from "lucide-react";
 import { format } from "sql-formatter";
 import {
@@ -39,6 +40,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useDatasetById } from "@/lib/queries/dataset/get-dataset-by-id";
+import { useProject } from "@/lib/queries/project/get-project";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { UIMessage } from "ai";
@@ -110,6 +112,93 @@ interface ChatMessageProps {
   finalizedSqlQuery?: string;
 }
 
+// Component for displaying context information (projects and datasets)
+interface ContextDisplayProps {
+  projectIds: string[];
+  datasetIds: string[];
+}
+
+function ContextDisplay({ projectIds, datasetIds }: ContextDisplayProps) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {projectIds.map((projectId) => (
+        <ProjectItem key={projectId} projectId={projectId} />
+      ))}
+      {datasetIds.map((datasetId) => (
+        <DatasetItem 
+          key={datasetId} 
+          datasetId={datasetId}
+          projectId={datasetIds.length === 1 && projectIds.length === 1 ? projectIds[0] : undefined}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Component for displaying project information
+interface ProjectItemProps {
+  projectId: string;
+}
+
+function ProjectItem({ projectId }: ProjectItemProps) {
+  const {
+    data: project,
+    isLoading,
+    isError,
+  } = useProject({
+    variables: { projectId },
+  });
+
+  if (isLoading) {
+    return (
+      <Badge variant="secondary" className="text-xs">
+        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+        Loading...
+      </Badge>
+    );
+  }
+
+  if (isError || !project) {
+    return (
+      <Badge variant="destructive" className="text-xs">
+        Project not found
+      </Badge>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="secondary"
+          className="text-xs font-normal"
+        >
+          <Link
+            href={`/projects/${projectId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 hover:underline"
+          >
+            <FolderOpen className="h-3 w-3" />
+            {project.name}
+            <ExternalLink className="h-3 w-3 ml-0.5" />
+          </Link>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent className="w-60">
+        <div className="space-y-1.5">
+          <p className="font-medium">{project.name}</p>
+          {project.description && (
+            <p className="text-xs text-muted-foreground">
+              {project.description}
+            </p>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 // New component for dataset details
 interface DatasetItemProps {
   datasetId: string;
@@ -127,18 +216,18 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
 
   if (isLoading) {
     return (
-      <span className="text-xs bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary-foreground/70 px-2 py-0.5 font-mono flex items-center gap-1">
-        <Loader2 className="h-3 w-3 animate-spin" />
+      <Badge variant="secondary" className="text-xs">
+        <Loader2 className="h-3 w-3 animate-spin mr-1" />
         {datasetId.substring(0, 8)}...
-      </span>
+      </Badge>
     );
   }
 
   if (isError || !dataset) {
     return (
-      <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 font-mono">
+      <Badge variant="destructive" className="text-xs">
         {datasetId.substring(0, 8)}...
-      </span>
+      </Badge>
     );
   }
 
@@ -146,19 +235,25 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge
-          variant="outline"
-          className="text-xs bg-primary/10 text-primary font-normal"
+          variant="secondary"
+          className="text-xs font-normal"
         >
           {projectId ? (
             <Link
               href={`/projects/${projectId}/datasets/${datasetId}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1 hover:underline"
             >
+              <Database className="h-3 w-3" />
               {dataset.alias}
               <ExternalLink className="h-3 w-3 ml-0.5" />
             </Link>
           ) : (
-            dataset.alias
+            <span className="flex items-center gap-1">
+              <Database className="h-3 w-3" />
+              {dataset.alias}
+            </span>
           )}
         </Badge>
       </TooltipTrigger>
@@ -225,6 +320,8 @@ export function ChatMessage({
   const [editedQueries, setEditedQueries] = useState<Map<number, string>>(
     new Map()
   );
+  const [contextProjectIds, setContextProjectIds] = useState<string[]>([]);
+  const [contextDatasetIds, setContextDatasetIds] = useState<string[]>([]);
 
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
@@ -259,10 +356,23 @@ export function ChatMessage({
       const newVisualizationPaths: string[] = [];
       // Extract visualization results from visualization_result tool calls
       const newVisualizationResults: string[] = [];
+      // Extract context from set_context tool calls (for user messages)
+      const newProjectIds: string[] = [];
+      const newDatasetIds: string[] = [];
 
       message.parts.forEach((part) => {
         if (part.type === "tool-invocation") {
           const { toolName, args } = part.toolInvocation;
+          
+          // Handle set_context tool call (from user messages)
+          if (toolName === "set_context") {
+            if (args.project_ids && Array.isArray(args.project_ids)) {
+              newProjectIds.push(...args.project_ids);
+            }
+            if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
+              newDatasetIds.push(...args.dataset_ids);
+            }
+          }
 
           if (toolName === "datasets_used" && args.datasets) {
             // Handle datasets_used tool
@@ -317,6 +427,14 @@ export function ChatMessage({
       });
 
       // Update state with extracted data
+      if (newProjectIds.length > 0) {
+        setContextProjectIds(newProjectIds);
+      }
+      
+      if (newDatasetIds.length > 0) {
+        setContextDatasetIds(newDatasetIds);
+      }
+
       if (newDatasets.length > 0) {
         setDisplayDatasets(newDatasets);
       } else if (finalizedDatasets && finalizedDatasets.length > 0) {
@@ -878,6 +996,11 @@ export function ChatMessage({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Context display for user messages */}
+          {styleRole === "user" && (contextProjectIds.length > 0 || contextDatasetIds.length > 0) && (
+            <ContextDisplay projectIds={contextProjectIds} datasetIds={contextDatasetIds} />
           )}
 
           {/* Message footer: timestamp, TTS button, and delete option */}

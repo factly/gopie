@@ -66,17 +66,47 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       delta.role === "user" &&
       delta.content
     ) {
+      const parts: Array<Record<string, unknown>> = [
+        {
+          type: "text",
+          text: delta.content,
+        },
+      ];
+
+      // Check if user message has tool calls (like set_context)
+      if (delta.tool_calls && delta.tool_calls.length > 0) {
+        for (const toolCall of delta.tool_calls) {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            
+            // Add tool invocation to parts
+            parts.push({
+              type: "tool-invocation",
+              toolInvocation: {
+                state: "result",
+                toolCallId: toolCall.id,
+                toolName: toolCall.function.name,
+                args: args,
+                result: {
+                  type: "tool-call",
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.function.name,
+                  args: args,
+                },
+              },
+            });
+          } catch (error) {
+            console.warn("Failed to parse user tool call arguments:", error);
+          }
+        }
+      }
+
       messages.push({
         id: chunk.id,
         role: "user",
         content: delta.content,
         createdAt: new Date(chunk.created_at),
-        parts: [
-          {
-            type: "text",
-            text: delta.content,
-          },
-        ],
+        parts: parts,
       } as UIMessage);
       continue;
     }

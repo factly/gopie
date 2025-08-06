@@ -15,6 +15,7 @@ import { useChats } from "@/lib/queries/chat/list-chats";
 import { useChatMessages } from "@/lib/queries/chat/get-messages";
 import { useChatDetails } from "@/lib/queries/chat/get-chat";
 import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
+import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -591,6 +592,7 @@ function ChatPageClient() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [contextInitialized, setContextInitialized] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [hasLoadedContextFromMessages, setHasLoadedContextFromMessages] = useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
 
@@ -847,6 +849,138 @@ function ChatPageClient() {
     }
   }, [error]);
 
+  // Extract context from the last user message when chat messages are loaded
+  useEffect(() => {
+    if (
+      allChatMessages.length > 0 && 
+      !hasLoadedContextFromMessages && 
+      selectedChatId &&
+      !isLoadingChatMessages
+    ) {
+      // Find the last user message
+      const lastUserMessage = [...allChatMessages]
+        .reverse()
+        .find(msg => msg.role === "user");
+      
+      if (lastUserMessage?.parts) {
+        // Look for set_context tool invocation in the message parts
+        let contextArgs: { project_ids?: string[]; dataset_ids?: string[] } | null = null;
+        
+        for (const part of lastUserMessage.parts) {
+          if (
+            part.type === "tool-invocation" && 
+            'toolInvocation' in part
+          ) {
+            const toolPart = part as {
+              type: string;
+              toolInvocation: {
+                toolName: string;
+                args: {
+                  project_ids?: string[];
+                  dataset_ids?: string[];
+                };
+              };
+            };
+            
+            if (toolPart.toolInvocation?.toolName === "set_context") {
+              contextArgs = toolPart.toolInvocation.args;
+              break;
+            }
+          }
+        }
+        
+        if (contextArgs) {
+          const args = contextArgs;
+          const newContexts: ContextItem[] = [];
+          
+          // Fetch actual names for projects and datasets
+          const fetchContextDetails = async () => {
+            try {
+              // Fetch project details
+              if (args.project_ids && Array.isArray(args.project_ids)) {
+                for (const projectId of args.project_ids) {
+                  try {
+                    const projectResponse = await apiClient.get(`v1/api/projects/${projectId}`);
+                    const project = await projectResponse.json() as { name?: string };
+                    newContexts.push({
+                      id: projectId,
+                      type: "project" as const,
+                      name: project.name || "Project",
+                      projectId: projectId,
+                    });
+                  } catch (error) {
+                    console.warn(`Failed to fetch project ${projectId}:`, error);
+                    // Fallback to generic name if fetch fails
+                    newContexts.push({
+                      id: projectId,
+                      type: "project" as const,
+                      name: "Project",
+                      projectId: projectId,
+                    });
+                  }
+                }
+              }
+              
+              // Fetch dataset details
+              if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
+                for (const datasetId of args.dataset_ids) {
+                  try {
+                    const datasetResponse = await apiClient.get(`v1/api/datasets/${datasetId}`);
+                    const dataset = await datasetResponse.json() as { alias?: string; name?: string };
+                    const projectId = args.project_ids?.[0] || undefined;
+                    newContexts.push({
+                      id: datasetId,
+                      type: "dataset" as const,
+                      name: dataset.alias || dataset.name || "Dataset",
+                      projectId: projectId,
+                    });
+                  } catch (error) {
+                    console.warn(`Failed to fetch dataset ${datasetId}:`, error);
+                    // Fallback to generic name if fetch fails
+                    const projectId = args.project_ids?.[0] || undefined;
+                    newContexts.push({
+                      id: datasetId,
+                      type: "dataset" as const,
+                      name: "Dataset",
+                      projectId: projectId,
+                    });
+                  }
+                }
+              }
+              
+              if (newContexts.length > 0) {
+                console.log("Loading context from last user message:", newContexts);
+                setSelectedContexts(newContexts);
+                updateUrlWithContext(newContexts);
+                
+                // Set linked dataset if there's a dataset context
+                const datasetContext = newContexts.find(ctx => ctx.type === "dataset");
+                if (datasetContext) {
+                  setLinkedDatasetId(datasetContext.id);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching context details:", error);
+            }
+          };
+          
+          // Execute the async function
+          fetchContextDetails();
+        }
+      }
+      
+      // Mark that we've attempted to load context from messages
+      setHasLoadedContextFromMessages(true);
+    }
+  }, [
+    allChatMessages, 
+    hasLoadedContextFromMessages, 
+    selectedChatId,
+    isLoadingChatMessages,
+    updateUrlWithContext,
+    setLinkedDatasetId
+  ]);
+
   // Custom input handler that works with our MentionInput component
   const handleInputChange = useCallback(
     (value: string) => {
@@ -968,6 +1102,8 @@ function ChatPageClient() {
     setShowScrollButton(false);
     // Reset message count for auto-scroll
     previousMessageCountRef.current = 0;
+    // Reset context loading flag so it can load context for the new chat
+    setHasLoadedContextFromMessages(false);
   }, [selectedChatId]);
 
   // This logic is now handled by the useChatDetails hook above
