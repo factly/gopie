@@ -82,12 +82,12 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Processing query..."})
 
 	pr, pw := io.Pipe()
-	s3Key := fmt.Sprintf("downloads/%s/%s.csv", job.OrgID, job.ID)
+	s3Key := fmt.Sprintf("%s/%s.csv", job.OrgID, job.ID)
 
 	go func() {
 		defer pr.Close()
 		// Pass nil for progress callback as we don't know the total size.
-		_, uploadErr := q.s3ObjectStore.UploadFile(ctx, s3Key, pr, -1, nil)
+		_, uploadErr := q.s3ObjectStore.UploadFile(ctx, s3Key, pr)
 		if uploadErr != nil {
 			pw.CloseWithError(uploadErr)
 		}

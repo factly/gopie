@@ -75,15 +75,15 @@ func (m *SubscriptionManager) run() {
 	}
 }
 
-// Register adds a new client channel to listen for events for a specific download.
-func (m *SubscriptionManager) Register(downloadID string) chan string {
+// Subscribe adds a new client channel to listen for events for a specific download.
+func (m *SubscriptionManager) Subscribe(downloadID string) chan string {
 	ch := make(chan string, 10) // Buffered channel
 	m.registerCh <- &clientSubscription{downloadID: downloadID, channel: ch}
 	return ch
 }
 
-// Unregister removes a client channel.
-func (m *SubscriptionManager) Unregister(downloadID string, ch chan string) {
+// Unsubscribe removes a client channel.
+func (m *SubscriptionManager) Unsubscribe(downloadID string, ch chan string) {
 	m.unregisterCh <- &clientSubscription{downloadID: downloadID, channel: ch}
 }
 

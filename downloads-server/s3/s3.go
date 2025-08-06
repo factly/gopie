@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	appConfig "github.com/factly/gopie/downlods-server/pkg/config"
 	"github.com/factly/gopie/downlods-server/pkg/logger"
@@ -20,6 +21,7 @@ type S3ObjectStore struct {
 	logger        *logger.Logger
 	client        *s3.Client
 	presignClient *s3.PresignClient
+	uploader      *manager.Uploader
 }
 
 // NewS3ObjectStore creates a new, uninitialized instance of S3ObjectStore.
@@ -30,77 +32,60 @@ func NewS3ObjectStore(config appConfig.S3Config, logger *logger.Logger) *S3Objec
 	}
 }
 
-// customEndpointResolver is a simple struct that implements the s3.EndpointResolverV2 interface.
-// It's used to direct the S3 client to a custom endpoint, like Minio, which is required by the modern AWS SDK.
-type customEndpointResolver struct {
-	URL string
-}
-
+// Connect initializes the S3 client using a stable endpoint resolution method.
 func (s *S3ObjectStore) Connect(ctx context.Context) error {
 	s.logger.Info("Connecting to S3 object store", zap.String("endpoint", s.config.Endpoint), zap.String("region", s.config.Region))
 
-	// Load the base configuration, providing static credentials.
+	// This resolver function is a stable way to handle custom endpoints,
+	// avoiding the dependency issues with the newer V2 resolver interface.
+	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...any) (aws.Endpoint, error) {
+		return aws.Endpoint{
+			URL:               s.config.Endpoint,
+			SigningRegion:     s.config.Region,
+			HostnameImmutable: true, // Important for S3-compatible services like Minio
+		}, nil
+	})
+
+	// Load the base configuration, providing static credentials and our custom endpoint resolver.
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(s.config.Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s.config.AccessKey, s.config.SecretKey, "")),
+		config.WithEndpointResolverWithOptions(resolver),
 	)
 	if err != nil {
 		s.logger.Error("Failed to load S3 configuration", zap.Error(err))
 		return err
 	}
 
+	// Create the S3 client from the configuration, adding the option for path-style addressing.
 	s.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
 
+	// Initialize the uploader and presign client using the configured S3 client.
+	s.uploader = manager.NewUploader(s.client)
 	s.presignClient = s3.NewPresignClient(s.client)
 
 	s.logger.Info("Successfully connected to S3 object store")
 	return nil
 }
 
-type ProgressCallback func(bytesRead, totalSize int64)
+// UploadFile now uses the multipart uploader for robust, non-seekable stream uploads.
+func (s *S3ObjectStore) UploadFile(ctx context.Context, key string, body io.Reader) (*manager.UploadOutput, error) {
+	s.logger.Info("Starting file upload to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key))
 
-type ProgressTrackingReader struct {
-	reader     io.Reader
-	totalSize  int64
-	bytesRead  int64
-	onProgress ProgressCallback
-}
-
-func (r *ProgressTrackingReader) Read(p []byte) (n int, err error) {
-	n, err = r.reader.Read(p)
-	if n > 0 {
-		r.bytesRead += int64(n)
-		if r.onProgress != nil {
-			r.onProgress(r.bytesRead, r.totalSize)
-		}
-	}
-	return n, err
-}
-
-// UploadFile streams the content from an io.Reader to the specified S3 bucket and object key,
-func (s *S3ObjectStore) UploadFile(ctx context.Context, key string, body io.Reader, totalSize int64, progressCb ProgressCallback) (*s3.PutObjectOutput, error) {
-	s.logger.Info("Starting file upload to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.Int64("size", totalSize))
-
-	progressReader := &ProgressTrackingReader{
-		reader:     body,
-		totalSize:  totalSize,
-		onProgress: progressCb,
-	}
-
-	output, err := s.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:        aws.String(s.config.Bucket),
-		Key:           aws.String(key),
-		Body:          progressReader,
-		ContentLength: &totalSize,
+	// The uploader handles the non-seekable stream gracefully, uploading it in chunks.
+	output, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(s.config.Bucket),
+		Key:    aws.String(key),
+		Body:   body,
 	})
 	if err != nil {
 		s.logger.Error("Failed to upload file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.Error(err))
 		return nil, err
 	}
 
-	s.logger.Info("Successfully uploaded file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key))
+	s.logger.Info("Successfully uploaded file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.String("upload_id", output.UploadID))
 	return output, nil
 }
 

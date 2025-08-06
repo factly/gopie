@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-create type if not exists download_status as enum (
+create type download_status as enum (
   'pending',
   'processing',
   'completed',

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -40,6 +41,11 @@ func ServeHttp() error {
 	logger.Info("logger initialized")
 
 	s3 := s3.NewS3ObjectStore(cfg.S3, logger)
+	err = s3.Connect(context.Background())
+	if err != nil {
+		logger.Error("Error connecting to s3 ", zap.Error(err))
+	}
+
 	dbStore := postgres.NewPostgresStore(logger)
 	err = dbStore.Connect(&cfg.Postgres)
 	if err != nil {
@@ -54,6 +60,8 @@ func ServeHttp() error {
 
 	manager := queue.NewSubscriptionManager(logger)
 	queue := queue.NewDownloadQueue(dbStore, olapStore, s3, logger, manager, &cfg.Queue)
+
+	go queue.Start()
 
 	app := fiber.New(fiber.Config{
 		CaseSensitive: true,

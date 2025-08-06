@@ -162,6 +162,7 @@ func LoadConfig() (*Config, error) {
 			SecretKey: viper.GetString("GOPIE_DS_S3_SECRET_KEY"),
 			Region:    viper.GetString("GOPIE_DS_S3_REGION"),
 			Endpoint:  viper.GetString("GOPIE_DS_S3_ENDPOINT"),
+			Bucket:    viper.GetString("GOPIE_DS_S3_BUCKET"),
 			SSL:       viper.GetBool("GOPIE_DS_S3_SSL"),
 		},
 		Logger: LoggerConfig{

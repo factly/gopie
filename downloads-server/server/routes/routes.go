@@ -22,8 +22,7 @@ func NewHttpHandler(log *logger.Logger, queue *queue.DownloadQueue) *httpHandler
 // RegisterRoutes sets up all the application routes on the provided fiber router.
 func (h *httpHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/health", h.healthCheck)
-	router.Post("/downloads", h.createDownload)
-	router.Get("/downloads/:id/events", h.downloadEvents)
+	router.Post("/downloads", h.downloadEvents)
 }
 
 func (h *httpHandler) healthCheck(c *fiber.Ctx) error {
