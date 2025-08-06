@@ -1487,10 +1487,57 @@ function ChatPageClient() {
                   </Button>
                   <div className="flex-1"></div>
                   {selectedChatId && (
-                    <ShareChatDialog
-                      chatId={selectedChatId}
-                      currentVisibility={chatDetails?.visibility || "private"}
-                    />
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`mr-2 ${
+                              activeTab === "history"
+                                ? "bg-muted border-b-2 border-primary"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setActiveTab("history");
+                              // Update URL with tab parameter
+                              const params = new URLSearchParams(
+                                searchParams.toString()
+                              );
+                              params.set("tab", "history");
+                              router.replace(`/chat?${params.toString()}`);
+                            }}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>History</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mr-2"
+                            onClick={() => {
+                              // Use window.location for a hard navigation to bypass all React state/effects
+                              window.location.href = "/chat";
+                            }}
+                          >
+                            <MessageSquarePlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>New Chat</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <ShareChatDialog
+                        chatId={selectedChatId}
+                        currentVisibility={chatDetails?.visibility || "private"}
+                      />
+                    </>
                   )}
                 </div>
 
