@@ -32,7 +32,7 @@ async def validate_input(state: AgentState, config: RunnableConfig):
     """
     user_input = state.get("initial_user_query")
     return {
-        "user_query": user_input,
+        "initial_user_query": user_input,
         "invalid_input": False,
         "messages": [IntermediateStep(content="Not a malicious input")],
     }
