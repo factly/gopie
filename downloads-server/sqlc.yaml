@@ -1,12 +1,13 @@
 version: "2"
-cloud:
-    organization: ""
-    project: ""
-    hostname: ""
-servers: []
-sql: []
-overrides:
-    go: null
-plugins: []
-rules: []
-options: {}
+sql:
+  - engine: "postgresql"
+    queries: "./postgres/sql/queries"
+    schema: "./postgres/sql/schema.sql"
+    gen:
+      go:
+        package: "gen"
+        out: "./postgres/gen"
+        sql_package: "pgx/v5"
+        emit_interface: false
+        emit_json_tags: false
+        omit_unused_structs: true
