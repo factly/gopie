@@ -9,6 +9,7 @@ import (
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	"github.com/factly/gopie/interfaces/http/routes/api/ai"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
+	"github.com/factly/gopie/interfaces/http/routes/api/download"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
@@ -118,6 +119,10 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		DatasetService: params.DatasetService,
 		OlapService:    params.OlapService,
 	})
+	download.Routes(apiGroup.Group("/downloads"),
+		params.DownloadsService,
+		appLogger,
+	)
 
 	// Create a channel to listen for server shutdown
 	serverShutdown := make(chan struct{})

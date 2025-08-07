@@ -39,18 +39,19 @@ type LoggerConfig struct {
 }
 
 type GopieConfig struct {
-	Server         ServerConfig
-	S3             S3Config
-	Logger         LoggerConfig
-	OlapDB         OlapDBConfig
-	PortKey        PortKeyConfig
-	Meterus        MeterusConfig
-	Postgres       PostgresConfig
-	Zitadel        ZitadelConfig
-	AIAgent        AIAgentConfig
-	InternalServer InternalServerConfig
-	EnableZitadel  bool
-	EncryptionKey  string
+	Server          ServerConfig
+	S3              S3Config
+	Logger          LoggerConfig
+	OlapDB          OlapDBConfig
+	PortKey         PortKeyConfig
+	Meterus         MeterusConfig
+	Postgres        PostgresConfig
+	Zitadel         ZitadelConfig
+	AIAgent         AIAgentConfig
+	InternalServer  InternalServerConfig
+	EnableZitadel   bool
+	DownloadsServer DownloadsServerConfig
+	EncryptionKey   string
 }
 
 type OlapDBConfig struct {
@@ -92,6 +93,10 @@ type AIAgentConfig struct {
 	Url string
 }
 
+type DownloadsServerConfig struct {
+	Url string
+}
+
 type ZitadelConfig struct {
 	Protocol     string
 	Domain       string
@@ -130,6 +135,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
+		{config.DownloadsServer.Url, "donwloads server url"},
 		{config.EncryptionKey, "encryption key"},
 	}
 
@@ -299,6 +305,10 @@ func LoadConfig() (*GopieConfig, error) {
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
+		DownloadsServer: DownloadsServerConfig{
+			Url: viper.GetString("GOPIE_DOWNLOADS_SERVER_URL"),
+		},
+
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
 

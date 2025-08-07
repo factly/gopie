@@ -8,30 +8,30 @@ import (
 	"github.com/factly/gopie/domain/pkg/logger"
 )
 
-type downloadService struct {
+type DownloadService struct {
 	repo   repositories.DownloadRepository
 	logger *logger.Logger
 }
 
-func NewDownloadService(repo repositories.DownloadRepository, logger *logger.Logger) *downloadService {
-	return &downloadService{
+func NewDownloadService(repo repositories.DownloadRepository, logger *logger.Logger) *DownloadService {
+	return &DownloadService{
 		repo:   repo,
 		logger: logger,
 	}
 }
 
-func (s *downloadService) CreateAndStream(req *models.CreateDownloadRequest) (io.ReadCloser, error) {
+func (s *DownloadService) CreateAndStream(req *models.CreateDownloadRequest) (io.ReadCloser, error) {
 	return s.repo.CreateAndStream(req)
 }
 
-func (s *downloadService) List(userID, orgID string, limit, offset int) ([]models.Download, error) {
+func (s *DownloadService) List(userID, orgID string, limit, offset int) ([]models.Download, error) {
 	return s.repo.List(userID, orgID, limit, offset)
 }
 
-func (s *downloadService) Get(downloadID, userID, orgID string) (*models.Download, error) {
+func (s *DownloadService) Get(downloadID, userID, orgID string) (*models.Download, error) {
 	return s.repo.Get(downloadID, userID, orgID)
 }
 
-func (s *downloadService) Delete(downloadID, userID, orgID string) error {
+func (s *DownloadService) Delete(downloadID, userID, orgID string) error {
 	return s.repo.Delete(downloadID, userID, orgID)
 }

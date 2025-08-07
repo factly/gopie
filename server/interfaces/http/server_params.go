@@ -11,11 +11,12 @@ type ServerParams struct {
 	Logger *logger.Logger
 
 	// Services
-	OlapService     *services.OlapService
-	AIService       *services.AiDriver
-	ProjectService  *services.ProjectService
-	DatasetService  *services.DatasetService
-	ChatService     *services.ChatService
-	AIAgentService  *services.AIService
-	DbSourceService *services.DatabaseSourceService
+	OlapService      *services.OlapService
+	AIService        *services.AiDriver
+	ProjectService   *services.ProjectService
+	DatasetService   *services.DatasetService
+	ChatService      *services.ChatService
+	AIAgentService   *services.AIService
+	DbSourceService  *services.DatabaseSourceService
+	DownloadsService *services.DownloadService
 }
