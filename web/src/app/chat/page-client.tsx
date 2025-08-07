@@ -211,19 +211,19 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     // Use setTimeout to ensure state updates happen first
     setTimeout(() => {
       const params = new URLSearchParams();
-      
+
       // Only copy over params we want to keep (excluding 'tab')
       searchParams.forEach((value, key) => {
-        if (key !== 'tab') {
+        if (key !== "tab") {
           params.set(key, value);
         }
       });
-      
+
       if (chatId) {
         params.set("chatId", chatId);
       }
-      
-      const newUrl = params.toString() ? `/chat?${params.toString()}` : '/chat';
+
+      const newUrl = params.toString() ? `/chat?${params.toString()}` : "/chat";
       router.push(newUrl);
     }, 0);
   };
@@ -592,7 +592,8 @@ function ChatPageClient() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [contextInitialized, setContextInitialized] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [hasLoadedContextFromMessages, setHasLoadedContextFromMessages] = useState(false);
+  const [hasLoadedContextFromMessages, setHasLoadedContextFromMessages] =
+    useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
 
@@ -855,25 +856,25 @@ function ChatPageClient() {
   // Extract context from the last user message when chat messages are loaded
   useEffect(() => {
     if (
-      allChatMessages.length > 0 && 
-      !hasLoadedContextFromMessages && 
+      allChatMessages.length > 0 &&
+      !hasLoadedContextFromMessages &&
       selectedChatId &&
       !isLoadingChatMessages
     ) {
       // Find the last user message
       const lastUserMessage = [...allChatMessages]
         .reverse()
-        .find(msg => msg.role === "user");
-      
+        .find((msg) => msg.role === "user");
+
       if (lastUserMessage?.parts) {
         // Look for set_context tool invocation in the message parts
-        let contextArgs: { project_ids?: string[]; dataset_ids?: string[] } | null = null;
-        
+        let contextArgs: {
+          project_ids?: string[];
+          dataset_ids?: string[];
+        } | null = null;
+
         for (const part of lastUserMessage.parts) {
-          if (
-            part.type === "tool-invocation" && 
-            'toolInvocation' in part
-          ) {
+          if (part.type === "tool-invocation" && "toolInvocation" in part) {
             const toolPart = part as {
               type: string;
               toolInvocation: {
@@ -884,18 +885,18 @@ function ChatPageClient() {
                 };
               };
             };
-            
+
             if (toolPart.toolInvocation?.toolName === "set_context") {
               contextArgs = toolPart.toolInvocation.args;
               break;
             }
           }
         }
-        
+
         if (contextArgs) {
           const args = contextArgs;
           const newContexts: ContextItem[] = [];
-          
+
           // Fetch actual names for projects and datasets
           const fetchContextDetails = async () => {
             try {
@@ -903,8 +904,12 @@ function ChatPageClient() {
               if (args.project_ids && Array.isArray(args.project_ids)) {
                 for (const projectId of args.project_ids) {
                   try {
-                    const projectResponse = await apiClient.get(`v1/api/projects/${projectId}`);
-                    const project = await projectResponse.json() as { name?: string };
+                    const projectResponse = await apiClient.get(
+                      `v1/api/projects/${projectId}`
+                    );
+                    const project = (await projectResponse.json()) as {
+                      name?: string;
+                    };
                     newContexts.push({
                       id: projectId,
                       type: "project" as const,
@@ -912,7 +917,10 @@ function ChatPageClient() {
                       projectId: projectId,
                     });
                   } catch (error) {
-                    console.warn(`Failed to fetch project ${projectId}:`, error);
+                    console.warn(
+                      `Failed to fetch project ${projectId}:`,
+                      error
+                    );
                     // Fallback to generic name if fetch fails
                     newContexts.push({
                       id: projectId,
@@ -923,13 +931,18 @@ function ChatPageClient() {
                   }
                 }
               }
-              
+
               // Fetch dataset details
               if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
                 for (const datasetId of args.dataset_ids) {
                   try {
-                    const datasetResponse = await apiClient.get(`v1/api/datasets/${datasetId}`);
-                    const dataset = await datasetResponse.json() as { alias?: string; name?: string };
+                    const datasetResponse = await apiClient.get(
+                      `v1/api/datasets/${datasetId}`
+                    );
+                    const dataset = (await datasetResponse.json()) as {
+                      alias?: string;
+                      name?: string;
+                    };
                     const projectId = args.project_ids?.[0] || undefined;
                     newContexts.push({
                       id: datasetId,
@@ -938,7 +951,10 @@ function ChatPageClient() {
                       projectId: projectId,
                     });
                   } catch (error) {
-                    console.warn(`Failed to fetch dataset ${datasetId}:`, error);
+                    console.warn(
+                      `Failed to fetch dataset ${datasetId}:`,
+                      error
+                    );
                     // Fallback to generic name if fetch fails
                     const projectId = args.project_ids?.[0] || undefined;
                     newContexts.push({
@@ -950,14 +966,19 @@ function ChatPageClient() {
                   }
                 }
               }
-              
+
               if (newContexts.length > 0) {
-                console.log("Loading context from last user message:", newContexts);
+                console.log(
+                  "Loading context from last user message:",
+                  newContexts
+                );
                 setSelectedContexts(newContexts);
                 updateUrlWithContext(newContexts);
-                
+
                 // Set linked dataset if there's a dataset context
-                const datasetContext = newContexts.find(ctx => ctx.type === "dataset");
+                const datasetContext = newContexts.find(
+                  (ctx) => ctx.type === "dataset"
+                );
                 if (datasetContext) {
                   setLinkedDatasetId(datasetContext.id);
                 }
@@ -966,22 +987,22 @@ function ChatPageClient() {
               console.error("Error fetching context details:", error);
             }
           };
-          
+
           // Execute the async function
           fetchContextDetails();
         }
       }
-      
+
       // Mark that we've attempted to load context from messages
       setHasLoadedContextFromMessages(true);
     }
   }, [
-    allChatMessages, 
-    hasLoadedContextFromMessages, 
+    allChatMessages,
+    hasLoadedContextFromMessages,
     selectedChatId,
     isLoadingChatMessages,
     updateUrlWithContext,
-    setLinkedDatasetId
+    setLinkedDatasetId,
   ]);
 
   // Custom input handler that works with our MentionInput component
@@ -1320,7 +1341,7 @@ function ChatPageClient() {
   useLayoutEffect(() => {
     // Only run auto-scroll when on the chat tab
     if (activeTab !== "chat") return;
-    
+
     if (scrollRef.current && displayMessages.length > 0) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
@@ -1330,7 +1351,7 @@ function ChatPageClient() {
         const lastMessage = displayMessages[displayMessages.length - 1];
         const isNewMessage =
           displayMessages.length > previousMessageCountRef.current;
-        
+
         // Check if we should auto-scroll
         const isInitialLoad =
           previousMessageCountRef.current === 0 && displayMessages.length > 0;
@@ -1363,40 +1384,48 @@ function ChatPageClient() {
             }
           }, 100);
         }
-        
+
         // Update the message count after processing
         previousMessageCountRef.current = displayMessages.length;
       }
     }
-  }, [displayMessages, streamingMessages, isStreaming, userHasScrolled, showLoadingMessage, activeTab]);
+  }, [
+    displayMessages,
+    streamingMessages,
+    isStreaming,
+    userHasScrolled,
+    showLoadingMessage,
+    activeTab,
+  ]);
 
   // Separate effect for continuous scrolling during streaming using MutationObserver
   useEffect(() => {
     if (isStreaming && !userHasScrolled && activeTab === "chat") {
       let observer: MutationObserver | null = null;
-      
+
       const setupObserver = () => {
         if (scrollRef.current) {
           const viewport = scrollRef.current.querySelector(
-            '[data-radix-scroll-area-viewport]'
+            "[data-radix-scroll-area-viewport]"
           );
-          
+
           if (viewport) {
             // Create a MutationObserver to watch for DOM changes
             observer = new MutationObserver(() => {
               // Check if user is near bottom (within 150px)
               const isNearBottom =
                 viewport.scrollHeight -
-                viewport.scrollTop -
-                viewport.clientHeight < 150;
-              
+                  viewport.scrollTop -
+                  viewport.clientHeight <
+                150;
+
               // Only auto-scroll if user is near the bottom
               if (isNearBottom) {
                 // Immediately scroll to bottom without animation
                 viewport.scrollTop = viewport.scrollHeight;
               }
             });
-            
+
             // Observe changes in the viewport's subtree
             observer.observe(viewport, {
               childList: true,
@@ -1407,10 +1436,10 @@ function ChatPageClient() {
           }
         }
       };
-      
+
       // Setup observer with a small delay to ensure DOM is ready
       const timeoutId = setTimeout(setupObserver, 100);
-      
+
       return () => {
         clearTimeout(timeoutId);
         if (observer) {
@@ -1488,7 +1517,8 @@ function ChatPageClient() {
     } else {
       setOpen(false);
     }
-  }, [isMobile, setOpen, setOpenMobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="flex flex-col w-full h-[calc(100vh-16px)]">
@@ -1684,11 +1714,15 @@ function ChatPageClient() {
                                 onSelectContext={handleSelectContext}
                                 onRemoveContext={handleRemoveContext}
                                 triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
-                                  isInputFocused && selectedContexts.length === 0
+                                  isInputFocused &&
+                                  selectedContexts.length === 0
                                     ? "animate-slow-pulse bg-muted/90"
                                     : "bg-muted/70"
                                 }`}
-                                shouldFlash={isInputFocused && selectedContexts.length === 0}
+                                shouldFlash={
+                                  isInputFocused &&
+                                  selectedContexts.length === 0
+                                }
                               />
                             </div>
                             <MentionInput
@@ -1712,8 +1746,10 @@ function ChatPageClient() {
                             />
                           </div>
                         </div>
-                        <ContextSelectionHelper 
-                          isVisible={isInputFocused && selectedContexts.length === 0}
+                        <ContextSelectionHelper
+                          isVisible={
+                            isInputFocused && selectedContexts.length === 0
+                          }
                         />
                       </div>
                     </div>
