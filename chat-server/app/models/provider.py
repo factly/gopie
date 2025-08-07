@@ -1,5 +1,7 @@
 from enum import Enum
 
+from app.core.config import settings
+
 
 class ModelCategory(str, Enum):
     ADVANCED = "advanced"
@@ -23,8 +25,10 @@ class EmbeddingProvider(str, Enum):
 
 
 class TemperatureCategory(Enum):
-    DETERMINISTIC = 0.0  # Analysis, validation, routing
-    LOW_VARIATION = 0.3  # SQL generation, structured output with slight variation
-    BALANCED = 0.5  # General processing, context analysis
-    CREATIVE = 0.7  # Natural language generation, summarization
+    DETERMINISTIC = settings.DETERMINISTIC_TEMPERATURE  # Analysis, validation, routing
+    LOW_VARIATION = (
+        settings.LOW_VARIATION_TEMPERATURE
+    )  # SQL generation, structured output with slight variation
+    BALANCED = settings.BALANCED_TEMPERATURE  # General processing, context analysis
+    CREATIVE = settings.CREATIVE_TEMPERATURE  # Natural language generation, summarization
     NONE = None  # No temperature setting, used for deterministic outputs
