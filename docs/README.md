@@ -163,3 +163,126 @@ The web section defines configuration for deploying the web component
 | `zitadel.ingress.annotations`     | Ingress annotations                                |
 | `zitadel.ingress.hosts`           | Ingress host and paths                             |
 | `zitadel.ingress.tls`             | TLS configuration for Ingress                      |
+
+
+# **Gopie Configuration: Environment Variables**
+
+This document provides a complete reference for all environment variables required to configure and run the Gopie application. All configuration is handled through environment variables, which can also be placed in a config.env file in the application's root directory.
+
+### **General Configuration**
+
+These variables control core application behavior.
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_ENCRYPTION\_KEY** | **Yes** | \- | A secret key used for all data encryption and decryption. **Must be 32 characters long.** |
+| **GOPIE\_ENABLE\_ZITADEL** | No | false | A boolean (true/false) to enable or disable Zitadel authentication. |
+
+### **Server Configuration**
+
+Settings for the main public-facing server.
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_SERVER\_HOST** | No | localhost | The hostname or IP address the main server will listen on. |
+| **GOPIE\_SERVER\_PORT** | No | 8000 | The port the main server will listen on. |
+
+### **Internal Server Configuration**
+
+Settings for the internal-only server.
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_INTERNAL\_SERVER\_HOST** | No | localhost | The hostname or IP address the internal server will listen on. |
+| **GOPIE\_INTERNAL\_SERVER\_PORT** | No | 8001 | The port the internal server will listen on. |
+
+### **Postgres Configuration**
+
+Connection details for the PostgreSQL database.
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_POSTGRES\_HOST** | **Yes** | \- | Hostname of the PostgreSQL server. |
+| **GOPIE\_POSTGRES\_PORT** | **Yes** | \- | Port of the PostgreSQL server. |
+| **GOPIE\_POSTGRES\_DB** | **Yes** | \- | The name of the database to connect to. |
+| **GOPIE\_POSTGRES\_USER** | **Yes** | \- | The username for the database connection. |
+| **GOPIE\_POSTGRES\_PASSWORD** | **Yes** | \- | The password for the database connection. |
+
+### **S3 Configuration**
+
+Credentials for an S3-compatible object storage service. **These are required for dataset operations.**
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_S3\_ACCESS\_KEY** | **Yes** | \- | Access key for your S3-compatible service. |
+| **GOPIE\_S3\_SECRET\_KEY** | **Yes** | \- | Secret key for your S3-compatible service. |
+| **GOPIE\_S3\_ENDPOINT** | **Yes** | \- | Custom endpoint URL for the S3 service (e.g., for MinIO). |
+| **GOPIE\_S3\_REGION** | No | us-east-1 | The AWS region for the S3 bucket. |
+| **GOPIE\_S3\_SSL** | No | false | Use SSL (true/false) for the S3 connection. |
+
+### **OLAP Database Configuration**
+
+This section configures the OLAP database. You must choose between duckdb and motherduck.
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_OLAPDB\_DBTYPE** | **Yes** | \- | The OLAP database to use. Must be duckdb or motherduck. |
+| **GOPIE\_OLAPDB\_ACCESS\_MODE** | No | read\_write | The database access mode (e.g., read\_only, read\_write). |
+
+#### **DuckDB Settings**
+
+*These variables are used if GOPIE\_OLAPDB\_DBTYPE="duckdb".*
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_DUCKDB\_PATH** | **Yes** | ./duckdb/gopie.db | The file path for the local DuckDB database file. |
+| **GOPIE\_DUCKDB\_CPU** | No | 1 | Number of CPU cores allocated to DuckDB. Must be \> 0\. |
+| **GOPIE\_DUCKDB\_MEMORY\_LIMIT** | No | 1024 | Memory limit in MB for DuckDB. Must be \> 0\. |
+| **GOPIE\_DUCKDB\_STORAGE\_LIMIT** | No | 1024 | Storage limit in MB for DuckDB. Must be \> 0\. |
+
+#### **MotherDuck Settings**
+
+*These variables are used if GOPIE\_OLAPDB\_DBTYPE="motherduck".*
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_MOTHERDUCK\_DB\_NAME** | **Yes** | \- | The name of your database in MotherDuck. |
+| **GOPIE\_MOTHERDUCK\_TOKEN** | **Yes** | \- | Your MotherDuck service token for authentication. |
+| **GOPIE\_MOTHERDUCK\_HELPER\_DB\_DIR\_PATH** | No | ./motherduck | Directory path for MotherDuck's local helper files. |
+
+### **AI Provider Configuration (PortKey / OpenAI)**
+
+Configuration for the AI provider. The application uses the OpenAI SDK internally, so these variables can accept values for either PortKey or a standard OpenAI-compatible service.
+
+| Variable | Required | Description |
+| :---- | :---- | :---- |
+| **GOPIE\_PORTKEY\_BASEURL** | **Yes** | The base URL for the API. This can be the PortKey URL or a standard OPENAI\_API\_BASE URL. |
+| **GOPIE\_PORTKEY\_APIKEY** | **Yes** | The API key for the service. This can be a PortKey API key or a standard OPENAI\_API\_KEY. |
+| **GOPIE\_PORTKEY\_MODEL** | **Yes** | The specific AI model to use (e.g., gpt-4). |
+| **GOPIE\_PORTKEY\_VIRTUALKEY** | **Yes** | The virtual key for your PortKey configuration. **Note:** This is specific to PortKey and should be set even if using OpenAI values in other variables. |
+
+### **Zitadel Configuration**
+
+*These variables are required if GOPIE\_ENABLE\_ZITADEL="true".*
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_ZITADEL\_PROTOCOL** | **Yes** | \- | The protocol for Zitadel (http or https). |
+| **GOPIE\_ZITADEL\_DOMAIN** | **Yes** | \- | The domain of your Zitadel instance. |
+| **GOPIE\_ZITADEL\_PROJECT\_ID** | **Yes** | \- | The project ID within your Zitadel instance. |
+| **GOPIE\_ZITADEL\_INSECURE\_PORT** | **Conditional** | \- | Required only if GOPIE\_ZITADEL\_PROTOCOL is not https. |
+
+### **AI Agent Configuration**
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_AIAGENT\_URL** | **Yes** | \- | The URL endpoint for the AI Agent service. |
+
+### **Logger Configuration**
+
+| Variable | Required | Default | Description |
+| :---- | :---- | :---- | :---- |
+| **GOPIE\_LOGGER\_LEVEL** | No | info | Logging level (e.g., debug, info, warn, error). |
+| **GOPIE\_LOGGER\_FILE** | No | gopie.log | The path to the log file. |
+| **GOPIE\_LOGGER\_MODE** | No | dev | Logger mode (dev for human-readable, prod for JSON). |
+

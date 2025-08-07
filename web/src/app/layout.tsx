@@ -29,9 +29,7 @@ export function generateMetadata(): Metadata {
       icon: "/favicon.svg",
       apple: "/favicon.svg",
     },
-    other: {
-      ...Sentry.getTraceData(),
-    },
+    // Removed Sentry.getTraceData() as it may contain non-serializable objects
   };
 }
 

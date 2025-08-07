@@ -1,3 +1,5 @@
+"use client";
+
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
