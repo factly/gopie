@@ -223,7 +223,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         Ensure column names follow these rules:
         <ul className="list-disc pl-5 mt-2">
           <li>Must be in snake_case (lowercase with underscores)</li>
@@ -231,7 +231,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
           <li>No special characters</li>
           <li>Cannot be a single digit</li>
         </ul>
-      </p>
+      </div>
 
       <div className="overflow-x-auto">
         <Table>
