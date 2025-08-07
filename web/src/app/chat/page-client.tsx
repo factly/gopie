@@ -1374,7 +1374,10 @@ function ChatPageClient() {
     (context: ContextItem) => {
       setSelectedContexts((prev) => {
         const newContexts = [...prev, context];
-        updateUrlWithContext(newContexts);
+        // Schedule URL update after state update to avoid calling setState during render
+        setTimeout(() => {
+          updateUrlWithContext(newContexts);
+        }, 0);
         return newContexts;
       });
       // Stop flashing when context is selected
@@ -1387,7 +1390,10 @@ function ChatPageClient() {
     (contextId: string) => {
       setSelectedContexts((prev) => {
         const newContexts = prev.filter((c) => c.id !== contextId);
-        updateUrlWithContext(newContexts);
+        // Schedule URL update after state update to avoid calling setState during render
+        setTimeout(() => {
+          updateUrlWithContext(newContexts);
+        }, 0);
         return newContexts;
       });
     },

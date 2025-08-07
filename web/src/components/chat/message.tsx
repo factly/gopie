@@ -761,48 +761,9 @@ export function ChatMessage({
 
         <div className="flex-1 min-w-0 w-full pt-1 overflow-hidden">
           <div className="text-sm break-words space-y-3 min-w-0">
-            {/* AI SDK parts-based rendering for text content with memoization */}
-            {message?.parts ? (
-              <>
-                {message.parts.map((part, index) => {
-                  if (part.type === "text") {
-                    return (
-                      <MessageTextPart
-                        key={`${id}-part-${index}`}
-                        text={part.text}
-                        styleRole={styleRole}
-                      />
-                    );
-                  }
-                  return null;
-                })}
-              </>
-            ) : (
-              // Legacy text content rendering
-              parsedTextContent.type === "text" &&
-              parsedTextContent.content && (
-                <div
-                  className={cn(
-                    "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
-                    "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
-                    styleRole === "user"
-                      ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
-                      : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
-                  )}
-                >
-                  <ReactMarkdown>{parsedTextContent.content}</ReactMarkdown>
-                </div>
-              )
-            )}
-
-            {/* SQL Queries display */}
+            {/* SQL Queries display - moved before text content for better UX flow */}
             {displaySqlQueries.length > 0 && (
               <div className="w-full max-w-full lg:max-w-[800px] text-base pt-2 space-y-3">
-                <p className="text-xs text-muted-foreground font-medium mb-2">
-                  Suggested SQL{" "}
-                  {displaySqlQueries.length > 1 ? "Queries" : "Query"}:
-                </p>
                 {displaySqlQueries.map((query, index) => (
                   <Collapsible
                     key={index}
@@ -908,6 +869,41 @@ export function ChatMessage({
                   </div>
                 </div>
               )}
+
+            {/* AI SDK parts-based rendering for text content with memoization - moved after SQL for better flow */}
+            {message?.parts ? (
+              <>
+                {message.parts.map((part, index) => {
+                  if (part.type === "text") {
+                    return (
+                      <MessageTextPart
+                        key={`${id}-part-${index}`}
+                        text={part.text}
+                        styleRole={styleRole}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </>
+            ) : (
+              // Legacy text content rendering
+              parsedTextContent.type === "text" &&
+              parsedTextContent.content && (
+                <div
+                  className={cn(
+                    "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
+                    "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
+                    "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
+                    styleRole === "user"
+                      ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
+                      : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
+                  )}
+                >
+                  <ReactMarkdown>{parsedTextContent.content}</ReactMarkdown>
+                </div>
+              )
+            )}
 
             {/* Loading indicator */}
             {isLoading && !textContent && displaySqlQueries.length === 0 && (
