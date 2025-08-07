@@ -153,10 +153,14 @@ function ContextDisplay({ projectIds, datasetIds }: ContextDisplayProps) {
         <ProjectItem key={projectId} projectId={projectId} />
       ))}
       {datasetIds.map((datasetId) => (
-        <DatasetItem 
-          key={datasetId} 
+        <DatasetItem
+          key={datasetId}
           datasetId={datasetId}
-          projectId={datasetIds.length === 1 && projectIds.length === 1 ? projectIds[0] : undefined}
+          projectId={
+            datasetIds.length === 1 && projectIds.length === 1
+              ? projectIds[0]
+              : undefined
+          }
         />
       ))}
     </div>
@@ -195,10 +199,7 @@ function ProjectItem({ projectId }: ProjectItemProps) {
   }
 
   return (
-    <Badge
-      variant="secondary"
-      className="text-xs font-normal"
-    >
+    <Badge variant="secondary" className="text-xs font-normal">
       <Link
         href={`/projects/${projectId}`}
         target="_blank"
@@ -246,12 +247,9 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
   }
 
   return (
-    <Badge
-      variant="secondary"
-      className="text-xs font-normal"
-    >
+    <Badge variant="secondary" className="text-xs font-normal">
       <Link
-        href={projectId ? `/projects/${projectId}/datasets/${datasetId}` : `/datasets/${datasetId}`}
+        href={`/projects/${projectId}/datasets/${datasetId}`}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-1 hover:underline"
@@ -302,13 +300,18 @@ export function ChatMessage({
   const [displayVisualizationResults, setDisplayVisualizationResults] =
     useState<string[]>([]);
   const [expandedQueries, setExpandedQueries] = useState<number[]>([]);
-  const [editedQueries, setEditedQueries] = useState<Record<number, string>>({});
+  const [editedQueries, setEditedQueries] = useState<Record<number, string>>(
+    {}
+  );
   const [contextProjectIds, setContextProjectIds] = useState<string[]>([]);
   const [contextDatasetIds, setContextDatasetIds] = useState<string[]>([]);
 
   // Memoize these values at the component level to avoid conditional hook calls
   const latestThoughtProcessMessage = useMemo(
-    () => displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing...",
+    () =>
+      displayIntermediateMessages[displayIntermediateMessages.length - 1]
+        ?.split("\n")
+        .pop() || "Processing...",
     [displayIntermediateMessages]
   );
 
@@ -320,7 +323,7 @@ export function ChatMessage({
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
       if (prev.includes(index)) {
-        return prev.filter(i => i !== index);
+        return prev.filter((i) => i !== index);
       } else {
         return [...prev, index];
       }
@@ -357,7 +360,7 @@ export function ChatMessage({
         message.parts.forEach((part) => {
           if (part.type === "tool-invocation") {
             const { toolName, args } = part.toolInvocation;
-            
+
             // Handle set_context tool call (from user messages)
             if (toolName === "set_context") {
               if (args.project_ids && Array.isArray(args.project_ids)) {
@@ -424,7 +427,7 @@ export function ChatMessage({
         if (newProjectIds.length > 0) {
           setContextProjectIds(newProjectIds);
         }
-        
+
         if (newDatasetIds.length > 0) {
           setContextDatasetIds(newDatasetIds);
         }
@@ -453,7 +456,7 @@ export function ChatMessage({
         if (newVisualizationResults.length > 0) {
           setDisplayVisualizationResults(newVisualizationResults);
           setVisualizationPaths(newVisualizationResults, chatId);
-          setActiveTab('visualizations'); // Auto-switch to visualizations tab when new visualizations are received
+          setActiveTab("visualizations"); // Auto-switch to visualizations tab when new visualizations are received
         }
       });
     } else if (Array.isArray(content)) {
@@ -510,7 +513,6 @@ export function ChatMessage({
   const textContent =
     message?.content || (typeof content === "string" ? content : "");
 
-
   const handleRunQuery = useCallback(
     async (query: string) => {
       setIsExecuting(true);
@@ -524,7 +526,7 @@ export function ChatMessage({
           chatId,
         });
         setSqlPanelOpen(true);
-        setActiveTab('sql'); // Switch to SQL tab when running a query
+        setActiveTab("sql"); // Switch to SQL tab when running a query
       } catch (error) {
         setResults({
           data: [],
@@ -535,7 +537,7 @@ export function ChatMessage({
           chatId,
         });
         setSqlPanelOpen(true);
-        setActiveTab('sql'); // Switch to SQL tab even on error
+        setActiveTab("sql"); // Switch to SQL tab even on error
       } finally {
         setIsExecuting(false);
       }
@@ -545,10 +547,14 @@ export function ChatMessage({
 
   // Execute SQL queries as soon as they appear (even while streaming)
   useEffect(() => {
-    if ((role === "assistant" || role === "ai") && isLatest && displaySqlQueries.length > 0) {
+    if (
+      (role === "assistant" || role === "ai") &&
+      isLatest &&
+      displaySqlQueries.length > 0
+    ) {
       // Execute the last query by default
       const sqlToExecute = displaySqlQueries[displaySqlQueries.length - 1];
-      
+
       if (sqlToExecute) {
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
@@ -571,7 +577,12 @@ export function ChatMessage({
 
   // Fallback for legacy SQL content (when not using displaySqlQueries)
   useEffect(() => {
-    if (!isLoading && (role === "assistant" || role === "ai") && isLatest && displaySqlQueries.length === 0) {
+    if (
+      !isLoading &&
+      (role === "assistant" || role === "ai") &&
+      isLatest &&
+      displaySqlQueries.length === 0
+    ) {
       let sqlToExecute: string | null = null;
 
       if (typeof content === "string") {
@@ -726,12 +737,14 @@ export function ChatMessage({
                   <ChevronRight className="h-4 w-4" />
                 )}
                 {/* Always show lightbulb icon, animate it while loading */}
-                <Lightbulb className={cn(
-                  "h-4 w-4",
-                  isLoading 
-                    ? "animate-pulse text-yellow-500 dark:text-yellow-400" 
-                    : "text-muted-foreground"
-                )} />
+                <Lightbulb
+                  className={cn(
+                    "h-4 w-4",
+                    isLoading
+                      ? "animate-pulse text-yellow-500 dark:text-yellow-400"
+                      : "text-muted-foreground"
+                  )}
+                />
                 {/* Show title when expanded or not loading, show latest message when collapsed and loading */}
                 {isThoughtProcessOpen || !isLoading ? (
                   "Agent thought process"
@@ -819,7 +832,7 @@ export function ChatMessage({
                           onChange={(newValue) => {
                             setEditedQueries((prev) => ({
                               ...prev,
-                              [index]: newValue
+                              [index]: newValue,
                             }));
                           }}
                           datasetId={""}
@@ -836,7 +849,9 @@ export function ChatMessage({
               parsedTextContent.type === "sql" && (
                 <div className="w-full max-w-full lg:max-w-[800px] text-base">
                   <div className="relative">
-                    <SqlPreview value={formatSqlQuery(parsedTextContent.content)} />
+                    <SqlPreview
+                      value={formatSqlQuery(parsedTextContent.content)}
+                    />
                     {!isLoading && (
                       <div className="absolute top-2 right-2 flex items-center gap-2">
                         {isExecuting && (
@@ -852,7 +867,9 @@ export function ChatMessage({
                               variant="ghost"
                               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() =>
-                                handleRunQuery(formatSqlQuery(parsedTextContent.content))
+                                handleRunQuery(
+                                  formatSqlQuery(parsedTextContent.content)
+                                )
                               }
                               disabled={isExecuting}
                             >
@@ -957,7 +974,7 @@ export function ChatMessage({
                             chatId
                           );
                           setVisualizationOpen(true);
-                          setActiveTab('visualizations'); // Switch to visualizations tab
+                          setActiveTab("visualizations"); // Switch to visualizations tab
                         }}
                       >
                         <BarChart3 className="h-3 w-3 mr-1" />
@@ -1024,14 +1041,21 @@ export function ChatMessage({
           )}
 
           {/* Context display for user messages */}
-          {styleRole === "user" && (contextProjectIds.length > 0 || contextDatasetIds.length > 0) && (
-            <ContextDisplay projectIds={contextProjectIds} datasetIds={contextDatasetIds} />
-          )}
+          {styleRole === "user" &&
+            (contextProjectIds.length > 0 || contextDatasetIds.length > 0) && (
+              <ContextDisplay
+                projectIds={contextProjectIds}
+                datasetIds={contextDatasetIds}
+              />
+            )}
 
           {/* Message footer: delete option */}
-          {!isLoading && (styleRole === "user" || textContent) && onDelete && chatId && (
-            <div className="flex items-center gap-2 mt-2">
-              {/* <div id={`tts-button-container-${id}`} data-tts-message-id={id}>
+          {!isLoading &&
+            (styleRole === "user" || textContent) &&
+            onDelete &&
+            chatId && (
+              <div className="flex items-center gap-2 mt-2">
+                {/* <div id={`tts-button-container-${id}`} data-tts-message-id={id}>
                 <TTSButton
                   text={textContent}
                   role={styleRole}
@@ -1039,33 +1063,33 @@ export function ChatMessage({
                 />
               </div> */}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100",
-                      styleRole === "user"
-                        ? "hover:bg-primary-foreground/10 text-primary-foreground"
-                        : "hover:bg-muted"
-                    )}
-                  >
-                    <MoreVertical className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => onDelete(id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100",
+                        styleRole === "user"
+                          ? "hover:bg-primary-foreground/10 text-primary-foreground"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => onDelete(id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
         </div>
       </div>
     </div>
