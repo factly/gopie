@@ -24,6 +24,7 @@ import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
 import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
+import { useUploadStore } from "@/lib/stores/uploadStore";
 
 interface UrlUploaderProps {
   projectId: string;
@@ -74,9 +75,12 @@ export function UrlUploader({
 
   // Column description store integration
   const clearColumnDescriptions = useColumnDescriptionStore((state) => state.clearColumnDescriptions);
+  
+  // Upload store integration for filename tracking
+  const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
 
   // Calculate if all column names are valid
-  const allColumnsValid = Array.from(columnMappings.values()).every(
+  const allColumnsValid = Object.values(columnMappings).every(
     (mapping) => mapping.isValid
   );
   const canUpload =
@@ -318,6 +322,7 @@ export function UrlUploader({
       // Download the file
       const file = await downloadFileFromUrl(url);
       setDownloadedFile(file);
+      setOriginalFileName(file.name);
 
       // Detect file format
       const format = detectFileFormat(file.name, file.type);
@@ -420,7 +425,7 @@ export function UrlUploader({
               const summary: Record<string, any> = {};
               result.columnNames.forEach((originalName, index) => {
                 // Get the updated name for this column (it will be the same initially)
-                const mapping = Array.from(columnMappings.values()).find(
+                const mapping = Object.values(columnMappings).find(
                   (m) => m.originalName === originalName
                 );
                 const updatedName = mapping?.updatedName || originalName;
@@ -548,8 +553,9 @@ export function UrlUploader({
       .replace(/[^a-zA-Z0-9.-]/g, "_");
   };
 
+  // Don't show loading here - it's handled at the wizard level
   if (isInitializing) {
-    return <div>Initializing DuckDB for file validation...</div>;
+    return null;
   }
 
   if (duckDbError) {

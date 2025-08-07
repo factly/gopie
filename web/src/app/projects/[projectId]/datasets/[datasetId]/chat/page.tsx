@@ -596,7 +596,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         </ResizablePanel>
         {isOpen && (
           <>
-            <ResizableHandle />
+            <ResizableHandle withHandle />
             <ResizablePanel defaultSize={70} minSize={30}>
               <SqlResults />
             </ResizablePanel>

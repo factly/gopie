@@ -345,24 +345,27 @@ export function MentionInput({
       });
     }
 
-    // Close the popover
-    setShowMentionPopover(false);
-
-    // Focus the input and set cursor after the mention
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-
-        if (cursorPosition !== null) {
-          // Set cursor position after the mention
-          const beforeMention = value
-            .substring(0, cursorPosition)
-            .replace(/@[^@\s]*$/, "");
-          const newPosition = beforeMention.length + item.name.length + 2; // +2 for @ and space
+    // Replace the @mention with prefixed item name in the input text
+    if (cursorPosition !== null) {
+      const beforeMention = value.substring(0, cursorPosition).replace(/@[^@\s]*$/, "");
+      const afterMention = value.substring(cursorPosition);
+      const prefix = item.type === "dataset" ? "Dataset: " : "Project: ";
+      const replacementText = prefix + item.name;
+      const newValue = beforeMention + replacementText + afterMention;
+      onChange(newValue);
+      
+      // Set cursor position after the inserted prefixed item name
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          const newPosition = beforeMention.length + replacementText.length;
           textareaRef.current.setSelectionRange(newPosition, newPosition);
         }
-      }
-    }, 10); // Slightly longer timeout to ensure UI updates first
+      }, 10);
+    }
+
+    // Close the popover
+    setShowMentionPopover(false);
   };
 
   const handleStopMessageStream = useCallback(

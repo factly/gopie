@@ -118,11 +118,9 @@ export function getSupportedFileExtensions(): string[] {
  * Gets all supported MIME types for Uppy restrictions
  */
 export function getSupportedMimeTypes(): string[] {
-  return [
-    ...new Set(
-      Object.values(SUPPORTED_FORMATS).flatMap((format) => format.mimeTypes)
-    ),
-  ];
+  const mimeTypes = Object.values(SUPPORTED_FORMATS).flatMap((format) => format.mimeTypes);
+  // Remove duplicates using filter instead of Set
+  return mimeTypes.filter((type, index) => mimeTypes.indexOf(type) === index);
 }
 
 /**

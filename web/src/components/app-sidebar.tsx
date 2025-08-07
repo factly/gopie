@@ -11,7 +11,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { NavProjects } from "@/components/nav-projects";
@@ -38,6 +38,7 @@ import {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
 
@@ -302,7 +303,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <>
                       <CommandSearch
                         projectId={projectId}
-                        onNavigate={() => {}}
+                        onNavigate={router.push}
                       />
                       <SidebarMenu>
                         <SidebarMenuItem>
@@ -380,7 +381,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           {!isSettingsPage && (
             <>
-              <CommandSearch projectId={projectId} onNavigate={() => {}} />
+              <CommandSearch projectId={projectId} onNavigate={router.push} />
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton

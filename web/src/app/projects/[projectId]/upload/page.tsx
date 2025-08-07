@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { DatasetUploadWizard } from "@/components/dataset/dataset-upload-wizard";
 
