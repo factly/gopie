@@ -3,6 +3,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+COPY . .
 RUN go build -o gopie main.go
 
 FROM ubuntu:jammy AS runtime
