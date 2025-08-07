@@ -269,7 +269,7 @@ export function ChatMessage({
   content,
   message,
   role,
-  createdAt,
+  createdAt: _createdAt,
   isLoading,
   streamAborted,
   onDelete,

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { History, PanelLeft } from "lucide-react";
 import { useChatStore } from "@/lib/stores/chat-store";
 // import { VoiceMode } from "@/components/chat/voice-mode";
@@ -1488,7 +1488,7 @@ function ChatPageClient() {
     } else {
       setOpen(false);
     }
-  }, []); // Empty dependency array to run only once on mount
+  }, [isMobile, setOpen, setOpenMobile]);
 
   return (
     <main className="flex flex-col w-full h-[calc(100vh-16px)]">

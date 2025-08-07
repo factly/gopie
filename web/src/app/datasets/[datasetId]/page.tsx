@@ -47,7 +47,7 @@ export default function DatasetPage({ params }: DatasetPageProps) {
     );
   }
 
-  if (hasError || !projects || projects.length === 0) {
+  if (hasError || !projects || !projects.results || projects.results.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -95,7 +95,7 @@ export default function DatasetPage({ params }: DatasetPageProps) {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
-              {projects.map((project) => (
+              {projects.results.map((project) => (
                 <Button
                   key={project.id}
                   variant="outline"
