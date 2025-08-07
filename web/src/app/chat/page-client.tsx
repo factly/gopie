@@ -703,16 +703,19 @@ function ChatPageClient() {
         setShowLoadingMessage(false);
       }
 
-      // If this was a new chat (no selectedChatId), invalidate chats list
-      if (!selectedChatId) {
-        queryClient.invalidateQueries({ queryKey: ["chats"] });
-      }
+      // Delay invalidation to prevent loader during the transition
+      setTimeout(() => {
+        // If this was a new chat (no selectedChatId), invalidate chats list
+        if (!selectedChatId) {
+          queryClient.invalidateQueries({ queryKey: ["chats"] });
+        }
 
-      // Switch back to query messages and invalidate to get the complete conversation
-      setUseStreamingMessages(false);
-      queryClient.invalidateQueries({
-        queryKey: ["chat-messages", { chatId: selectedChatId }],
-      });
+        // Switch back to query messages and invalidate to get the complete conversation
+        setUseStreamingMessages(false);
+        queryClient.invalidateQueries({
+          queryKey: ["chat-messages", { chatId: selectedChatId }],
+        });
+      }, 100); // Small delay to ensure smooth transition
     },
     onError: (err) => {
       console.error("Chat error:", err);

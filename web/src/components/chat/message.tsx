@@ -32,7 +32,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo, useMemo } from "react";
 import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
 // import { TTSButton } from "./tts-button";
 import {
@@ -75,6 +75,31 @@ function formatSqlQuery(sql: string): string {
     return sql;
   }
 }
+
+// Memoized component for rendering text parts to reduce re-renders during streaming
+const MessageTextPart = memo(
+  ({ text, styleRole }: { text: string; styleRole: string }) => {
+    const className = useMemo(
+      () =>
+        cn(
+          "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
+          "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
+          "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
+          styleRole === "user"
+            ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
+            : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
+        ),
+      [styleRole]
+    );
+
+    return (
+      <div className={className}>
+        <ReactMarkdown>{text}</ReactMarkdown>
+      </div>
+    );
+  }
+);
+MessageTextPart.displayName = "MessageTextPart";
 
 function parseMessageContent(content: string): MessageContent {
   if (content.startsWith("---SQL---") && content.endsWith("---SQL---")) {
@@ -283,6 +308,17 @@ export function ChatMessage({
   const [contextProjectIds, setContextProjectIds] = useState<string[]>([]);
   const [contextDatasetIds, setContextDatasetIds] = useState<string[]>([]);
 
+  // Memoize these values at the component level to avoid conditional hook calls
+  const latestThoughtProcessMessage = useMemo(
+    () => displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing...",
+    [displayIntermediateMessages]
+  );
+
+  const joinedIntermediateMessages = useMemo(
+    () => displayIntermediateMessages.join("\n\n"),
+    [displayIntermediateMessages]
+  );
+
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
       const newSet = new Set(prev);
@@ -303,124 +339,127 @@ export function ChatMessage({
     return preview.length < formattedQuery.length ? `${preview}...` : preview;
   };
 
-  // Process message parts from AI SDK
+  // Process message parts from AI SDK with memoization to reduce re-renders
   useEffect(() => {
     if (message?.parts) {
-      // Extract datasets from datasets_used tool calls
-      const newDatasets: string[] = [];
-      // Extract SQL from sql_queries tool calls
-      const newSqlQueries: string[] = [];
-      // Extract thought process messages from tool_messages tool calls
-      const newIntermediateMessages: string[] = [];
-      // Extract visualization paths from visualization_paths tool calls
-      const newVisualizationPaths: string[] = [];
-      // Extract visualization results from visualization_result tool calls
-      const newVisualizationResults: string[] = [];
-      // Extract context from set_context tool calls (for user messages)
-      const newProjectIds: string[] = [];
-      const newDatasetIds: string[] = [];
+      // Use requestAnimationFrame to defer state updates and batch them
+      requestAnimationFrame(() => {
+        // Extract datasets from datasets_used tool calls
+        const newDatasets: string[] = [];
+        // Extract SQL from sql_queries tool calls
+        const newSqlQueries: string[] = [];
+        // Extract thought process messages from tool_messages tool calls
+        const newIntermediateMessages: string[] = [];
+        // Extract visualization paths from visualization_paths tool calls
+        const newVisualizationPaths: string[] = [];
+        // Extract visualization results from visualization_result tool calls
+        const newVisualizationResults: string[] = [];
+        // Extract context from set_context tool calls (for user messages)
+        const newProjectIds: string[] = [];
+        const newDatasetIds: string[] = [];
 
-      message.parts.forEach((part) => {
-        if (part.type === "tool-invocation") {
-          const { toolName, args } = part.toolInvocation;
-          
-          // Handle set_context tool call (from user messages)
-          if (toolName === "set_context") {
-            if (args.project_ids && Array.isArray(args.project_ids)) {
-              newProjectIds.push(...args.project_ids);
-            }
-            if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
-              newDatasetIds.push(...args.dataset_ids);
-            }
-          }
-
-          if (toolName === "datasets_used" && args.datasets) {
-            // Handle datasets_used tool
-            args.datasets.forEach((dataset: string) => {
-              if (!newDatasets.includes(dataset)) {
-                newDatasets.push(dataset);
+        message.parts.forEach((part) => {
+          if (part.type === "tool-invocation") {
+            const { toolName, args } = part.toolInvocation;
+            
+            // Handle set_context tool call (from user messages)
+            if (toolName === "set_context") {
+              if (args.project_ids && Array.isArray(args.project_ids)) {
+                newProjectIds.push(...args.project_ids);
               }
-            });
-          }
-
-          if (toolName === "sql_queries" && args.queries) {
-            // Handle sql_queries tool (now expects an array of queries)
-            if (Array.isArray(args.queries)) {
-              newSqlQueries.push(...args.queries);
-            } else if (typeof args.queries === "string") {
-              newSqlQueries.push(args.queries);
+              if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
+                newDatasetIds.push(...args.dataset_ids);
+              }
             }
-          }
 
-          if (toolName === "tool_messages" && args.role && args.content) {
-            // Handle tool_messages tool (thought process) - now expects role and content directly
-            if (
-              args.role === "intermediate" &&
-              typeof args.content === "string"
-            ) {
-              newIntermediateMessages.push(args.content);
-            }
-          }
-
-          if (toolName === "visualization_paths" && args.paths) {
-            // Handle visualization_paths tool
-            if (Array.isArray(args.paths)) {
-              args.paths.forEach((path: string) => {
-                if (!newVisualizationPaths.includes(path)) {
-                  newVisualizationPaths.push(path);
+            if (toolName === "datasets_used" && args.datasets) {
+              // Handle datasets_used tool
+              args.datasets.forEach((dataset: string) => {
+                if (!newDatasets.includes(dataset)) {
+                  newDatasets.push(dataset);
                 }
               });
             }
-          }
 
-          if (toolName === "visualization_result" && args.s3_paths) {
-            // Handle visualization_result tool
-            if (Array.isArray(args.s3_paths)) {
-              args.s3_paths.forEach((path: string) => {
-                if (!newVisualizationResults.includes(path)) {
-                  newVisualizationResults.push(path);
-                }
-              });
+            if (toolName === "sql_queries" && args.queries) {
+              // Handle sql_queries tool (now expects an array of queries)
+              if (Array.isArray(args.queries)) {
+                newSqlQueries.push(...args.queries);
+              } else if (typeof args.queries === "string") {
+                newSqlQueries.push(args.queries);
+              }
+            }
+
+            if (toolName === "tool_messages" && args.role && args.content) {
+              // Handle tool_messages tool (thought process) - now expects role and content directly
+              if (
+                args.role === "intermediate" &&
+                typeof args.content === "string"
+              ) {
+                newIntermediateMessages.push(args.content);
+              }
+            }
+
+            if (toolName === "visualization_paths" && args.paths) {
+              // Handle visualization_paths tool
+              if (Array.isArray(args.paths)) {
+                args.paths.forEach((path: string) => {
+                  if (!newVisualizationPaths.includes(path)) {
+                    newVisualizationPaths.push(path);
+                  }
+                });
+              }
+            }
+
+            if (toolName === "visualization_result" && args.s3_paths) {
+              // Handle visualization_result tool
+              if (Array.isArray(args.s3_paths)) {
+                args.s3_paths.forEach((path: string) => {
+                  if (!newVisualizationResults.includes(path)) {
+                    newVisualizationResults.push(path);
+                  }
+                });
+              }
             }
           }
+        });
+
+        // Batch state updates to reduce re-renders
+        if (newProjectIds.length > 0) {
+          setContextProjectIds(newProjectIds);
+        }
+        
+        if (newDatasetIds.length > 0) {
+          setContextDatasetIds(newDatasetIds);
+        }
+
+        if (newDatasets.length > 0) {
+          setDisplayDatasets(newDatasets);
+        } else if (finalizedDatasets && finalizedDatasets.length > 0) {
+          setDisplayDatasets(finalizedDatasets);
+        }
+
+        if (newSqlQueries.length > 0) {
+          setDisplaySqlQueries(newSqlQueries);
+        } else if (finalizedSqlQuery) {
+          setDisplaySqlQueries([finalizedSqlQuery]);
+        }
+
+        if (newIntermediateMessages.length > 0) {
+          setDisplayIntermediateMessages(newIntermediateMessages);
+          // Keep thought process collapsed by default - user can manually expand if needed
+        }
+
+        if (newVisualizationPaths.length > 0) {
+          setDisplayVisualizationPaths(newVisualizationPaths);
+        }
+
+        if (newVisualizationResults.length > 0) {
+          setDisplayVisualizationResults(newVisualizationResults);
+          setVisualizationPaths(newVisualizationResults, chatId);
+          setActiveTab('visualizations'); // Auto-switch to visualizations tab when new visualizations are received
         }
       });
-
-      // Update state with extracted data
-      if (newProjectIds.length > 0) {
-        setContextProjectIds(newProjectIds);
-      }
-      
-      if (newDatasetIds.length > 0) {
-        setContextDatasetIds(newDatasetIds);
-      }
-
-      if (newDatasets.length > 0) {
-        setDisplayDatasets(newDatasets);
-      } else if (finalizedDatasets && finalizedDatasets.length > 0) {
-        setDisplayDatasets(finalizedDatasets);
-      }
-
-      if (newSqlQueries.length > 0) {
-        setDisplaySqlQueries(newSqlQueries);
-      } else if (finalizedSqlQuery) {
-        setDisplaySqlQueries([finalizedSqlQuery]);
-      }
-
-      if (newIntermediateMessages.length > 0) {
-        setDisplayIntermediateMessages(newIntermediateMessages);
-        // Keep thought process collapsed by default - user can manually expand if needed
-      }
-
-      if (newVisualizationPaths.length > 0) {
-        setDisplayVisualizationPaths(newVisualizationPaths);
-      }
-
-      if (newVisualizationResults.length > 0) {
-        setDisplayVisualizationResults(newVisualizationResults);
-        setVisualizationPaths(newVisualizationResults, chatId);
-        setActiveTab('visualizations'); // Auto-switch to visualizations tab when new visualizations are received
-      }
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
       const allStreamDatasets = new Set<string>();
@@ -466,7 +505,7 @@ export function ChatMessage({
     chatId,
     setVisualizationPaths,
     setActiveTab,
-    isLoading,
+    // Remove isLoading dependency to prevent re-renders during loading
   ]);
 
   // Extract text content from message or fallback to content (needed early for useEffect)
@@ -515,10 +554,11 @@ export function ChatMessage({
       if (sqlToExecute) {
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
-          // Execute query asynchronously without blocking UI thread
-          setTimeout(() => {
+          // Use queueMicrotask to ensure non-blocking execution
+          // This allows the SQL to run in parallel with streaming without blocking the UI
+          queueMicrotask(() => {
             handleRunQuery(sqlToExecute);
-          }, 0);
+          });
         }
       }
     }
@@ -551,10 +591,10 @@ export function ChatMessage({
       if (sqlToExecute) {
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
-          // Execute query asynchronously without blocking UI thread
-          setTimeout(() => {
+          // Use queueMicrotask for non-blocking execution
+          queueMicrotask(() => {
             handleRunQuery(sqlToExecute);
-          }, 0);
+          });
         }
       }
     }
@@ -699,7 +739,7 @@ export function ChatMessage({
                   "Agent thought process"
                 ) : (
                   <span className="text-xs italic text-muted-foreground truncate max-w-[400px]">
-                    {displayIntermediateMessages[displayIntermediateMessages.length - 1]?.split('\n').pop() || "Processing..."}
+                    {latestThoughtProcessMessage}
                   </span>
                 )}
               </CollapsibleTrigger>
@@ -713,9 +753,7 @@ export function ChatMessage({
                   "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
                 )}
               >
-                <ReactMarkdown>
-                  {displayIntermediateMessages.join("\n\n")}
-                </ReactMarkdown>
+                <ReactMarkdown>{joinedIntermediateMessages}</ReactMarkdown>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -723,25 +761,17 @@ export function ChatMessage({
 
         <div className="flex-1 min-w-0 w-full pt-1 overflow-hidden">
           <div className="text-sm break-words space-y-3 min-w-0">
-            {/* AI SDK parts-based rendering for text content */}
+            {/* AI SDK parts-based rendering for text content with memoization */}
             {message?.parts ? (
               <>
                 {message.parts.map((part, index) => {
                   if (part.type === "text") {
                     return (
-                      <div
+                      <MessageTextPart
                         key={`${id}-part-${index}`}
-                        className={cn(
-                          "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
-                          "[&_code]:whitespace-pre-wrap [&_code]:break-words [&_pre]:border",
-                          "[&_pre]:overflow-x-auto [&_pre]:whitespace-pre [&_pre]:shadow-sm",
-                          styleRole === "user"
-                            ? "dark:prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-ul:text-primary-foreground prose-ol:text-primary-foreground prose-strong:text-primary-foreground [&_*]:text-primary-foreground"
-                            : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
-                        )}
-                      >
-                        <ReactMarkdown>{part.text}</ReactMarkdown>
-                      </div>
+                        text={part.text}
+                        styleRole={styleRole}
+                      />
                     );
                   }
                   return null;
