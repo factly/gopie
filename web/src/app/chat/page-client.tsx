@@ -1368,7 +1368,57 @@ function ChatPageClient() {
         previousMessageCountRef.current = displayMessages.length;
       }
     }
-  }, [displayMessages, isStreaming, userHasScrolled, showLoadingMessage, activeTab]);
+  }, [displayMessages, streamingMessages, isStreaming, userHasScrolled, showLoadingMessage, activeTab]);
+
+  // Separate effect for continuous scrolling during streaming using MutationObserver
+  useEffect(() => {
+    if (isStreaming && !userHasScrolled && activeTab === "chat") {
+      let observer: MutationObserver | null = null;
+      
+      const setupObserver = () => {
+        if (scrollRef.current) {
+          const viewport = scrollRef.current.querySelector(
+            '[data-radix-scroll-area-viewport]'
+          );
+          
+          if (viewport) {
+            // Create a MutationObserver to watch for DOM changes
+            observer = new MutationObserver(() => {
+              // Check if user is near bottom (within 150px)
+              const isNearBottom =
+                viewport.scrollHeight -
+                viewport.scrollTop -
+                viewport.clientHeight < 150;
+              
+              // Only auto-scroll if user is near the bottom
+              if (isNearBottom) {
+                // Immediately scroll to bottom without animation
+                viewport.scrollTop = viewport.scrollHeight;
+              }
+            });
+            
+            // Observe changes in the viewport's subtree
+            observer.observe(viewport, {
+              childList: true,
+              subtree: true,
+              characterData: true,
+              characterDataOldValue: false,
+            });
+          }
+        }
+      };
+      
+      // Setup observer with a small delay to ensure DOM is ready
+      const timeoutId = setTimeout(setupObserver, 100);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        if (observer) {
+          observer.disconnect();
+        }
+      };
+    }
+  }, [isStreaming, userHasScrolled, activeTab]);
 
   const handleSelectContext = useCallback(
     (context: ContextItem) => {
