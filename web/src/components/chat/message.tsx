@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -299,12 +301,8 @@ export function ChatMessage({
   >([]);
   const [displayVisualizationResults, setDisplayVisualizationResults] =
     useState<string[]>([]);
-  const [expandedQueries, setExpandedQueries] = useState<Set<number>>(
-    new Set()
-  );
-  const [editedQueries, setEditedQueries] = useState<Map<number, string>>(
-    new Map()
-  );
+  const [expandedQueries, setExpandedQueries] = useState<number[]>([]);
+  const [editedQueries, setEditedQueries] = useState<Record<number, string>>({});
   const [contextProjectIds, setContextProjectIds] = useState<string[]>([]);
   const [contextDatasetIds, setContextDatasetIds] = useState<string[]>([]);
 
@@ -321,13 +319,11 @@ export function ChatMessage({
 
   const toggleQueryExpansion = (index: number) => {
     setExpandedQueries((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
       } else {
-        newSet.add(index);
+        return [...prev, index];
       }
-      return newSet;
     });
   };
 
@@ -462,7 +458,7 @@ export function ChatMessage({
       });
     } else if (Array.isArray(content)) {
       // Legacy handling for StreamEvent[]
-      const allStreamDatasets = new Set<string>();
+      const allStreamDatasets: string[] = [];
       const streamSqlQueries: string[] = [];
       const intermediateMessages: string[] = [];
 
@@ -477,9 +473,11 @@ export function ChatMessage({
         const streamContent = content as StreamEvent[];
         streamContent.forEach((event) => {
           if (event.datasets_used) {
-            event.datasets_used.forEach((dataset) =>
-              allStreamDatasets.add(dataset)
-            );
+            event.datasets_used.forEach((dataset) => {
+              if (!allStreamDatasets.includes(dataset)) {
+                allStreamDatasets.push(dataset);
+              }
+            });
           }
           if (event.generated_sql_query) {
             streamSqlQueries.push(event.generated_sql_query);
@@ -490,7 +488,7 @@ export function ChatMessage({
         });
       }
 
-      setDisplayDatasets(Array.from(allStreamDatasets));
+      setDisplayDatasets(allStreamDatasets);
       setDisplaySqlQueries(streamSqlQueries);
       setDisplayIntermediateMessages(intermediateMessages);
     } else {
@@ -767,13 +765,13 @@ export function ChatMessage({
                 {displaySqlQueries.map((query, index) => (
                   <Collapsible
                     key={index}
-                    open={expandedQueries.has(index)}
+                    open={expandedQueries.includes(index)}
                     onOpenChange={() => toggleQueryExpansion(index)}
                     className="border border-border bg-card shadow-sm min-w-0"
                   >
                     <div className="flex items-center justify-between w-full p-3 text-sm font-medium text-left hover:bg-accent hover:text-accent-foreground transition-colors data-[state=open]:border-b-0">
                       <CollapsibleTrigger className="flex items-center gap-3 min-w-0 flex-1">
-                        {expandedQueries.has(index) ? (
+                        {expandedQueries.includes(index) ? (
                           <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         ) : (
                           <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -799,7 +797,7 @@ export function ChatMessage({
                           onClick={(e) => {
                             e.stopPropagation();
                             const queryToRun =
-                              editedQueries.get(index) ?? formatSqlQuery(query);
+                              editedQueries[index] ?? formatSqlQuery(query);
                             handleRunQuery(queryToRun);
                           }}
                           disabled={isExecuting}
@@ -817,13 +815,12 @@ export function ChatMessage({
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
                         <SqlEditor
-                          value={editedQueries.get(index) ?? formatSqlQuery(query)}
+                          value={editedQueries[index] ?? formatSqlQuery(query)}
                           onChange={(newValue) => {
-                            setEditedQueries((prev) => {
-                              const newMap = new Map(prev);
-                              newMap.set(index, newValue);
-                              return newMap;
-                            });
+                            setEditedQueries((prev) => ({
+                              ...prev,
+                              [index]: newValue
+                            }));
                           }}
                           datasetId={""}
                         />

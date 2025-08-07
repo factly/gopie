@@ -79,23 +79,23 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
   );
 
   // Check if there are any invalid columns
-  const hasInvalidColumns = Array.from(columnMappings.values()).some(
+  const hasInvalidColumns = Object.values(columnMappings).some(
     (mapping) => !mapping.isValid
   );
 
-  // Convert Map to array for easier rendering
-  const mappingsArray = Array.from(columnMappings.values());
+  // Convert object to array for easier rendering
+  const mappingsArray = Object.values(columnMappings);
 
   const handleEditNameStart = (originalName: string) => {
     setEditingNameIndex(originalName);
-    const mapping = columnMappings.get(originalName);
+    const mapping = columnMappings[originalName];
     if (mapping) {
       setEditNameValue(mapping.updatedName);
     }
   };
 
   const handleEditNameSave = (originalName: string) => {
-    const mapping = columnMappings.get(originalName);
+    const mapping = columnMappings[originalName];
     const oldUpdatedName = mapping?.updatedName;
 
     // Update the column name in the store
@@ -117,7 +117,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
 
   const handleEditDataTypeStart = (originalName: string) => {
     setEditingDataTypeIndex(originalName);
-    const mapping = columnMappings.get(originalName);
+    const mapping = columnMappings[originalName];
     if (mapping) {
       setEditDataTypeValue(mapping.updatedDataType || mapping.dataType || "");
     }
@@ -147,7 +147,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
   };
 
   const handleOpenDescriptionDialog = (originalName: string) => {
-    const mapping = columnMappings.get(originalName);
+    const mapping = columnMappings[originalName];
     if (mapping) {
       setCurrentColumn({
         originalName: mapping.originalName,
@@ -179,7 +179,7 @@ export function ColumnNameEditor({ onDataTypeChange }: ColumnNameEditorProps) {
 
   const handleAutoFixAll = () => {
     // Get the current state before auto-fixing
-    const currentMappings = Array.from(columnMappings.values());
+    const currentMappings = Object.values(columnMappings);
 
     // Apply auto-fix
     autoFixAllColumns();

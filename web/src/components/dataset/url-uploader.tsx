@@ -80,7 +80,7 @@ export function UrlUploader({
   const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
 
   // Calculate if all column names are valid
-  const allColumnsValid = Array.from(columnMappings.values()).every(
+  const allColumnsValid = Object.values(columnMappings).every(
     (mapping) => mapping.isValid
   );
   const canUpload =
@@ -425,7 +425,7 @@ export function UrlUploader({
               const summary: Record<string, any> = {};
               result.columnNames.forEach((originalName, index) => {
                 // Get the updated name for this column (it will be the same initially)
-                const mapping = Array.from(columnMappings.values()).find(
+                const mapping = Object.values(columnMappings).find(
                   (m) => m.originalName === originalName
                 );
                 const updatedName = mapping?.updatedName || originalName;
