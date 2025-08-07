@@ -1,3 +1,5 @@
+"use client";
+
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
 import { Database, Download } from "lucide-react";
