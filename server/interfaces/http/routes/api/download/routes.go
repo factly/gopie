@@ -14,8 +14,8 @@ type httpHandler struct {
 
 func Routes(router fiber.Router, service *services.DownloadService, logger *logger.Logger) {
 	h := httpHandler{service, logger}
-	router.Post("/downloads", h.createAndStream)
-	router.Get("/downloads", h.list)
-	router.Get("/downloads/:id", h.get)
-	router.Delete("/downloads/:id", h.delete)
+	router.Post("/", h.createAndStream)
+	router.Get("/", h.list)
+	router.Get("/:id", h.get)
+	router.Delete("/:id", h.delete)
 }

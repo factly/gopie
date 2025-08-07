@@ -1,8 +1,6 @@
 package services
 
 import (
-	"io"
-
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
@@ -20,7 +18,7 @@ func NewDownloadService(repo repositories.DownloadRepository, logger *logger.Log
 	}
 }
 
-func (s *DownloadService) CreateAndStream(req *models.CreateDownloadRequest) (io.ReadCloser, error) {
+func (s *DownloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
 	return s.repo.CreateAndStream(req)
 }
 

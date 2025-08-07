@@ -31,3 +31,9 @@ type CreateDownloadRequest struct {
 	SQL       string `json:"sql"`
 	Format    string `json:"format"`
 }
+
+// The DownloadsSSEData struct helps pass either data or an error through the channel.
+type DownloadsSSEData struct {
+	Data  []byte
+	Error error
+}

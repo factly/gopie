@@ -104,7 +104,7 @@ func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
 	// Access mode is now always read_only.
 	dsn := ""
 	if cfg.DB == "motherduck" {
-		dsn = fmt.Sprintf("md:%s?motherduck_token=%s&access_mode=read_only", cfg.MotherDuck.DBName, "TOKEN")
+		dsn = fmt.Sprintf("md:%s?motherduck_token=%s&access_mode=read_only", cfg.MotherDuck.DBName, cfg.MotherDuck.Token)
 	} else {
 		dsn = fmt.Sprintf("%s?access_mode=read_only", cfg.DuckDB.Path)
 	}

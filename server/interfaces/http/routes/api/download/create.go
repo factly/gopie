@@ -1,7 +1,7 @@
 package download
 
 import (
-	"io"
+	"bufio"
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/interfaces/http/middleware"
@@ -20,20 +20,36 @@ func (h *httpHandler) createAndStream(c *fiber.Ctx) error {
 	req.UserID = userID
 	req.OrgID = orgID
 
-	streamBody, err := h.service.CreateAndStream(&req)
+	// This part remains the same. It initiates the request to the downstream service.
+	dataChan, err := h.service.CreateAndStream(&req)
 	if err != nil {
 		h.logger.Error("Failed to start download stream", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not initiate download stream"})
 	}
-	defer streamBody.Close()
 
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
+	c.Set("Transfer-Encoding", "chunked")
 
-	if _, err := io.Copy(c.Response().BodyWriter(), streamBody); err != nil {
-		h.logger.Error("Error while streaming SSE events", zap.Error(err))
-	}
+	c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
+		for sse := range dataChan {
+			if sse.Error != nil {
+				h.logger.Error("Error received from stream source", zap.Error(sse.Error))
+				return
+			}
+
+			if _, err := w.Write(sse.Data); err != nil {
+				h.logger.Error("Error writing to client stream", zap.Error(err))
+				return
+			}
+
+			if err := w.Flush(); err != nil {
+				h.logger.Error("Error flushing client stream", zap.Error(err))
+				return
+			}
+		}
+	})
 
 	return nil
 }
