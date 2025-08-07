@@ -29,7 +29,7 @@ Your analysis should follow these key criteria:
 
 3. is the query related to visualization? (`is_visualization_query`)
   • Determine if the query is related to visualization based on the following criteria:
-  • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart", or "show"
+  • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart"
   • IMPLICIT VISUALIZATION NEEDS: Queries that would benefit from visualization even without explicitly requesting it:
     - COMPARISONS: "compare", "vs", "versus", "difference between", "contrast"
     - TRENDS AND PATTERNS: "trends", "over time", "from X to Y", "patterns", "growth", "decline", "changes over"
