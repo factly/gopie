@@ -174,14 +174,16 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 
 		assistantMessageBuilder := strings.Builder{}
 		assistantMessage := models.ChatMessage{}
-		toolCalls := []any{}
+		userToolCalls := []any{}
+		assistantToolCalls := []any{}
 		role := "user"
 		assistantRole := "assistant"
+
+		// This logic remains the same
 		type contextArgs struct {
 			ProjectIDs []string `json:"project_ids,omitempty"`
 			DatasetIDs []string `json:"dataset_ids,omitempty"`
 		}
-
 		args := contextArgs{}
 		if projectIDs != "" {
 			args.ProjectIDs = strings.Split(projectIDs, ",")
@@ -189,7 +191,6 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 		if datasetIDs != "" {
 			args.DatasetIDs = strings.Split(datasetIDs, ",")
 		}
-
 		if len(args.ProjectIDs) > 0 || len(args.DatasetIDs) > 0 {
 			argsJSON, err := json.Marshal(args)
 			if err != nil {
@@ -210,7 +211,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 						Arguments: string(argsJSON),
 					},
 				}
-				toolCalls = append(toolCalls, contextToolCall)
+				userToolCalls = append(userToolCalls, contextToolCall)
 			}
 		}
 		messages := []models.ChatMessage{
@@ -223,7 +224,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 						Delta: models.Delta{
 							Role:      &role,
 							Content:   &body.Messages[len(body.Messages)-1].Content,
-							ToolCalls: toolCalls,
+							ToolCalls: userToolCalls,
 						},
 					},
 				},
@@ -254,7 +255,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					}
 
 					if len(choice.Delta.ToolCalls) > 0 {
-						toolCalls = append(toolCalls, choice.Delta.ToolCalls...)
+						assistantToolCalls = append(assistantToolCalls, choice.Delta.ToolCalls...)
 					}
 
 					s := assistantMessageBuilder.String()
@@ -269,7 +270,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 									Role:         &assistantRole,
 									FunctionCall: choice.Delta.FunctionCall,
 									Refusal:      choice.Delta.Refusal,
-									ToolCalls:    toolCalls, // Use the accumulated toolCalls
+									ToolCalls:    assistantToolCalls,
 									Content:      &s,
 								},
 							},
