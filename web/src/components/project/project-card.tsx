@@ -169,7 +169,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
 
   return (
     <>
-      <Link href={`/projects/${project.id}`} className="block" prefetch={false}>
+      <Link href={`/projects/${project.id}`} className="block">
         <Card
           className={cn(
             "group transition-all duration-300 relative overflow-hidden border border-border/40 hover:border-border/80",
@@ -202,14 +202,14 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                 </div>
               </div>
             </div>
-            
+
             {/* Description section using full width */}
             {project.description && (
               <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                 {project.description}
               </p>
             )}
-            
+
             <Button
               variant="ghost"
               size="sm"

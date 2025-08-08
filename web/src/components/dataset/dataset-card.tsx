@@ -95,7 +95,6 @@ export function DatasetCard({
     <Link
       href={`/projects/${projectId}/datasets/${dataset.id}`}
       className="block"
-      prefetch={false}
     >
       <Card
         className={cn(
