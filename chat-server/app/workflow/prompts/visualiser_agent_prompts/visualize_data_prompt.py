@@ -34,13 +34,15 @@ IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the
 Follow the steps below to create a visualization:
 1. Decide if you have enough information to create a visualization, otherwise explore the datasets to get more information.
 2. Find the best way to visualize the data if the user has not specified any visualization type.
-3. Use altair to create visualizations, and save them to json.
+3. Use altair to create visualizations, and save them to json and png.
 4. Use the run_python_code tool to run python code.
-5. Use the ResultPaths tool to return the paths to the json files that contain the visualizations.
+5. Get feedback for the generated image using the tool and make changes as needed
+6. When the overall rating >= 8 or if you have gotten feedback 3 times, use the ResultPaths tool to return the paths to the json files that contain the visualizations.
 
 First start by reasoning about the type of visualization, and all the details about the visualization based on the user query and the datasets.
 
 Always call the result_paths tool at the end to return the paths to the json files that contain the visualizations.
+Always validate your work.
 """
 
     human_template_str = """This is the user query: {user_query}

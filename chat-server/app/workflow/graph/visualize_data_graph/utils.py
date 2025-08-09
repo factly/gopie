@@ -87,7 +87,7 @@ async def get_sandbox():
     if not settings.E2B_API_KEY:
         raise ValueError("E2B API key is not set. Please set up E2B to enable visualizations.")
     sbx = await AsyncSandbox.create(timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY)
-    _ = await sbx.commands.run("pip install altair")
+    _ = await sbx.commands.run("pip install altair vl-convert-python")
     return sbx
 
 
