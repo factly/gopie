@@ -348,7 +348,7 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 		Count:   0, // Count will be set by the parent function
 		Err:     nil,
 	}
-	
+
 	result.data = tempResult
 	resultChan <- result
 }

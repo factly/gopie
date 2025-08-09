@@ -21,6 +21,10 @@ definitions:
   api.sqlRequestBody:
     description: Request body for executing a SQL query
     properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
       query:
         example: SELECT * FROM sales_data WHERE value > 1000
         minLength: 1
@@ -103,6 +107,15 @@ definitions:
     - driver
     - project_id
     - sql_query
+    type: object
+  datasets.updateColumnDescriptionsParams:
+    properties:
+      column_descriptions:
+        additionalProperties:
+          type: string
+        type: object
+    required:
+    - column_descriptions
     type: object
   datasets.updateDatasetParams:
     properties:
@@ -224,6 +237,72 @@ definitions:
         description: UpdatedBy represents the user who last updated the dataset
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
+    type: object
+  models.DatasetSummary:
+    description: Dataset summary statistics for columns
+    properties:
+      approx_unique:
+        description: Approximate number of unique values
+        example: 120
+        type: integer
+      avg:
+        description: Average value of the column
+        example: "456.25"
+        type: string
+      column_name:
+        description: Name of the column
+        example: sales_amount
+        type: string
+      column_type:
+        description: Data type of the column
+        example: numeric
+        type: string
+      count:
+        description: Count of values
+        example: 1000
+        type: integer
+      description:
+        description: Description of the column
+        example: Total sales amount for each transaction
+        type: string
+      max:
+        description: Maximum value in the column
+        example: "1000.75"
+        type: string
+      min:
+        description: Minimum value in the column
+        example: "10.5"
+        type: string
+      null_percentage:
+        description: Percentage of null values
+        example: 2.5
+        type: number
+      q25:
+        description: 25th percentile value
+        example: "245.5"
+        type: string
+      q50:
+        description: 50th percentile value (median)
+        example: "450.8"
+        type: string
+      q75:
+        description: 75th percentile value
+        example: "675.2"
+        type: string
+      std:
+        description: Standard deviation of the column values
+        example: "152.3"
+        type: string
+    type: object
+  models.DatasetSummaryWithName:
+    properties:
+      dataset_name:
+        example: sales_data
+        type: string
+      summary:
+        items:
+          $ref: '#/definitions/models.DatasetSummary'
+        type: array
     type: object
   models.Delta:
     properties:
@@ -980,6 +1059,85 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Get dataset details
+      tags:
+      - datasets
+  /v1/api/datasets/{datasetID}/column-descriptions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve column descriptions and statistics for an existing dataset
+      operationId: get-dataset-column-descriptions
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.DatasetSummaryWithName'
+              type: object
+        "404":
+          description: Dataset not found or no summary exists
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get dataset column descriptions
+      tags:
+      - datasets
+    patch:
+      consumes:
+      - application/json
+      description: Update column descriptions for an existing dataset
+      operationId: update-dataset-column-descriptions
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      - description: Column descriptions to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/datasets.updateColumnDescriptionsParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/responses.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.DatasetSummaryWithName'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Update dataset column descriptions
       tags:
       - datasets
   /v1/api/nl2sql:

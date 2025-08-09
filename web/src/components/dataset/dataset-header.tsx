@@ -13,6 +13,7 @@ import {
   InfoIcon,
   UserIcon,
   CodeIcon,
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { ColumnDescriptionsModal } from "@/components/dataset/column-descriptions-modal";
 
 interface DatasetHeaderProps {
   dataset: Dataset;
@@ -321,6 +323,20 @@ export function DatasetHeader({
                       </span>
                       <span className="text-muted-foreground">columns</span>
                     </div>
+                    <ColumnDescriptionsModal
+                      datasetId={dataset.id}
+                      datasetName={dataset.alias || dataset.name}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-muted-foreground hover:text-foreground"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Column Descriptions
+                        </Button>
+                      }
+                    />
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button

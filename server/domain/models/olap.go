@@ -30,18 +30,18 @@ func (r *Result) RowsToMap() (*[]map[string]any, error) {
 func (r *Result) RowsToMapWithColumns() (*[]map[string]any, []string, error) {
 	var data []map[string]any
 	var columns []string
-	
+
 	if r.Rows == nil {
 		return nil, nil, fmt.Errorf("rows is nil")
 	}
-	
+
 	// get columns once at the beginning
 	cols, err := r.Columns()
 	if err != nil {
 		return nil, nil, err
 	}
 	columns = cols
-	
+
 	for r.Rows.Next() {
 		d := make(map[string]any)
 		err := r.MapScan(d)

@@ -834,6 +834,133 @@
                 }
             }
         },
+        "/v1/api/datasets/{datasetID}/column-descriptions": {
+            "get": {
+                "description": "Retrieve column descriptions and statistics for an existing dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Get dataset column descriptions",
+                "operationId": "get-dataset-column-descriptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.DatasetSummaryWithName"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found or no summary exists",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update column descriptions for an existing dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Update dataset column descriptions",
+                "operationId": "update-dataset-column-descriptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Column descriptions to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/datasets.updateColumnDescriptionsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/responses.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.DatasetSummaryWithName"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/nl2sql": {
             "post": {
                 "description": "Convert a natural language query to SQL for a specific dataset",
@@ -1609,6 +1736,12 @@
                 "query"
             ],
             "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
                 "query": {
                     "type": "string",
                     "minLength": 1,
@@ -1713,6 +1846,20 @@
                     "description": "SQL query to execute",
                     "type": "string",
                     "example": "SELECT * FROM users"
+                }
+            }
+        },
+        "datasets.updateColumnDescriptionsParams": {
+            "type": "object",
+            "required": [
+                "column_descriptions"
+            ],
+            "properties": {
+                "column_descriptions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1883,6 +2030,92 @@
                     "description": "UpdatedBy represents the user who last updated the dataset",
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "models.DatasetSummary": {
+            "description": "Dataset summary statistics for columns",
+            "type": "object",
+            "properties": {
+                "approx_unique": {
+                    "description": "Approximate number of unique values",
+                    "type": "integer",
+                    "example": 120
+                },
+                "avg": {
+                    "description": "Average value of the column",
+                    "type": "string",
+                    "example": "456.25"
+                },
+                "column_name": {
+                    "description": "Name of the column",
+                    "type": "string",
+                    "example": "sales_amount"
+                },
+                "column_type": {
+                    "description": "Data type of the column",
+                    "type": "string",
+                    "example": "numeric"
+                },
+                "count": {
+                    "description": "Count of values",
+                    "type": "integer",
+                    "example": 1000
+                },
+                "description": {
+                    "description": "Description of the column",
+                    "type": "string",
+                    "example": "Total sales amount for each transaction"
+                },
+                "max": {
+                    "description": "Maximum value in the column",
+                    "type": "string",
+                    "example": "1000.75"
+                },
+                "min": {
+                    "description": "Minimum value in the column",
+                    "type": "string",
+                    "example": "10.5"
+                },
+                "null_percentage": {
+                    "description": "Percentage of null values",
+                    "type": "number",
+                    "example": 2.5
+                },
+                "q25": {
+                    "description": "25th percentile value",
+                    "type": "string",
+                    "example": "245.5"
+                },
+                "q50": {
+                    "description": "50th percentile value (median)",
+                    "type": "string",
+                    "example": "450.8"
+                },
+                "q75": {
+                    "description": "75th percentile value",
+                    "type": "string",
+                    "example": "675.2"
+                },
+                "std": {
+                    "description": "Standard deviation of the column values",
+                    "type": "string",
+                    "example": "152.3"
+                }
+            }
+        },
+        "models.DatasetSummaryWithName": {
+            "type": "object",
+            "properties": {
+                "dataset_name": {
+                    "type": "string",
+                    "example": "sales_data"
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DatasetSummary"
+                    }
                 }
             }
         },
