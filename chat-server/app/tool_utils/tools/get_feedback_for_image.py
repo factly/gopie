@@ -22,6 +22,8 @@ You are an expert data visualization analyst. Your task is to analyze a data vis
 - Evaluate color choices, readability, and visual hierarchy
 - Check for proper labeling of axes, legends, and titles
 - Identify any visual clutter or missing elements
+- are the labels overlapping each other
+- are the labels legible and meaningful?
 
 ### 2. Data Representation Accuracy
 - Verify if the visualization correctly represents the underlying data
