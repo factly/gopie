@@ -12,12 +12,6 @@ If you're just using a local DuckDB file, `gopie-server` has a basic downloader 
 
 ---
 
-## Core Architecture
-
-The service is built around a few key components to keep it scalable and resilient.
-
----
-
 ## Why MotherDuck? 🦆
 
 A local DuckDB file can't be safely read by two different processes at the same time (i.e., `gopie-server` and this one). MotherDuck solves that by being a managed service, which lets us scale reads without everything catching fire.
