@@ -42,19 +42,8 @@ type Config struct {
 }
 
 type OlapDBConfig struct {
-	DB         string
-	MotherDuck *MotherDuckConfig
-	DuckDB     *DuckDBConfig
-}
-
-type DuckDBConfig struct {
-	Path string
-}
-
-type MotherDuckConfig struct {
-	DBName          string
-	Token           string
-	HelperDBDirPath string
+	DBName string
+	Token  string
 }
 
 type PostgresConfig struct {
@@ -79,6 +68,7 @@ func initializeViper() error {
 	return nil
 }
 
+// validateConfig ensures that all necessary configuration values are present.
 func validateConfig(config *Config) (*Config, error) {
 	type validation struct {
 		value string
@@ -91,36 +81,8 @@ func validateConfig(config *Config) (*Config, error) {
 		{config.Postgres.Database, "postgres database"},
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
-	}
-
-	if config.OlapDB.DB == "" {
-		return nil, fmt.Errorf("missing olapdb dbtype")
-	}
-
-	switch config.OlapDB.DB {
-	case "duckdb":
-		config.OlapDB.DuckDB = &DuckDBConfig{
-			Path: viper.GetString("GOPIE_DS_DUCKDB_PATH"),
-		}
-
-		// check it path exists
-		if config.OlapDB.DuckDB.Path == "" {
-			return nil, fmt.Errorf("missing DuckDB path")
-		}
-
-	case "motherduck":
-		config.OlapDB.MotherDuck = &MotherDuckConfig{
-			DBName:          viper.GetString("GOPIE_DS_MOTHERDUCK_DB_NAME"),
-			Token:           viper.GetString("GOPIE_DS_MOTHERDUCK_TOKEN"),
-			HelperDBDirPath: viper.GetString("GOPIE_DS_MOTHERDUCK_HELPER_DB_DIR_PATH"),
-		}
-		validations = append(validations,
-			validation{config.OlapDB.MotherDuck.DBName, "MotherDuck DB name"},
-			validation{config.OlapDB.MotherDuck.Token, "MotherDuck token"},
-		)
-
-	default:
-		return nil, fmt.Errorf("invalid olapdb dbtype: %s", config.OlapDB.DB)
+		{config.OlapDB.DBName, "MotherDuck DB name"},
+		{config.OlapDB.Token, "MotherDuck token"},
 	}
 
 	for _, v := range validations {
@@ -132,6 +94,7 @@ func validateConfig(config *Config) (*Config, error) {
 	return config, nil
 }
 
+// setDefaults sets default values for configuration options.
 func setDefaults() {
 	viper.SetDefault("GOPIE_DS_SERVER_HOST", "localhost")
 	viper.SetDefault("GOPIE_DS_SERVER_PORT", "8000")
@@ -140,11 +103,11 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DS_LOGGER_LEVEL", "info")
 	viper.SetDefault("GOPIE_DS_LOGGER_FILE", "gopie.log")
 	viper.SetDefault("GOPIE_DS_LOGGER_MODE", "dev")
-	viper.SetDefault("GOPIE_DS_DUCKDB_PATH", "./duckdb/gopie.db")
 	viper.SetDefault("GOPIE_DS_QUEUE_SIZE", 1000)
 	viper.SetDefault("GOPIE_DS_QUEUE_WORKERS", 10)
 }
 
+// LoadConfig loads the configuration from environment variables or a config file.
 func LoadConfig() (*Config, error) {
 	if err := initializeViper(); err != nil {
 		return nil, err
@@ -171,7 +134,8 @@ func LoadConfig() (*Config, error) {
 			Mode:    viper.GetString("GOPIE_DS_LOGGER_MODE"),
 		},
 		OlapDB: OlapDBConfig{
-			DB: viper.GetString("GOPIE_DS_OLAPDB_DBTYPE"),
+			DBName: viper.GetString("GOPIE_DS_MOTHERDUCK_DB_NAME"),
+			Token:  viper.GetString("GOPIE_DS_MOTHERDUCK_TOKEN"),
 		},
 		Postgres: PostgresConfig{
 			Host:     viper.GetString("GOPIE_DS_POSTGRES_HOST"),

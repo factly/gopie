@@ -52,7 +52,7 @@ func ServeHttp() error {
 		logger.Error("Error connecting to postgres", zap.Error(err))
 		return err
 	}
-	olapStore, err := duckdb.NewOlapDBDriver(&cfg.OlapDB, logger)
+	olapStore, err := duckdb.NewMotherDuckDriver(&cfg.OlapDB, logger)
 	if err != nil {
 		logger.Error("Error initializing olapStore", zap.Error(err))
 		return err

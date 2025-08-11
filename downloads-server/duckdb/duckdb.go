@@ -14,41 +14,37 @@ import (
 	"github.com/factly/gopie/downlods-server/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/marcboeker/go-duckdb/v2"
-	_ "github.com/marcboeker/go-duckdb/v2" // DuckDB driver
+	_ "github.com/marcboeker/go-duckdb/v2" // DuckDB driver for MotherDuck
 	"go.uber.org/zap"
 )
 
-// OlapDBDriver holds the necessary components for a DuckDB connection.
+// OlapDBDriver holds the necessary components for a MotherDuck connection.
 type OlapDBDriver struct {
-	db       *sql.DB
-	logger   *logger.Logger
-	olapType string // "duckdb" or "motherduck"
-	dbName   string
+	db     *sql.DB
+	logger *logger.Logger
+	dbName string
 }
 
-// NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
+// NewMotherDuckDriver initializes a new MotherDuck driver.
 // It assumes access_mode is always read_only.
-func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger) (*OlapDBDriver, error) {
+func NewMotherDuckDriver(cfg *config.OlapDBConfig, logger *logger.Logger) (*OlapDBDriver, error) {
 	olap := OlapDBDriver{
 		logger: logger,
+		dbName: cfg.DBName,
 	}
-	logger.Info("initializing duckdb driver",
-		zap.String("db_type", cfg.DB),
+	logger.Info("initializing motherduck driver",
+		zap.String("db_name", cfg.DBName),
 		zap.String("access_mode", "read_only"))
 
 	err := olap.Connect(cfg)
 	if err != nil {
-		logger.Error("failed to connect to duckdb",
-			zap.String("db_type", cfg.DB),
+		logger.Error("failed to connect to motherduck",
+			zap.String("db_name", cfg.DBName),
 			zap.Error(err))
 		return nil, err
 	}
-	logger.Info("successfully connected to duckdb",
-		zap.String("db_type", cfg.DB))
-
-	if cfg.DB == "motherduck" {
-		olap.dbName = cfg.MotherDuck.DBName
-	}
+	logger.Info("successfully connected to motherduck",
+		zap.String("db_name", cfg.DBName))
 
 	return &olap, nil
 }
@@ -81,11 +77,12 @@ func (m *OlapDBDriver) Query(query string) (*models.Result, error) {
 	return &result, nil
 }
 
-// GetHelperDB returns the main database connection, as helperDB is no longer used.
+// GetHelperDB returns the main database connection.
 func (m *OlapDBDriver) GetHelperDB() any {
 	return m.db
 }
 
+// parseError unwraps the underlying duckdb-specific error for better context.
 func parseError(err error) error {
 	if err == nil {
 		return nil
@@ -93,6 +90,7 @@ func parseError(err error) error {
 
 	var duckErr *duckdb.Error
 	if errors.As(err, &duckErr) {
+		// The error still comes from the underlying duckdb driver
 		return fmt.Errorf("DuckDB %v error: %w", duckErr.Type, err)
 	}
 	return err
@@ -100,20 +98,19 @@ func parseError(err error) error {
 
 // Connect establishes the database connection with read_only access.
 func (m *OlapDBDriver) Connect(cfg *config.OlapDBConfig) error {
-	// This function builds the DSN and opens the sql.DB connection.
+	// This function builds the DSN for MotherDuck and opens the sql.DB connection.
 	// Access mode is now always read_only.
-	dsn := ""
-	if cfg.DB == "motherduck" {
-		dsn = fmt.Sprintf("md:%s?motherduck_token=%s&access_mode=read_only", cfg.MotherDuck.DBName, cfg.MotherDuck.Token)
-	} else {
-		dsn = fmt.Sprintf("%s?access_mode=read_only", cfg.DuckDB.Path)
+	if cfg.Token == "" {
+		return errors.New("motherduck token is required")
 	}
+	dsn := fmt.Sprintf("md:%s?motherduck_token=%s&access_mode=read_only", cfg.DBName, cfg.Token)
 
 	var err error
 	m.db, err = sql.Open("duckdb", dsn)
 	if err != nil {
 		return err
 	}
+	// Ping the database to verify the connection.
 	return m.db.Ping()
 }
 
@@ -125,7 +122,9 @@ func (m *OlapDBDriver) Close() error {
 	return nil
 }
 
+// ExecuteQueryAndStreamCSV executes a query and streams the results as a CSV file.
 func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string, writer io.Writer) error {
+	// Ensure the writer is closed if it has a Close method.
 	defer func() {
 		if closer, ok := writer.(io.Closer); ok {
 			closer.Close()
@@ -141,6 +140,7 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 	csvWriter := csv.NewWriter(writer)
 	defer csvWriter.Flush()
 
+	// Write CSV headers from column names.
 	headers, err := rows.Columns()
 	if err != nil {
 		return err
@@ -149,12 +149,14 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 		return err
 	}
 
+	// Prepare to scan row values.
 	values := make([]any, len(headers))
 	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
 
+	// Iterate over rows and write to CSV.
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
 			return err
@@ -163,7 +165,7 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 		record := make([]string, len(values))
 		for i, val := range values {
 			if val == nil {
-				record[i] = ""
+				record[i] = "" // Represent NULL as an empty string.
 			} else {
 				record[i] = fmt.Sprintf("%v", val)
 			}
@@ -174,5 +176,6 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 		}
 	}
 
+	// Check for any errors encountered during iteration.
 	return rows.Err()
 }
