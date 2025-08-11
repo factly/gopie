@@ -33,4 +33,4 @@ jobs:
         push: true
         tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-download-server:${{ env.RELEASE_VERSION }},asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-download-server:latest
         context: download-server
-        file: download-server/Dockerfile
+        file: downloads-server/Dockerfile
