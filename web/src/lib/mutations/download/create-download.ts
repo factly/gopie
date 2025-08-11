@@ -9,11 +9,13 @@ export interface CreateDownloadRequest {
 }
 
 export interface SSEMessage {
-  type: 'progress' | 'complete' | 'error';
+  type?: 'progress' | 'complete' | 'error' | 'status_update';
   message?: string;
   progress?: number;
   download_id?: string;
   url?: string;
+  id?: string;
+  status?: string;
 }
 
 export const createDownloadWithSSE = async (
@@ -80,12 +82,17 @@ export const createDownloadWithSSE = async (
                 try {
                   const data = JSON.parse(jsonStr) as SSEMessage;
                   
+                  // Log for debugging
+                  console.log('SSE message received:', data);
+                  
                   if (onProgress) {
                     onProgress(data);
                   }
                   
-                  if (data.type === 'complete' && data.download_id && data.url) {
-                    resolve({ downloadId: data.download_id, url: data.url });
+                  // Handle completion - the URL is in the message field when type is 'complete'
+                  if (data.type === 'complete' && data.download_id && data.message) {
+                    // The message contains the download URL
+                    resolve({ downloadId: data.download_id, url: data.message });
                     return;
                   }
                   
@@ -97,6 +104,9 @@ export const createDownloadWithSSE = async (
                   console.error('Failed to parse SSE message:', e);
                 }
               }
+            } else if (line.startsWith('event: ')) {
+              // Skip event lines, we only care about data lines
+              continue;
             }
           }
         }
@@ -131,13 +141,20 @@ export const useCreateDownload = () => {
               message: data.message || 'Processing...',
               status: 'processing'
             });
+          } else if (data.type === 'status_update') {
+            // Handle status update messages
+            setCurrentDownloadProgress({
+              progress: 50, // Default progress for status updates
+              message: data.message || 'Processing...',
+              status: 'processing'
+            });
           } else if (data.type === 'complete') {
             setCurrentDownloadProgress({
               downloadId: data.download_id,
               progress: 100,
               message: 'Download complete!',
               status: 'completed',
-              url: data.url
+              url: data.message // URL is in the message field
             });
           } else if (data.type === 'error') {
             setCurrentDownloadProgress({
@@ -146,6 +163,13 @@ export const useCreateDownload = () => {
               status: 'error'
             });
             setError(data.message || 'Download failed');
+          } else if (data.id && data.status === 'pending') {
+            // Handle job_created event
+            setCurrentDownloadProgress({
+              progress: 10,
+              message: 'Download job created...',
+              status: 'processing'
+            });
           }
         },
         accessToken

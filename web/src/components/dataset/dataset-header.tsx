@@ -14,6 +14,7 @@ import {
   UserIcon,
   CodeIcon,
   Loader2Icon,
+  CheckCircleIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -122,6 +123,7 @@ export function DatasetHeader({
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'csv' | 'json' | 'parquet'>('csv');
   const [downloadSql, setDownloadSql] = useState(`SELECT * FROM "${dataset.name}"`);
+  const [completedDownloadUrl, setCompletedDownloadUrl] = useState<string | null>(null);
   const { createDownload } = useCreateDownload();
   const { currentDownloadProgress, setCurrentDownloadProgress } = useDownloadStore();
 
@@ -203,6 +205,12 @@ export function DatasetHeader({
   };
 
   const handleDownload = async () => {
+    // If we have a completed download URL, just open it
+    if (completedDownloadUrl) {
+      window.open(completedDownloadUrl, '_blank');
+      return;
+    }
+
     try {
       const result = await createDownload({
         dataset_id: dataset.id,
@@ -210,8 +218,10 @@ export function DatasetHeader({
         format: downloadFormat,
       });
 
-      // Open the download URL in a new tab
+      // Store the completed URL for re-download
       if (result.url) {
+        setCompletedDownloadUrl(result.url);
+        // Automatically open the download URL in a new tab
         window.open(result.url, '_blank');
       }
 
@@ -220,21 +230,23 @@ export function DatasetHeader({
         description: "Your download has been prepared and opened in a new tab.",
       });
 
-      setIsDownloadDialogOpen(false);
-      setCurrentDownloadProgress(null);
+      // Don't close the dialog, just update the state to show completion
+      // User can close manually or download again
     } catch (error) {
       toast({
         title: "Download failed",
         description: error instanceof Error ? error.message : "Failed to create download",
         variant: "destructive",
       });
+      setCompletedDownloadUrl(null);
     }
   };
 
-  // Reset download progress when dialog closes
+  // Reset download progress and URL when dialog closes
   useEffect(() => {
     if (!isDownloadDialogOpen) {
       setCurrentDownloadProgress(null);
+      setCompletedDownloadUrl(null);
     }
   }, [isDownloadDialogOpen, setCurrentDownloadProgress]);
 
@@ -554,14 +566,25 @@ export function DatasetHeader({
                                 <Progress value={currentDownloadProgress.progress} />
                               </div>
                             )}
+                            {completedDownloadUrl && !currentDownloadProgress && (
+                              <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-200">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircleIcon className="h-4 w-4" />
+                                  <span>Download completed successfully! The file has been opened in a new tab.</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <DialogFooter>
                             <Button
                               variant="outline"
-                              onClick={() => setIsDownloadDialogOpen(false)}
+                              onClick={() => {
+                                setIsDownloadDialogOpen(false);
+                                setCompletedDownloadUrl(null);
+                              }}
                               disabled={currentDownloadProgress?.status === 'processing'}
                             >
-                              Cancel
+                              {completedDownloadUrl ? 'Close' : 'Cancel'}
                             </Button>
                             <Button
                               onClick={handleDownload}
@@ -571,6 +594,11 @@ export function DatasetHeader({
                                 <>
                                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
                                   Processing...
+                                </>
+                              ) : completedDownloadUrl ? (
+                                <>
+                                  <DownloadIcon className="mr-2 h-4 w-4" />
+                                  Download File
                                 </>
                               ) : (
                                 <>
