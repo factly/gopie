@@ -84,27 +84,38 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 	pr, pw := io.Pipe()
 	s3Key := fmt.Sprintf("%s/%s.csv", job.OrgID, job.ID)
 
+	errChan := make(chan error, 1)
+
 	go func() {
+		defer close(errChan)
 		defer pr.Close()
-		// Pass nil for progress callback as we don't know the total size.
+
 		_, uploadErr := q.s3ObjectStore.UploadFile(ctx, s3Key, pr)
 		if uploadErr != nil {
 			pw.CloseWithError(uploadErr)
 		}
+		errChan <- uploadErr
 	}()
 
 	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Streaming data to storage..."})
 	dbErr := q.olapStore.ExecuteQueryAndStreamCSV(ctx, job.SQL, pw)
 
-	if dbErr != nil {
-		pw.CloseWithError(dbErr)
-		q.logger.Error("Failed to execute and stream query", zap.String("download_id", jobIDStr), zap.Error(dbErr))
-		failReq := &models.SetDownloadFailedRequest{ErrorMessage: dbErr.Error()}
+	pw.Close()
+
+	uploadErr := <-errChan
+
+	if uploadErr != nil || dbErr != nil {
+		finalErr := uploadErr
+		if finalErr == nil {
+			finalErr = dbErr
+		}
+
+		q.logger.Error("Failed to process and upload data", zap.String("download_id", jobIDStr), zap.Error(finalErr))
+		failReq := &models.SetDownloadFailedRequest{ErrorMessage: finalErr.Error()}
 		q.DbStore.SetDownloadAsFailed(ctx, jobIDStr, failReq)
-		q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed to execute query: " + dbErr.Error()})
+		q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "error", Message: "Failed during data processing: " + finalErr.Error()})
 		return
 	}
-	pw.Close()
 
 	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Generating secure download link..."})
 	expiresIn := 24 * time.Hour
