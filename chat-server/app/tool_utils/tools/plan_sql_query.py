@@ -2,7 +2,6 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
@@ -46,18 +45,6 @@ async def plan_sql_query(
         prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
         llm = get_configured_llm_for_node("plan_sql_query_tool", config)
         response = await llm.ainvoke(prompt)
-
-        sql_queries = response.get("sql_queries", [])
-
-        await adispatch_custom_event(
-            "gopie-agent",
-            {
-                "content": "SQL query planning tool",
-                "name": SQL_QUERIES_GENERATED,
-                "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
-            },
-        )
-
         return response
     except Exception as e:
         await adispatch_custom_event(

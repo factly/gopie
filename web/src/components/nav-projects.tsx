@@ -6,6 +6,7 @@ import {
   CodeIcon,
   ChevronDown,
   ArrowLeftRight,
+  ScanEyeIcon
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -186,7 +187,7 @@ export function NavProjects() {
                   isActive={isActive(`/projects/${projectId}/datasets/${datasetId}`, true)}
                 >
                   <Link href={`/projects/${projectId}/datasets/${datasetId}`}>
-                    <TableIcon className="h-4 w-4" />
+                    <ScanEyeIcon className="h-4 w-4" />
                     <span>Overview</span>
                   </Link>
                 </SidebarMenuButton>

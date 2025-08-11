@@ -14,7 +14,11 @@ from app.models.query import (
     SingleDatasetQueryResult,
     SqlQueryInfo,
 )
-from app.services.gopie.sql_executor import execute_sql_with_limit
+from app.services.gopie.sql_executor import (
+    execute_sql,
+    execute_sql_with_limit,
+    truncate_if_too_large,
+)
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
@@ -159,28 +163,28 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": "SQL queries generated",
-                    "name": SQL_QUERIES_GENERATED,
-                    "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
-                },
-            )
-
             sql_results: list[SqlQueryInfo] = []
-
             for q, exp in zip(sql_queries, explanations):
                 try:
-                    result_data = await execute_sql_with_limit(query=q)
+                    full_result_data = await execute_sql(query=q)
+                    result_data = truncate_if_too_large(full_result_data)
                     sql_results.append(
                         SqlQueryInfo(
                             sql_query=q,
                             explanation=exp,
                             sql_query_result=result_data,
+                            full_sql_result=full_result_data,
                             success=True,
                             error=None,
                         )
+                    )
+                    await adispatch_custom_event(
+                        "gopie-agent",
+                        {
+                            "content": "SQL queries executed",
+                            "name": SQL_QUERIES_GENERATED,
+                            "values": {SQL_QUERIES_GENERATED_ARG: sql_queries},
+                        },
                     )
                 except Exception as err:
                     error_str = str(err)

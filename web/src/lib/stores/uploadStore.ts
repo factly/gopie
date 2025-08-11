@@ -11,6 +11,7 @@ interface UploadState {
   selectedFile: File | null;
   modifiedFile: File | null;
   detectedFormat: string | null;
+  originalFileName: string | null;
   
   // Actions
   setUploadedFile: (file: UppyFile<Meta, Record<string, never>> | null) => void;
@@ -21,6 +22,7 @@ interface UploadState {
   setSelectedFile: (file: File | null) => void;
   setModifiedFile: (file: File | null) => void;
   setDetectedFormat: (format: string | null) => void;
+  setOriginalFileName: (name: string | null) => void;
   resetUploadState: () => void;
 }
 
@@ -33,6 +35,7 @@ export const useUploadStore = create<UploadState>((set) => ({
   selectedFile: null,
   modifiedFile: null,
   detectedFormat: null,
+  originalFileName: null,
   
   setUploadedFile: (file) => set({ uploadedFile: file }),
   setUploadResponse: (response) => set({ uploadResponse: response }),
@@ -42,6 +45,7 @@ export const useUploadStore = create<UploadState>((set) => ({
   setSelectedFile: (file) => set({ selectedFile: file }),
   setModifiedFile: (file) => set({ modifiedFile: file }),
   setDetectedFormat: (format) => set({ detectedFormat: format }),
+  setOriginalFileName: (name) => set({ originalFileName: name }),
   
   resetUploadState: () => set({
     uploadedFile: null,
@@ -52,5 +56,6 @@ export const useUploadStore = create<UploadState>((set) => ({
     selectedFile: null,
     modifiedFile: null,
     detectedFormat: null,
+    originalFileName: null,
   }),
 }));

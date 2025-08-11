@@ -202,14 +202,14 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                 </div>
               </div>
             </div>
-            
+
             {/* Description section using full width */}
             {project.description && (
               <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                 {project.description}
               </p>
             )}
-            
+
             <Button
               variant="ghost"
               size="sm"

@@ -36,7 +36,6 @@ interface DatasetCardProps {
   onDelete?: (datasetId: string) => Promise<void>;
 }
 
-
 export function DatasetCard({
   dataset,
   projectId,
@@ -93,7 +92,10 @@ export function DatasetCard({
   };
 
   return (
-    <Link href={`/projects/${projectId}/datasets/${dataset.id}`} className="block">
+    <Link
+      href={`/projects/${projectId}/datasets/${dataset.id}`}
+      className="block"
+    >
       <Card
         className={cn(
           "group transition-all duration-300 relative overflow-hidden border border-border/40 hover:border-border/80",
@@ -126,7 +128,7 @@ export function DatasetCard({
               </div>
             </div>
           </div>
-          
+
           {/* Description section using full width */}
           <div className="h-[40px]">
             {dataset.description ? (
@@ -134,12 +136,10 @@ export function DatasetCard({
                 {dataset.description}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground opacity-0">
-                &nbsp;
-              </p>
+              <p className="text-sm text-muted-foreground opacity-0">&nbsp;</p>
             )}
           </div>
-          
+
           <Button
             variant="ghost"
             size="sm"

@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     BALANCED_MODEL: str = ""
     FAST_MODEL: str = ""
 
+    DETERMINISTIC_TEMPERATURE: float = 0.0
+    LOW_VARIATION_TEMPERATURE: float = 0.3
+    BALANCED_TEMPERATURE: float = 0.5
+    CREATIVE_TEMPERATURE: float = 0.7
+
     DEFAULT_LLM_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
 

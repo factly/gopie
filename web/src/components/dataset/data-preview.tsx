@@ -102,7 +102,6 @@ export function DataPreview(props: { datasetId: string }) {
       datasetId: props.datasetId,
       columns: selectedColumns.length > 0 ? selectedColumns : [],
       sort: Object.entries(sortState)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .filter(([_, direction]) => direction !== null)
         .map(([column, direction]) => ({
           column,

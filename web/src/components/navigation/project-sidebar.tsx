@@ -2,14 +2,11 @@
 
 import * as React from "react";
 import {
-  FolderIcon,
   LoaderIcon,
-  DatabaseIcon,
-  ChevronRightIcon,
-  ChevronDownIcon,
+  FolderOpen,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
-import { Project, Dataset } from "@/lib/api-client";
+import { Project } from "@/lib/api-client";
 import { useProjects } from "@/lib/queries/project/list-projects";
 import {
   SidebarGroup,
@@ -17,7 +14,6 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import { fetchDatasets } from "@/lib/queries/dataset/list-datasets";
 
 export function ProjectsSidebar() {
   const router = useRouter();
@@ -30,19 +26,6 @@ export function ProjectsSidebar() {
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const observerRef = React.useRef<IntersectionObserver | null>(null);
   const lastProjectRef = React.useRef<HTMLDivElement | null>(null);
-
-  // Track expanded project states
-  const [expandedProjects, setExpandedProjects] = React.useState<
-    Record<string, boolean>
-  >({});
-  // Track datasets by project ID
-  const [datasetsByProject, setDatasetsByProject] = React.useState<
-    Record<string, Dataset[]>
-  >({});
-  // Track which projects are loading datasets
-  const [loadingDatasets, setLoadingDatasets] = React.useState<
-    Record<string, boolean>
-  >({});
 
   const { data: projects, isLoading: isProjectsLoading } = useProjects({
     variables: {
@@ -100,50 +83,9 @@ export function ProjectsSidebar() {
     };
   }, [isLoadingMore, hasMore, allProjects, pathname]);
 
-  // Function to toggle project expansion
-  const toggleProjectExpansion = async (projectId: string) => {
-    // Toggle the expanded state
-    const newExpandedState = !expandedProjects[projectId];
-    setExpandedProjects((prev) => ({
-      ...prev,
-      [projectId]: newExpandedState,
-    }));
-
-    // If expanding and we don't have datasets yet, fetch them
-    if (newExpandedState && !datasetsByProject[projectId]) {
-      try {
-        setLoadingDatasets((prev) => ({ ...prev, [projectId]: true }));
-
-        // Fetch datasets for this project
-        const response = await fetchDatasets({
-          projectId,
-          limit: 50,
-          page: 1,
-        });
-
-        setDatasetsByProject((prev) => ({
-          ...prev,
-          [projectId]: response.results || [],
-        }));
-      } catch (error) {
-        console.error(
-          `Failed to fetch datasets for project ${projectId}:`,
-          error
-        );
-      } finally {
-        setLoadingDatasets((prev) => ({ ...prev, [projectId]: false }));
-      }
-    }
-  };
-
-  // Function to navigate to a dataset
-  const navigateToDataset = (
-    projectId: string,
-    datasetId: string,
-    event: React.MouseEvent
-  ) => {
-    event.stopPropagation(); // Prevent toggling project expansion
-    router.push(`/projects/${projectId}/datasets/${datasetId}`);
+  // Function to navigate to a project
+  const navigateToProject = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
   };
 
   // Only render for the chat page
@@ -176,72 +118,22 @@ export function ProjectsSidebar() {
               <div className="space-y-1 pb-1">
                 {allProjects.map((project, index) => {
                   const isLastItem = index === allProjects.length - 1;
-                  const isExpanded = expandedProjects[project.id] || false;
-                  const datasets = datasetsByProject[project.id] || [];
-                  const isLoadingDatasets =
-                    loadingDatasets[project.id] || false;
 
                   return (
                     <div
                       key={project.id}
                       ref={isLastItem ? lastProjectRef : null}
-                      className="px-1"
+                      className="px-2"
                     >
-                      <>
-                        <div
-                          className="group flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer transition-all duration-200"
-                          onClick={() => toggleProjectExpansion(project.id)}
-                        >
-                          <div className="flex-shrink-0 w-4">
-                            {isExpanded ? (
-                              <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <FolderIcon className="h-4 w-4 text-primary group-hover:text-primary transition-transform flex-shrink-0" />
-                          <span
-                            className="truncate text-sm font-medium group-hover:text-accent-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/projects/${project.id}`);
-                            }}
-                          >
-                            {project.name}
-                          </span>
-                        </div>
-
-                        {/* Datasets (when expanded) */}
-                        {isExpanded && (
-                          <div className="ml-9 mt-1 space-y-1">
-                            {isLoadingDatasets ? (
-                              <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground">
-                                <LoaderIcon className="h-3 w-3 animate-spin" />
-                                <span>Loading datasets...</span>
-                              </div>
-                            ) : datasets.length === 0 ? (
-                              <div className="px-3 py-1.5 text-xs text-muted-foreground">
-                                No datasets found
-                              </div>
-                            ) : (
-                              datasets.map((dataset) => (
-                                <div
-                                  key={dataset.id}
-                                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent cursor-pointer group"
-                                  onClick={(e) =>
-                                    navigateToDataset(project.id, dataset.id, e)
-                                  }
-                                >
-                                  <DatabaseIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <span className="truncate text-sm text-muted-foreground group-hover:text-foreground">
-                                    {dataset.alias || dataset.name}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </>
+                      <div
+                        className="group flex items-center gap-2 py-1 hover:bg-accent cursor-pointer transition-all duration-200 rounded-sm"
+                        onClick={() => navigateToProject(project.id)}
+                      >
+                        <FolderOpen className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="truncate text-sm font-medium group-hover:text-accent-foreground">
+                          {project.name}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

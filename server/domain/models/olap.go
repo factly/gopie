@@ -26,6 +26,34 @@ func (r *Result) RowsToMap() (*[]map[string]any, error) {
 	return &data, nil
 }
 
+// RowsToMapWithColumns returns both the data and column order information
+func (r *Result) RowsToMapWithColumns() (*[]map[string]any, []string, error) {
+	var data []map[string]any
+	var columns []string
+	
+	if r.Rows == nil {
+		return nil, nil, fmt.Errorf("rows is nil")
+	}
+	
+	// get columns once at the beginning
+	cols, err := r.Columns()
+	if err != nil {
+		return nil, nil, err
+	}
+	columns = cols
+	
+	for r.Rows.Next() {
+		d := make(map[string]any)
+		err := r.MapScan(d)
+		if err != nil {
+			return nil, nil, err
+		}
+		data = append(data, d)
+	}
+
+	return &data, columns, nil
+}
+
 func (r *Result) Close() error {
 	return r.Rows.Close()
 }

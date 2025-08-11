@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,6 +7,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { NavigationProgress } from "@/components/navigation/navigation-progress";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +28,7 @@ export function generateMetadata(): Metadata {
       icon: "/favicon.svg",
       apple: "/favicon.svg",
     },
-    other: {
-      ...Sentry.getTraceData(),
-    },
+    // Removed Sentry.getTraceData() as it may contain non-serializable objects
   };
 }
 
@@ -46,6 +44,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Providers>
+            <NavigationProgress />
             <SidebarProvider>
               <AppSidebar />
               <SidebarInset>

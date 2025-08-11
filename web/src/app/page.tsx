@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme/toggle";
+import { ContextSelectionHelper } from "@/components/chat/context-selection-helper";
 // import { UserInfo } from "@/components/dashboard/user-info";
 
 export default function HomePage() {
@@ -287,7 +288,7 @@ export default function HomePage() {
               <div className="mb-6">
                 <div className="flex justify-center mb-3">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
-                    <a
+                    <Link
                       href="/chat?tab=history"
                       className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
                     >
@@ -306,7 +307,7 @@ export default function HomePage() {
                         <path d="M12 7v5l4 2" />
                       </svg>
                       Previous Chats
-                    </a>
+                    </Link>
                   </div>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-center text-foreground mt-3 mb-5">
@@ -332,7 +333,9 @@ export default function HomePage() {
                           ? "animate-slow-pulse bg-muted/90"
                           : "bg-muted/70"
                       }`}
-                      shouldFlash={isInputFocused && selectedContexts.length === 0}
+                      shouldFlash={
+                        isInputFocused && selectedContexts.length === 0
+                      }
                     />
                   </div>
                   <MentionInput
@@ -353,34 +356,11 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              
+
               {/* Help message when context selection is needed */}
-              {isInputFocused && selectedContexts.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <div className="flex items-center gap-1">
-                    <svg 
-                      className="w-4 h-4 text-primary animate-bounce" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M7 11l5-5m0 0l5 5m-5-5v12" 
-                      />
-                    </svg>
-                    <span className="text-primary font-medium">Click here</span>
-                  </div>
-                  <span>to select at least one project or dataset to continue</span>
-                </motion.div>
-              )}
+              <ContextSelectionHelper
+                isVisible={isInputFocused && selectedContexts.length === 0}
+              />
             </motion.div>
           </div>
 

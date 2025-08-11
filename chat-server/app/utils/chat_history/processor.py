@@ -36,6 +36,7 @@ class ChatHistoryProcessor:
         self._raw_history = None
         self._filtered_history = None
         self._context_cache = {}
+        self.sql_queries_mapping = {}
 
     @property
     def raw_history(self) -> list[BaseMessage]:
@@ -78,7 +79,7 @@ class ChatHistoryProcessor:
             for tool_call in self.get_all_tool_calls():
                 if tool_call.get("name") == DATASETS_USED:
                     args = tool_call.get("args", {})
-                    datasets_used.append(args.get(DATASETS_USED_ARG, []))
+                    datasets_used.extend(args.get(DATASETS_USED_ARG, []))
             self._context_cache["datasets_used"] = datasets_used
         return self._context_cache["datasets_used"]
 
@@ -92,6 +93,17 @@ class ChatHistoryProcessor:
                     break
             self._context_cache["vizpaths"] = vizpaths
         return self._context_cache["vizpaths"]
+
+    def formatted_sql_queries(self, sql_queries: list[str]) -> str:
+        text = ""
+        for i, sql_query in enumerate(sql_queries, start=1):
+            text += f"id: {i}\n{sql_query}\n\n"
+            self.sql_queries_mapping[i] = sql_query
+        return text
+
+    def ids_to_sql_queries(self, ids: list[int]) -> list[str]:
+        sql_queries = [self.sql_queries_mapping.get(id, "") for id in ids]
+        return [sql_query for sql_query in sql_queries if sql_query]
 
     def format_chat_history(self) -> str:
         """
@@ -115,7 +127,8 @@ class ChatHistoryProcessor:
 
                 sql_queries = self.get_sql_queries()
                 if sql_queries:
-                    formatted_history += f"\n\nRecent SQL Queries: {sql_queries}\n\n"
+                    formatted_sql_queries = self.formatted_sql_queries(sql_queries)
+                    formatted_history += f"\nRecent SQL Queries:\n{formatted_sql_queries}"
 
             self._context_cache["formatted_history"] = formatted_history
 

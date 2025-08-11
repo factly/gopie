@@ -13,7 +13,8 @@ ENV USER=gopie
 ENV HOME_DIR=/home/$USER
 ENV DATA_DIR=$HOME_DIR/dataful
 
-RUN apt-get update && apt-get install -y ca-certificates gcc musl-dev g++
+RUN apt-get update && apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/gopie /usr/local/bin
 RUN chmod 777 /usr/local/bin/gopie

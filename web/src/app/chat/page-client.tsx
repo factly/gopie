@@ -14,11 +14,13 @@ import { useDeleteChat } from "@/lib/mutations/chat";
 import { useChats } from "@/lib/queries/chat/list-chats";
 import { useChatMessages } from "@/lib/queries/chat/get-messages";
 import { useChatDetails } from "@/lib/queries/chat/get-chat";
+import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
+import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { MessageSquarePlus, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Trash2, ChevronDown } from "lucide-react";
 import { ChatMessage } from "@/components/chat/message";
 import { ResultsPanel } from "@/components/chat/results-panel";
 import {
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/resizable";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { History, PanelLeft } from "lucide-react";
 import { useChatStore } from "@/lib/stores/chat-store";
 // import { VoiceMode } from "@/components/chat/voice-mode";
@@ -38,6 +40,7 @@ import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
 import { ShareChatDialog } from "@/components/chat/share-chat-dialog";
 import { ChatVisibilityIndicator } from "@/components/chat/chat-visibility-indicator";
 import { ReadOnlyMessage } from "@/components/chat/read-only-message";
+import { ContextSelectionHelper } from "@/components/chat/context-selection-helper";
 import {
   Tooltip,
   TooltipContent,
@@ -64,12 +67,18 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
   setLinkedDatasetId,
   currentUserId,
   updateUrlWithContext,
+  searchParams,
+  router,
+  resetScrollStates,
 }: {
   setActiveTab: (tab: string) => void;
   setSelectedContexts: (contexts: ContextItem[]) => void;
   setLinkedDatasetId: (datasetId: string | null) => void;
   currentUserId: string;
   updateUrlWithContext: (contexts: ContextItem[]) => void;
+  searchParams: URLSearchParams;
+  router: ReturnType<typeof useRouter>;
+  resetScrollStates: () => void;
 }) {
   const { selectChatForDataset, selectedChatId } = useChatStore();
   const queryClient = useQueryClient();
@@ -78,6 +87,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     clearPaths: clearVisualizationPaths,
     setIsOpen: setVisualizationOpen,
   } = useVisualizationStore();
+  const { setActiveTab: setResultsPanelActiveTab } = useResultsPanelStore();
 
   const deleteChat = useDeleteChat();
 
@@ -148,6 +158,7 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
         clearVisualizationPaths();
         setIsOpen(false);
         setVisualizationOpen(false);
+        setResultsPanelActiveTab("sql"); // Reset to SQL tab when deleting current chat
         await queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId }],
         });
@@ -172,6 +183,9 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
     setIsOpen(false);
     setVisualizationOpen(false);
 
+    // Reset scroll states for proper auto-scroll when switching chats
+    resetScrollStates();
+
     if (datasetId && datasetName && projectId) {
       const newContexts = [
         {
@@ -192,6 +206,26 @@ const ChatHistoryList = React.memo(function ChatHistoryList({
       setLinkedDatasetId(null);
     }
     setActiveTab("chat");
+
+    // Remove the tab parameter from URL when switching to chat
+    // Use setTimeout to ensure state updates happen first
+    setTimeout(() => {
+      const params = new URLSearchParams();
+
+      // Only copy over params we want to keep (excluding 'tab')
+      searchParams.forEach((value, key) => {
+        if (key !== "tab") {
+          params.set(key, value);
+        }
+      });
+
+      if (chatId) {
+        params.set("chatId", chatId);
+      }
+
+      const newUrl = params.toString() ? `/chat?${params.toString()}` : "/chat";
+      router.push(newUrl);
+    }, 0);
   };
 
   useEffect(() => {
@@ -378,7 +412,6 @@ ChatInput.displayName = "ChatInput";
 
 interface ChatViewProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
   isLoading: boolean;
   messages: UIMessage[];
   // selectedContexts: ContextItem[]; // Removed since not used in component
@@ -387,12 +420,13 @@ interface ChatViewProps {
   hasNextPage?: boolean;
   fetchNextPage?: () => void;
   isFetchingNextPage?: boolean;
+  showScrollButton: boolean;
+  onScrollToBottom: () => void;
 }
 
 const ChatView = React.memo(
   ({
     scrollRef,
-    handleScroll,
     isLoading,
     messages,
     // selectedContexts, // Removed since not used in component
@@ -401,6 +435,8 @@ const ChatView = React.memo(
     hasNextPage = false,
     fetchNextPage,
     isFetchingNextPage = false,
+    showScrollButton,
+    onScrollToBottom,
   }: ChatViewProps) => (
     <div className="flex-1 overflow-hidden relative min-h-0">
       <div
@@ -408,11 +444,7 @@ const ChatView = React.memo(
           messages.length > 0 ? "opacity-100" : "opacity-0"
         } transition-opacity duration-300`}
       />
-      <ScrollArea
-        ref={scrollRef}
-        className="h-full w-full"
-        onScroll={handleScroll}
-      >
+      <ScrollArea ref={scrollRef} className="h-full w-full">
         <div className="px-4 pb-32 pt-8">
           {/* Load more button for pagination */}
           {hasNextPage && selectedChatId && (
@@ -479,6 +511,17 @@ const ChatView = React.memo(
           )}
         </div>
       </ScrollArea>
+      {showScrollButton && (
+        <Button
+          onClick={onScrollToBottom}
+          className="absolute bottom-24 right-4 z-50 rounded-full h-10 w-10 p-0 shadow-lg bg-background border-2 border-border hover:bg-accent hover:border-accent transition-all"
+          variant="outline"
+          size="icon"
+          aria-label="Scroll to bottom"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </Button>
+      )}
       <div
         className={`z-10 absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none`}
       />
@@ -499,6 +542,7 @@ function ChatPageClient() {
     tabFromUrl === "history" ? "history" : "chat"
   );
   const queryClient = useQueryClient();
+  const { setActiveTab: setResultsPanelActiveTab } = useResultsPanelStore();
 
   // Get current user from auth store
   const { user } = useAuthStore();
@@ -519,6 +563,9 @@ function ChatPageClient() {
   } = useChatStore();
   const [isStreaming, setIsStreaming] = useState(false);
   const [showLoadingMessage, setShowLoadingMessage] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+  const previousMessageCountRef = useRef(0);
   const {
     isOpen: sqlIsOpen,
     setIsOpen,
@@ -544,6 +591,9 @@ function ChatPageClient() {
   const [linkedDatasetId, setLinkedDatasetId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [contextInitialized, setContextInitialized] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [hasLoadedContextFromMessages, setHasLoadedContextFromMessages] =
+    useState(false);
 
   const sqlPanelRef = useRef<HTMLDivElement>(null);
 
@@ -654,16 +704,19 @@ function ChatPageClient() {
         setShowLoadingMessage(false);
       }
 
-      // If this was a new chat (no selectedChatId), invalidate chats list
-      if (!selectedChatId) {
-        queryClient.invalidateQueries({ queryKey: ["chats"] });
-      }
+      // Delay invalidation to prevent loader during the transition
+      setTimeout(() => {
+        // If this was a new chat (no selectedChatId), invalidate chats list
+        if (!selectedChatId) {
+          queryClient.invalidateQueries({ queryKey: ["chats"] });
+        }
 
-      // Switch back to query messages and invalidate to get the complete conversation
-      setUseStreamingMessages(false);
-      queryClient.invalidateQueries({
-        queryKey: ["chat-messages", { chatId: selectedChatId }],
-      });
+        // Switch back to query messages and invalidate to get the complete conversation
+        setUseStreamingMessages(false);
+        queryClient.invalidateQueries({
+          queryKey: ["chat-messages", { chatId: selectedChatId }],
+        });
+      }, 100); // Small delay to ensure smooth transition
     },
     onError: (err) => {
       console.error("Chat error:", err);
@@ -800,6 +853,158 @@ function ChatPageClient() {
     }
   }, [error]);
 
+  // Extract context from the last user message when chat messages are loaded
+  useEffect(() => {
+    if (
+      allChatMessages.length > 0 &&
+      !hasLoadedContextFromMessages &&
+      selectedChatId &&
+      !isLoadingChatMessages
+    ) {
+      // Find the last user message
+      const lastUserMessage = [...allChatMessages]
+        .reverse()
+        .find((msg) => msg.role === "user");
+
+      if (lastUserMessage?.parts) {
+        // Look for set_context tool invocation in the message parts
+        let contextArgs: {
+          project_ids?: string[];
+          dataset_ids?: string[];
+        } | null = null;
+
+        for (const part of lastUserMessage.parts) {
+          if (part.type === "tool-invocation" && "toolInvocation" in part) {
+            const toolPart = part as {
+              type: string;
+              toolInvocation: {
+                toolName: string;
+                args: {
+                  project_ids?: string[];
+                  dataset_ids?: string[];
+                };
+              };
+            };
+
+            if (toolPart.toolInvocation?.toolName === "set_context") {
+              contextArgs = toolPart.toolInvocation.args;
+              break;
+            }
+          }
+        }
+
+        if (contextArgs) {
+          const args = contextArgs;
+          const newContexts: ContextItem[] = [];
+
+          // Fetch actual names for projects and datasets
+          const fetchContextDetails = async () => {
+            try {
+              // Fetch project details
+              if (args.project_ids && Array.isArray(args.project_ids)) {
+                for (const projectId of args.project_ids) {
+                  try {
+                    const projectResponse = await apiClient.get(
+                      `v1/api/projects/${projectId}`
+                    );
+                    const project = (await projectResponse.json()) as {
+                      name?: string;
+                    };
+                    newContexts.push({
+                      id: projectId,
+                      type: "project" as const,
+                      name: project.name || "Project",
+                      projectId: projectId,
+                    });
+                  } catch (error) {
+                    console.warn(
+                      `Failed to fetch project ${projectId}:`,
+                      error
+                    );
+                    // Fallback to generic name if fetch fails
+                    newContexts.push({
+                      id: projectId,
+                      type: "project" as const,
+                      name: "Project",
+                      projectId: projectId,
+                    });
+                  }
+                }
+              }
+
+              // Fetch dataset details
+              if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
+                for (const datasetId of args.dataset_ids) {
+                  try {
+                    const datasetResponse = await apiClient.get(
+                      `v1/api/datasets/${datasetId}`
+                    );
+                    const dataset = (await datasetResponse.json()) as {
+                      alias?: string;
+                      name?: string;
+                    };
+                    const projectId = args.project_ids?.[0] || undefined;
+                    newContexts.push({
+                      id: datasetId,
+                      type: "dataset" as const,
+                      name: dataset.alias || dataset.name || "Dataset",
+                      projectId: projectId,
+                    });
+                  } catch (error) {
+                    console.warn(
+                      `Failed to fetch dataset ${datasetId}:`,
+                      error
+                    );
+                    // Fallback to generic name if fetch fails
+                    const projectId = args.project_ids?.[0] || undefined;
+                    newContexts.push({
+                      id: datasetId,
+                      type: "dataset" as const,
+                      name: "Dataset",
+                      projectId: projectId,
+                    });
+                  }
+                }
+              }
+
+              if (newContexts.length > 0) {
+                console.log(
+                  "Loading context from last user message:",
+                  newContexts
+                );
+                setSelectedContexts(newContexts);
+                updateUrlWithContext(newContexts);
+
+                // Set linked dataset if there's a dataset context
+                const datasetContext = newContexts.find(
+                  (ctx) => ctx.type === "dataset"
+                );
+                if (datasetContext) {
+                  setLinkedDatasetId(datasetContext.id);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching context details:", error);
+            }
+          };
+
+          // Execute the async function
+          fetchContextDetails();
+        }
+      }
+
+      // Mark that we've attempted to load context from messages
+      setHasLoadedContextFromMessages(true);
+    }
+  }, [
+    allChatMessages,
+    hasLoadedContextFromMessages,
+    selectedChatId,
+    isLoadingChatMessages,
+    updateUrlWithContext,
+    setLinkedDatasetId,
+  ]);
+
   // Custom input handler that works with our MentionInput component
   const handleInputChange = useCallback(
     (value: string) => {
@@ -835,6 +1040,10 @@ function ChatPageClient() {
       // Set loading state immediately
       setIsStreaming(true);
       setShowLoadingMessage(true);
+
+      // Reset scroll state to ensure auto-scroll works
+      setUserHasScrolled(false);
+      setShowScrollButton(false);
 
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
@@ -907,11 +1116,18 @@ function ChatPageClient() {
     }
   }, [chatDetailsError]);
 
-  // Reset streaming state when switching chats
+  // Reset streaming and scroll states when switching chats
   useEffect(() => {
     setUseStreamingMessages(false);
     setShowLoadingMessage(false);
     setIsStreaming(false);
+    // Reset scroll states when switching chats
+    setUserHasScrolled(false);
+    setShowScrollButton(false);
+    // Reset message count for auto-scroll
+    previousMessageCountRef.current = 0;
+    // Reset context loading flag so it can load context for the new chat
+    setHasLoadedContextFromMessages(false);
   }, [selectedChatId]);
 
   // This logic is now handled by the useChatDetails hook above
@@ -956,6 +1172,7 @@ function ChatPageClient() {
           clearVisualizationPaths();
           setIsOpen(false);
           setVisualizationOpen(false);
+          setResultsPanelActiveTab("sql"); // Reset to SQL tab when navigating with new context
           // Clear URL parameters to avoid re-applying context data
           const params = new URLSearchParams(searchParams.toString());
           params.delete("contextData");
@@ -975,6 +1192,7 @@ function ChatPageClient() {
     setLinkedDatasetId,
     searchParams,
     router,
+    setResultsPanelActiveTab,
   ]);
 
   useEffect(() => {
@@ -1052,44 +1270,197 @@ function ChatPageClient() {
     isLoading,
   ]);
 
-  const handleScroll = useCallback(() => {
-    // Handle scroll - can be used for loading more messages if needed
+  // Function to reset scroll states
+  const resetScrollStates = useCallback(() => {
+    previousMessageCountRef.current = 0;
+    setUserHasScrolled(false);
+    setShowScrollButton(false);
   }, []);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLElement;
+
+      if (viewport) {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: "smooth",
+        });
+        setShowScrollButton(false);
+        setUserHasScrolled(false);
+      }
+    }
+  }, []);
+
+  // Set up scroll event listener on the viewport
+  useEffect(() => {
+    // Small delay to ensure DOM is ready after tab/chat switch
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector(
+          "[data-radix-scroll-area-viewport]"
+        ) as HTMLElement;
+
+        if (viewport) {
+          const scrollHandler = () => {
+            const isNearBottom =
+              viewport.scrollHeight -
+                viewport.scrollTop -
+                viewport.clientHeight <
+              100;
+
+            // Show scroll button when user is not near bottom
+            setShowScrollButton(!isNearBottom);
+
+            // Track if user has manually scrolled
+            if (!isNearBottom) {
+              setUserHasScrolled(true);
+            } else {
+              setUserHasScrolled(false);
+            }
+          };
+
+          viewport.addEventListener("scroll", scrollHandler);
+          // Initial check for scroll button visibility
+          scrollHandler();
+          return () => {
+            viewport.removeEventListener("scroll", scrollHandler);
+            clearTimeout(timer);
+          };
+        }
+      }
+    }, 150); // Delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
+  }, [selectedChatId, activeTab]); // Re-setup when switching chats or tabs
+
+  // Auto-scroll logic
   useLayoutEffect(() => {
+    // Only run auto-scroll when on the chat tab
+    if (activeTab !== "chat") return;
+
     if (scrollRef.current && displayMessages.length > 0) {
       const viewport = scrollRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
-      );
+      ) as HTMLElement;
+
       if (viewport) {
-        const isNearBottom =
-          viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
-          150;
-        // Only auto-scroll if user is near the bottom or if it's a new message being added
         const lastMessage = displayMessages[displayMessages.length - 1];
+        const isNewMessage =
+          displayMessages.length > previousMessageCountRef.current;
+
+        // Check if we should auto-scroll
+        const isInitialLoad =
+          previousMessageCountRef.current === 0 && displayMessages.length > 0;
+        const isUserSending =
+          lastMessage?.role === "user" && (isStreaming || showLoadingMessage);
+        const isAssistantResponding =
+          lastMessage?.role === "assistant" && isStreaming;
+
         const shouldAutoScroll =
-          isNearBottom &&
-          (lastMessage?.role === "assistant" || lastMessage?.role === "user");
+          isInitialLoad || // Initial chat load or chat switch
+          isUserSending || // User just sent a message
+          isAssistantResponding || // Assistant is responding
+          (isNewMessage && !userHasScrolled); // New message arrived and user hasn't scrolled
 
         if (shouldAutoScroll) {
-          requestAnimationFrame(() => {
-            viewport.scrollTo({
-              top: viewport.scrollHeight,
-              behavior: "smooth",
-            });
-          });
+          // Use setTimeout to ensure DOM is updated
+          setTimeout(() => {
+            if (viewport && viewport.scrollHeight > 0) {
+              viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: isInitialLoad ? "auto" : "smooth",
+              });
+              // Update scroll button visibility after scroll
+              const isNearBottom =
+                viewport.scrollHeight -
+                  viewport.scrollTop -
+                  viewport.clientHeight <
+                100;
+              setShowScrollButton(!isNearBottom);
+            }
+          }, 100);
         }
+
+        // Update the message count after processing
+        previousMessageCountRef.current = displayMessages.length;
       }
     }
-  }, [displayMessages]);
+  }, [
+    displayMessages,
+    streamingMessages,
+    isStreaming,
+    userHasScrolled,
+    showLoadingMessage,
+    activeTab,
+  ]);
+
+  // Separate effect for continuous scrolling during streaming using MutationObserver
+  useEffect(() => {
+    if (isStreaming && !userHasScrolled && activeTab === "chat") {
+      let observer: MutationObserver | null = null;
+
+      const setupObserver = () => {
+        if (scrollRef.current) {
+          const viewport = scrollRef.current.querySelector(
+            "[data-radix-scroll-area-viewport]"
+          );
+
+          if (viewport) {
+            // Create a MutationObserver to watch for DOM changes
+            observer = new MutationObserver(() => {
+              // Check if user is near bottom (within 150px)
+              const isNearBottom =
+                viewport.scrollHeight -
+                  viewport.scrollTop -
+                  viewport.clientHeight <
+                150;
+
+              // Only auto-scroll if user is near the bottom
+              if (isNearBottom) {
+                // Immediately scroll to bottom without animation
+                viewport.scrollTop = viewport.scrollHeight;
+              }
+            });
+
+            // Observe changes in the viewport's subtree
+            observer.observe(viewport, {
+              childList: true,
+              subtree: true,
+              characterData: true,
+              characterDataOldValue: false,
+            });
+          }
+        }
+      };
+
+      // Setup observer with a small delay to ensure DOM is ready
+      const timeoutId = setTimeout(setupObserver, 100);
+
+      return () => {
+        clearTimeout(timeoutId);
+        if (observer) {
+          observer.disconnect();
+        }
+      };
+    }
+  }, [isStreaming, userHasScrolled, activeTab]);
 
   const handleSelectContext = useCallback(
     (context: ContextItem) => {
       setSelectedContexts((prev) => {
         const newContexts = [...prev, context];
-        updateUrlWithContext(newContexts);
+        // Schedule URL update after state update to avoid calling setState during render
+        setTimeout(() => {
+          updateUrlWithContext(newContexts);
+        }, 0);
         return newContexts;
       });
+      // Stop flashing when context is selected
+      setIsInputFocused(false);
     },
     [updateUrlWithContext]
   );
@@ -1098,7 +1469,10 @@ function ChatPageClient() {
     (contextId: string) => {
       setSelectedContexts((prev) => {
         const newContexts = prev.filter((c) => c.id !== contextId);
-        updateUrlWithContext(newContexts);
+        // Schedule URL update after state update to avoid calling setState during render
+        setTimeout(() => {
+          updateUrlWithContext(newContexts);
+        }, 0);
         return newContexts;
       });
     },
@@ -1136,14 +1510,15 @@ function ChatPageClient() {
   const isAuthDisabled =
     String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
 
-  // Close sidebar when chat page opens
+  // Close sidebar when chat page opens (only on mount)
   useEffect(() => {
     if (isMobile) {
       setOpenMobile(false);
     } else {
       setOpen(false);
     }
-  }, [isMobile, setOpen, setOpenMobile]); // Added missing dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="flex flex-col w-full h-[calc(100vh-16px)]">
@@ -1161,6 +1536,24 @@ function ChatPageClient() {
                     params.set("tab", "history");
                   } else {
                     params.delete("tab");
+                    // When switching to chat tab, trigger a scroll check
+                    if (value === "chat" && selectedChatId) {
+                      // Small delay to let the tab content render
+                      setTimeout(() => {
+                        if (scrollRef.current) {
+                          const viewport = scrollRef.current.querySelector(
+                            "[data-radix-scroll-area-viewport]"
+                          ) as HTMLElement;
+                          if (viewport) {
+                            // Scroll to bottom for existing chat
+                            viewport.scrollTo({
+                              top: viewport.scrollHeight,
+                              behavior: "auto",
+                            });
+                          }
+                        }
+                      }, 50);
+                    }
                   }
                   router.replace(`/chat?${params.toString()}`);
                 }}
@@ -1181,77 +1574,59 @@ function ChatPageClient() {
                   >
                     <PanelLeft className="h-4 w-4" />
                   </Button>
-                  <TabsList className="flex-1 h-10 grid grid-cols-1 rounded-none bg-background">
-                    <TabsTrigger
-                      value="chat"
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none data-[state=active]:font-medium rounded-none px-4 py-2 text-sm transition-all truncate"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        {chatDetails?.visibility && (
-                          <ChatVisibilityIndicator
-                            visibility={chatDetails.visibility}
-                          />
-                        )}
-                        <span className="truncate">
-                          {isLoadingChatDetails && selectedChatId
-                            ? "Loading..."
-                            : selectedChatTitle
-                            ? selectedChatTitle
-                            : "Chat"}
-                        </span>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`mr-2 ${
-                          activeTab === "history"
-                            ? "bg-muted border-b-2 border-primary"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          setActiveTab("history");
-                          // Update URL with tab parameter
-                          const params = new URLSearchParams(
-                            searchParams.toString()
-                          );
-                          params.set("tab", "history");
-                          router.replace(`/chat?${params.toString()}`);
-                        }}
-                      >
-                        <History className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>History</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mr-2"
-                        onClick={() => {
-                          // Use window.location for a hard navigation to bypass all React state/effects
-                          window.location.href = "/chat";
-                        }}
-                      >
-                        <MessageSquarePlus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>New Chat</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="flex-1"></div>
                   {selectedChatId && (
-                    <ShareChatDialog
-                      chatId={selectedChatId}
-                      currentVisibility={chatDetails?.visibility || "private"}
-                    />
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`mr-2 ${
+                              activeTab === "history"
+                                ? "bg-muted border-b-2 border-primary"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setActiveTab("history");
+                              // Update URL with tab parameter
+                              const params = new URLSearchParams(
+                                searchParams.toString()
+                              );
+                              params.set("tab", "history");
+                              router.replace(`/chat?${params.toString()}`);
+                            }}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>History</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mr-2"
+                            onClick={() => {
+                              // Use window.location for a hard navigation to bypass all React state/effects
+                              window.location.href = "/chat";
+                            }}
+                          >
+                            <MessageSquarePlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>New Chat</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <ShareChatDialog
+                        chatId={selectedChatId}
+                        currentVisibility={chatDetails?.visibility || "private"}
+                      />
+                    </>
                   )}
                 </div>
 
@@ -1262,7 +1637,6 @@ function ChatPageClient() {
                   <div className="flex flex-col h-full min-h-0 relative">
                     <ChatView
                       scrollRef={scrollRef}
-                      handleScroll={handleScroll}
                       isLoading={isLoading}
                       messages={displayMessages}
                       selectedChatId={selectedChatId}
@@ -1270,6 +1644,8 @@ function ChatPageClient() {
                       hasNextPage={hasNextPage}
                       fetchNextPage={fetchNextPage}
                       isFetchingNextPage={isFetchingNextPage}
+                      showScrollButton={showScrollButton}
+                      onScrollToBottom={scrollToBottom}
                     />
                   </div>
                 </TabsContent>
@@ -1284,6 +1660,9 @@ function ChatPageClient() {
                     setLinkedDatasetId={setLinkedDatasetId}
                     currentUserId={currentUserId}
                     updateUrlWithContext={updateUrlWithContext}
+                    searchParams={searchParams}
+                    router={router}
+                    resetScrollStates={resetScrollStates}
                   />
                 </TabsContent>
               </Tabs>
@@ -1293,15 +1672,36 @@ function ChatPageClient() {
                     <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
                       <div className="w-full max-w-2xl pointer-events-auto">
                         <div className="mb-6 text-center">
-                          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                          <div className="flex justify-center mb-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
+                              <a
+                                href="/chat?tab=history"
+                                className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="h-4 w-4"
+                                >
+                                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                  <path d="M3 3v5h5" />
+                                  <path d="M12 7v5l4 2" />
+                                </svg>
+                                Previous Chats
+                              </a>
+                            </div>
+                          </div>
+                          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
                             Chat with your data
                           </h1>
-                          <p className="text-sm text-muted-foreground">
-                            Select contexts and ask questions about your data
-                          </p>
                         </div>
                         <div
-                          className="bg-card border border-border shadow-lg 
+                          className="bg-card dark:bg-card/90 border border-border shadow-lg 
                           ring-[1.5px] ring-foreground/10 
                           hover:ring-foreground/20 hover:shadow-xl hover:border-foreground/20
                           focus-within:ring-primary/30 focus-within:border-primary/50 focus-within:shadow-primary/10
@@ -1313,7 +1713,16 @@ function ChatPageClient() {
                                 selectedContexts={selectedContexts}
                                 onSelectContext={handleSelectContext}
                                 onRemoveContext={handleRemoveContext}
-                                triggerClassName="flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 bg-muted/70"
+                                triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
+                                  isInputFocused &&
+                                  selectedContexts.length === 0
+                                    ? "animate-slow-pulse bg-muted/90"
+                                    : "bg-muted/70"
+                                }`}
+                                shouldFlash={
+                                  isInputFocused &&
+                                  selectedContexts.length === 0
+                                }
                               />
                             </div>
                             <MentionInput
@@ -1325,16 +1734,23 @@ function ChatPageClient() {
                               selectedContexts={selectedContexts}
                               onSelectContext={handleSelectContext}
                               onRemoveContext={handleRemoveContext}
-                              className="flex-1"
+                              className="flex-1 dark-input"
                               showSendButton={true}
                               isSending={isLoading}
                               isStreaming={isStreaming}
                               stopMessageStream={handleStop}
                               lockableContextIds={[]}
                               hasContext={selectedContexts.length > 0}
+                              onFocus={() => setIsInputFocused(true)}
+                              onBlur={() => setIsInputFocused(false)}
                             />
                           </div>
                         </div>
+                        <ContextSelectionHelper
+                          isVisible={
+                            isInputFocused && selectedContexts.length === 0
+                          }
+                        />
                       </div>
                     </div>
                   ) : (
@@ -1374,7 +1790,7 @@ function ChatPageClient() {
           </ResizablePanel>
           {isResultsPanelOpen && (
             <>
-              <ResizableHandle />
+              <ResizableHandle withHandle />
               <ResizablePanel defaultSize={70} minSize={30}>
                 <div ref={sqlPanelRef} className="h-[calc(100vh-16px)]">
                   <ResultsPanel

@@ -77,6 +77,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
   const setSelectedFile = useUploadStore((state) => state.setSelectedFile);
   const setModifiedFile = useUploadStore((state) => state.setModifiedFile);
   const setDetectedFormat = useUploadStore((state) => state.setDetectedFormat);
+  const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
   
   // Local state for UI
   const [isUploading, setIsUploading] = useState(false);
@@ -116,7 +117,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
   );
 
   // Calculate if all column names are valid
-  const allColumnsValid = Array.from(columnMappings.values()).every(
+  const allColumnsValid = Object.values(columnMappings).every(
     (mapping) => mapping.isValid
   );
   const canUpload =
@@ -373,6 +374,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     // Reset states and store the file
     console.log('Setting selected file in store:', file.name);
     setSelectedFile(file);
+    setOriginalFileName(file.name);
     setModifiedFile(null);
     setUploadError(null);
     setValidationResult(null);
@@ -488,7 +490,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
             const summary: Record<string, any> = {};
             result.columnNames.forEach((originalName, index) => {
               // Get the updated name for this column (it will be the same initially)
-              const mapping = Array.from(columnMappings.values()).find(
+              const mapping = Object.values(columnMappings).find(
                 (m) => m.originalName === originalName
               );
               const updatedName = mapping?.updatedName || originalName;
@@ -632,8 +634,9 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     }
   };
 
+  // Don't show loading here - it's handled at the wizard level
   if (isInitializing) {
-    return <div>Initializing DuckDB for file validation...</div>;
+    return null;
   }
 
   if (duckDbError) {

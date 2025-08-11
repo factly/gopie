@@ -195,7 +195,9 @@ export function NavProjects() {
               >
                 {datasets.results.map((dataset) => (
                   <DropdownMenuItem asChild key={dataset.id}>
-                    <Link href={`/projects/${projectId}/datasets/${dataset.id}`}>
+                    <Link
+                      href={`/projects/${projectId}/datasets/${dataset.id}`}
+                    >
                       <span className="truncate">
                         {dataset.alias || dataset.name}
                       </span>

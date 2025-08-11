@@ -130,7 +130,7 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
                 <CommandItem
                   key={project.id}
                   value={`${project.name} ${project.description || ""}`}
-                  onSelect={() => handleSelect(`/${project.id}`)}
+                  onSelect={() => handleSelect(`/projects/${project.id}`)}
                   className="group"
                 >
                   <Folder className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -154,7 +154,7 @@ export function CommandSearch({ projectId, onNavigate }: CommandSearchProps) {
                   value={`${dataset.alias || dataset.name} ${
                     dataset.description || ""
                   }`}
-                  onSelect={() => handleSelect(`/${projectId}/${dataset.id}`)}
+                  onSelect={() => handleSelect(`/projects/${projectId}/datasets/${dataset.id}`)}
                   className="group"
                 >
                   <Database className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />

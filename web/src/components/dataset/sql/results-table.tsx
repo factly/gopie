@@ -32,11 +32,12 @@ import { downloadCsv } from "@/lib/utils";
 interface ResultsTableProps {
   results: Record<string, unknown>[];
   total?: number; // Total number of records (for server-side pagination)
+  columns?: string[]; // Optional column order information
   onPageChange?: (page: number, limit: number) => void; // Callback for server-side pagination
   loading?: boolean; // Loading state for server-side pagination
 }
 
-export function ResultsTable({ results, total, onPageChange, loading = false }: ResultsTableProps) {
+export function ResultsTable({ results, total, columns, onPageChange, loading = false }: ResultsTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
   const [viewMode, setViewMode] = React.useState<"table" | "json">("table");
@@ -78,7 +79,7 @@ export function ResultsTable({ results, total, onPageChange, loading = false }: 
   const paginatedResults = isServerSidePagination 
     ? results // Server already returned paginated results
     : results.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-  const columns = results.length > 0 ? Object.keys(results[0]) : [];
+  const tableColumns = columns || (results.length > 0 ? Object.keys(results[0]) : []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -152,7 +153,7 @@ export function ResultsTable({ results, total, onPageChange, loading = false }: 
             <Table>
               <TableHeader>
                 <TableRow>
-                  {columns.map((column) => (
+                  {tableColumns.map((column) => (
                     <TableHead key={column}>{column}</TableHead>
                   ))}
                 </TableRow>
@@ -160,14 +161,14 @@ export function ResultsTable({ results, total, onPageChange, loading = false }: 
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="text-center py-8">
+                    <TableCell colSpan={tableColumns.length} className="text-center py-8">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedResults.map((row, idx) => (
                     <TableRow key={idx}>
-                      {columns.map((column) => (
+                      {tableColumns.map((column) => (
                         <TableCell key={column}>
                           {row[column]?.toString() ?? "NULL"}
                         </TableCell>

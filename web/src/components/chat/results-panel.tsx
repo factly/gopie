@@ -1,5 +1,8 @@
+"use client";
+
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
+import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
 import { SqlResults } from "./sql-results";
 import { VisualizationResults } from "./visualization-results";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,19 +16,17 @@ interface ResultsPanelProps {
 export function ResultsPanel({ isOpen }: ResultsPanelProps) {
   const { results: sqlResults } = useSqlStore();
   const { paths: visualizationPaths } = useVisualizationStore();
+  const { activeTab, setActiveTab } = useResultsPanelStore();
 
   const hasSqlResults = !!(sqlResults?.data?.length || sqlResults?.error);
   const hasVisualizations = visualizationPaths.length > 0;
-
-  // Determine default tab
-  const defaultTab = hasVisualizations ? "visualizations" : "sql";
 
   if (!isOpen) return null;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-muted/50">
 
-      <Tabs defaultValue={defaultTab} className="flex-1 min-h-0 flex flex-col">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'sql' | 'visualizations')} className="flex-1 min-h-0 flex flex-col">
         <TabsList className="h-10 grid w-full grid-cols-2 rounded-none bg-background">
           <TabsTrigger
             value="sql"

@@ -2,7 +2,6 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -136,14 +135,6 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
                     "tables_used": list(set(tables_used)),
                     "query_count": len(sql_queries),
                     "limitations": limitations,
-                },
-            )
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": "Generated SQL query",
-                    "name": SQL_QUERIES_GENERATED,
-                    "values": {SQL_QUERIES_GENERATED_ARG: formatted_sql_queries},
                 },
             )
         else:

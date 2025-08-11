@@ -164,8 +164,9 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int)
 	}
 
 	return map[string]any{
-		"count": queryResult.Count,
-		"data":  queryResult.Rows,
+		"count":   queryResult.Count,
+		"data":    queryResult.Rows,
+		"columns": queryResult.Columns,
 	}, nil
 }
 
@@ -195,9 +196,10 @@ func (d *OlapService) GetDatasetSummary(tableName string) (*[]models.DatasetSumm
 }
 
 type queryResult struct {
-	Rows  *[]map[string]any
-	Count int64
-	Err   error
+	Rows    *[]map[string]any
+	Columns []string
+	Count   int64
+	Err     error
 }
 
 type asyncResult[T any] struct {
@@ -237,7 +239,7 @@ func limitsTransformer(limit, offset int) func(query string, db any) (string, er
 
 func (d *OlapService) getResultsWithCount(sql string, limit, offset int, imposeLim bool) (*queryResult, error) {
 	countChan := make(chan asyncResult[int64], 1)
-	rowsChan := make(chan asyncResult[*[]map[string]any], 1)
+	rowsChan := make(chan asyncResult[*queryResult], 1)
 
 	go d.executeDataQuery(sql, limit, offset, rowsChan, imposeLim)
 	go d.executeCountQuery(sql, countChan)
@@ -252,10 +254,10 @@ func (d *OlapService) getResultsWithCount(sql string, limit, offset int, imposeL
 		return nil, fmt.Errorf("rows query failed: %w", rowsResult.err)
 	}
 
-	return &queryResult{
-		Count: countResult.data,
-		Rows:  rowsResult.data,
-	}, nil
+	// Update the count in the queryResult
+	rowsResult.data.Count = countResult.data
+
+	return rowsResult.data, nil
 }
 
 func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResult[int64]) {
@@ -308,9 +310,9 @@ func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResul
 	resultChan <- result
 }
 
-func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan chan<- asyncResult[*[]map[string]any], imposeLimits bool) {
-	var result asyncResult[*[]map[string]any]
-	var queryResult *models.Result
+func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan chan<- asyncResult[*queryResult], imposeLimits bool) {
+	var result asyncResult[*queryResult]
+	var dbResult *models.Result
 	var err error
 
 	if imposeLimits {
@@ -320,9 +322,9 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 		} else if limit > 1000 {
 			limit = 1000
 		}
-		queryResult, err = d.olap.Query(sql, limitsTransformer(limit, offset))
+		dbResult, err = d.olap.Query(sql, limitsTransformer(limit, offset))
 	} else {
-		queryResult, err = d.olap.Query(sql)
+		dbResult, err = d.olap.Query(sql)
 	}
 
 	if err != nil {
@@ -330,16 +332,24 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 		resultChan <- result
 		return
 	}
-	defer queryResult.Close()
+	defer dbResult.Close()
 
-	resultMap, err := queryResult.RowsToMap()
+	resultMap, columns, err := dbResult.RowsToMapWithColumns()
 	if err != nil {
 		result.err = fmt.Errorf("rows to map conversion failed: %w", err)
 		resultChan <- result
 		return
 	}
 
-	result.data = resultMap
+	// Create a temporary queryResult with columns info
+	tempResult := &queryResult{
+		Rows:    resultMap,
+		Columns: columns,
+		Count:   0, // Count will be set by the parent function
+		Err:     nil,
+	}
+	
+	result.data = tempResult
 	resultChan <- result
 }
 
