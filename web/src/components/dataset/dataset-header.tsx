@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DownloadIcon,
@@ -13,6 +13,7 @@ import {
   InfoIcon,
   UserIcon,
   CodeIcon,
+  Loader2Icon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -29,8 +30,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCreateDownload } from "@/lib/mutations/download/create-download";
+import { useDownloadStore } from "@/lib/stores/download-store";
+import { Progress } from "@/components/ui/progress";
 
 interface DatasetHeaderProps {
   dataset: Dataset;
@@ -104,6 +117,13 @@ export function DatasetHeader({
   const [editedCustomPrompt, setEditedCustomPrompt] = useState(
     dataset.custom_prompt || ""
   );
+  
+  // Download state
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'csv' | 'json' | 'parquet'>('csv');
+  const [downloadSql, setDownloadSql] = useState(`SELECT * FROM "${dataset.name}"`);
+  const { createDownload } = useCreateDownload();
+  const { currentDownloadProgress, setCurrentDownloadProgress } = useDownloadStore();
 
   const handleUpdate = async () => {
     if (editedDescription.length < 10) {
@@ -181,6 +201,42 @@ export function DatasetHeader({
 
     router.push(`/chat?contextData=${contextData}`);
   };
+
+  const handleDownload = async () => {
+    try {
+      const result = await createDownload({
+        dataset_id: dataset.id,
+        sql: downloadSql,
+        format: downloadFormat,
+      });
+
+      // Open the download URL in a new tab
+      if (result.url) {
+        window.open(result.url, '_blank');
+      }
+
+      toast({
+        title: "Download ready",
+        description: "Your download has been prepared and opened in a new tab.",
+      });
+
+      setIsDownloadDialogOpen(false);
+      setCurrentDownloadProgress(null);
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Failed to create download",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Reset download progress when dialog closes
+  useEffect(() => {
+    if (!isDownloadDialogOpen) {
+      setCurrentDownloadProgress(null);
+    }
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress]);
 
   return (
     <div className="space-y-6">
@@ -441,14 +497,91 @@ export function DatasetHeader({
                   {/* Action Buttons */}
                   {!isEditing && (
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-secondary/80"
-                        title="Download Dataset"
-                      >
-                        <DownloadIcon className="h-5 w-5" />
-                      </Button>
+                      <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 hover:bg-secondary/80"
+                            title="Download Dataset"
+                          >
+                            <DownloadIcon className="h-5 w-5" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Download Dataset</DialogTitle>
+                            <DialogDescription>
+                              Export your dataset in your preferred format
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Format</label>
+                              <Select value={downloadFormat} onValueChange={(value) => setDownloadFormat(value as 'csv' | 'json' | 'parquet')}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="csv">CSV - Comma-separated values</SelectItem>
+                                  <SelectItem value="json">JSON - JavaScript Object Notation</SelectItem>
+                                  <SelectItem value="parquet">Parquet - Columnar storage format</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">SQL Query</label>
+                              <Textarea
+                                value={downloadSql}
+                                onChange={(e) => setDownloadSql(e.target.value)}
+                                placeholder="Enter SQL query..."
+                                className="min-h-[100px] font-mono text-sm"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Customize the SQL query to filter or transform your data before download
+                              </p>
+                            </div>
+                            {currentDownloadProgress && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {currentDownloadProgress.message}
+                                  </span>
+                                  <span className="font-medium">
+                                    {currentDownloadProgress.progress}%
+                                  </span>
+                                </div>
+                                <Progress value={currentDownloadProgress.progress} />
+                              </div>
+                            )}
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsDownloadDialogOpen(false)}
+                              disabled={currentDownloadProgress?.status === 'processing'}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleDownload}
+                              disabled={!downloadSql || currentDownloadProgress?.status === 'processing'}
+                            >
+                              {currentDownloadProgress?.status === 'processing' ? (
+                                <>
+                                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <DownloadIcon className="mr-2 h-4 w-4" />
+                                  Download
+                                </>
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
                         <Button
                           variant="outline"
