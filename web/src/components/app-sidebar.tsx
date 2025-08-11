@@ -7,6 +7,7 @@ import {
   Send,
   KeyIcon,
   SettingsIcon,
+  DownloadIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -130,6 +131,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isSettingsPage = pathname.startsWith("/settings");
 
   const navSecondary = [
+    {
+      title: "Downloads",
+      url: "/downloads",
+      icon: DownloadIcon,
+    },
     {
       title: "Settings",
       url: "/settings",

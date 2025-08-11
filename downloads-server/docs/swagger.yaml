@@ -1,0 +1,227 @@
+basePath: /
+definitions:
+  models.CreateDownloadRequest:
+    properties:
+      dataset_id:
+        type: string
+      format:
+        type: string
+      org_id:
+        type: string
+      sql:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.Download:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      dataset_id:
+        type: string
+      error_message:
+        type: string
+      expires_at:
+        type: string
+      format:
+        type: string
+      id:
+        type: string
+      org_id:
+        type: string
+      pre_signed_url:
+        type: string
+      sql:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: support@factly.org
+    name: API Support
+  description: API for managing data export downloads with support for SQL queries
+    and multiple formats
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Downloads Server API
+  version: 1.0.0
+paths:
+  /downloads:
+    get:
+      description: Retrieve a paginated list of all download jobs for the authenticated
+        user
+      parameters:
+      - description: User ID from authentication
+        in: header
+        name: x-user-id
+        required: true
+        type: string
+      - description: Organization ID from authentication
+        in: header
+        name: x-organization-id
+        required: true
+        type: string
+      - default: 10
+        description: Number of items to return
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of download jobs
+          schema:
+            items:
+              $ref: '#/definitions/models.Download'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List download jobs
+      tags:
+      - Downloads
+    post:
+      consumes:
+      - application/json
+      description: Submit a SQL query to create a new download job. Returns Server-Sent
+        Events (SSE) stream for real-time progress updates.
+      parameters:
+      - description: User ID from authentication
+        in: header
+        name: x-user-id
+        required: true
+        type: string
+      - description: Organization ID from authentication
+        in: header
+        name: x-organization-id
+        required: true
+        type: string
+      - description: Download request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateDownloadRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream with download progress
+          schema:
+            type: string
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new download job
+      tags:
+      - Downloads
+  /downloads/{id}:
+    delete:
+      description: Delete a download job record and associated data
+      parameters:
+      - description: Download job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Organization ID from authentication
+        in: header
+        name: x-organization-id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Download successfully deleted
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete download job
+      tags:
+      - Downloads
+    get:
+      description: Retrieve the details of a specific download job
+      parameters:
+      - description: Download job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Organization ID from authentication
+        in: header
+        name: x-organization-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Download job details
+          schema:
+            $ref: '#/definitions/models.Download'
+        "404":
+          description: Download not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get download job details
+      tags:
+      - Downloads
+  /health:
+    get:
+      description: Check if the service is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            type: string
+      summary: Health check
+      tags:
+      - Health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: JWT token for authentication
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
