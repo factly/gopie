@@ -26,7 +26,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	router.Get("/openapi/:tableName", httpHandler.datasetOpenAPI)
 
 	// Register datasets routes
-	datasets.NewHTTPHandler(router, datasetsSvc, logger)
+	datasets.NewHTTPHandler(router, datasetsSvc, driverSvc, logger)
 }
 
 func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {
