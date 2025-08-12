@@ -119,17 +119,18 @@ async def get_feedback_for_image(
 
     This tool evaluates the visual design, data representation accuracy, query alignment, and best practices of the visualization.
     """
-    llm = get_configured_llm_for_node("visualize_data", config, schema=Feedback)
-    chain = prompt | llm
-    image = await sandbox.files.read(png_path, format="bytes")
-    response = await chain.ainvoke(
-        {
-            "image_data": image_to_base64(image),
-            "dataset_description": format_dataset_info(datasets),
-            "user_query": user_query,
-        }
-    )
-    if response.final_rating > 7.5 or feedback_count > 2:
+    if feedback_count < 2:
+        llm = get_configured_llm_for_node("visualize_data", config, schema=Feedback)
+        chain = prompt | llm
+        image = await sandbox.files.read(png_path, format="bytes")
+        response = await chain.ainvoke(
+            {
+                "image_data": image_to_base64(image),
+                "dataset_description": format_dataset_info(datasets),
+                "user_query": user_query,
+            }
+        )
+    if response.final_rating > 7.5 or feedback_count >= 2:
         feedback_text = "The visualization is good. You can return the final result."
     else:
         feedback_text = ""
