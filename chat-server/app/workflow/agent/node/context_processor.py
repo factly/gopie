@@ -29,8 +29,8 @@ class ProcessContextOutput(BaseModel):
     is_new_data_needed: bool = Field(
         description="Whether new data retrieval is needed to answer the query"
     )
-    is_visualization_query: bool = Field(
-        description="Whether the query is related to visualization"
+    generate_visualization: bool = Field(
+        description="Whether to generate a visualization for the query"
     )
     relevant_sql_queries: list[SQLQuery] = Field(
         description="Most relevant SQL queries from previously used queries", default=[]
@@ -89,7 +89,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
 
         is_follow_up = parsed_response.is_follow_up
         is_new_data_needed = parsed_response.is_new_data_needed
-        needs_visualization = parsed_response.is_visualization_query
+        generate_visualization = parsed_response.generate_visualization
         relevant_sql_queries_ids = [query.id for query in parsed_response.relevant_sql_queries]
         relevant_sql_queries = history_processor.ids_to_sql_queries(relevant_sql_queries_ids)
         enhanced_query = parsed_response.enhanced_query
@@ -106,10 +106,13 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         else:
             final_query = enhanced_query
 
+        if generate_visualization and not (last_vizpaths or relevant_sql_queries):
+            is_new_data_needed = True
+
         return {
             "user_query": final_query,
             "new_data_needed": is_new_data_needed,
-            "needs_visualization": needs_visualization,
+            "generate_visualization": generate_visualization,
             "relevant_datasets_ids": relevant_datasets_ids,
             "relevant_sql_queries": relevant_sql_queries,
             "enhanced_query": enhanced_query,
@@ -121,7 +124,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         return {
             "user_query": user_input,
             "new_data_needed": True,
-            "needs_visualization": False,
+            "generate_visualization": False,
             "relevant_datasets_ids": relevant_datasets_ids,
             "relevant_sql_queries": [],
             "enhanced_query": user_input,
