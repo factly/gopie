@@ -130,9 +130,16 @@ async def get_feedback_for_image(
                 "user_query": user_query,
             }
         )
-    if response.final_rating > 7.5 or feedback_count >= 2:
-        feedback_text = "The visualization is good. You can return the final result."
     else:
+        response = Feedback(
+            overall_assessment="",
+            strengths="",
+            areas_for_improvement="",
+            alternative_suggestions="",
+            final_rating=8,
+        )
+    feedback_text = "The visualization is good. You can return the final result."
+    if response.final_rating < 7:
         feedback_text = ""
         if response.overall_assessment:
             feedback_text += f"**Overall Assessment:**\n\n{response.overall_assessment}\n\n"
