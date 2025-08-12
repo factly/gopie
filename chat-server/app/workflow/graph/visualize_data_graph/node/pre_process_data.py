@@ -31,4 +31,5 @@ async def pre_process_visualization_data(state: State) -> dict:
 
     return {
         "datasets": datasets,
+        "feedback_count": 0,
     }

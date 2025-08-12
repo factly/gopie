@@ -141,6 +141,7 @@ def get_configured_llm_for_node(
     config: RunnableConfig,
     *,
     tool_names: list[ToolNames] | None = None,
+    force_tool_calls: bool = False,
     schema: Optional[Type[StructuredOutputType]] = None,
 ) -> Union[ChatOpenAI, StructuredLLM[StructuredOutputType]]:
     """
@@ -175,6 +176,8 @@ def get_configured_llm_for_node(
         return structured_llm
     elif json_mode:
         llm = llm.bind(response_format={"type": "json_object"})
+    if force_tool_calls:
+        llm = llm.bind(tool_choice=True)
     return llm
 
 
