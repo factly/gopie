@@ -643,52 +643,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         className="mb-8"
       />
 
-      {/* AI Column Description Generation Status Section - Visible only on Step 3 (AI Readiness) */}
-      {currentStep === 3 && (isGeneratingDescriptions || descriptionsGenerated || descriptionsError) && validationResult?.isValid && (
-        <div className="bg-card border p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-3 flex items-center">
-            <Sparkles className="h-5 w-5 mr-2" /> AI Column Description Generation
-          </h3>
-          
-          {isGeneratingDescriptions && (
-            <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
-              <AlertTitle className="text-blue-800 dark:text-blue-200">
-                Generating Column Descriptions...
-              </AlertTitle>
-              <AlertDescription className="text-blue-700 dark:text-blue-300">
-                AI is analyzing your data to generate helpful column descriptions. 
-                This process runs in the background and may take a few moments.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {descriptionsGenerated && !isGeneratingDescriptions && (
-            <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertTitle className="text-green-800 dark:text-green-200">
-                Column Descriptions Generated Successfully!
-              </AlertTitle>
-              <AlertDescription className="text-green-700 dark:text-green-300">
-                AI has successfully generated descriptions for your dataset columns. 
-                You can review and edit them below in the description column.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {descriptionsError && !isGeneratingDescriptions && (
-            <Alert className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-              <AlertTitle className="text-yellow-800 dark:text-yellow-200">
-                Column Description Generation Failed
-              </AlertTitle>
-              <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-                {descriptionsError}. You can still proceed and add descriptions manually in the next steps.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      )}
 
       <StepperContent>
         {/* Keep CSV validation component mounted but hidden to preserve Uppy instance */}
@@ -1031,10 +985,43 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               <h2 className="text-xl font-semibold mb-4">
                 Configure Columns for AI Readiness
               </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Review and edit column names, data types, and descriptions to
-                optimize your dataset for AI analysis.
-              </p>
+
+              {isGeneratingDescriptions && (
+                <Alert className="mb-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                  <AlertTitle className="text-blue-800 dark:text-blue-200">
+                    Generating Column Descriptions...
+                  </AlertTitle>
+                  <AlertDescription className="text-blue-700 dark:text-blue-300">
+                    GoPie is analyzing your data to generate helpful column descriptions. 
+                    This process runs in the background and may take a few moments.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {descriptionsGenerated && !isGeneratingDescriptions && (
+                <Alert className="mb-4 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertTitle className="text-green-800 dark:text-green-200">
+                    Column Descriptions Generated Successfully!
+                  </AlertTitle>
+                  <AlertDescription className="text-green-700 dark:text-green-300">
+                    GoPie generated descriptions for your dataset columns to optimize your dataset for AI analysis. You can review and edit them below in the description column.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {descriptionsError && !isGeneratingDescriptions && (
+                <Alert className="mb-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <AlertTitle className="text-yellow-800 dark:text-yellow-200">
+                    Column Description Generation Failed
+                  </AlertTitle>
+                  <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                    {descriptionsError}. You can still proceed and add descriptions manually below.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {isProcessing && (
                 <Alert className="mb-4 bg-primary/10 border-primary/20">
