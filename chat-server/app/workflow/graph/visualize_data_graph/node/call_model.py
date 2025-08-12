@@ -15,7 +15,7 @@ async def call_model(state: State, config: RunnableConfig) -> dict:
     Invokes the language model for the "visualize_data" node using the current message history.
     """
     llm = get_configured_llm_for_node("visualize_data", config, tool_names=tool_names, force_tool_calls=True)
-    response = await llm.ainvoke(state["messages"])
+    response = await llm.ainvoke(state["messages"], parallel_tool_calls=False)
     return {"messages": [response]}
 
 
