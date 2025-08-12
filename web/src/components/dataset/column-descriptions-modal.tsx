@@ -106,7 +106,7 @@ export function ColumnDescriptionsModal({
         description: "Column descriptions updated successfully.",
       });
       setOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update column descriptions. Please try again.",
