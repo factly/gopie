@@ -10,6 +10,7 @@ import (
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/aiagent"
+	"github.com/factly/gopie/infrastructure/download"
 	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
@@ -72,6 +73,7 @@ func ServeHttp() error {
 	chatStore := chats.NewChatStoreRepository(storeRepo.GetDB(), appLogger)
 	dbSourceStore := database_source.NewDatabaseSourceStore(storeRepo.GetDB(), appLogger, cfg)
 	aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
+	downloadsRepo := download.NewDownloadRepository(&cfg.DownloadsServer)
 
 	olapService := services.NewOlapService(olap, source, appLogger)
 	// Initialize services
@@ -81,17 +83,19 @@ func ServeHttp() error {
 	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
 	aiAgentService := services.NewAIService(aiAgentRepo)
 	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, appLogger)
+	downloadService := services.NewDownloadService(downloadsRepo, appLogger)
 
 	// Create ServerParams to pass to both servers
 	params := &ServerParams{
-		Logger:          appLogger,
-		OlapService:     olapService,
-		AIService:       aiService,
-		ProjectService:  projectService,
-		DatasetService:  datasetService,
-		ChatService:     chatService,
-		AIAgentService:  aiAgentService,
-		DbSourceService: dbSourceService,
+		Logger:           appLogger,
+		OlapService:      olapService,
+		AIService:        aiService,
+		ProjectService:   projectService,
+		DatasetService:   datasetService,
+		ChatService:      chatService,
+		AIAgentService:   aiAgentService,
+		DbSourceService:  dbSourceService,
+		DownloadsService: downloadService,
 	}
 
 	var wg sync.WaitGroup

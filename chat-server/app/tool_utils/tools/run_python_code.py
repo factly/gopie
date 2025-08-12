@@ -18,8 +18,10 @@ async def run_python_code(
     """Run python code in a sandbox.
     Pandas and Altair are already installed.
     The dataset csv are saved in the `csv_path` locations.
-    Always use altair to create visualizations and save using altair.save("filename.json").
+    Always use altair to create visualizations and save to both json and png
+    using altair.save("filename.json") and altair.save("filename.png").
     To get any output in the logs, use the print function.
+    Eg: print("df.head()")
 
     Return the logs and error if any.
     """

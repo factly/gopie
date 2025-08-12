@@ -967,6 +967,201 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/api/downloads": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get a paginated list of downloads for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "downloads"
+                ],
+                "summary": "List downloads",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of items to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of items to skip",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of downloads",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Download"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Could not retrieve downloads",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new download request and stream the progress via Server-Sent Events (SSE)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "downloads"
+                ],
+                "summary": "Create and stream a download",
+                "parameters": [
+                    {
+                        "description": "Download request object",
+                        "name": "download",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateDownloadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream of download progress",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Could not initiate download stream",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/downloads/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get details of a specific download by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "downloads"
+                ],
+                "summary": "Get download details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Download ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Download details",
+                        "schema": {
+                            "$ref": "#/definitions/models.Download"
+                        }
+                    },
+                    "400": {
+                        "description": "Download ID is required",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Download not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete a specific download by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "downloads"
+                ],
+                "summary": "Delete a download",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Download ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Download deleted successfully"
+                    },
+                    "400": {
+                        "description": "Download ID is required",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Could not delete download",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/nl2sql": {
             "post": {
                 "description": "Convert a natural language query to SQL for a specific dataset",
@@ -1939,6 +2134,37 @@ const docTemplate = `{
                 "logprobs": {}
             }
         },
+        "models.CreateDownloadRequest": {
+            "description": "Request body for creating a new download",
+            "type": "object",
+            "required": [
+                "dataset_id",
+                "format",
+                "sql"
+            ],
+            "properties": {
+                "dataset_id": {
+                    "description": "ID of the dataset to download from",
+                    "type": "string",
+                    "example": "dataset_123"
+                },
+                "format": {
+                    "description": "Format of the download file (csv, json, parquet)",
+                    "type": "string",
+                    "enum": [
+                        "csv",
+                        "json",
+                        "parquet"
+                    ],
+                    "example": "csv"
+                },
+                "sql": {
+                    "description": "SQL query to execute for the download",
+                    "type": "string",
+                    "example": "SELECT * FROM users WHERE created_at \u003e '2024-01-01'"
+                }
+            }
+        },
         "models.DatabaseSource": {
             "type": "object",
             "properties": {
@@ -2141,6 +2367,88 @@ const docTemplate = `{
                 "tool_calls": {
                     "type": "array",
                     "items": {}
+                }
+            }
+        },
+        "models.Download": {
+            "description": "Download entity containing download details and status",
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "description": "Timestamp when the download was completed",
+                    "type": "string",
+                    "example": "2024-01-15T09:31:00Z"
+                },
+                "created_at": {
+                    "description": "Timestamp when the download was created",
+                    "type": "string",
+                    "example": "2024-01-15T09:30:00Z"
+                },
+                "dataset_id": {
+                    "description": "ID of the dataset being downloaded",
+                    "type": "string",
+                    "example": "dataset_123"
+                },
+                "error_message": {
+                    "description": "Error message if the download failed",
+                    "type": "string",
+                    "example": "Query execution failed"
+                },
+                "expires_at": {
+                    "description": "Timestamp when the download URL expires",
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                },
+                "format": {
+                    "description": "Format of the download file (csv, json, parquet)",
+                    "type": "string",
+                    "enum": [
+                        "csv",
+                        "json",
+                        "parquet"
+                    ],
+                    "example": "csv"
+                },
+                "id": {
+                    "description": "Unique identifier for the download",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "org_id": {
+                    "description": "ID of the organization",
+                    "type": "string",
+                    "example": "org_456"
+                },
+                "pre_signed_url": {
+                    "description": "Pre-signed URL for downloading the file (only available when completed)",
+                    "type": "string",
+                    "example": "https://s3.example.com/downloads/file.csv?signature=..."
+                },
+                "sql": {
+                    "description": "SQL query to be executed for the download",
+                    "type": "string",
+                    "example": "SELECT * FROM users LIMIT 100"
+                },
+                "status": {
+                    "description": "Current status of the download (pending, processing, completed, failed)",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "processing",
+                        "completed",
+                        "failed"
+                    ],
+                    "example": "completed"
+                },
+                "updated_at": {
+                    "description": "Timestamp when the download was last updated",
+                    "type": "string",
+                    "example": "2024-01-15T09:31:00Z"
+                },
+                "user_id": {
+                    "description": "ID of the user who initiated the download",
+                    "type": "string",
+                    "example": "user_123"
                 }
             }
         },
@@ -2412,12 +2720,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.1",
-	Host:             "localhost:8000",
-	BasePath:         "/",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "GoPie API",
-	Description:      "GoPie API documentation",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

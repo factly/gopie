@@ -7,7 +7,7 @@ from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
 from ...visualize_data_graph.types import State
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS]
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_FEEDBACK_FOR_IMAGE]
 
 
 async def call_model(state: State, config: RunnableConfig) -> dict:

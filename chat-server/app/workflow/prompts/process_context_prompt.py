@@ -12,6 +12,7 @@ def create_process_context_prompt(
     current_query = kwargs.get("current_query", "")
     formatted_chat_history = kwargs.get("formatted_chat_history", [])
     project_custom_prompts = kwargs.get("project_custom_prompts", [])
+    schemas = kwargs.get("schemas", [])
 
     system_content = """
 You are a context analyzer. Your primary responsibility is to analyze the conversation history and
@@ -53,7 +54,7 @@ Your analysis should follow these key criteria:
   • Keep the user's intent and wording where possible.
   • Make it clear whether user needs more data, new datasets, or just visualization.
   • If the chat history is empty, then the enhanced query should be the user query enhanced with the special instructions.
-  • This must from the user perspective. 
+  • This must from the user perspective.
 
 6. Summary of the context (`context_summary`)
   • Provide a summary of how the present query is related to the previous conversation history.
@@ -69,6 +70,9 @@ Previous conversation history:
 
 Special Instructions:
 {project_custom_prompts}
+
+Schemas of the datasets provided for the current query:
+{schemas}
 
 Analyze the above and return ONLY a single JSON response with the specified fields."""
 
@@ -87,6 +91,7 @@ Analyze the above and return ONLY a single JSON response with the specified fiel
         current_query=current_query,
         formatted_chat_history=formatted_chat_history,
         project_custom_prompts=project_custom_prompts,
+        schemas=schemas,
     )
 
     return [

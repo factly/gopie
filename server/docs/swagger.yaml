@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   ai.genColumnsDescBody:
     type: object
@@ -163,6 +162,30 @@ definitions:
         type: integer
       logprobs: {}
     type: object
+  models.CreateDownloadRequest:
+    description: Request body for creating a new download
+    properties:
+      dataset_id:
+        description: ID of the dataset to download from
+        example: dataset_123
+        type: string
+      format:
+        description: Format of the download file (csv, json, parquet)
+        enum:
+        - csv
+        - json
+        - parquet
+        example: csv
+        type: string
+      sql:
+        description: SQL query to execute for the download
+        example: SELECT * FROM users WHERE created_at > '2024-01-01'
+        type: string
+    required:
+    - dataset_id
+    - format
+    - sql
+    type: object
   models.DatabaseSource:
     properties:
       connection_string:
@@ -316,6 +339,73 @@ definitions:
       tool_calls:
         items: {}
         type: array
+    type: object
+  models.Download:
+    description: Download entity containing download details and status
+    properties:
+      completed_at:
+        description: Timestamp when the download was completed
+        example: "2024-01-15T09:31:00Z"
+        type: string
+      created_at:
+        description: Timestamp when the download was created
+        example: "2024-01-15T09:30:00Z"
+        type: string
+      dataset_id:
+        description: ID of the dataset being downloaded
+        example: dataset_123
+        type: string
+      error_message:
+        description: Error message if the download failed
+        example: Query execution failed
+        type: string
+      expires_at:
+        description: Timestamp when the download URL expires
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      format:
+        description: Format of the download file (csv, json, parquet)
+        enum:
+        - csv
+        - json
+        - parquet
+        example: csv
+        type: string
+      id:
+        description: Unique identifier for the download
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      org_id:
+        description: ID of the organization
+        example: org_456
+        type: string
+      pre_signed_url:
+        description: Pre-signed URL for downloading the file (only available when
+          completed)
+        example: https://s3.example.com/downloads/file.csv?signature=...
+        type: string
+      sql:
+        description: SQL query to be executed for the download
+        example: SELECT * FROM users LIMIT 100
+        type: string
+      status:
+        description: Current status of the download (pending, processing, completed,
+          failed)
+        enum:
+        - pending
+        - processing
+        - completed
+        - failed
+        example: completed
+        type: string
+      updated_at:
+        description: Timestamp when the download was last updated
+        example: "2024-01-15T09:31:00Z"
+        type: string
+      user_id:
+        description: ID of the user who initiated the download
+        example: user_123
+        type: string
     type: object
   models.FunctionCall:
     properties:
@@ -517,12 +607,8 @@ definitions:
     - file_path
     - project_id
     type: object
-host: localhost:8000
 info:
   contact: {}
-  description: GoPie API documentation
-  title: GoPie API
-  version: "1.1"
 paths:
   /api/chats/{chat_id}/visibility:
     put:
@@ -1140,6 +1226,131 @@ paths:
       summary: Update dataset column descriptions
       tags:
       - datasets
+  /v1/api/downloads:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of downloads for the authenticated user
+      parameters:
+      - default: 10
+        description: Number of items to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of downloads
+          schema:
+            items:
+              $ref: '#/definitions/models.Download'
+            type: array
+        "500":
+          description: Could not retrieve downloads
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List downloads
+      tags:
+      - downloads
+    post:
+      consumes:
+      - application/json
+      description: Create a new download request and stream the progress via Server-Sent
+        Events (SSE)
+      parameters:
+      - description: Download request object
+        in: body
+        name: download
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateDownloadRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of download progress
+          schema:
+            type: string
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Could not initiate download stream
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create and stream a download
+      tags:
+      - downloads
+  /v1/api/downloads/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific download by ID
+      parameters:
+      - description: Download ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Download deleted successfully
+        "400":
+          description: Download ID is required
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Could not delete download
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete a download
+      tags:
+      - downloads
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific download by ID
+      parameters:
+      - description: Download ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Download details
+          schema:
+            $ref: '#/definitions/models.Download'
+        "400":
+          description: Download ID is required
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "404":
+          description: Download not found
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get download details
+      tags:
+      - downloads
   /v1/api/nl2sql:
     post:
       consumes:

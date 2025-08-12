@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DownloadIcon,
@@ -14,6 +14,8 @@ import {
   UserIcon,
   CodeIcon,
   FileText,
+  Loader2Icon,
+  CheckCircleIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -30,9 +32,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ColumnDescriptionsModal } from "@/components/dataset/column-descriptions-modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCreateDownload } from "@/lib/mutations/download/create-download";
+import { useDownloadStore } from "@/lib/stores/download-store";
+import { Progress } from "@/components/ui/progress";
 
 interface DatasetHeaderProps {
   dataset: Dataset;
@@ -106,6 +120,21 @@ export function DatasetHeader({
   const [editedCustomPrompt, setEditedCustomPrompt] = useState(
     dataset.custom_prompt || ""
   );
+
+  // Download state
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<
+    "csv" | "json" | "parquet"
+  >("csv");
+  const [downloadSql, setDownloadSql] = useState(
+    `SELECT * FROM "${dataset.name}"`
+  );
+  const [completedDownloadUrl, setCompletedDownloadUrl] = useState<
+    string | null
+  >(null);
+  const { createDownload } = useCreateDownload();
+  const { currentDownloadProgress, setCurrentDownloadProgress } =
+    useDownloadStore();
 
   const handleUpdate = async () => {
     if (editedDescription.length < 10) {
@@ -184,6 +213,53 @@ export function DatasetHeader({
     router.push(`/chat?contextData=${contextData}`);
   };
 
+  const handleDownload = async () => {
+    // If we have a completed download URL, just open it
+    if (completedDownloadUrl) {
+      window.open(completedDownloadUrl, "_blank");
+      return;
+    }
+
+    try {
+      const result = await createDownload({
+        dataset_id: dataset.id,
+        sql: downloadSql,
+        format: downloadFormat,
+      });
+
+      // Store the completed URL for re-download
+      if (result.url) {
+        setCompletedDownloadUrl(result.url);
+        // Automatically open the download URL in a new tab
+        window.open(result.url, "_blank");
+      }
+
+      toast({
+        title: "Download ready",
+        description: "Your download has been prepared and opened in a new tab.",
+      });
+
+      // Don't close the dialog, just update the state to show completion
+      // User can close manually or download again
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description:
+          error instanceof Error ? error.message : "Failed to create download",
+        variant: "destructive",
+      });
+      setCompletedDownloadUrl(null);
+    }
+  };
+
+  // Reset download progress and URL when dialog closes
+  useEffect(() => {
+    if (!isDownloadDialogOpen) {
+      setCurrentDownloadProgress(null);
+      setCompletedDownloadUrl(null);
+    }
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress]);
+
   return (
     <div className="space-y-6">
       {/* Main Header */}
@@ -199,7 +275,7 @@ export function DatasetHeader({
         >
           <MessageSquareIcon className="h-4 w-4" />
         </Button>
-        
+
         {/* Left Section - Main Info */}
         <div className="flex items-start gap-4 flex-1 min-w-0 pr-[60px]">
           <div className="flex-1 min-w-0 space-y-3">
@@ -287,7 +363,9 @@ export function DatasetHeader({
                   <div className="group">
                     <div className="flex items-start gap-2">
                       <div className="flex-1 pr-8">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Custom Prompt:</p>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">
+                          Custom Prompt:
+                        </p>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {dataset.custom_prompt}
                         </p>
@@ -348,124 +426,254 @@ export function DatasetHeader({
                           More details
                         </Button>
                       </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Dataset Details</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        {/* Basic Stats */}
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-sm">Statistics</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-secondary/20 p-3">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Rows
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Dataset Details</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          {/* Basic Stats */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm">Statistics</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-secondary/20 p-3">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Rows
+                                </div>
+                                <div className="font-semibold">
+                                  {new Intl.NumberFormat("en", {
+                                    notation: "compact",
+                                  }).format(dataset.row_count || 0)}
+                                </div>
                               </div>
-                              <div className="font-semibold">
-                                {new Intl.NumberFormat("en", {
-                                  notation: "compact",
-                                }).format(dataset.row_count || 0)}
+                              <div className="bg-secondary/20 p-3">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Columns
+                                </div>
+                                <div className="font-semibold">
+                                  {dataset.columns?.length || 0}
+                                </div>
+                              </div>
+                              <div className="bg-secondary/20 p-3 col-span-2">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  File Size
+                                </div>
+                                <div className="font-semibold">
+                                  {dataset.size
+                                    ? `${(dataset.size / (1024 * 1024)).toFixed(
+                                        1
+                                      )} MB`
+                                    : "N/A"}
+                                </div>
                               </div>
                             </div>
-                            <div className="bg-secondary/20 p-3">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Columns
+                          </div>
+
+                          <Separator />
+
+                          {/* Timestamps */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm">Timeline</h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">
+                                  Created:
+                                </span>
+                                <span className="font-medium">
+                                  {format(
+                                    new Date(dataset.created_at),
+                                    "MMM d, yyyy 'at' h:mm a"
+                                  )}
+                                </span>
                               </div>
-                              <div className="font-semibold">
-                                {dataset.columns?.length || 0}
+                              <div className="flex items-center gap-2 text-sm">
+                                <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">
+                                  Updated:
+                                </span>
+                                <span className="font-medium">
+                                  {format(
+                                    new Date(dataset.updated_at),
+                                    "MMM d, yyyy 'at' h:mm a"
+                                  )}
+                                </span>
                               </div>
                             </div>
-                            <div className="bg-secondary/20 p-3 col-span-2">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                File Size
+                          </div>
+
+                          <Separator />
+
+                          {/* Contributors */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm">
+                              Contributors
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">
+                                  Created by:
+                                </span>
+                                <span className="font-medium">
+                                  {dataset.created_by}
+                                </span>
                               </div>
-                              <div className="font-semibold">
-                                {dataset.size
-                                  ? `${(dataset.size / (1024 * 1024)).toFixed(
-                                      1
-                                    )} MB`
-                                  : "N/A"}
+                              <div className="flex items-center gap-2 text-sm">
+                                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">
+                                  Updated by:
+                                </span>
+                                <span className="font-medium">
+                                  {dataset.updated_by}
+                                </span>
                               </div>
                             </div>
                           </div>
                         </div>
-
-                        <Separator />
-
-                        {/* Timestamps */}
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-sm">Timeline</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm">
-                              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Created:
-                              </span>
-                              <span className="font-medium">
-                                {format(
-                                  new Date(dataset.created_at),
-                                  "MMM d, yyyy 'at' h:mm a"
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Updated:
-                              </span>
-                              <span className="font-medium">
-                                {format(
-                                  new Date(dataset.updated_at),
-                                  "MMM d, yyyy 'at' h:mm a"
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Contributors */}
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-sm">Contributors</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Created by:
-                              </span>
-                              <span className="font-medium">
-                                {dataset.created_by}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Updated by:
-                              </span>
-                              <span className="font-medium">
-                                {dataset.updated_by}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   {!isEditing && (
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-secondary/80"
-                        title="Download Dataset"
+                      <Dialog
+                        open={isDownloadDialogOpen}
+                        onOpenChange={setIsDownloadDialogOpen}
                       >
-                        <DownloadIcon className="h-5 w-5" />
-                      </Button>
-                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/data/`}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 hover:bg-secondary/80"
+                            title="Download Dataset"
+                          >
+                            <DownloadIcon className="h-5 w-5" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Download Dataset</DialogTitle>
+                            <DialogDescription>
+                              Export your dataset in your preferred format
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Format
+                              </label>
+                              <Select
+                                value={downloadFormat}
+                                onValueChange={(value) =>
+                                  setDownloadFormat(
+                                    value as "csv" | "json" | "parquet"
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="csv">
+                                    CSV - Comma-separated values
+                                  </SelectItem>
+                                  <SelectItem value="json">
+                                    JSON - JavaScript Object Notation
+                                  </SelectItem>
+                                  <SelectItem value="parquet">
+                                    Parquet - Columnar storage format
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                SQL Query
+                              </label>
+                              <Textarea
+                                value={downloadSql}
+                                onChange={(e) => setDownloadSql(e.target.value)}
+                                placeholder="Enter SQL query..."
+                                className="min-h-[100px] font-mono text-sm"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Customize the SQL query to filter or transform
+                                your data before download
+                              </p>
+                            </div>
+                            {currentDownloadProgress && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {currentDownloadProgress.message}
+                                  </span>
+                                  <span className="font-medium">
+                                    {currentDownloadProgress.progress}%
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={currentDownloadProgress.progress}
+                                />
+                              </div>
+                            )}
+                            {completedDownloadUrl &&
+                              !currentDownloadProgress && (
+                                <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-200">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircleIcon className="h-4 w-4" />
+                                    <span>
+                                      Download completed successfully! The file
+                                      has been opened in a new tab.
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsDownloadDialogOpen(false);
+                                setCompletedDownloadUrl(null);
+                              }}
+                              disabled={
+                                currentDownloadProgress?.status === "processing"
+                              }
+                            >
+                              {completedDownloadUrl ? "Close" : "Cancel"}
+                            </Button>
+                            <Button
+                              onClick={handleDownload}
+                              disabled={
+                                !downloadSql ||
+                                currentDownloadProgress?.status === "processing"
+                              }
+                            >
+                              {currentDownloadProgress?.status ===
+                              "processing" ? (
+                                <>
+                                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : completedDownloadUrl ? (
+                                <>
+                                  <DownloadIcon className="mr-2 h-4 w-4" />
+                                  Download File
+                                </>
+                              ) : (
+                                <>
+                                  <DownloadIcon className="mr-2 h-4 w-4" />
+                                  Download
+                                </>
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      <Link
+                        href={`/projects/${projectId}/datasets/${dataset.id}/data/`}
+                      >
                         <Button
                           variant="outline"
                           size="icon"
@@ -475,7 +683,9 @@ export function DatasetHeader({
                           <DatabaseIcon className="h-5 w-5" />
                         </Button>
                       </Link>
-                      <Link href={`/projects/${projectId}/datasets/${dataset.id}/api`}>
+                      <Link
+                        href={`/projects/${projectId}/datasets/${dataset.id}/api`}
+                      >
                         <Button
                           variant="outline"
                           size="icon"
@@ -492,8 +702,6 @@ export function DatasetHeader({
             )}
           </div>
         </div>
-
-
       </div>
     </div>
   );

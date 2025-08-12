@@ -9,9 +9,9 @@ def supervisor(
     dataset_ids = state.get("dataset_ids", None)
     datasets_count = len(dataset_ids) if dataset_ids else 0
     new_data_needed = state.get("new_data_needed", False)
-    needs_visualization = state.get("needs_visualization", False)
+    generate_visualization = state.get("generate_visualization", False)
 
-    if not new_data_needed and needs_visualization:
+    if not new_data_needed and generate_visualization:
         return Command(
             goto="visualization_agent",
         )

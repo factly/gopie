@@ -1,0 +1,36 @@
+name: Download Server Release CI
+on:
+  release:
+    types: [released]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set env
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - id: auth
+      name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        token_format: access_token
+        workload_identity_provider: projects/735814365928/locations/global/workloadIdentityPools/ga-google-artifact-registry/providers/github
+        service_account: ga-google-artifact-registry@factly-prod.iam.gserviceaccount.com
+        access_token_lifetime: 1800s          
+    - name: Login to Artifact Registry
+      uses: docker/login-action@v2
+      with:
+        registry: asia-south1-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}      
+    - name: Build and push Gopie Download Server
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-download-server:${{ env.RELEASE_VERSION }},asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-download-server:latest
+        context: downloads-server
+        file: downloads-server/Dockerfile
