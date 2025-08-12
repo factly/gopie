@@ -38,5 +38,6 @@ class State(TypedDict):
     is_input_prepared: bool
     s3_paths: list[str]
     tool_call_count: int
+    feedback_count: int
     executed_python_code: str | None
     relevant_sql_queries: list[str] | None
