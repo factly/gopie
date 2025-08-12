@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/factly/gopie/downlods-server/duckdb"
@@ -90,7 +89,7 @@ func ServeHttp() error {
 
 	// Register protected routes
 	handler.RegisterProtectedRoutes(app)
-	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
+	addr := ":" + cfg.Server.Port
 
 	if err := app.Listen(addr); err != nil {
 		logger.Fatal("Error starting server", zap.Error(err))
