@@ -658,35 +658,18 @@ export function ChatMessage({
 
   const parsedTextContent = parseMessageContent(textContent);
 
+  // Don't show the initial "Processing your request" message
+  // Instead, immediately show the agent thought process when streaming starts
   if (
     isLoading &&
     !message?.parts?.length &&
     !(Array.isArray(content) && content.length > 0) &&
-    styleRole === "assistant"
+    styleRole === "assistant" &&
+    displayIntermediateMessages.length === 0
   ) {
-    return (
-      <div className={cn("group flex w-full justify-start")}>
-        <div
-          className={cn(
-            "flex items-start gap-3 px-4 py-3",
-            "w-fit max-w-[90%] min-w-0",
-            "bg-muted shadow-sm border border-border/10"
-          )}
-        >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <TextShimmerWave
-                className="text-sm [--base-color:#71717a] [--base-gradient-color:#a1a1aa] dark:[--base-color:#a1a1aa] dark:[--base-gradient-color:#e4e4e7]"
-                duration={1}
-                spread={1}
-              >
-                Processing your request...
-              </TextShimmerWave>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    // Return null to hide the initial loading message
+    // The actual message with agent thoughts will appear once streaming starts
+    return null;
   }
 
   // Special handling for intermediate role with string content
