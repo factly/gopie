@@ -134,7 +134,7 @@ export function CreateProjectDialog() {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Optional description of your project"
+                      placeholder="Description of your project"
                       {...field}
                     />
                   </FormControl>
