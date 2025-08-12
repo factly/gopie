@@ -20,7 +20,7 @@ class AgentState(TypedDict):
     project_ids: list[str] | None
     user_query: str | None
     new_data_needed: bool | None
-    needs_visualization: bool | None
+    generate_visualization: bool | None
     previous_json_paths: list[str] | None
     relevant_datasets_ids: list[str] | None
     relevant_sql_queries: list[str] | None
