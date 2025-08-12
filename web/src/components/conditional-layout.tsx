@@ -12,7 +12,7 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
 
   // Don't show sidebar on auth pages or landing page
   if (isAuthPage || isLandingPage) {
-    return <>{children}</>;
+    return <div className="min-h-screen bg-background">{children}</div>;
   }
 
   return (
