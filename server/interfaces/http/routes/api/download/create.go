@@ -9,6 +9,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary Create and stream a download
+// @Description Create a new download request and stream the progress via Server-Sent Events (SSE)
+// @Tags downloads
+// @Accept json
+// @Produce text/event-stream
+// @Param download body models.CreateDownloadRequest true "Download request object"
+// @Success 200 {string} string "SSE stream of download progress"
+// @Failure 400 {object} responses.ErrorResponse "Invalid request body"
+// @Failure 500 {object} responses.ErrorResponse "Could not initiate download stream"
+// @Router /v1/api/downloads [post]
+// @Security Bearer
 func (h *httpHandler) createAndStream(c *fiber.Ctx) error {
 	userID := c.Locals(middleware.UserCtxKey).(string)
 	orgID := c.Locals(middleware.OrganizationCtxKey).(string)

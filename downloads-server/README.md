@@ -48,6 +48,7 @@ The server exposes a simple RESTful API for managing downloads.
 | **GET**    | `/downloads/:id` | Fetches the current status and details of a single download job by its ID.                                                                                                            |
 | **DELETE** | `/downloads/:id` | Deletes the record of a download job. This does not delete the file from S3.                                                                                                          |
 | **GET**    | `/health`        | A simple health check endpoint. Returns a `200 OK` with the body `"Ok"`.                                                                                                              |
+| **GET**    | `/swagger`       | Interactive Swagger UI documentation for the API (no authentication required).                                                                                                         |
 
 ---
 

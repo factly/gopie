@@ -28,7 +28,7 @@ async def should_run_visualization(state: AgentState):
     """
     Determine the next workflow step based on whether visualization is needed and datasets are available.
     """
-    if state.get("needs_visualization", False) and state.get("datasets", []):
+    if state.get("generate_visualization", False) and state.get("datasets", []):
         return "visualization_agent"
     else:
         return END

@@ -15,6 +15,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// createDownload creates a new download job
+// @Summary Create a new download job
+// @Description Submit a SQL query to create a new download job. Returns Server-Sent Events (SSE) stream for real-time progress updates.
+// @Tags Downloads
+// @Accept json
+// @Produce text/event-stream
+// @Param x-user-id header string true "User ID from authentication"
+// @Param x-organization-id header string true "Organization ID from authentication"
+// @Param request body models.CreateDownloadRequest true "Download request"
+// @Success 200 {string} string "SSE stream with download progress"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Security BearerAuth
+// @Router /downloads [post]
 func (h *httpHandler) createDownload(ctx *fiber.Ctx) error {
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
@@ -84,6 +97,18 @@ func (h *httpHandler) createDownload(ctx *fiber.Ctx) error {
 }
 
 // listDownloads retrieves a paginated list of all download jobs for the user.
+// @Summary List download jobs
+// @Description Retrieve a paginated list of all download jobs for the authenticated user
+// @Tags Downloads
+// @Produce json
+// @Param x-user-id header string true "User ID from authentication"
+// @Param x-organization-id header string true "Organization ID from authentication"
+// @Param limit query int false "Number of items to return" default(10) minimum(1) maximum(100)
+// @Param offset query int false "Number of items to skip" default(0) minimum(0)
+// @Success 200 {array} models.Download "List of download jobs"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /downloads [get]
 func (h *httpHandler) listDownloads(c *fiber.Ctx) error {
 	userID := c.Get("x-user-id")
 	orgID := c.Get("x-organization-id")
@@ -101,6 +126,16 @@ func (h *httpHandler) listDownloads(c *fiber.Ctx) error {
 }
 
 // getDownload retrieves the details of a single download job.
+// @Summary Get download job details
+// @Description Retrieve the details of a specific download job
+// @Tags Downloads
+// @Produce json
+// @Param id path string true "Download job ID"
+// @Param x-organization-id header string true "Organization ID from authentication"
+// @Success 200 {object} models.Download "Download job details"
+// @Failure 404 {object} map[string]string "Download not found"
+// @Security BearerAuth
+// @Router /downloads/{id} [get]
 func (h *httpHandler) getDownload(c *fiber.Ctx) error {
 	downloadID := c.Params("id")
 	orgID := c.Get("x-organization-id")
@@ -115,6 +150,15 @@ func (h *httpHandler) getDownload(c *fiber.Ctx) error {
 }
 
 // deleteDownload deletes a download job record.
+// @Summary Delete download job
+// @Description Delete a download job record and associated data
+// @Tags Downloads
+// @Param id path string true "Download job ID"
+// @Param x-organization-id header string true "Organization ID from authentication"
+// @Success 204 "Download successfully deleted"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /downloads/{id} [delete]
 func (h *httpHandler) deleteDownload(c *fiber.Ctx) error {
 	downloadID := c.Params("id")
 	orgID := c.Get("x-organization-id")

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/factly/gopie/downlods-server/duckdb"
@@ -79,12 +78,18 @@ func ServeHttp() error {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Logger,
 	}))
-	app.Use(middleware.AuthorizeHeaders(logger))
 
 	handler := routes.NewHttpHandler(logger, queue)
 
-	handler.RegisterRoutes(app)
-	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
+	// Register public routes (no auth required)
+	handler.RegisterPublicRoutes(app)
+
+	// Apply auth middleware for protected routes
+	app.Use(middleware.AuthorizeHeaders(logger))
+
+	// Register protected routes
+	handler.RegisterProtectedRoutes(app)
+	addr := ":" + cfg.Server.Port
 
 	if err := app.Listen(addr); err != nil {
 		logger.Fatal("Error starting server", zap.Error(err))
