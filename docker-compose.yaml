@@ -98,6 +98,20 @@ services:
     command: >
       sh -c "cd /home/gopie && goose up && gopie serve"
 
+  # downloads-server:
+  #   build:
+  #     context: ./downloads-server
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8003:8000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - gopie
+  #   command: >
+  #     sh -c "cd /home/downloads-server && goose up && downloads-server serve"
+
   gopie-web:
     build:
       context: ./web
@@ -171,7 +185,7 @@ services:
       context: ./server
       dockerfile: Dockerfile.reindex
     env_file:
-        - ./config.env
+      - ./config.env
     networks:
       - gopie
   #########################################################################

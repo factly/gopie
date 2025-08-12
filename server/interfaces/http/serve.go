@@ -9,6 +9,7 @@ import (
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	"github.com/factly/gopie/interfaces/http/routes/api/ai"
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
+	"github.com/factly/gopie/interfaces/http/routes/api/download"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
@@ -44,7 +45,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
+		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev,https://gopie-web.vercel.app",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
 		AllowCredentials: true,
@@ -118,6 +119,10 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		DatasetService: params.DatasetService,
 		OlapService:    params.OlapService,
 	})
+	download.Routes(apiGroup.Group("/downloads"),
+		params.DownloadsService,
+		appLogger,
+	)
 
 	// Create a channel to listen for server shutdown
 	serverShutdown := make(chan struct{})
@@ -164,7 +169,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev",
+		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev,https://gopie-web.vercel.app",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
 		AllowCredentials: true,

@@ -281,6 +281,10 @@ export function ChatMessage({
     setResults,
     setIsOpen: setSqlPanelOpen,
     markQueryAsExecuted,
+    setOnPageChange,
+    setIsLoading,
+    resetPagination,
+    rowsPerPage,
   } = useSqlStore();
   const { setPaths: setVisualizationPaths, setIsOpen: setVisualizationOpen } =
     useVisualizationStore();
@@ -514,13 +518,20 @@ export function ChatMessage({
     message?.content || (typeof content === "string" ? content : "");
 
   const handleRunQuery = useCallback(
-    async (query: string) => {
+    async (query: string, page: number = 1, limit: number = 20) => {
       setIsExecuting(true);
+      setIsLoading(true);
+      const offset = (page - 1) * limit;
+      
       try {
-        const result = await executeSql.mutateAsync(query);
+        const result = await executeSql.mutateAsync({
+          query,
+          limit,
+          offset,
+        });
         setResults({
           data: result.data ?? [],
-          total: result.data?.length ?? 0,
+          total: result.count ?? result.data?.length ?? 0,
           columns: result.columns,
           query,
           chatId,
@@ -540,9 +551,10 @@ export function ChatMessage({
         setActiveTab("sql"); // Switch to SQL tab even on error
       } finally {
         setIsExecuting(false);
+        setIsLoading(false);
       }
     },
-    [executeSql, setResults, setSqlPanelOpen, chatId, setActiveTab]
+    [executeSql, setResults, setSqlPanelOpen, chatId, setActiveTab, setIsLoading]
   );
 
   // Execute SQL queries as soon as they appear (even while streaming)
@@ -558,10 +570,18 @@ export function ChatMessage({
       if (sqlToExecute) {
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
+          // Reset pagination for new query
+          resetPagination();
+          
+          // Set up the page change callback for this query
+          setOnPageChange((page: number, limit: number) => {
+            handleRunQuery(sqlToExecute, page, limit);
+          });
+          
           // Use queueMicrotask to ensure non-blocking execution
           // This allows the SQL to run in parallel with streaming without blocking the UI
           queueMicrotask(() => {
-            handleRunQuery(sqlToExecute);
+            handleRunQuery(sqlToExecute, 1, rowsPerPage);
           });
         }
       }
@@ -573,6 +593,9 @@ export function ChatMessage({
     id,
     markQueryAsExecuted,
     displaySqlQueries,
+    resetPagination,
+    setOnPageChange,
+    rowsPerPage,
   ]);
 
   // Fallback for legacy SQL content (when not using displaySqlQueries)
@@ -601,8 +624,16 @@ export function ChatMessage({
         const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
         if (shouldExecute) {
           // Use queueMicrotask for non-blocking execution
+          // Reset pagination for new query
+          resetPagination();
+          
+          // Set up the page change callback for this query
+          setOnPageChange((page: number, limit: number) => {
+            handleRunQuery(sqlToExecute, page, limit);
+          });
+          
           queueMicrotask(() => {
-            handleRunQuery(sqlToExecute);
+            handleRunQuery(sqlToExecute, 1, rowsPerPage);
           });
         }
       }
@@ -617,6 +648,9 @@ export function ChatMessage({
     id,
     markQueryAsExecuted,
     displaySqlQueries,
+    resetPagination,
+    setOnPageChange,
+    rowsPerPage,
   ]);
 
   const styleRole =
@@ -811,7 +845,11 @@ export function ChatMessage({
                             e.stopPropagation();
                             const queryToRun =
                               editedQueries[index] ?? formatSqlQuery(query);
-                            handleRunQuery(queryToRun);
+                            resetPagination();
+                            setOnPageChange((page: number, limit: number) => {
+                              handleRunQuery(queryToRun, page, limit);
+                            });
+                            handleRunQuery(queryToRun, 1, rowsPerPage);
                           }}
                           disabled={isExecuting}
                           className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
@@ -866,11 +904,14 @@ export function ChatMessage({
                               size="icon"
                               variant="ghost"
                               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() =>
-                                handleRunQuery(
-                                  formatSqlQuery(parsedTextContent.content)
-                                )
-                              }
+                              onClick={() => {
+                                const queryToRun = formatSqlQuery(parsedTextContent.content);
+                                resetPagination();
+                                setOnPageChange((page: number, limit: number) => {
+                                  handleRunQuery(queryToRun, page, limit);
+                                });
+                                handleRunQuery(queryToRun, 1, rowsPerPage);
+                              }}
                               disabled={isExecuting}
                             >
                               <Play className="h-3 w-3" />

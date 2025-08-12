@@ -288,7 +288,7 @@ export default function HomePage() {
               <div className="mb-6">
                 <div className="flex justify-center mb-3">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-background/30 backdrop-blur-sm max-w-md">
-                    <a
+                    <Link
                       href="/chat?tab=history"
                       className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
                     >
@@ -307,7 +307,7 @@ export default function HomePage() {
                         <path d="M12 7v5l4 2" />
                       </svg>
                       Previous Chats
-                    </a>
+                    </Link>
                   </div>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-center text-foreground mt-3 mb-5">
@@ -333,7 +333,9 @@ export default function HomePage() {
                           ? "animate-slow-pulse bg-muted/90"
                           : "bg-muted/70"
                       }`}
-                      shouldFlash={isInputFocused && selectedContexts.length === 0}
+                      shouldFlash={
+                        isInputFocused && selectedContexts.length === 0
+                      }
                     />
                   </div>
                   <MentionInput
@@ -354,9 +356,9 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              
+
               {/* Help message when context selection is needed */}
-              <ContextSelectionHelper 
+              <ContextSelectionHelper
                 isVisible={isInputFocused && selectedContexts.length === 0}
               />
             </motion.div>
