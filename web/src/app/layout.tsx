@@ -3,11 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { AppHeader } from "@/components/app-header";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { NavigationProgress } from "@/components/navigation/navigation-progress";
+import { ConditionalLayout } from "@/components/conditional-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,14 +43,10 @@ export default function RootLayout({
         <AuthProvider>
           <Providers>
             <NavigationProgress />
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <AppHeader />
-                {children}
-              </SidebarInset>
-              <Toaster />
-            </SidebarProvider>
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+            <Toaster />
           </Providers>
         </AuthProvider>
       </body>
