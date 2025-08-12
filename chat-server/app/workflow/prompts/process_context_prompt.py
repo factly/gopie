@@ -31,14 +31,6 @@ Your analysis should follow these key criteria:
 3. Weather to generate a visualization for this query? (`generate_visualization`)
   • Determine if the query needs a visualization based on the following criteria:
   • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart"
-  • IMPLICIT VISUALIZATION NEEDS: Queries that would benefit from visualization even without explicitly requesting it:
-    - COMPARISONS: "compare", "vs", "versus", "difference between", "contrast"
-    - TRENDS AND PATTERNS: "trends", "over time", "from X to Y", "patterns", "growth", "decline", "changes over"
-    - DISTRIBUTIONS: "distribution", "breakdown", "share", "percentage", "proportion", "split"
-    - RANKINGS: "top", "bottom", "highest", "lowest", "rank", "best", "worst"
-    - CORRELATIONS: "relationship", "correlation", "impact of", "effect of"
-    - MULTI-DIMENSIONAL DATA: Queries involving multiple categories, time periods, or groupings that would be clearer with visual representation
-  • Consider the enhanced query context - if data involves multiple time periods, categories, or comparative analysis, it likely benefits from visualization
   • Consider the special instructions also while determining if the query is related to visualization.
 
 4. relevant sql queries (`relevant_sql_queries`)
