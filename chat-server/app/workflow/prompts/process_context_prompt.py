@@ -28,8 +28,8 @@ Your analysis should follow these key criteria:
   • Determine if the previously used sql queries would have all the sufficient data to answer the user query.
   • If the previously used sql queries would not have all the sufficient data to answer the user query, then the answer should be true.
 
-3. is the query related to visualization? (`is_visualization_query`)
-  • Determine if the query is related to visualization based on the following criteria:
+3. Weather to generate a visualization for this query? (`generate_visualization`)
+  • Determine if the query needs a visualization based on the following criteria:
   • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart"
   • IMPLICIT VISUALIZATION NEEDS: Queries that would benefit from visualization even without explicitly requesting it:
     - COMPARISONS: "compare", "vs", "versus", "difference between", "contrast"
@@ -39,7 +39,6 @@ Your analysis should follow these key criteria:
     - CORRELATIONS: "relationship", "correlation", "impact of", "effect of"
     - MULTI-DIMENSIONAL DATA: Queries involving multiple categories, time periods, or groupings that would be clearer with visual representation
   • Consider the enhanced query context - if data involves multiple time periods, categories, or comparative analysis, it likely benefits from visualization
-  • Return true if the query falls into any of these categories, even if visualization is not explicitly mentioned
   • Consider the special instructions also while determining if the query is related to visualization.
 
 4. relevant sql queries (`relevant_sql_queries`)
@@ -53,7 +52,7 @@ Your analysis should follow these key criteria:
   • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history and special instructions.
   • Keep the user's intent and wording where possible.
   • Make it clear whether user needs more data, new datasets, or just visualization.
-  • If the chat history is empty, then the enhanced query should be the user query enhanced with the special instructions.
+  • If the chat history is empty, then the enhanced query should be the user query together with the contents from the special instructions.
   • This must from the user perspective.
 
 6. Summary of the context (`context_summary`)
