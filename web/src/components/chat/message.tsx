@@ -46,6 +46,7 @@ import { useProject } from "@/lib/queries/project/get-project";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { UIMessage } from "ai";
+import { apiClient } from "@/lib/api-client";
 
 interface MessageContent {
   type: "text" | "sql";
@@ -155,11 +156,7 @@ function ContextDisplay({ projectIds, datasetIds }: ContextDisplayProps) {
         <DatasetItem
           key={datasetId}
           datasetId={datasetId}
-          projectId={
-            datasetIds.length === 1 && projectIds.length === 1
-              ? projectIds[0]
-              : undefined
-          }
+          // Don't pass projectId - let DatasetItem fetch it
         />
       ))}
     </div>
@@ -216,28 +213,50 @@ function ProjectItem({ projectId }: ProjectItemProps) {
 // New component for dataset details
 interface DatasetItemProps {
   datasetId: string;
-  projectId?: string;
 }
 
-function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
+function DatasetItem({ datasetId }: DatasetItemProps) {
   const {
     data: dataset,
-    isLoading,
-    isError,
+    isLoading: datasetLoading,
+    isError: datasetError,
   } = useDatasetById({
     variables: { datasetId },
   });
 
-  if (isLoading) {
+  // Fetch the dataset's project
+  const [projectId, setProjectId] = useState<string | undefined>();
+  const [isLoadingProject, setIsLoadingProject] = useState(true);
+
+  useEffect(() => {
+    // Fetch the project ID for this dataset
+    if (dataset) {
+      apiClient.get(`v1/api/datasets/${datasetId}/project`)
+        .json<{ project_id: string }>()
+        .then((result) => {
+          if (result?.project_id) {
+            setProjectId(result.project_id);
+          }
+        })
+        .catch((error) => {
+          console.warn(`Could not fetch project for dataset ${datasetId}:`, error);
+        })
+        .finally(() => {
+          setIsLoadingProject(false);
+        });
+    }
+  }, [dataset, datasetId]);
+
+  if (datasetLoading || isLoadingProject) {
     return (
       <Badge variant="secondary" className="text-xs">
         <Loader2 className="h-3 w-3 animate-spin mr-1" />
-        {datasetId.substring(0, 8)}...
+        Loading...
       </Badge>
     );
   }
 
-  if (isError || !dataset) {
+  if (datasetError || !dataset) {
     return (
       <Badge variant="destructive" className="text-xs">
         {datasetId.substring(0, 8)}...
@@ -245,18 +264,31 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
     );
   }
 
+  // If we have a project ID, show as a link
+  if (projectId) {
+    return (
+      <Badge variant="secondary" className="text-xs font-normal">
+        <Link
+          href={`/projects/${projectId}/datasets/${datasetId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <Database className="h-3 w-3" />
+          {dataset.alias}
+          <ExternalLink className="h-3 w-3 ml-0.5" />
+        </Link>
+      </Badge>
+    );
+  }
+
+  // If no project ID is available, show the dataset without a link
   return (
     <Badge variant="secondary" className="text-xs font-normal">
-      <Link
-        href={`/projects/${projectId}/datasets/${datasetId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:underline"
-      >
+      <div className="flex items-center gap-1">
         <Database className="h-3 w-3" />
         {dataset.alias}
-        <ExternalLink className="h-3 w-3 ml-0.5" />
-      </Link>
+      </div>
     </Badge>
   );
 }
@@ -1023,7 +1055,6 @@ export function ChatMessage({
           {displayDatasets.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border/50">
               <p className="text-xs text-muted-foreground font-medium mb-1.5 flex items-center">
-                <Database className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/80" />
                 Agent utilized the following dataset(s):
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -1031,13 +1062,7 @@ export function ChatMessage({
                   <DatasetItem
                     key={datasetId}
                     datasetId={datasetId}
-                    projectId={
-                      datasetId && datasetId.includes("/")
-                        ? datasetId.split("/")[0]
-                        : contextProjectIds.length > 0
-                        ? contextProjectIds[0]
-                        : undefined
-                    }
+                    // Don't pass projectId - let DatasetItem fetch it
                   />
                 ))}
               </div>
