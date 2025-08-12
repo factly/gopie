@@ -8,8 +8,10 @@ import { AppHeader } from "@/components/app-header";
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
+  const isLandingPage = pathname === "/";
 
-  if (isAuthPage) {
+  // Don't show sidebar on auth pages or landing page
+  if (isAuthPage || isLandingPage) {
     return <>{children}</>;
   }
 
