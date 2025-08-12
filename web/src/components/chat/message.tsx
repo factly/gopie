@@ -35,7 +35,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEffect, useState, useCallback, memo, useMemo } from "react";
-import { TextShimmerWave } from "@/components/ui/text-shimmer-wave";
 // import { TTSButton } from "./tts-button";
 import {
   Collapsible,
