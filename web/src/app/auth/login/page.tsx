@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,11 @@ function LoginPageInner() {
     loginName: "",
     password: "",
   });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -101,9 +107,34 @@ function LoginPageInner() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/GoPie_Logo.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="dark:hidden"
+              priority
+            />
+            <Image
+              src="/GoPie_Logo_Dark.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="hidden dark:block"
+              priority
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">Log in to your account</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            <div>
+              <Link
+                href="/auth/register"
+                className="text-primary hover:underline"
+              >
+                Don&apos;t have an account? Sign up
+              </Link>
+            </div>
           </CardDescription>
         </CardHeader>
 
@@ -154,49 +185,51 @@ function LoginPageInner() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="loginName">Email</Label>
-              <Input
-                id="loginName"
-                type="text"
-                placeholder="Enter your email"
-                value={formData.loginName}
-                onChange={handleInputChange("loginName")}
-                disabled={isLoading}
-                required
-              />
-            </div>
+          {mounted ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="loginName">Email</Label>
+                <Input
+                  id="loginName"
+                  type="text"
+                  placeholder="Enter your email"
+                  value={formData.loginName}
+                  onChange={handleInputChange("loginName")}
+                  disabled={isLoading}
+                  required
+                  autoComplete="username"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleInputChange("password")}
-                disabled={isLoading}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleInputChange("password")}
+                  disabled={isLoading}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Button>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="h-[180px] flex items-center justify-center">
+                <div className="text-muted-foreground">Loading form...</div>
+              </div>
+            </div>
+          )}
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-sm text-center space-y-2">
-            <div>
-              <Link
-                href="/auth/register"
-                className="text-primary hover:underline"
-              >
-                Don&apos;t have an account? Sign up
-              </Link>
-            </div>
             <div>
               <Link
                 href="/auth/forgot-password"

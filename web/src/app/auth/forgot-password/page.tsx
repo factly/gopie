@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,24 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/GoPie_Logo.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="dark:hidden"
+              priority
+            />
+            <Image
+              src="/GoPie_Logo_Dark.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="hidden dark:block"
+              priority
+            />
+          </div>
           <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
           <CardDescription className="text-center">
             Enter your email address and we&apos;ll send you a link to reset
