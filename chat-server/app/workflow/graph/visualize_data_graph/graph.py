@@ -32,8 +32,7 @@ workflow.add_node("agent", call_model)
 workflow.add_node("tools", ToolNode(tool_names))
 workflow.add_node("process_result", process_visualization_result)
 workflow.add_node("cleanup", cleanup_resources)
-workflow.add_node(should_continue, 
-                destinations=("tools", "process_result", "agent"))
+workflow.add_node(should_continue, destinations=("tools", "process_result", "agent"))
 workflow.add_node("respond", respond)
 
 workflow.set_entry_point("pre_process_data")

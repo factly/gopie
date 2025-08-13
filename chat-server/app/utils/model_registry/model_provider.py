@@ -121,6 +121,7 @@ def get_configured_llm_for_node(
     *,
     tool_names: list[ToolNames] | None = None,
     schema: None = None,
+    force_tool_calls: bool = False,
 ) -> ChatOpenAI:
     ...
 

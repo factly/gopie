@@ -34,6 +34,9 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
     datasets = state["datasets"]
 
     try:
+        if isinstance(last_message, ErrorMessage):
+            raise ValueError(last_message.content)
+
         if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
             raise ValueError("No tool calls found in the last message")
 

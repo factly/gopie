@@ -1,7 +1,6 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 
-from app.core.config import settings
 from app.core.log import logger
 from app.models.message import ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -28,15 +27,6 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     Prepares the environment and prompt messages for the data visualization agent.
     Handles tool call counting and initial setup.
     """
-    tool_call_count = state.get("tool_call_count", 0)
-
-    if tool_call_count > settings.MAX_TOOL_CALL_LIMIT:
-        result = state.get("result", VisualizationResult(data=[], errors=[]))
-        result.errors.append("Maximum tool call limit reached during visualization generation")
-        return {
-            "messages": [ErrorMessage(content="Tool call limit exceeded")],
-            "result": result,
-        }
 
     result = state.get("result", VisualizationResult(data=[], errors=[]))
 
@@ -74,7 +64,6 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             "messages": messages,
             "sandbox": sandbox,
             "result": result,
-            "tool_call_count": tool_call_count,
             "is_input_prepared": True,
         }
 
@@ -86,7 +75,6 @@ async def pre_model_hook(state: State, config: RunnableConfig):
         return {
             "messages": [ErrorMessage(content=err_msg)],
             "result": result,
-            "tool_call_count": tool_call_count,
             "sandbox": state.get("sandbox"),
             "is_input_prepared": state.get("is_input_prepared", False),
         }
