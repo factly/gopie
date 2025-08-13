@@ -1066,7 +1066,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               <Button
                 size="sm"
                 onClick={handleNext}
-                disabled={!canProceedFromStep3}
+                disabled={!canProceedFromStep3 || isGeneratingDescriptions || !descriptionsGenerated}
               >
                 Next
               </Button>
