@@ -12,7 +12,10 @@ from app.services.qdrant.get_schema import (
 from app.utils.chat_history.processor import ChatHistoryProcessor
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
-from app.workflow.events.event_utils import configure_node
+from app.workflow.events.event_utils import (
+    configure_node,
+    stream_dynamic_message,
+)
 
 from ..types import AgentState
 
@@ -108,6 +111,11 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
 
         if generate_visualization and not (last_vizpaths or relevant_sql_queries):
             is_new_data_needed = True
+
+        await stream_dynamic_message(
+            f"Create a short user friendly message that tells what it understand from the input user query: {final_query}",
+            config,
+        )
 
         return {
             "user_query": final_query,

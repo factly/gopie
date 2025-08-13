@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+from langchain_core.messages import BaseMessage
+from langchain_core.runnables import RunnableConfig
+
 from app.core.config import settings
 from app.models.provider import ModelCategory, TemperatureCategory
 
@@ -65,7 +68,8 @@ NODE_CONFIGS = {
 EXTERNAL_FUNCTION_CONFIGS = {
     "generate_col_descriptions": NodeConfig(
         ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=True
-    )
+    ),
+    "progress_message": NodeConfig(ModelCategory.FAST, TemperatureCategory.CREATIVE),
 }
 
 
@@ -89,3 +93,7 @@ def requires_json_mode(node_name: str) -> bool:
 
 def get_node_model(node_name: str) -> str:
     return get_node_config(node_name).model_id
+
+
+def get_chat_history(config: RunnableConfig) -> list[BaseMessage]:
+    return config.get("configurable", {}).get("chat_history", [])

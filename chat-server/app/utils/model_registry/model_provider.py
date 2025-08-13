@@ -1,6 +1,5 @@
 from typing import Generic, Optional, Type, TypeVar, Union
 
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
@@ -108,10 +107,6 @@ def get_model_provider(
 ) -> ModelProvider:
     metadata = config.get("configurable", {}).get("metadata", {})
     return ModelProvider(metadata=metadata)
-
-
-def get_chat_history(config: RunnableConfig) -> list[BaseMessage]:
-    return config.get("configurable", {}).get("chat_history", [])
 
 
 @overload

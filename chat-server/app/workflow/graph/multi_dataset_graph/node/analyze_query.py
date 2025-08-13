@@ -154,7 +154,7 @@ def _handle_analysis_response(
     return {
         "query_result": query_result,
         "tool_call_count": tool_call_count,
-        "messages": [IntermediateStep.from_json(parsed_content)],
+        "messages": [IntermediateStep(content=analyze_result.response)],
     }
 
 

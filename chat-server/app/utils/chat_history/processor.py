@@ -10,7 +10,7 @@ from app.core.constants import (
     VISUALIZATION_RESULT,
     VISUALIZATION_RESULT_ARG,
 )
-from app.utils.model_registry.model_provider import get_chat_history
+from app.utils.model_registry.model_selection import get_chat_history
 
 from .sliding_window import apply_sliding_window
 
