@@ -191,6 +191,11 @@ export function SqlResults() {
               <span className="text-xs text-muted-foreground">
                 {results?.total || 0} total rows
               </span>
+              {results?.executionTime !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  Query Execution Time: {results.executionTime}ms
+                </span>
+              )}
               {results?.data && results.data.length > 0 && (
                 <>
                   <div className="flex items-center gap-2">

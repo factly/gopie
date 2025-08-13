@@ -7,6 +7,7 @@ interface SqlResult {
   error?: string;
   query: string;
   chatId?: string;
+  executionTime?: number; // in milliseconds
 }
 
 interface SqlStore {

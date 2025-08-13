@@ -55,6 +55,7 @@ export default function SqlPage({
   >(null);
   const [totalCount, setTotalCount] = React.useState<number>(0);
   const [columns, setColumns] = React.useState<string[] | undefined>(undefined);
+  const [executionTime, setExecutionTime] = React.useState<number | undefined>(undefined);
   const [isExecuting, setIsExecuting] = React.useState(false);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
@@ -100,6 +101,7 @@ export default function SqlPage({
         setResults(response.data);
         setTotalCount(response.count);
         setColumns(response.columns);
+        setExecutionTime(response.executionTime);
         setCurrentQuery(queryToExecute);
 
         return response;
@@ -392,8 +394,13 @@ export default function SqlPage({
 
           {/* Results Header */}
           <div className="border-b bg-muted/50 p-3 ml-4 border">
-            <div className="flex items-center">
+            <div className="flex items-center justify-between">
               <h3 className="font-medium">Results</h3>
+              {executionTime !== undefined && (
+                <span className="text-sm text-muted-foreground">
+                  Query Execution Time: {executionTime}ms
+                </span>
+              )}
             </div>
           </div>
 

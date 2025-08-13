@@ -500,7 +500,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 	}
 
 	rows, err := m.db.Query(transformedQuery)
-	latencyInMs := time.Since(start).Milliseconds()
+	executionTime := time.Since(start)
+	latencyInMs := executionTime.Milliseconds()
 
 	if err != nil {
 		m.logger.Error("error executing query",
@@ -516,7 +517,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 		zap.Int64("latency_ms", latencyInMs))
 
 	result := models.Result{
-		Rows: rows,
+		Rows:          rows,
+		ExecutionTime: executionTime,
 	}
 	return &result, nil
 }

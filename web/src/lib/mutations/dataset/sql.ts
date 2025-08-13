@@ -18,6 +18,6 @@ export const useDatasetSql = createMutation({
       await apiClient.post("v1/api/sql", {
         body: JSON.stringify(requestBody),
       })
-    ).json()) as { data: Record<string, unknown>[] | null; count: number; columns?: string[] };
+    ).json()) as { data: Record<string, unknown>[] | null; count: number; columns?: string[]; executionTime?: number };
   },
 });

@@ -160,9 +160,10 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int)
 	}
 
 	return map[string]any{
-		"count":   queryResult.Count,
-		"data":    queryResult.Rows,
-		"columns": queryResult.Columns,
+		"count":         queryResult.Count,
+		"data":          queryResult.Rows,
+		"columns":       queryResult.Columns,
+		"executionTime": queryResult.ExecutionTime,
 	}, nil
 }
 
@@ -192,10 +193,11 @@ func (d *OlapService) GetDatasetSummary(tableName string) (*[]models.DatasetSumm
 }
 
 type queryResult struct {
-	Rows    *[]map[string]any
-	Columns []string
-	Count   int64
-	Err     error
+	Rows          *[]map[string]any
+	Columns       []string
+	Count         int64
+	ExecutionTime int64 // milliseconds
+	Err           error
 }
 
 type asyncResult[T any] struct {
@@ -339,10 +341,11 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 
 	// Create a temporary queryResult with columns info
 	tempResult := &queryResult{
-		Rows:    resultMap,
-		Columns: columns,
-		Count:   0, // Count will be set by the parent function
-		Err:     nil,
+		Rows:          resultMap,
+		Columns:       columns,
+		Count:         0, // Count will be set by the parent function
+		ExecutionTime: dbResult.ExecutionTime.Milliseconds(),
+		Err:           nil,
 	}
 
 	result.data = tempResult
@@ -370,8 +373,9 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	return map[string]any{
-		"data":  result.Rows,
-		"count": result.Count,
+		"data":          result.Rows,
+		"count":         result.Count,
+		"executionTime": result.ExecutionTime,
 	}, nil
 }
 
