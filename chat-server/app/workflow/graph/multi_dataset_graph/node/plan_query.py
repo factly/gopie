@@ -60,7 +60,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", {})
     datasets_info = state.get("datasets_info", {})
     previous_sql_queries = state.get("previous_sql_queries", [])
-    last_message = state.get("messages", [])[-1]
+    validation_result = state.get("validation_result", None)
 
     # Reset the SQL queries and tables used for the current subquery (due to validation logic)
     query_result.subqueries[query_index].sql_queries = []
@@ -86,10 +86,11 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
             error_messages=error_messages,
             retry_count=retry_count,
             previous_sql_queries=previous_sql_queries,
+            validation_result=validation_result,
         )
 
         llm = get_configured_llm_for_node("plan_query", config, schema=PlanQueryOutput)
-        response = await llm.ainvoke(llm_prompt + [last_message])
+        response = await llm.ainvoke(llm_prompt)
 
         sql_queries = response.sql_queries
         response_for_no_sql = response.response_for_no_sql

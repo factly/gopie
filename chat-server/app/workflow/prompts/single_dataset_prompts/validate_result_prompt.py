@@ -39,6 +39,8 @@ YOUR VALIDATION PROCESS:
 2. Assess data quality, completeness, and relevance
 3. Evaluate if failed queries prevent answering the question
 4. Consider if partial results still provide meaningful insights
+5. Tell what improvements are needed to make the results better or fix any issues.
+6. Please try to add sufficient context from query results to the response to make it more helpful.
 
 VALIDATION DECISION CRITERIA:
 * MARK AS VALID when:

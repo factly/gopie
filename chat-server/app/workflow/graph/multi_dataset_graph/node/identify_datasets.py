@@ -57,8 +57,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
-
-    last_message = state.get("messages", [])[-1]
+    validation_result = state.get("validation_result", None)
 
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
@@ -106,12 +105,13 @@ async def identify_datasets(state: State, config: RunnableConfig):
             user_query=user_query,
             relevant_dataset_schemas=relevant_dataset_schemas,
             semantic_searched_datasets=semantic_searched_datasets,
+            validation_result=validation_result,
         )
 
         llm = get_configured_llm_for_node(
             "identify_datasets", config, schema=IdentifyDatasetsOutput
         )
-        response = await llm.ainvoke(llm_prompt + [last_message])
+        response = await llm.ainvoke(llm_prompt)
 
         selected_datasets = response.selected_dataset
         if query_result.subqueries and len(query_result.subqueries) > query_index:

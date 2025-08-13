@@ -64,7 +64,7 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
             "retry_count": retry_count,
             "messages": [AIMessage(content=response)],
             "recommendation": recommendation,
-            "response": response,
+            "validation_result": response,
         }
 
     except Exception as e:
