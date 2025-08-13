@@ -18,4 +18,5 @@ func Routes(router fiber.Router, aiService *services.AiDriver, logger *logger.Lo
 	}
 
 	router.Post("/generate-column-descriptions", httpHandler.genColumnsDesc)
+	router.Post("/generate-dataset-description", httpHandler.genDatasetDesc)
 }

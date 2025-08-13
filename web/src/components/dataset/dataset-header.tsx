@@ -26,6 +26,8 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -47,11 +49,38 @@ import {
 import { useCreateDownload } from "@/lib/mutations/download/create-download";
 import { useDownloadStore } from "@/lib/stores/download-store";
 import { Progress } from "@/components/ui/progress";
+import { format as formatSQL } from "sql-formatter";
+
+// Dynamically import Monaco Editor to avoid SSR issues
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
+      <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
 
 interface DatasetHeaderProps {
   dataset: Dataset;
   projectId: string;
   onUpdate?: () => Promise<void>;
+}
+
+// Helper function to format SQL queries safely
+function formatSqlQuery(sql: string): string {
+  try {
+    return formatSQL(sql, {
+      language: "sql",
+      tabWidth: 2,
+      useTabs: false,
+      keywordCase: "upper",
+      linesBetweenQueries: 2,
+    });
+  } catch (error) {
+    console.error("Failed to format SQL:", error);
+    return sql; // Return original SQL if formatting fails
+  }
 }
 
 // Helper function to determine dataset source (commented out as unused)
@@ -111,6 +140,7 @@ export function DatasetHeader({
   const { toast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { resolvedTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedAlias, setEditedAlias] = useState(dataset.alias || "");
@@ -127,7 +157,7 @@ export function DatasetHeader({
     "csv" | "json" | "parquet"
   >("csv");
   const [downloadSql, setDownloadSql] = useState(
-    `SELECT * FROM "${dataset.name}"`
+    formatSqlQuery(`SELECT * FROM "${dataset.name}"`)
   );
   const [completedDownloadUrl, setCompletedDownloadUrl] = useState<
     string | null
@@ -252,13 +282,16 @@ export function DatasetHeader({
     }
   };
 
-  // Reset download progress and URL when dialog closes
+  // Reset download progress and URL when dialog closes, format SQL when dialog opens
   useEffect(() => {
     if (!isDownloadDialogOpen) {
       setCurrentDownloadProgress(null);
       setCompletedDownloadUrl(null);
+    } else {
+      // Format the SQL when dialog opens
+      setDownloadSql(formatSqlQuery(`SELECT * FROM "${dataset.name}"`));
     }
-  }, [isDownloadDialogOpen, setCurrentDownloadProgress]);
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress, dataset.name]);
 
   return (
     <div className="space-y-6">
@@ -551,7 +584,7 @@ export function DatasetHeader({
                             <DownloadIcon className="h-5 w-5" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
+                        <DialogContent className="sm:max-w-[600px]">
                           <DialogHeader>
                             <DialogTitle>Download Dataset</DialogTitle>
                             <DialogDescription>
@@ -588,15 +621,52 @@ export function DatasetHeader({
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                SQL Query
-                              </label>
-                              <Textarea
-                                value={downloadSql}
-                                onChange={(e) => setDownloadSql(e.target.value)}
-                                placeholder="Enter SQL query..."
-                                className="min-h-[100px] font-mono text-sm"
-                              />
+                              <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">
+                                  SQL Query
+                                </label>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const formatted = formatSqlQuery(downloadSql);
+                                    setDownloadSql(formatted);
+                                  }}
+                                  className="h-7 text-xs"
+                                >
+                                  Format SQL
+                                </Button>
+                              </div>
+                              <div className="border rounded-md overflow-hidden">
+                                <Editor
+                                  height="150px"
+                                  defaultLanguage="sql"
+                                  value={downloadSql}
+                                  onChange={(value) => setDownloadSql(value || "")}
+                                  theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+                                  options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    lineNumbers: "on",
+                                    roundedSelection: false,
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    wordWrap: "on",
+                                    wrappingIndent: "indent",
+                                    formatOnPaste: true,
+                                    formatOnType: true,
+                                    scrollbar: {
+                                      vertical: "auto",
+                                      horizontal: "auto",
+                                    },
+                                    padding: {
+                                      top: 8,
+                                      bottom: 8,
+                                    },
+                                  }}
+                                />
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 Customize the SQL query to filter or transform
                                 your data before download

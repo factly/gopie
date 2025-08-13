@@ -233,7 +233,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Gradient background */}
-        <div className="absolute inset-x-0 top-0 h-[300px] bg-gradient-to-br from-primary/70 via-primary/60 to-secondary/70 opacity-70 -z-10" />
+        <div className="absolute inset-x-0 top-0 h-[300px] opacity-70 -z-10" />
 
         {/* Navbar */}
         <div className="border-b bg-background/80 backdrop-blur-sm z-10">

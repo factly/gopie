@@ -1,6 +1,8 @@
 definitions:
   ai.genColumnsDescBody:
     type: object
+  ai.genDatasetDescBody:
+    type: object
   api.nl2SqlRequest:
     description: Request body for converting natural language to SQL
     properties:
@@ -81,7 +83,7 @@ definitions:
       description:
         description: Description of the dataset
         example: User data from our production database
-        maxLength: 500
+        maxLength: 1000
         minLength: 10
         type: string
       driver:
@@ -457,7 +459,7 @@ definitions:
       description:
         description: Description of the project
         example: This is a detailed description of my new project
-        maxLength: 500
+        maxLength: 1000
         minLength: 10
         type: string
       name:
@@ -478,7 +480,7 @@ definitions:
       description:
         description: Description of the project
         example: Updated project description
-        maxLength: 500
+        maxLength: 1000
         type: string
       name:
         description: Name of the project
@@ -533,7 +535,7 @@ definitions:
       description:
         description: Updated description of the dataset (optional)
         example: Updated sales data for Q1 2024
-        maxLength: 500
+        maxLength: 1000
         minLength: 10
         type: string
       file_path:
@@ -585,7 +587,7 @@ definitions:
       description:
         description: Description of the dataset
         example: Sales data for Q1 2024
-        maxLength: 500
+        maxLength: 1000
         minLength: 10
         type: string
       file_path:
@@ -907,6 +909,40 @@ paths:
             additionalProperties: true
             type: object
       summary: Generate AI-powered column descriptions
+      tags:
+      - ai
+  /v1/api/ai/generate-dataset-description:
+    post:
+      consumes:
+      - application/json
+      description: Generate a comprehensive description for a dataset using AI analysis
+        of column information and sample data
+      parameters:
+      - description: Dataset description request parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ai.genDatasetDescBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset description generated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body or missing required fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to generate dataset description
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Generate AI-powered dataset description
       tags:
       - ai
   /v1/api/chat:

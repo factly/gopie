@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
-import { Database, Download, Loader2 } from "lucide-react";
-import { cn, downloadCsv } from "@/lib/utils";
+import { Database, Download, Loader2, CheckCircleIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Pagination,
   PaginationContent,
@@ -21,17 +21,141 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { useCreateDownload } from "@/lib/mutations/download/create-download";
+import { useDownloadStore } from "@/lib/stores/download-store";
+import { format as formatSQL } from "sql-formatter";
+import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
+import { useToast } from "@/hooks/use-toast";
+
+// Dynamically import Monaco Editor to avoid SSR issues
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
+
+// Helper function to format SQL queries safely
+function formatSqlQuery(sql: string): string {
+  try {
+    return formatSQL(sql, {
+      language: "sql",
+      tabWidth: 2,
+      useTabs: false,
+      keywordCase: "upper",
+      linesBetweenQueries: 2,
+    });
+  } catch (error) {
+    console.error("Failed to format SQL:", error);
+    return sql; // Return original SQL if formatting fails
+  }
+}
 
 export function SqlResults() {
   const { results, currentPage, rowsPerPage, setCurrentPage, setRowsPerPage, onPageChange, isLoading } = useSqlStore();
+  const { resolvedTheme } = useTheme();
+  const { toast } = useToast();
   
-  const handleDownload = () => {
-    if (!results?.data?.length) return;
-    downloadCsv(
-      results.data,
-      `sql_results_${new Date().toISOString().split("T")[0]}.csv`
-    );
+  // Download state
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = React.useState(false);
+  const [downloadFormat, setDownloadFormat] = React.useState<"csv" | "json" | "parquet">("csv");
+  const [downloadSql, setDownloadSql] = React.useState("");
+  const [completedDownloadUrl, setCompletedDownloadUrl] = React.useState<string | null>(null);
+  const { createDownload } = useCreateDownload();
+  const { currentDownloadProgress, setCurrentDownloadProgress } = useDownloadStore();
+  
+  // Extract dataset ID from the query if it exists
+  const extractDatasetId = (query: string): string | null => {
+    // Look for patterns like FROM "dataset_id" or FROM 'dataset_id' or FROM dataset_id
+    // Also handle cases with schema like FROM schema.table or FROM "schema"."table"
+    const patterns = [
+      /FROM\s+["']?([^"'\s,]+)["']?/i,  // Basic pattern
+      /FROM\s+["']?[\w]+["']?\.["']?([^"'\s,]+)["']?/i,  // Schema.table pattern
+    ];
+    
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match) {
+        // Get the last match group (table name in case of schema.table)
+        return match[match.length - 1];
+      }
+    }
+    return null;
   };
+  
+  const handleDownload = async () => {
+    // If we have a completed download URL, just open it
+    if (completedDownloadUrl) {
+      window.open(completedDownloadUrl, "_blank");
+      return;
+    }
+
+    try {
+      // Extract dataset ID from the query
+      const datasetId = extractDatasetId(downloadSql);
+      
+      if (!datasetId) {
+        toast({
+          title: "Error",
+          description: "Could not identify dataset from the SQL query",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const result = await createDownload({
+        dataset_id: datasetId,
+        sql: downloadSql,
+        format: downloadFormat,
+      });
+
+      // Store the completed URL for re-download
+      if (result.url) {
+        setCompletedDownloadUrl(result.url);
+        // Automatically open the download URL in a new tab
+        window.open(result.url, "_blank");
+      }
+
+      toast({
+        title: "Download ready",
+        description: "Your download has been prepared and opened in a new tab.",
+      });
+
+      // Don't close the dialog, just update the state to show completion
+      // User can close manually or download again
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Failed to create download",
+        variant: "destructive",
+      });
+      setCompletedDownloadUrl(null);
+    }
+  };
+  
+  // Reset download progress and URL when dialog closes, format SQL when dialog opens
+  React.useEffect(() => {
+    if (!isDownloadDialogOpen) {
+      setCurrentDownloadProgress(null);
+      setCompletedDownloadUrl(null);
+    } else if (results?.query) {
+      // Format the SQL query when dialog opens
+      setDownloadSql(formatSqlQuery(results.query));
+    }
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress, results?.query]);
 
   const handleRowsPerPageChange = (value: string) => {
     const newRowsPerPage = Number(value);
@@ -99,15 +223,177 @@ export function SqlResults() {
         </div>
         <div className="flex gap-2">
           {results?.data && results.data.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleDownload}
-              title="Download as CSV"
+            <Dialog
+              open={isDownloadDialogOpen}
+              onOpenChange={setIsDownloadDialogOpen}
             >
-              <Download className="h-4 w-4" />
-            </Button>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Download Results"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Download Results</DialogTitle>
+                  <DialogDescription>
+                    Export your query results in your preferred format
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Format
+                    </label>
+                    <Select
+                      value={downloadFormat}
+                      onValueChange={(value) =>
+                        setDownloadFormat(
+                          value as "csv" | "json" | "parquet"
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="csv">
+                          CSV - Comma-separated values
+                        </SelectItem>
+                        <SelectItem value="json">
+                          JSON - JavaScript Object Notation
+                        </SelectItem>
+                        <SelectItem value="parquet">
+                          Parquet - Columnar storage format
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">
+                        SQL Query
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const formatted = formatSqlQuery(downloadSql);
+                          setDownloadSql(formatted);
+                        }}
+                        className="h-7 text-xs"
+                      >
+                        Format SQL
+                      </Button>
+                    </div>
+                    <div className="border rounded-md overflow-hidden">
+                      <Editor
+                        height="150px"
+                        defaultLanguage="sql"
+                        value={downloadSql}
+                        onChange={(value) => setDownloadSql(value || "")}
+                        theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: "on",
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          wordWrap: "on",
+                          wrappingIndent: "indent",
+                          formatOnPaste: true,
+                          formatOnType: true,
+                          scrollbar: {
+                            vertical: "auto",
+                            horizontal: "auto",
+                          },
+                          padding: {
+                            top: 8,
+                            bottom: 8,
+                          },
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Customize the SQL query to filter or transform
+                      your data before download
+                    </p>
+                  </div>
+                  {currentDownloadProgress && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {currentDownloadProgress.message}
+                        </span>
+                        <span className="font-medium">
+                          {currentDownloadProgress.progress}%
+                        </span>
+                      </div>
+                      <Progress
+                        value={currentDownloadProgress.progress}
+                      />
+                    </div>
+                  )}
+                  {completedDownloadUrl &&
+                    !currentDownloadProgress && (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircleIcon className="h-4 w-4" />
+                          <span>
+                            Download completed successfully! The file
+                            has been opened in a new tab.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsDownloadDialogOpen(false);
+                      setCompletedDownloadUrl(null);
+                    }}
+                    disabled={
+                      currentDownloadProgress?.status === "processing"
+                    }
+                  >
+                    {completedDownloadUrl ? "Close" : "Cancel"}
+                  </Button>
+                  <Button
+                    onClick={handleDownload}
+                    disabled={
+                      !downloadSql ||
+                      currentDownloadProgress?.status === "processing"
+                    }
+                  >
+                    {currentDownloadProgress?.status ===
+                    "processing" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : completedDownloadUrl ? (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download File
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
