@@ -23,6 +23,8 @@ export default function ProjectPage({
   const { projectId } = React.use(params);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isMounted, setIsMounted] = React.useState(false);
+  
   const {
     data: project,
     isLoading,
@@ -38,6 +40,10 @@ export default function ProjectPage({
       projectId,
     },
   });
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleDeleteDataset = async (datasetId: string) => {
     try {
@@ -59,32 +65,31 @@ export default function ProjectPage({
     }
   };
 
+  // Return null during SSR and initial client render to avoid hydration mismatch
+  if (!isMounted) {
+    return null;
+  }
+
   if (isLoading) {
     return (
-      <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Project header */}
+      <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-4">
-          <Skeleton className="h-[44px] w-[300px]" /> {/* Title */}
-          <Skeleton className="h-[28px] w-full max-w-[800px]" />{" "}
-          {/* Description */}
+          <Skeleton className="h-[44px] w-[300px]" />
+          <Skeleton className="h-[28px] w-full max-w-[800px]" />
         </div>
-
-        {/* Datasets section */}
         <div className="pt-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <Skeleton className="h-[32px] w-[100px]" /> {/* Datasets text */}
-              <Skeleton className="h-[22px] w-[30px]" />{" "}
-              {/* Count badge */}
+              <Skeleton className="h-[32px] w-[100px]" />
+              <Skeleton className="h-[22px] w-[30px]" />
             </div>
-            <Skeleton className="h-9 w-[135px]" /> {/* Upload button */}
+            <Skeleton className="h-9 w-[135px]" />
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="space-y-3">
-                <Skeleton className="h-[28px] w-3/4" /> {/* Dataset name */}
-                <Skeleton className="h-[20px] w-1/2" /> {/* Dataset info */}
+                <Skeleton className="h-[28px] w-3/4" />
+                <Skeleton className="h-[20px] w-1/2" />
               </div>
             ))}
           </div>
@@ -95,7 +100,7 @@ export default function ProjectPage({
 
   if (error) {
     return (
-      <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8">
         <div className="border border-destructive/50 bg-destructive/5 p-4">
           <h2 className="text-lg font-semibold text-destructive">Error</h2>
           <p className="text-sm text-destructive/80">{error.message}</p>
