@@ -1,3 +1,4 @@
+basePath: /
 definitions:
   ai.genColumnsDescBody:
     type: object
@@ -609,8 +610,12 @@ definitions:
     - file_path
     - project_id
     type: object
+host: localhost:8000
 info:
   contact: {}
+  description: GoPie API documentation
+  title: GoPie API
+  version: "1.1"
 paths:
   /api/chats/{chat_id}/visibility:
     put:
@@ -1260,6 +1265,37 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
       summary: Update dataset column descriptions
+      tags:
+      - datasets
+  /v1/api/datasets/{datasetID}/project:
+    get:
+      consumes:
+      - application/json
+      description: Get the project ID for a specific dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No project found for dataset
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get project for dataset
       tags:
       - datasets
   /v1/api/downloads:

@@ -1,8 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "GoPie API documentation",
+        "title": "GoPie API",
+        "contact": {},
+        "version": "1.1"
     },
+    "host": "localhost:8000",
+    "basePath": "/",
     "paths": {
         "/api/chats/{chat_id}/visibility": {
             "put": {
@@ -992,6 +997,53 @@
                     },
                     "404": {
                         "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/datasets/{datasetID}/project": {
+            "get": {
+                "description": "Get the project ID for a specific dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Get project for dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No project found for dataset",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }

@@ -41,6 +41,7 @@ type DatasetStoreRepository interface {
 	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
 	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
 	ListALlDatasetsFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error)
+	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
 }
 
 type ChatStoreRepository interface {
