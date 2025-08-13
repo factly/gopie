@@ -406,6 +406,8 @@ export default function SqlPage({
                 columns={columns}
                 onPageChange={handlePageChange}
                 loading={isExecuting}
+                sqlQuery={currentQuery}
+                datasetId={dataset?.name}
               />
             ) : (
               <div className="p-4 text-center text-muted-foreground">
