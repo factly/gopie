@@ -143,13 +143,9 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int)
 		return nil, domain.ErrMultipleSqlStatements
 	}
 
-	isSelect, err := pkg.IsSelectStatement(sql)
-	if err != nil {
-		d.logger.Error("Invalid query", zap.Error(err))
-		return nil, fmt.Errorf("failed to validate query type: %w", err)
-	}
-	if !isSelect && !strings.HasPrefix(strings.ToLower(sql), "with") {
-		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
+	// Check if the query is a read-only operation
+	if !pkg.IsReadOnlyQuery(sql) {
+		d.logger.Error("Only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE)", zap.String("query", sql))
 		return nil, domain.ErrNotSelectStatement
 	}
 
