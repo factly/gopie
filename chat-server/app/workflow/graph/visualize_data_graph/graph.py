@@ -32,6 +32,8 @@ workflow.add_node("agent", call_model)
 workflow.add_node("tools", ToolNode(tool_names))
 workflow.add_node("process_result", process_visualization_result)
 workflow.add_node("cleanup", cleanup_resources)
+workflow.add_node(should_continue, 
+                destinations=("tools", "process_result", "agent"))
 workflow.add_node("respond", respond)
 
 workflow.set_entry_point("pre_process_data")
@@ -45,14 +47,7 @@ workflow.add_conditional_edges(
     },
 )
 
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "continue": "tools",
-        "process_result": "process_result",
-    },
-)
+workflow.add_edge("agent", "should_continue")
 
 workflow.add_edge("pre_process_data", "pre_model_hook")
 workflow.add_edge("tools", "pre_model_hook")

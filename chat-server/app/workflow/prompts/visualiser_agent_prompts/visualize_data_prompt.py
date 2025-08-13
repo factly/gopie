@@ -20,7 +20,7 @@ Do not create the data, read the data from the csv_path where the data is stored
 Use the run_python_code tool to run python code.
 The datasets are already saved in the python sandbox with the specified file names.
 
-IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the visualization):
+IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the visualizations):
 - Add clear, descriptive titles to all visualizations
 - Include meaningful axis labels with appropriate units
 - Use color schemes that are colorblind-friendly and have sufficient contrast
@@ -30,23 +30,22 @@ IMPORTANT VISUALIZATION DIRECTIVES (Think about all of these before creating the
 - Add annotations for important data points or patterns
 - Ensure text is readable (appropriate font size and contrast)
 - Use consistent formatting across multiple visualizations
-- Display data values directly on the visualization if the data is appropriate for it.
+- Display data values directly on the visualizations if the data is appropriate for it.
 - Make sure the labels do not overlap each other
 
-Follow the steps below to create a visualization:
+Follow the steps below to create the visualizations:
 
 REMEMBER TO FOLLOW ALL THESE STEPS
-1. Decide if you have enough information to create a visualization, otherwise explore the datasets to get more information.
+1. Decide if you have enough information to create the visualizations, otherwise explore the datasets to get more information.
 2. Find the best way to visualize the data if the user has not specified any visualization type.
 3. Use altair to create visualizations, and save them to json and png.
 4. Use the run_python_code tool to run python code.
 5. Get feedback for the generated image using the get_feedback_for_image tool.
-6. Incorporate the feedback and edit the visualization.
-7. When the overall rating >= 8, use the ResultPaths tool to return the paths to the json files that contain the visualizations.
+6. Incorporate the feedback and edit the visualizations.
+7. Use the ResultPaths tool to return the paths to the json files that contain the visualizations.
 
-If you have already gotten feedback thrice, you may use the ResultPaths tool to return the paths to the json.
-
-First start by reasoning about the type of visualization, and all the details about the visualization based on the user query and the datasets.
+Use the ResultPaths tool to return the paths to the json.
+First start by thinking clearly about the type of visualizations, and all the details about the visualizations based on the user query and the datasets.
 """
 
     human_template_str = """This is the user query: {user_query}

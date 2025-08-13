@@ -11,16 +11,19 @@ graph TD;
 	tools(tools)
 	process_result(process_result)
 	cleanup(cleanup)
+	should_continue(should_continue)
 	respond(respond)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> pre_process_data;
-	agent -.-> process_result;
-	agent -. &nbsp;continue&nbsp; .-> tools;
+	agent --> should_continue;
 	cleanup --> respond;
 	pre_model_hook -.-> agent;
 	pre_model_hook -.-> cleanup;
 	pre_process_data --> pre_model_hook;
 	process_result --> cleanup;
+	should_continue -.-> agent;
+	should_continue -.-> process_result;
+	should_continue -.-> tools;
 	tools --> pre_model_hook;
 	respond --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
