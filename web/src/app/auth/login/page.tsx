@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,9 +107,34 @@ function LoginPageInner() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/GoPie_Logo.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="dark:hidden"
+              priority
+            />
+            <Image
+              src="/GoPie_Logo_Dark.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="hidden dark:block"
+              priority
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">Log in to your account</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            <div>
+              <Link
+                href="/auth/register"
+                className="text-primary hover:underline"
+              >
+                Don&apos;t have an account? Sign up
+              </Link>
+            </div>
           </CardDescription>
         </CardHeader>
 
@@ -204,14 +230,6 @@ function LoginPageInner() {
 
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-sm text-center space-y-2">
-            <div>
-              <Link
-                href="/auth/register"
-                className="text-primary hover:underline"
-              >
-                Don&apos;t have an account? Sign up
-              </Link>
-            </div>
             <div>
               <Link
                 href="/auth/forgot-password"
