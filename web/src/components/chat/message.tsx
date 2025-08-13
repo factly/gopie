@@ -550,6 +550,8 @@ export function ChatMessage({
 
   const handleRunQuery = useCallback(
     async (query: string, page: number = 1, limit: number = 20) => {
+      // Clear previous results when starting new query execution
+      setResults(null);
       setIsExecuting(true);
       setIsLoading(true);
       const offset = (page - 1) * limit;

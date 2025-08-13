@@ -90,6 +90,12 @@ export default function SqlPage({
     async (queryToExecute: string, page: number = 1, limit: number = 10) => {
       const offset = (page - 1) * limit;
 
+      // Clear previous results when starting new query execution
+      setResults(null);
+      setTotalCount(0);
+      setColumns(undefined);
+      setExecutionTime(undefined);
+      
       setIsExecuting(true);
       try {
         const response = await executeSql.mutateAsync({
@@ -396,9 +402,9 @@ export default function SqlPage({
           <div className="border-b bg-muted/50 p-3 ml-4 border">
             <div className="flex items-center justify-between">
               <h3 className="font-medium">Results</h3>
-              {executionTime !== undefined && (
+              {!isExecuting && executionTime !== undefined && (
                 <span className="text-sm text-muted-foreground">
-                  Query Execution Time: {executionTime}ms
+                  Query took {executionTime}ms
                 </span>
               )}
             </div>
@@ -406,7 +412,12 @@ export default function SqlPage({
 
           {/* Results Content */}
           <div className="mt-4 ml-4 flex-1 min-h-0 overflow-auto">
-            {results ? (
+            {isExecuting ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin opacity-50" />
+                <p className="text-sm">Executing query...</p>
+              </div>
+            ) : results ? (
               <ResultsTable
                 results={results}
                 total={totalCount}
