@@ -17,7 +17,7 @@ type updateRequestBody struct {
 	// S3 path of the new file (optional)
 	FilePath string `json:"file_path,omitempty" validate:"omitempty,min=1" example:"my-bucket/data/updated_sales.csv"`
 	// Updated description of the dataset (optional)
-	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Updated sales data for Q1 2024"`
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=1000" example:"Updated sales data for Q1 2024"`
 	// Name of the dataset to update
 	Dataset string `json:"dataset" validate:"required" example:"sales_data_table"`
 	// User ID of the updater

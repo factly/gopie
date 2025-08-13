@@ -3,6 +3,7 @@ package portkey
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/factly/gopie/domain"
@@ -190,4 +191,45 @@ func (c *PortkeyClient) GenerateColumnDescriptions(ctx context.Context, rows str
 	}
 
 	return descriptions, nil
+}
+
+func (c *PortkeyClient) GenerateDatasetDescription(ctx context.Context, datasetName string, columnNames []string, columnDescriptions map[string]string, rows string, summary string) (string, error) {
+	// Prepare column info for the prompt
+	columnInfo := "Column Information:\n"
+	for _, colName := range columnNames {
+		if desc, exists := columnDescriptions[colName]; exists {
+			columnInfo += fmt.Sprintf("- %s: %s\n", colName, desc)
+		} else {
+			columnInfo += fmt.Sprintf("- %s\n", colName)
+		}
+	}
+
+	systemPrompt := fmt.Sprintf(`
+	!! IMPORTANT: Generate a comprehensive dataset description (target 600-900 characters, maximum 950 characters) that explains what this dataset contains and its potential use cases. !!
+	
+	Dataset Name: %s
+	
+	%s
+	
+	Sample Data (first few rows): %s
+	
+	Dataset Statistics: %s
+	
+	Based on the above information, generate a detailed and informative description for this dataset that:
+	1. Explains what type of data it contains and its structure
+	2. Mentions key columns and their purpose in detail
+	3. Suggests multiple potential analytical use cases
+	4. Describes the data's relevance and possible insights that can be derived
+	
+	IMPORTANT: Aim for 600-900 characters to provide comprehensive information while staying under the 950 character maximum limit.
+	Provide ONLY the description text, no additional formatting or explanations.
+	`, datasetName, columnInfo, rows, summary)
+
+	resp, err := c.GenerateResponse(systemPrompt)
+	if err != nil {
+		c.logger.Error("failed to generate dataset description", zap.Error(err))
+		return "", err
+	}
+
+	return resp, nil
 }

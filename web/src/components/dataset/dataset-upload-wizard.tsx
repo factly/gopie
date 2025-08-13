@@ -37,6 +37,7 @@ import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
 import { useRouter } from "next/navigation";
 import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useGenerateColumnDescriptions } from "@/lib/mutations/ai/generate-column-descriptions";
+import { useGenerateDatasetDescription } from "@/lib/mutations/ai/generate-dataset-description";
 import { useQueryClient } from "@tanstack/react-query";
 import { useColumnNameStore } from "@/lib/stores/columnNameStore";
 import { useColumnDescriptionStore } from "@/lib/stores/columnDescriptionStore";
@@ -44,6 +45,7 @@ import { ValidationResult } from "@/lib/validation/validate-file";
 import { useUploadStore } from "@/lib/stores/uploadStore";
 import { useDuckDb } from "@/hooks/useDuckDb";
 import { CenteredLoading } from "@/components/ui/loading";
+import { sanitizeDatasetRows } from "@/lib/utils/serialization";
 
 const WIZARD_STEPS: Step[] = [
   {
@@ -81,6 +83,9 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   const [descriptionsGenerated, setDescriptionsGenerated] = 
     useState<boolean>(false);
   const [descriptionsError, setDescriptionsError] = useState<string | null>(null);
+  const [isGeneratingDatasetDesc, setIsGeneratingDatasetDesc] = useState<boolean>(false);
+  const [datasetDescGenerated, setDatasetDescGenerated] = useState<boolean>(false);
+  const [datasetDescError, setDatasetDescError] = useState<string | null>(null);
   const [createdDataset, setCreatedDataset] = useState<{
     id: string;
     alias: string;
@@ -152,6 +157,8 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   );
   const { mutateAsync: generateColumnDescriptions } =
     useGenerateColumnDescriptions();
+  const { mutateAsync: generateDatasetDescription } =
+    useGenerateDatasetDescription();
   const setColumnMappings = useColumnNameStore(
     (state) => state.setColumnMappings
   );
@@ -452,6 +459,9 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       setDescriptionsGenerated(false);
       setDescriptionsError(null);
       setIsGeneratingDescriptions(false);
+      setDatasetDescGenerated(false);
+      setDatasetDescError(null);
+      setIsGeneratingDatasetDesc(false);
 
       // Dataset created successfully - stay in Step 4 but show success message
     } catch (error) {
@@ -479,6 +489,9 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     setDescriptionsGenerated(false);
     setDescriptionsError(null);
     setIsGeneratingDescriptions(false);
+    setDatasetDescGenerated(false);
+    setDatasetDescError(null);
+    setIsGeneratingDatasetDesc(false);
     router.push(`/projects/${projectId}/datasets/${datasetId}`);
   };
 
@@ -541,6 +554,9 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     setDescriptionsGenerated(false);
     setDescriptionsError(null);
     setIsGeneratingDescriptions(false);
+    setDatasetDescGenerated(false);
+    setDatasetDescError(null);
+    setIsGeneratingDatasetDesc(false);
 
     // Reset to step 1
     setCurrentStep(1);
@@ -589,6 +605,82 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       setDatasetName(cleanedName);
     }
   }, [currentStep, originalFileName, datasetName, setDatasetName]);
+
+  // Auto-generate dataset description when reaching step 4
+  React.useEffect(() => {
+    // Add a small delay to ensure column descriptions are ready
+    const timer = setTimeout(async () => {
+      if (
+        currentStep === 4 &&
+        !datasetDescription.trim() && // Check for empty or whitespace-only strings
+        !isGeneratingDatasetDesc &&
+        !datasetDescGenerated &&
+        datasetName &&
+        validationResult?.columnNames &&
+        validationResult?.previewData
+      ) {
+        try {
+          console.log("Auto-generating dataset description for:", datasetName);
+          console.log("Column names:", validationResult.columnNames);
+          console.log("Preview data rows:", validationResult.previewData?.length);
+          console.log("Preview data sample:", validationResult.previewData?.[0]);
+          console.log("Preview data type:", typeof validationResult.previewData?.[0]);
+          
+          setIsGeneratingDatasetDesc(true);
+          setDatasetDescError(null);
+
+          const columnDescriptions = getColumnDescriptions();
+          console.log("Column descriptions available:", Object.keys(columnDescriptions).length);
+          
+          // Sanitize preview data for serialization
+          const sanitizedRows = sanitizeDatasetRows(validationResult.previewData);
+          
+          const result = await generateDatasetDescription({
+            datasetName,
+            columnNames: validationResult.columnNames,
+            columnDescriptions,
+            rows: sanitizedRows,
+            summary: {
+              rowCount: validationResult.previewRowCount || 0,
+              columnCount: validationResult.columnNames.length,
+            },
+          });
+
+          if (result.description) {
+            // Truncate description to 1000 characters if it exceeds the backend limit
+            const maxLength = 1000;
+            const truncatedDescription = result.description.length > maxLength 
+              ? result.description.substring(0, maxLength - 3) + '...'
+              : result.description;
+            setDatasetDescription(truncatedDescription);
+            setDatasetDescGenerated(true);
+            console.log("Dataset description generated successfully:", truncatedDescription);
+          }
+        } catch (error) {
+          console.error("Failed to generate dataset description:", error);
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to generate dataset description";
+          setDatasetDescError(errorMessage);
+        } finally {
+          setIsGeneratingDatasetDesc(false);
+        }
+      }
+    }, 500); // 500ms delay to ensure everything is ready
+
+    return () => clearTimeout(timer);
+  }, [
+    currentStep,
+    datasetName,
+    datasetDescription,
+    isGeneratingDatasetDesc,
+    datasetDescGenerated,
+    validationResult,
+    generateDatasetDescription,
+    getColumnDescriptions,
+    setDatasetDescription,
+  ]);
 
   // Auto-generate descriptions when validation succeeds
   React.useEffect(() => {
@@ -1111,14 +1203,89 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dataset-description">Description *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="dataset-description">Description *</Label>
+                    <div className="flex items-center gap-2">
+                      {isGeneratingDatasetDesc && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Generating description...
+                        </span>
+                      )}
+                      {datasetDescGenerated && !isGeneratingDatasetDesc && (
+                        <span className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Auto-generated
+                        </span>
+                      )}
+                      {!isGeneratingDatasetDesc && !datasetDescGenerated && datasetName && validationResult?.columnNames && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            if (!datasetName || !validationResult?.columnNames || !validationResult?.previewData) {
+                              return;
+                            }
+                            try {
+                              console.log("Manual trigger: Generating dataset description for:", datasetName);
+                              setIsGeneratingDatasetDesc(true);
+                              setDatasetDescError(null);
+                              const columnDescriptions = getColumnDescriptions();
+                              
+                              // Sanitize preview data for serialization
+                              const sanitizedRows = sanitizeDatasetRows(validationResult.previewData);
+                              
+                              const result = await generateDatasetDescription({
+                                datasetName,
+                                columnNames: validationResult.columnNames,
+                                columnDescriptions,
+                                rows: sanitizedRows,
+                                summary: {
+                                  rowCount: validationResult.previewRowCount || 0,
+                                  columnCount: validationResult.columnNames.length,
+                                },
+                              });
+                              if (result.description) {
+                                // Truncate description to 1000 characters if it exceeds the backend limit
+                                const maxLength = 1000;
+                                const truncatedDescription = result.description.length > maxLength 
+                                  ? result.description.substring(0, maxLength - 3) + '...'
+                                  : result.description;
+                                setDatasetDescription(truncatedDescription);
+                                setDatasetDescGenerated(true);
+                                console.log("Dataset description generated successfully via manual trigger");
+                              }
+                            } catch (error) {
+                              console.error("Failed to generate dataset description via manual trigger:", error);
+                              const errorMessage = error instanceof Error ? error.message : "Failed to generate";
+                              setDatasetDescError(errorMessage);
+                            } finally {
+                              setIsGeneratingDatasetDesc(false);
+                            }
+                          }}
+                          className="h-6 text-xs"
+                        >
+                          {datasetDescError ? "Retry Generation" : "Regenerate Description"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   <Textarea
                     id="dataset-description"
                     placeholder="Enter dataset description"
                     value={datasetDescription}
-                    onChange={(e) => setDatasetDescription(e.target.value)}
+                    onChange={(e) => {
+                      // Enforce 1000 character limit
+                      const newValue = e.target.value.slice(0, 1000);
+                      setDatasetDescription(newValue);
+                      // Remove auto-generated flag when user manually edits
+                      if (datasetDescGenerated) {
+                        setDatasetDescGenerated(false);
+                      }
+                    }}
                     onBlur={() => setDatasetDescriptionTouched(true)}
                     rows={3}
+                    maxLength={1000}
                     className={
                       datasetDescriptionTouched &&
                       datasetDescription.length < 10
@@ -1132,6 +1299,21 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                         Description must be at least 10 characters
                       </p>
                     )}
+                  {datasetDescGenerated && (
+                    <p className="text-xs text-muted-foreground">
+                      This description was auto-generated based on your dataset content. You can edit it if needed.
+                    </p>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">
+                      {datasetDescription.length}/1000 characters
+                    </p>
+                    {datasetDescription.length > 1000 && (
+                      <p className="text-xs text-red-600">
+                        Description exceeds maximum length
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
