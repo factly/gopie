@@ -27,6 +27,11 @@ class PlanQueryOutput(BaseModel):
     response_for_no_sql: str = Field(
         description="Clear explanation when SQL queries cannot be generated", default=""
     )
+    user_friendly_response: str = Field(
+        description="A short user friendly (no technical jargon or error messages revealed in this field) "
+        "message not more than 200 characters telling why there was no SQL query generated otherwise this field should be empty",
+        default="",
+    )
     limitations: str = Field(
         description="Any constraints or assumptions in the analysis", default=""
     )
@@ -98,6 +103,13 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
         if response_for_no_sql:
             query_result.subqueries[query_index].no_sql_response = response_for_no_sql
+
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": response.user_friendly_response or "No SQL query generated",
+                },
+            )
 
             query_result.set_node_message(
                 "plan_query",

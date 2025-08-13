@@ -1,4 +1,3 @@
-from typing import Type
 from unittest.mock import Mock, patch
 
 import pytest
@@ -7,12 +6,12 @@ from pydantic import BaseModel, Field
 from app.tool_utils.tools import ToolNames
 from app.utils.model_registry.model_provider import (
     ModelProvider,
-    get_chat_history,
     get_configured_llm_for_node,
     get_embedding_provider,
     get_llm_provider,
     get_model_provider,
 )
+from app.utils.model_registry.model_selection import get_chat_history
 
 
 class TestLLMProvider:

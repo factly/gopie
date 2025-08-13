@@ -1,13 +1,15 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
+from app.workflow.events.event_utils import stream_dynamic_message
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
-async def execute_query(state: State) -> dict:
+async def execute_query(state: State, config: RunnableConfig) -> dict:
     """
     Executes all planned SQL queries for the current subquery in the workflow state and updates the state with results or error messages.
 
@@ -31,6 +33,11 @@ async def execute_query(state: State) -> dict:
 
         sql_results: list[SqlQueryInfo] = []
 
+        await stream_dynamic_message(
+            "create a short message about saying that we are executing the planned SQL queries",
+            config,
+        )
+
         for query_info in sql_queries:
             try:
                 full_result_data = await execute_sql(query=query_info.sql_query)
@@ -45,6 +52,7 @@ async def execute_query(state: State) -> dict:
                         error=None,
                     )
                 )
+
                 await adispatch_custom_event(
                     "gopie-agent",
                     {

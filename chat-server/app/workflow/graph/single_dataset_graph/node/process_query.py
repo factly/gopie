@@ -22,7 +22,10 @@ from app.services.gopie.sql_executor import (
 from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
-from app.workflow.events.event_utils import configure_node
+from app.workflow.events.event_utils import (
+    configure_node,
+    stream_dynamic_message,
+)
 from app.workflow.graph.single_dataset_graph.types import State
 
 
@@ -35,6 +38,11 @@ class ProcessQueryOutput(BaseModel):
     )
     response_for_non_sql: str = Field(
         description="Brief explanation for non-sql response", default=""
+    )
+    user_friendly_response: str = Field(
+        description="A short user friendly (no technical jargon or error messages revealed in this field) "
+        "message not more than 200 characters telling why there was no SQL query generated otherwise this field should be empty",
+        default="",
     )
 
 
@@ -164,6 +172,11 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
+            await stream_dynamic_message(
+                "create a short message about saying that we are executing the planned SQL queries",
+                config,
+            )
+
             sql_results: list[SqlQueryInfo] = []
             for q, exp in zip(sql_queries, explanations):
                 try:
@@ -179,6 +192,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             error=None,
                         )
                     )
+
                     await adispatch_custom_event(
                         "gopie-agent",
                         {
@@ -208,6 +222,13 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         else:
             query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
+
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": response.user_friendly_response or "No SQL query generated",
+                },
+            )
 
             return {
                 "messages": [AIMessage(content=json.dumps(query_result.to_dict(), indent=2))],

@@ -150,7 +150,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "query_result": query_result,
             "datasets_info": datasets_info,
             "identified_datasets": selected_datasets,
-            "messages": [IntermediateStep(content=f"Selected datasets: {selected_datasets}")],
+            "messages": [IntermediateStep(content=node_message)],
         }
 
     except Exception as e:

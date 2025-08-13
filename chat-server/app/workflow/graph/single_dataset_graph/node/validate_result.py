@@ -1,5 +1,6 @@
 from typing import Literal
 
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,9 @@ class ValidateResultOutput(BaseModel):
     )
     response: str = Field(
         description="A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
+    )
+    status_update_response: str = Field(
+        description="A short status update message to the user, no more than 50 characters"
     )
 
 
@@ -53,12 +57,20 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
 
         recommendation = parsed_response.recommendation
         response = parsed_response.response
+        status_update_response = parsed_response.status_update_response
 
         if recommendation not in RECOMMENDATION_LIST:
             raise ValueError(f"Invalid recommendation: {recommendation}")
 
         if recommendation == "rerun_query":
             retry_count += 1
+
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": status_update_response,
+            },
+        )
 
         return {
             "retry_count": retry_count,
