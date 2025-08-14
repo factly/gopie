@@ -571,6 +571,7 @@ function ChatPageClient() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   const previousMessageCountRef = useRef(0);
+  const streamingSessionBaselineRef = useRef(0);
   const {
     isOpen: sqlIsOpen,
     setIsOpen,
@@ -709,18 +710,24 @@ function ChatPageClient() {
         setShowLoadingMessage(false);
       }
 
-      // Delay invalidation to prevent loader during the transition
+      // Only invalidate if necessary - avoid full reload
       setTimeout(() => {
         // If this was a new chat (no selectedChatId), invalidate chats list
         if (!selectedChatId) {
           queryClient.invalidateQueries({ queryKey: ["chats"] });
         }
 
-        // Switch back to query messages and invalidate to get the complete conversation
-        setUseStreamingMessages(false);
+        // Don't switch back from streaming messages immediately
+        // This prevents the jarring reload effect
+        // Only invalidate the query to update the cache in the background
         queryClient.invalidateQueries({
           queryKey: ["chat-messages", { chatId: selectedChatId }],
         });
+        
+        // Delay switching back to query messages to avoid visible reload
+        setTimeout(() => {
+          setUseStreamingMessages(false);
+        }, 500);
       }, 100); // Small delay to ensure smooth transition
     },
     onError: (err) => {
@@ -742,7 +749,12 @@ function ChatPageClient() {
       // When streaming, show streaming messages (which includes the user message immediately)
       // If we have a selectedChatId, prepend existing messages
       if (selectedChatId && allChatMessages.length > 0) {
-        messages = [...allChatMessages, ...streamingMessages];
+        // For follow-up messages in existing chats, we need to avoid duplicates
+        // Only take the new messages from this streaming session
+        const newStreamingMessages = streamingMessages.slice(streamingSessionBaselineRef.current);
+        
+        // Combine existing messages with only the new streaming messages
+        messages = [...allChatMessages, ...newStreamingMessages];
       } else {
         // For new chats, just show streaming messages
         messages = streamingMessages;
@@ -1037,8 +1049,11 @@ function ChatPageClient() {
         return;
       }
 
-      // For new chats, immediately switch to streaming messages to show the user message
-      if (!selectedChatId && input.trim()) {
+      // Always switch to streaming messages immediately to show the user message
+      // This ensures follow-up messages are shown right away
+      if (input.trim()) {
+        // Track the baseline count of streaming messages when starting a new message
+        streamingSessionBaselineRef.current = streamingMessages.length;
         setUseStreamingMessages(true);
       }
 
@@ -1052,7 +1067,7 @@ function ChatPageClient() {
 
       sdkHandleSubmit(e as unknown as React.FormEvent);
     },
-    [sdkHandleSubmit, selectedContexts, selectedChatId, input]
+    [sdkHandleSubmit, selectedContexts, input, streamingMessages.length]
   );
 
   // Note: Projects are now fetched when needed for context selection
@@ -1131,6 +1146,8 @@ function ChatPageClient() {
     setShowScrollButton(false);
     // Reset message count for auto-scroll
     previousMessageCountRef.current = 0;
+    // Reset streaming session baseline
+    streamingSessionBaselineRef.current = 0;
     // Reset context loading flag so it can load context for the new chat
     setHasLoadedContextFromMessages(false);
   }, [selectedChatId]);
@@ -1372,13 +1389,22 @@ function ChatPageClient() {
           (isNewMessage && !userHasScrolled); // New message arrived and user hasn't scrolled
 
         if (shouldAutoScroll) {
-          // Use setTimeout to ensure DOM is updated
-          setTimeout(() => {
+          // Use requestAnimationFrame for smoother scrolling
+          requestAnimationFrame(() => {
             if (viewport && viewport.scrollHeight > 0) {
-              viewport.scrollTo({
-                top: viewport.scrollHeight,
-                behavior: isInitialLoad ? "auto" : "smooth",
-              });
+              // Calculate if we need to scroll
+              const currentScrollTop = viewport.scrollTop;
+              const targetScrollTop = viewport.scrollHeight - viewport.clientHeight;
+              
+              // Only scroll if we're not already at the bottom
+              if (Math.abs(targetScrollTop - currentScrollTop) > 5) {
+                viewport.scrollTo({
+                  top: targetScrollTop,
+                  // Use instant scroll for initial load, smooth for other cases
+                  behavior: isInitialLoad ? "instant" : "smooth",
+                });
+              }
+              
               // Update scroll button visibility after scroll
               const isNearBottom =
                 viewport.scrollHeight -
@@ -1387,7 +1413,7 @@ function ChatPageClient() {
                 100;
               setShowScrollButton(!isNearBottom);
             }
-          }, 100);
+          });
         }
 
         // Update the message count after processing
