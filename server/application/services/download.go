@@ -9,15 +9,44 @@ import (
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/download"
 )
+
+type DownloadsService interface {
+	CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error)
+	List(userID, orgID string, limit, offset int32) ([]*models.Download, error)
+	Get(downloadID, userID, orgID string) (*models.Download, error)
+	Delete(downloadID, userID, orgID string) error
+}
 
 type DownloadServerService struct {
 	repo   repositories.DownloadServerRepository
 	logger *logger.Logger
 }
 
-func NewDownloadServerService(repo repositories.DownloadServerRepository, logger *logger.Logger) *DownloadServerService {
+type DownloadsServiceParams struct {
+	Cfg    config.DownloadsServerConfig
+	Store  repositories.DownloadsRepository
+	S3     repositories.S3SourceRepository
+	Olap   repositories.OlapRepository
+	Logger *logger.Logger
+}
+
+func NewDownloadsService(params DownloadsServiceParams) (DownloadsService, error) {
+	if params.Cfg.Enable {
+		repo := download.NewDownloadServerRepository(&params.Cfg)
+		return newDownloadServerService(repo, params.Logger), nil
+	}
+	err := params.S3.Connect(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to s3: %w", err)
+	}
+	return newDownloadService(params.Store, params.S3, params.Olap), nil
+}
+
+func newDownloadServerService(repo repositories.DownloadServerRepository, logger *logger.Logger) DownloadsService {
 	return &DownloadServerService{
 		repo:   repo,
 		logger: logger,
@@ -28,7 +57,7 @@ func (s *DownloadServerService) CreateAndStream(req *models.CreateDownloadReques
 	return s.repo.CreateAndStream(req)
 }
 
-func (s *DownloadServerService) List(userID, orgID string, limit, offset int) ([]models.Download, error) {
+func (s *DownloadServerService) List(userID, orgID string, limit, offset int32) ([]*models.Download, error) {
 	return s.repo.List(userID, orgID, limit, offset)
 }
 
@@ -40,14 +69,14 @@ func (s *DownloadServerService) Delete(downloadID, userID, orgID string) error {
 	return s.repo.Delete(downloadID, userID, orgID)
 }
 
-type DowloadService struct {
+type downloadService struct {
 	store repositories.DownloadsRepository
 	s3    repositories.S3SourceRepository
 	olap  repositories.OlapRepository
 }
 
-func NewDownloadService(store repositories.DownloadsRepository, s3 repositories.S3SourceRepository, olap repositories.OlapRepository) *DowloadService {
-	return &DowloadService{
+func newDownloadService(store repositories.DownloadsRepository, s3 repositories.S3SourceRepository, olap repositories.OlapRepository) DownloadsService {
+	return &downloadService{
 		store: store,
 		s3:    s3,
 		olap:  olap,
@@ -56,11 +85,11 @@ func NewDownloadService(store repositories.DownloadsRepository, s3 repositories.
 
 type SSEEvent struct {
 	DownloadID string `json:"download_id"`
-	Type       string `json:"type"`    // e.g., "status_update", "complete"
-	Message    string `json:"message"` // e.g., "Processing query...", "https://s3..."
+	Type       string `json:"type"`
+	Message    string `json:"message"`
 }
 
-func (s *DowloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
+func (s *downloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
 	ctx := context.Background()
 
 	downloadJob, err := s.store.CreateDownload(ctx, req)
@@ -144,4 +173,16 @@ func (s *DowloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-c
 	}()
 
 	return sseChan, nil
+}
+
+func (s *downloadService) List(userID, orgID string, limit, offset int32) ([]*models.Download, error) {
+	return s.store.ListDownloadsByUser(context.Background(), userID, orgID, limit, offset)
+}
+
+func (s *downloadService) Get(downloadID, userID, orgID string) (*models.Download, error) {
+	return s.store.GetDownload(context.Background(), downloadID, orgID)
+}
+
+func (s *downloadService) Delete(downloadID, userID, orgID string) error {
+	return s.store.DeleteDownload(context.Background(), downloadID, orgID)
 }
