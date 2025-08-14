@@ -404,7 +404,7 @@ export default function SqlPage({
               <h3 className="font-medium">Results</h3>
               {!isExecuting && executionTime !== undefined && (
                 <span className="text-sm text-muted-foreground">
-                  Query took {executionTime}ms
+                  Query Execution Time: {executionTime}ms
                 </span>
               )}
             </div>

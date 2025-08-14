@@ -188,9 +188,6 @@ export function SqlResults() {
             <span className="text-xs text-destructive">Error</span>
           ) : (
             <>
-              <span className="text-xs text-muted-foreground">
-                {results?.total || 0} total rows
-              </span>
               {results?.executionTime !== undefined && (
                 <span className="text-xs text-muted-foreground">
                   Query Execution Time: {results.executionTime}ms
@@ -219,7 +216,7 @@ export function SqlResults() {
                     </Select>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    Showing {results.data.length} rows
+                    Showing {results.data.length} of {results?.total || 0} rows
                   </span>
                 </>
               )}

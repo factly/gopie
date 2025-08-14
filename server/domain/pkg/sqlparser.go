@@ -55,37 +55,37 @@ func IsSelectStatement(query string) (bool, error) {
 // Note: SHOW, EXPLAIN, and PRAGMA are explicitly NOT allowed for security
 func IsReadOnlyQuery(query string) bool {
 	query = strings.TrimSpace(strings.ToUpper(query))
-	
+
 	// List of allowed read-only statement prefixes
 	// Each prefix should be followed by whitespace or specific characters
 	readOnlyPrefixes := []string{
 		"SELECT ",
 		"SELECT\t",
 		"SELECT\n",
-		"SELECT(",  // For SELECT(column) style
+		"SELECT(", // For SELECT(column) style
 		"WITH ",
 		"WITH\t",
 		"WITH\n",
 		"DESCRIBE ",
 		"DESCRIBE\t",
 		"DESCRIBE\n",
-		"SUMMARIZE ",  // DuckDB statistical summary
+		"SUMMARIZE ", // DuckDB statistical summary
 		"SUMMARIZE\t",
 		"SUMMARIZE\n",
-		"SUMMARIZE(",  // For SUMMARIZE(SELECT ...) style
+		"SUMMARIZE(", // For SUMMARIZE(SELECT ...) style
 	}
-	
+
 	for _, prefix := range readOnlyPrefixes {
 		if strings.HasPrefix(query, prefix) {
 			return true
 		}
 	}
-	
+
 	// Special case for single word commands that might not have a space after
 	if query == "DESCRIBE" || query == "SUMMARIZE" {
 		return true
 	}
-	
+
 	return false
 }
 
