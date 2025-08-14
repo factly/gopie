@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     MODE: str = "development"
 
     MAX_TOOL_CALL_LIMIT: int = 3
-    MAX_VISUALIZATION_TOOL_CALL_LIMIT: int = 8
     MAX_VALIDATION_RETRY_COUNT: int = 2
 
     CORS_ORIGINS: list[str] = ["*"]

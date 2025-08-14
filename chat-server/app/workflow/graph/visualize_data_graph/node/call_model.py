@@ -2,8 +2,6 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
-from app.core.config import settings
-from app.models.message import ErrorMessage
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
@@ -29,16 +27,6 @@ def should_continue(state: State):
     Determines the next workflow step based on the last AI message and its tool calls.
     """
     last_message = state["messages"][-1]
-    tool_call_count = state.get("tool_call_count", 0)
-
-    if tool_call_count > settings.MAX_VISUALIZATION_TOOL_CALL_LIMIT:
-        return Command(
-            goto="process_result",
-            update={
-                "messages": list(state["messages"])
-                + [ErrorMessage(content="Tool call limit exceeded")]
-            },
-        )
 
     if isinstance(last_message, AIMessage):
         if has_tool_calls(last_message):
@@ -52,7 +40,6 @@ def should_continue(state: State):
                 )
             return Command(
                 goto="tools",
-                update={"tool_call_count": tool_call_count + 1},
             )
         else:
             state_update = {
@@ -62,5 +49,4 @@ def should_continue(state: State):
 
     return Command(
         goto="tools",
-        update={"tool_call_count": tool_call_count + 1},
     )
