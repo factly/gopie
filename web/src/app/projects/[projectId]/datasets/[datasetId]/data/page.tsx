@@ -5,7 +5,7 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, Loader2, Database, Lightbulb } from "lucide-react";
+import { PlayIcon, Loader2, Database, Lightbulb, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +77,10 @@ export default function SqlPage({
   const [isResizing, setIsResizing] = React.useState(false);
   const [previewRowLimit] = React.useState(100);
   const [currentQuery, setCurrentQuery] = React.useState<string>("");
+  const [queryGenerationStatus, setQueryGenerationStatus] = React.useState<
+    "idle" | "processing" | "converting" | "executing" | "completed"
+  >("idle");
+  const [queryGenerated, setQueryGenerated] = React.useState(false);
 
   const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
@@ -121,17 +125,18 @@ export default function SqlPage({
         setQueryError(null);
 
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Parse error response
-        let errorDetails: ErrorDetails = {
+        const errorDetails: ErrorDetails = {
           message: "Failed to execute query",
           details: undefined,
           suggestion: undefined,
           code: undefined,
         };
 
-        if (error?.errorData) {
-          const errorData = error.errorData;
+        const errorWithData = error as { errorData?: { message?: string; error?: string | unknown; code?: number } };
+        if (errorWithData?.errorData) {
+          const errorData = errorWithData.errorData;
           
           // Extract meaningful error information from server response
           if (errorData.message) {
@@ -259,10 +264,11 @@ export default function SqlPage({
       return;
     }
 
-    const promiseId = toast.loading("Processing your question...");
+    setQueryGenerationStatus("processing");
+    setQueryGenerated(false);
 
     try {
-      toast.loading("Converting to SQL...", { id: promiseId });
+      setQueryGenerationStatus("converting");
       const sqlQuery = await nl2Sql.mutateAsync({
         query: naturalQuery,
         datasetId: dataset.name,
@@ -283,19 +289,22 @@ export default function SqlPage({
         // Use original SQL if formatting fails
       }
       setQuery(formattedSQL);
+      setQueryGenerated(true);
 
-      toast.loading("Executing generated SQL...", { id: promiseId });
+      setQueryGenerationStatus("executing");
       await executeQueryWithPagination(formattedSQL, 1, 20);
 
-      toast.success("Query executed successfully", { id: promiseId });
+      setQueryGenerationStatus("completed");
+      // Reset status after a delay
+      setTimeout(() => {
+        setQueryGenerationStatus("idle");
+      }, 3000);
     } catch (error) {
+      setQueryGenerationStatus("idle");
+      setQueryGenerated(false);
       // Only show toast for NL2SQL generation errors, not SQL execution errors
       if (!queryError) {
-        toast.error("Failed to process question: " + (error as Error).message, {
-          id: promiseId,
-        });
-      } else {
-        toast.dismiss(promiseId);
+        toast.error("Failed to process question: " + (error as Error).message);
       }
     }
   };
@@ -403,13 +412,48 @@ export default function SqlPage({
 
               {/* SQL Editor */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground">
-                  SQL Query
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    SQL Query
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {queryGenerationStatus === "processing" && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Processing your question...
+                      </span>
+                    )}
+                    {queryGenerationStatus === "converting" && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Converting to SQL...
+                      </span>
+                    )}
+                    {queryGenerationStatus === "executing" && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Executing generated SQL...
+                      </span>
+                    )}
+                    {queryGenerationStatus === "completed" && queryGenerated && (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Auto-generated
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <div className="relative border rounded-md overflow-hidden">
                   <SqlEditor
                     value={query}
-                    onChange={setQuery}
+                    onChange={(value) => {
+                      setQuery(value);
+                      // Reset the auto-generated flag if user manually edits the query
+                      if (queryGenerated && queryGenerationStatus === "completed") {
+                        setQueryGenerated(false);
+                        setQueryGenerationStatus("idle");
+                      }
+                    }}
                     schema={dataset.columns}
                     datasetId={dataset.name}
                   />
@@ -555,8 +599,8 @@ export default function SqlPage({
                 />
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                No results to display. Execute a query to see results.
+              <div className="flex h-full items-center justify-center text-muted-foreground pb-32">
+                No results to display.
               </div>
             )}
           </div>
