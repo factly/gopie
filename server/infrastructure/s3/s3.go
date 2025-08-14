@@ -2,261 +2,109 @@ package s3
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"os"
-	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/factly/gopie/application/repositories"
-	"github.com/factly/gopie/domain/pkg"
-	domainCfg "github.com/factly/gopie/domain/pkg/config"
+	appConfig "github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
-	"github.com/mitchellh/mapstructure"
 	"go.uber.org/zap"
-	"gocloud.dev/blob"
-	"gocloud.dev/blob/s3blob"
 )
 
-// s3Source represents a connection to an AWS S3 storage bucket.
-// It holds the configuration and logger required for S3 operations.
-type s3Source struct {
-	config *domainCfg.S3Config // AWS S3 configuration including credentials and endpoint
-	logger *logger.Logger      // Logger instance for error and debug logging
+// S3ObjectStore provides methods to interact with an S3-compatible object store.
+type S3ObjectStore struct {
+	config        appConfig.S3Config
+	logger        *logger.Logger
+	client        *s3.Client
+	presignClient *s3.PresignClient
+	uploader      *manager.Uploader
 }
 
-func NewS3SourceRepository(config *domainCfg.S3Config, logger *logger.Logger) repositories.SourceRepository {
-	return &s3Source{
+// NewS3ObjectStore creates a new, uninitialized instance of S3ObjectStore.
+func NewS3ObjectStore(config appConfig.S3Config, logger *logger.Logger) repositories.S3SourceRepository {
+	return &S3ObjectStore{
 		config: config,
 		logger: logger,
 	}
 }
 
-func (s *s3Source) getAWSConfig(ctx context.Context) (aws.Config, error) {
-	// Validate s3 configuration exists
-	if s.config == nil {
-		return aws.Config{}, fmt.Errorf("s3 configuration is nil")
-	}
+// Connect initializes the S3 client using a stable endpoint resolution method.
+func (s *S3ObjectStore) Connect(ctx context.Context) error {
+	s.logger.Info("Connecting to S3 object store", zap.String("endpoint", s.config.Endpoint), zap.String("region", s.config.Region))
 
-	// Ensure region is specified
-	if s.config.Region == "" {
-		return aws.Config{}, fmt.Errorf("aws region is required")
-	}
+	// This resolver function is a stable way to handle custom endpoints,
+	// avoiding the dependency issues with the newer V2 resolver interface.
+	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...any) (aws.Endpoint, error) {
+		return aws.Endpoint{
+			URL:               s.config.Endpoint,
+			SigningRegion:     s.config.Region,
+			HostnameImmutable: true, // Important for S3-compatible services like Minio
+		}, nil
+	})
 
-	// Load AWS configuration with custom credentials
+	// Load the base configuration, providing static credentials and our custom endpoint resolver.
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(s.config.Region),
-		config.WithCredentialsProvider(
-			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
-				// Validate required credentials
-				if s.config.AccessKey == "" || s.config.SecretKey == "" {
-					return aws.Credentials{}, fmt.Errorf("aws credentials are required")
-				}
-				// Return credentials object with access key, secret key
-				return aws.Credentials{
-					AccessKeyID:     s.config.AccessKey,
-					SecretAccessKey: s.config.SecretKey,
-				}, nil
-			}),
-		),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s.config.AccessKey, s.config.SecretKey, "")),
+		config.WithEndpointResolverWithOptions(resolver),
 	)
 	if err != nil {
-		s.logger.Error("failed to load AWS config", zap.Error(err))
-		return aws.Config{}, fmt.Errorf("failed to load AWS config: %w", err)
+		s.logger.Error("Failed to load S3 configuration", zap.Error(err))
+		return err
 	}
 
-	return cfg, nil
+	// Create the S3 client from the configuration, adding the option for path-style addressing.
+	s.client = s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+
+	// Initialize the uploader and presign client using the configured S3 client.
+	s.uploader = manager.NewUploader(s.client)
+	s.presignClient = s3.NewPresignClient(s.client)
+
+	s.logger.Info("Successfully connected to S3 object store")
+	return nil
 }
 
-func (c *s3Source) getS3Client(cfg aws.Config) (*s3.Client, error) {
-	// Validate endpoint configuration
-	if c.config == nil || c.config.Endpoint == "" {
-		return nil, fmt.Errorf("s3 endpoint configuration is required")
+// UploadFile now uses the multipart uploader for robust, non-seekable stream uploads.
+func (s *S3ObjectStore) UploadFile(ctx context.Context, key string, body io.Reader) (*manager.UploadOutput, error) {
+	s.logger.Info("Starting file upload to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key))
+
+	// The uploader handles the non-seekable stream gracefully, uploading it in chunks.
+	output, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(s.config.Bucket),
+		Key:    aws.String(key),
+		Body:   body,
+	})
+	if err != nil {
+		s.logger.Error("Failed to upload file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.Error(err))
+		return nil, err
 	}
 
-	// Create new S3 client with custom options
-	return s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true                          // Enable path-style addressing
-		o.BaseEndpoint = aws.String(c.config.Endpoint) // Set custom endpoint
-	}), nil
+	s.logger.Info("Successfully uploaded file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.String("upload_id", output.UploadID))
+	return output, nil
 }
 
-func (c *s3Source) openBucket(ctx context.Context, bucket string) (*blob.Bucket, error) {
-	// Validate bucket name
-	if bucket == "" {
-		return nil, fmt.Errorf("bucket name is required")
-	}
+// GetPresignedURL generates a temporary, pre-signed URL that grants access to an S3 object for a limited time.
+func (s *S3ObjectStore) GetPresignedURL(ctx context.Context, key string, lifetime time.Duration) (string, error) {
+	s.logger.Info("Generating pre-signed URL", zap.String("bucket", s.config.Bucket), zap.String("key", key))
 
-	// Get AWS configuration
-	cfg, err := c.getAWSConfig(ctx)
+	request, err := s.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.config.Bucket),
+		Key:    aws.String(key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = lifetime
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get AWS config: %w", err)
+		s.logger.Error("Failed to generate pre-signed URL", zap.String("key", key), zap.Error(err))
+		return "", err
 	}
 
-	// Create S3 client
-	client, err := c.getS3Client(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create S3 client: %w", err)
-	}
-
-	// Open and return the bucket instance
-	b, err := s3blob.OpenBucketV2(ctx, client, bucket, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open bucket %s: %w", bucket, err)
-	}
-
-	return b, nil
-}
-
-type DownloadFileConfig struct {
-	Bucket   string `mapstructure:"bucket"`
-	FilePath string `mapstructure:"filepath"`
-	Name     string `mapstructure:"name"`
-}
-
-// DownloadFile downloads a file from an S3 bucket to a local file.
-// It returns the path to the downloaded file on success.
-// Stores the file in /tmp directory with a unique name.
-func (c *s3Source) DownloadFile(ctx context.Context, cfg map[string]any) (string, int64, error) {
-	srcCfg := DownloadFileConfig{}
-	err := mapstructure.Decode(cfg, &srcCfg)
-
-	if srcCfg.FilePath == "" {
-		return "", 0, fmt.Errorf("file path is required")
-	}
-
-	// extract file format from the file path
-	// should consider the last part of the file path as the file name
-	// after splitting the file path by '/'
-	// e.g. file path: "path/to/file.txt"
-	fileParts := strings.Split(srcCfg.FilePath, "/")
-	fileName := fileParts[len(fileParts)-1]
-	formatParts := strings.Split(fileName, ".")
-	format := formatParts[len(formatParts)-1]
-
-	c.logger.Info("starting file download from S3",
-		zap.String("bucket", srcCfg.Bucket),
-		zap.String("file", srcCfg.FilePath))
-
-	buckObj, err := c.openBucket(ctx, srcCfg.Bucket)
-	if err != nil {
-		c.logger.Error("failed to open bucket",
-			zap.String("bucket", srcCfg.Bucket),
-			zap.Error(err))
-		return "", 0, fmt.Errorf("failed to open bucket: %w", err)
-	}
-
-	c.logger.Debug("bucket opened successfully", zap.String("bucket", srcCfg.Bucket))
-
-	obj, err := buckObj.NewReader(ctx, srcCfg.FilePath, nil)
-	if err != nil {
-		c.logger.Error("failed to open file",
-			zap.String("bucket", srcCfg.Bucket),
-			zap.String("file", srcCfg.FilePath),
-			zap.Error(err))
-		return "", 0, fmt.Errorf("failed to open file: %w", err)
-	}
-
-	c.logger.Debug("file opened successfully",
-		zap.String("bucket", srcCfg.Bucket),
-		zap.String("file", srcCfg.FilePath))
-
-	defer obj.Close()
-
-	tableName := srcCfg.Name
-	if tableName == "" {
-		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
-	}
-
-	// Extract the filename from the path for the local file
-	fileName = fmt.Sprintf("/tmp/%s.%s",
-		tableName,
-		format,
-	)
-
-	file, err := os.Create(fileName)
-	if err != nil {
-		c.logger.Error("failed to create file",
-			zap.String("path", fileName),
-			zap.Error(err))
-		return "", 0, fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	written, err := io.Copy(file, obj)
-	if err != nil {
-		c.logger.Error("failed to write file contents",
-			zap.String("bucket", srcCfg.Bucket),
-			zap.String("file", srcCfg.FilePath),
-			zap.Error(err))
-		return "", 0, fmt.Errorf("failed to write file: %w", err)
-	}
-
-	c.logger.Info("file downloaded successfully",
-		zap.String("bucket", srcCfg.Bucket),
-		zap.String("file", srcCfg.FilePath),
-		zap.String("saved_to", fileName),
-		zap.Int64("bytes_downloaded", written))
-
-	return fileName, written, nil
-}
-
-func (c *s3Source) UploadFile(ctx context.Context, bucket, filePath string) (string, error) {
-	if bucket == "" || filePath == "" {
-		return "", fmt.Errorf("bucket and file path are required")
-	}
-
-	c.logger.Info("starting file upload to S3",
-		zap.String("bucket", bucket),
-		zap.String("file", filePath))
-
-	buckObj, err := c.openBucket(ctx, bucket)
-	if err != nil {
-		c.logger.Error("failed to open bucket",
-			zap.String("bucket", bucket),
-			zap.Error(err))
-		return "", fmt.Errorf("failed to open bucket: %w", err)
-	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		c.logger.Error("failed to open file",
-			zap.String("file", filePath),
-			zap.Error(err))
-		return "", fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
-	// Read the file content
-	fileContent, err := io.ReadAll(file)
-	if err != nil {
-		c.logger.Error("failed to read file content",
-			zap.String("file", filePath),
-			zap.Error(err))
-		return "", fmt.Errorf("failed to read file content: %w", err)
-	}
-
-	// Get the filename from the path for S3
-	filePathParts := strings.Split(filePath, "/")
-	fileName := filePathParts[len(filePathParts)-1]
-
-	// Upload the file content as bytes
-	err = buckObj.WriteAll(ctx, fileName, fileContent, nil)
-	if err != nil {
-		c.logger.Error("failed to upload file",
-			zap.String("bucket", bucket),
-			zap.String("file", fileName),
-			zap.Error(err))
-		return "", fmt.Errorf("failed to upload file: %w", err)
-	}
-
-	c.logger.Info("file uploaded successfully",
-		zap.String("bucket", bucket),
-		zap.String("file", fileName),
-		zap.Int("bytes_uploaded", len(fileContent)))
-
-	return fileName, nil
+	s.logger.Info("Successfully generated pre-signed URL", zap.String("key", key))
+	return request.URL, nil
 }
