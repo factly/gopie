@@ -81,11 +81,6 @@ func IsReadOnlyQuery(query string) bool {
 		}
 	}
 
-	// Special case for single word commands that might not have a space after
-	if query == "DESCRIBE" || query == "SUMMARIZE" {
-		return true
-	}
-
 	return false
 }
 

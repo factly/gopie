@@ -14,6 +14,7 @@ import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { format } from "sql-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parseSqlError, SqlErrorDetails } from "@/lib/sql-error-utils";
 
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -43,12 +44,6 @@ const fadeInVariants = {
   transition: { duration: 0.2 },
 };
 
-interface ErrorDetails {
-  message: string;
-  details?: string;
-  suggestion?: string;
-  code?: number;
-}
 
 export default function SqlPage({
   params,
@@ -64,7 +59,7 @@ export default function SqlPage({
   const [columns, setColumns] = React.useState<string[] | undefined>(undefined);
   const [executionTime, setExecutionTime] = React.useState<number | undefined>(undefined);
   const [isExecuting, setIsExecuting] = React.useState(false);
-  const [queryError, setQueryError] = React.useState<ErrorDetails | null>(null);
+  const [queryError, setQueryError] = React.useState<SqlErrorDetails | null>(null);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
   const [naturalQuery, setNaturalQuery] = React.useState("");
@@ -127,47 +122,8 @@ export default function SqlPage({
         return response;
       } catch (error: unknown) {
         // Parse error response
-        const errorDetails: ErrorDetails = {
-          message: "Failed to execute query",
-          details: undefined,
-          suggestion: undefined,
-          code: undefined,
-        };
-
-        const errorWithData = error as { errorData?: { message?: string; error?: string | unknown; code?: number } };
-        if (errorWithData?.errorData) {
-          const errorData = errorWithData.errorData;
-          
-          // Extract meaningful error information from server response
-          if (errorData.message) {
-            errorDetails.message = errorData.message;
-          }
-          if (errorData.error) {
-            // If error is a string, use it as details
-            if (typeof errorData.error === 'string') {
-              errorDetails.details = errorData.error;
-            }
-          }
-          if (errorData.code) {
-            errorDetails.code = errorData.code;
-          }
-          
-          // Add suggestions based on error type
-          if (errorData.code === 404 || errorDetails.message.includes("dataset does not exist")) {
-            errorDetails.suggestion = "Check that the table name is correct and that the dataset has been properly loaded.";
-          } else if (errorData.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
-            errorDetails.suggestion = "Only SELECT queries are allowed. Please modify your query to retrieve data without making changes.";
-          } else if (errorDetails.details?.includes("Syntax Error") || errorDetails.details?.includes("Parser Error")) {
-            errorDetails.suggestion = "Check your SQL syntax. Common issues include missing commas, unclosed quotes, or incorrect keywords.";
-          } else if (errorDetails.details?.includes("column") && errorDetails.details?.includes("not found")) {
-            errorDetails.suggestion = "The column name might be incorrect. Check the available columns in the schema.";
-          } else if (errorDetails.details?.includes("Binder Error")) {
-            errorDetails.suggestion = "There's an issue with table or column references. Verify that all referenced tables and columns exist.";
-          }
-        } else if (error instanceof Error) {
-          errorDetails.message = error.message;
-        }
-
+        // Use the shared SQL error categorization utility
+        const errorDetails = parseSqlError(error);
         setQueryError(errorDetails);
         setResults(null);
         throw error;
