@@ -38,7 +38,7 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.JSON(map[string]interface{}{
+	return ctx.JSON(map[string]any{
 		"data": chat,
 	})
 }
