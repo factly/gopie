@@ -25,12 +25,12 @@ export const useDatasetSql = createMutation({
         columns?: string[]; 
         executionTime?: number 
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If it's a ky HTTPError, extract the response
-      if (error.name === 'HTTPError' && error.response) {
-        const errorData = await error.response.json().catch(() => null);
+      if (error instanceof Error && 'name' in error && error.name === 'HTTPError' && 'response' in error) {
+        const errorData = await (error.response as Response).json().catch(() => null);
         // Attach the parsed error data to the error object
-        error.errorData = errorData;
+        (error as Error & { errorData?: unknown }).errorData = errorData;
       }
       throw error;
     }

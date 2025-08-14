@@ -10,7 +10,7 @@ export interface SqlErrorDetails {
  * @param errorData - The error data from the server
  * @returns SqlErrorDetails with categorized error information and suggestions
  */
-export function categorizeSqlError(errorData: any): SqlErrorDetails {
+export function categorizeSqlError(errorData: unknown): SqlErrorDetails {
   const errorDetails: SqlErrorDetails = {
     message: 'An error occurred',
     details: undefined,
@@ -18,26 +18,31 @@ export function categorizeSqlError(errorData: any): SqlErrorDetails {
     code: undefined,
   };
 
-  // Extract meaningful error information from server response
-  if (errorData?.message) {
-    errorDetails.message = errorData.message;
-  }
-  
-  if (errorData?.error) {
-    // If error is a string, use it as details
-    if (typeof errorData.error === 'string') {
-      errorDetails.details = errorData.error;
+  // Type guard to check if errorData is an object
+  if (errorData && typeof errorData === 'object') {
+    const data = errorData as Record<string, unknown>;
+    
+    // Extract meaningful error information from server response
+    if (data.message && typeof data.message === 'string') {
+      errorDetails.message = data.message;
     }
-  }
-  
-  if (errorData?.code) {
-    errorDetails.code = errorData.code;
+    
+    if (data.error) {
+      // If error is a string, use it as details
+      if (typeof data.error === 'string') {
+        errorDetails.details = data.error;
+      }
+    }
+    
+    if (data.code && typeof data.code === 'number') {
+      errorDetails.code = data.code;
+    }
   }
 
   // Add suggestions based on error type
-  if (errorData?.code === 404 || errorDetails.message.includes("dataset does not exist")) {
+  if (errorDetails.code === 404 || errorDetails.message.includes("dataset does not exist")) {
     errorDetails.suggestion = "Check that the table name is correct and that the dataset has been properly loaded.";
-  } else if (errorData?.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
+  } else if (errorDetails.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
     errorDetails.suggestion = "Only SELECT queries are allowed. Please modify your query to retrieve data without making changes.";
   } else if (errorDetails.details?.includes("Syntax Error") || errorDetails.details?.includes("Parser Error")) {
     errorDetails.suggestion = "Check your SQL syntax. Common issues include missing commas, unclosed quotes, or incorrect keywords.";
@@ -55,8 +60,8 @@ export function categorizeSqlError(errorData: any): SqlErrorDetails {
  * @param error - The error object (can be Error instance or server error response)
  * @returns SqlErrorDetails with formatted error information
  */
-export function parseSqlError(error: any): SqlErrorDetails {
-  if (error?.errorData) {
+export function parseSqlError(error: unknown): SqlErrorDetails {
+  if (error && typeof error === 'object' && 'errorData' in error) {
     return categorizeSqlError(error.errorData);
   } else if (error instanceof Error) {
     return {

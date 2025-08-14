@@ -575,7 +575,7 @@ export function ChatMessage({
         });
         setSqlPanelOpen(true);
         setActiveTab("sql"); // Switch to SQL tab when running a query
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Use the shared error categorization utility
         const errorDetails = parseSqlError(error);
 
