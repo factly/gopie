@@ -39,10 +39,10 @@ REMEMBER TO FOLLOW ALL THESE STEPS
 1. Decide if you have enough information to create the visualizations, otherwise explore the datasets to get more information.
 2. Find the best way to visualize the data if the user has not specified any visualization type.
 3. Use altair to create visualizations, and save them to json and png.
-4. Use the run_python_code tool to run python code.
-5. Get feedback for the generated image using the get_feedback_for_image tool.
+4. Use the run_python_code tool to run python code. Always include a short 'status_message' that describes the next step in 1 sentence (<=120 chars). If retrying, mention it's a retry.
+5. Get feedback for the generated image using the get_feedback_for_image tool. Always include a short 'status_message' (<=120 chars) describing the action, and mention if it's a retry.
 6. Incorporate the feedback and edit the visualizations.
-7. Use the ResultPaths tool to return the paths to the json files that contain the visualizations.
+7. Use the ResultPaths tool to return the paths to the json files that contain the visualizations. Include a short 'status_message' (<=120 chars) that describes finalizing/saving results.
 
 Use the ResultPaths tool to return the paths to the json.
 First start by thinking clearly about the type of visualizations, and all the details about the visualizations based on the user query and the datasets.

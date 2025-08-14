@@ -55,8 +55,13 @@ async def plan_sql_query(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    uq = args.get("user_query", "")
-    return f"Planning SQL query for: {uq[:50]}"
+    uq = (args.get("user_query") or "").strip().replace("\n", " ")
+    if len(uq) > 70:
+        uq = uq[:67] + "..."
+    schemas = args.get("schemas") or []
+    num_tables = len(schemas)
+    suffix = f" using {num_tables} schema(s)" if num_tables else ""
+    return f"Planning SQL{suffix}: {uq}" if uq else f"Planning SQL{suffix}"
 
 
 __tool__ = plan_sql_query

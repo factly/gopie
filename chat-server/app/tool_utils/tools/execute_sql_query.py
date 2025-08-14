@@ -26,10 +26,15 @@ async def execute_sql_query(
         results = []
         for query in queries:
             result = await execute_sql_with_limit(query=query)
+
+            snippet = query.strip().replace("\n", " ")
+            if len(snippet) > 140:
+                snippet = snippet[:137] + "..."
+
             await adispatch_custom_event(
                 "gopie-agent",
                 {
-                    "content": "SQL Execution tool",
+                    "content": f"Executing SQL: {snippet}",
                     "name": SQL_QUERIES_GENERATED,
                     "values": {SQL_QUERIES_GENERATED_ARG: [query]},
                 },
@@ -41,8 +46,11 @@ async def execute_sql_query(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    query_snippets = args.get("queries", [])[:50]
-    return f"Executing SQL queries: {query_snippets}..."
+    queries = args.get("queries", []) or []
+    if queries:
+        first = str(queries[0]).strip().replace("\n", " ")
+        return f"Executing SQL: {first}"
+    return "Executing SQL query"
 
 
 __tool__ = execute_sql_query

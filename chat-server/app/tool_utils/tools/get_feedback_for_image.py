@@ -114,6 +114,7 @@ async def get_feedback_for_image(
     user_query: Annotated[str, InjectedState("user_query")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
+    status_message: str = "",
 ):
     """
     Analyzes a data visualization image to provide comprehensive feedback based on the dataset description and user query.
@@ -166,6 +167,9 @@ async def get_feedback_for_image(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
+    status = (args.get("status_message") or "").strip()
+    if status:
+        return status
     return "Reviewing the generated Visualization"
 
 

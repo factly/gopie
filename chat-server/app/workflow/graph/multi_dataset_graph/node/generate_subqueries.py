@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import stream_dynamic_message
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -43,20 +44,17 @@ async def generate_subqueries(state: State, config: RunnableConfig):
 
             subqueries = subqueries_response.subqueries
 
-            subqueries_message = (
-                "I'll break down your query into steps to give you a more complete answer:"
-            )
+            await stream_dynamic_message(
+                f"""
+Create a short message that tells the user displaying the subqueries nicely.
+Don't care about characters over here, but ensure that you display the whole subqueries properly.
 
-            for i, subquery in enumerate(subqueries, 1):
-                subqueries_message += f"\n\nStep {i}: {subquery}"
+I'll break down your query into steps to give you a more complete answer:
+{subqueries}
 
-            subqueries_message += "\n\nPlease wait while I process these steps."
-
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": subqueries_message,
-                },
+Please wait while I process these steps.
+                """,
+                config,
             )
 
             if len(subqueries) > 2:

@@ -11,7 +11,7 @@ class ResultPathsSchema(BaseModel):
 
 
 @tool
-def result_paths(visualization_result_paths: list[str]):
+def result_paths(visualization_result_paths: list[str], status_message: str = ""):
     """Use this to return the paths to the json files created by the agent, after visualization.
 
     Args:
@@ -21,6 +21,9 @@ def result_paths(visualization_result_paths: list[str]):
 
 
 def get_dynamic_tool_text(args: dict) -> str:
+    status = (args.get("status_message") or "").strip()
+    if status:
+        return status
     return "Finalizing visualization results"
 
 

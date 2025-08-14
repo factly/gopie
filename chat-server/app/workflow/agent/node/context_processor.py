@@ -13,7 +13,7 @@ from app.utils.chat_history.processor import ChatHistoryProcessor
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import (
     configure_node,
-    stream_dynamic_message,
+    fake_streaming_response,
 )
 
 from ..types import AgentState
@@ -42,6 +42,11 @@ class ProcessContextOutput(BaseModel):
     )
     context_summary: str = Field(
         description="Summary of how the present query relates to previous conversation", default=""
+    )
+    status_message: str = Field(
+        description="""Create a short user friendly message that tells what it understand from the input
+        user query, this message will be displayed to the user in the UI. It should be a 1-2 sentence message.""",
+        default="",
     )
 
 
@@ -113,13 +118,10 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         else:
             final_query = enhanced_query
 
+        await fake_streaming_response(parsed_response.status_message, config)
+
         if generate_visualization and not (last_vizpaths or relevant_sql_queries):
             is_new_data_needed = True
-
-        await stream_dynamic_message(
-            f"Create a short user friendly message that tells what it understand from the input user query: {final_query}",
-            config,
-        )
 
         return {
             "user_query": final_query,

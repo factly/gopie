@@ -85,11 +85,19 @@ async def get_datasets_schemas(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    base_text = "Retrieving table schema information"
-    dataset_name = args.get("dataset_name", "")
-    if dataset_name:
-        return f"{base_text} for '{dataset_name}'"
-    return base_text
+    dataset_ids = args.get("dataset_ids") or []
+    project_ids = args.get("project_ids") or []
+    parts = []
+    if dataset_ids:
+        parts.append(
+            f"datasets: {', '.join(map(str, dataset_ids[:3]))}{'...' if len(dataset_ids) > 3 else ''}"
+        )
+    if project_ids:
+        parts.append(
+            f"projects: {', '.join(map(str, project_ids[:3]))}{'...' if len(project_ids) > 3 else ''}"
+        )
+    suffix = " (" + "; ".join(parts) + ")" if parts else ""
+    return f"Retrieving dataset schemas{suffix}"
 
 
 __tool__ = get_datasets_schemas

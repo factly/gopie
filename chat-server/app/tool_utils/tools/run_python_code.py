@@ -14,6 +14,7 @@ async def run_python_code(
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
+    status_message: str = "",
 ):
     """Run python code in a sandbox.
     Pandas and Altair are already installed.
@@ -47,7 +48,10 @@ async def run_python_code(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    return "Running python code for visualization"
+    status = (args.get("status_message") or "").strip()
+    if status:
+        return status
+    return "Getting your visualization ready"
 
 
 __tool__ = run_python_code

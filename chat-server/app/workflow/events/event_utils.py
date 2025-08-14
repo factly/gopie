@@ -3,7 +3,10 @@ from functools import wraps
 from typing import Any
 
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.language_models.fake_chat_models import (
+    GenericFakeChatModel,
+)
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
@@ -72,24 +75,23 @@ async def stream_dynamic_message(context: str, config: RunnableConfig):
     """
     Stream a dynamic message based on the context.
     """
-    config.update(
-        metadata=NodeEventConfig(
-            role=Role.AI,
-            progress_message="",
-        ).model_dump()
-    )
+    prev_metadata = config.get("metadata")
 
-    dynamic_message = await create_dynamic_progress_message(context, config)
-    logger.debug(dynamic_message)
+    try:
+        dynamic_message = await create_dynamic_progress_message(context, config)
+        logger.debug(dynamic_message)
 
-    config.update(
-        metadata=NodeEventConfig(
-            role=Role.INTERMEDIATE,
-            progress_message="",
-        ).model_dump()
-    )
-
-    return dynamic_message
+        config.update(
+            metadata=NodeEventConfig(
+                role=Role.INTERMEDIATE,
+                progress_message="",
+            ).model_dump()
+        )
+    finally:
+        if prev_metadata is not None:
+            config.update(metadata=prev_metadata)
+        else:
+            config.pop("metadata", None)
 
 
 async def non_streaming_dynamic_message(context: str, config: RunnableConfig):
@@ -104,3 +106,28 @@ async def non_streaming_dynamic_message(context: str, config: RunnableConfig):
             "content": dynamic_message,
         },
     )
+
+
+async def fake_streaming_response(response: str, config: RunnableConfig):
+    """
+    Fake a streaming response.
+    """
+    prev_metadata = config.get("metadata")
+    try:
+        config.update(
+            metadata=NodeEventConfig(
+                role=Role.AI,
+                progress_message="",
+            ).model_dump()
+        )
+
+        llm = GenericFakeChatModel(
+            messages=iter([AIMessage(content=response)]),
+        )
+
+        await llm.ainvoke(input=response)
+    finally:
+        if prev_metadata is not None:
+            config.update(metadata=prev_metadata)
+        else:
+            config.pop("metadata", None)
