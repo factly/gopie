@@ -173,7 +173,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         if sql_queries:
             await stream_dynamic_message(
-                "create a short message about saying that we are executing the planned SQL queries",
+                f"create a 1 to 2 sentence message saying that here are the generated SQL queries and now let's execute them: {sql_queries}",
                 config,
             )
 

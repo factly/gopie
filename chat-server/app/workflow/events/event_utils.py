@@ -46,7 +46,7 @@ Your job is to turn the given technical status into a short, friendly, natural-s
 
 Rules:
 - Keep it casual, conversational, and in-the-moment, like a real-time IDE status message.
-- Be concise: maximum 100 characters.
+- Be concise: maximum 100 to 200 characters.
 - Avoid technical jargon unless it's extremely common for developers.
 - Match the flow of what's currently happening in the context.
 - Do NOT include quotes or formatting, just output the plain string.
@@ -80,7 +80,6 @@ async def stream_dynamic_message(context: str, config: RunnableConfig):
     )
 
     dynamic_message = await create_dynamic_progress_message(context, config)
-
     logger.debug(dynamic_message)
 
     config.update(
