@@ -4,8 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -84,18 +83,17 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         if not datasets_info:
             raise Exception("Could not get preview information for any of the selected datasets")
 
-        llm_prompt = get_prompt(
-            "plan_query",
-            user_query=user_query,
-            datasets_info=datasets_info,
-            error_messages=error_messages,
-            retry_count=retry_count,
-            previous_sql_queries=previous_sql_queries,
-            validation_result=validation_result,
-        )
+        chain_input = {
+            "user_query": user_query,
+            "datasets_info": datasets_info,
+            "error_messages": error_messages,
+            "retry_count": retry_count,
+            "previous_sql_queries": previous_sql_queries,
+            "validation_result": validation_result,
+        }
 
-        llm = get_configured_llm_for_node("plan_query", config, schema=PlanQueryOutput)
-        response = await llm.ainvoke(llm_prompt)
+        chain = get_prompt_llm_chain("plan_query", config, schema=PlanQueryOutput)
+        response = await chain.ainvoke(chain_input)
 
         sql_queries = response.sql_queries
         response_for_no_sql = response.response_for_no_sql

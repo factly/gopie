@@ -9,8 +9,7 @@ from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
 from app.tool_utils.tools import ToolNames
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -43,14 +42,13 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
     collect_and_store_tool_messages(query_result, state)
 
     try:
-        prompt = get_prompt(
-            "analyze_query",
-            user_query=user_input,
-            tool_results=analyze_result.tool_used_result,
-            tool_call_count=tool_call_count,
-            dataset_ids=state.get("dataset_ids", []),
-            project_ids=state.get("project_ids", []),
-        )
+        chain_input = {
+            "user_query": user_input,
+            "tool_results": analyze_result.tool_used_result,
+            "tool_call_count": tool_call_count,
+            "dataset_ids": state.get("dataset_ids", []),
+            "project_ids": state.get("project_ids", []),
+        }
 
         tools_names = [
             ToolNames.EXECUTE_SQL_QUERY,
@@ -58,8 +56,8 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             ToolNames.PLAN_SQL_QUERY,
         ]
 
-        llm = get_configured_llm_for_node("analyze_query", config, tool_names=tools_names)
-        response = await llm.ainvoke(prompt)
+        chain = get_prompt_llm_chain("analyze_query", config, tool_names=tools_names)
+        response = await chain.ainvoke(chain_input)
 
         if has_tool_calls(response):
             return _handle_tool_call_response(response, query_result, tool_call_count)

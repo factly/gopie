@@ -2,8 +2,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 
 
 @tool
@@ -42,9 +41,8 @@ async def plan_sql_query(
             limitations: any assumptions or limitations
     """
     try:
-        prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
-        llm = get_configured_llm_for_node("plan_sql_query_tool", config)
-        response = await llm.ainvoke(prompt)
+        chain = get_prompt_llm_chain("plan_sql_query_tool", config)
+        response = await chain.ainvoke({"user_query": user_query, "schemas": schemas})
         return response
     except Exception as e:
         await adispatch_custom_event(

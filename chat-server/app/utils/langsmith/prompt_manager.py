@@ -1,8 +1,10 @@
 from langchain_core.messages import BaseMessage
+from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda
 
 from app.core.config import settings
 from app.core.log import logger
 from app.utils.langsmith.client import pull_prompt
+from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.prompts.prompt_selector import NodeName, PromptSelector
 
 
@@ -60,3 +62,37 @@ class PromptManager:
 def get_prompt(node_name: NodeName, *args, **kwargs) -> list[BaseMessage]:
     input_messages = PromptManager().get_prompt(node_name, *args, **kwargs)
     return input_messages
+
+
+def get_prompt_llm_chain(
+    node_name: NodeName,
+    config: RunnableConfig,
+    *,
+    schema=None,
+    tool_names=None,
+) -> Runnable:
+    """
+    Build a runnable chain that:
+      - accepts raw variables as input
+      - formats them into messages using the existing prompt manager
+      - invokes the configured LLM
+
+    This keeps the runnable input as the original variables.
+    """
+
+    def _format_prompt(variables: dict[str, object] | None) -> list[BaseMessage]:
+        input_vars: dict[str, object] = variables or {}
+        return PromptManager().get_prompt(node_name, **input_vars)
+
+    formatter: Runnable = RunnableLambda(_format_prompt).with_config(
+        {"run_name": f"format_{node_name}_prompt"}
+    )
+
+    llm = get_configured_llm_for_node(
+        node_name,
+        config,
+        tool_names=tool_names,
+        schema=schema,
+    )
+
+    return formatter | llm

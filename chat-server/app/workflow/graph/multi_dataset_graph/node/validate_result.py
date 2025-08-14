@@ -7,8 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.models.message import ErrorMessage
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -62,13 +61,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
 
     # Validate the result with the LLM
     try:
-        prompt_messages = get_prompt(
+        chain = get_prompt_llm_chain(
             "validate_result",
-            prev_query_result=query_result,
+            config,
+            schema=ValidateResultOutput,
         )
-
-        llm = get_configured_llm_for_node("validate_result", config, schema=ValidateResultOutput)
-        parsed_response = await llm.ainvoke(prompt_messages)
+        parsed_response = await chain.ainvoke({"prev_query_result": query_result})
         recommendation = parsed_response.recommendation
         response = parsed_response.response
         status_update_response = parsed_response.status_update_response

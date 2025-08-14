@@ -8,8 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.core.log import logger
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -43,15 +42,18 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
             {remaining_subqueries}
         """
 
-        stream_update_prompt = get_prompt(
-            node_name="stream_updates",
-            subquery_result=json.dumps(subquery_result.to_dict()),
-            original_user_query=query_result.original_user_query,
-            subquery_messages=subquery_messages,
-        )
+        chain_input = {
+            "subquery_result": json.dumps(subquery_result.to_dict()),
+            "original_user_query": query_result.original_user_query,
+            "subquery_messages": subquery_messages,
+        }
 
-        llm = get_configured_llm_for_node("stream_updates", config, schema=StreamUpdateResponse)
-        response = await llm.ainvoke(stream_update_prompt)
+        chain = get_prompt_llm_chain(
+            "stream_updates",
+            config,
+            schema=StreamUpdateResponse,
+        )
+        response = await chain.ainvoke(chain_input)
 
         stream_message = response.stream_update
         continue_execution = response.continue_execution

@@ -20,8 +20,7 @@ from app.services.gopie.sql_executor import (
     truncate_if_too_large,
 )
 from app.services.qdrant.get_schema import get_schema_from_qdrant
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import (
     configure_node,
     stream_dynamic_message,
@@ -147,20 +146,23 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         rows_csv = convert_rows_to_csv(sample_data)  # type: ignore
 
-        prompt_messages = get_prompt(
+        chain_input = {
+            "user_query": user_query,
+            "dataset_name": dataset_name,
+            "dataset_schema": dataset_schema,
+            "rows_csv": rows_csv,
+            "prev_query_result": prev_query_result,
+            "previous_sql_queries": previous_sql_queries,
+            "validation_result": validation_result,
+        }
+
+        chain = get_prompt_llm_chain(
             "process_query",
-            user_query=user_query,
-            dataset_name=dataset_name,
-            dataset_schema=dataset_schema,
-            rows_csv=rows_csv,
-            prev_query_result=prev_query_result,
-            previous_sql_queries=previous_sql_queries,
-            validation_result=validation_result,
+            config,
+            schema=ProcessQueryOutput,
         )
 
-        llm = get_configured_llm_for_node("process_query", config, schema=ProcessQueryOutput)
-
-        response = await llm.ainvoke(prompt_messages)
+        response = await chain.ainvoke(chain_input)
 
         sql_queries = response.sql_queries
         explanations = response.explanations
