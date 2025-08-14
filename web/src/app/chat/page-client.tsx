@@ -505,6 +505,11 @@ const ChatView = React.memo(
                   isLoading={
                     message.role === "assistant" && message.content === ""
                   }
+                  isStreaming={
+                    isLoading &&
+                    message === messages[messages.length - 1] &&
+                    message.role === "assistant"
+                  }
                 />
               ))}
             </div>

@@ -132,6 +132,7 @@ interface ChatMessageProps {
   role: "user" | "assistant" | "intermediate" | "ai";
   createdAt: string;
   isLoading?: boolean;
+  isStreaming?: boolean;
   streamAborted?: boolean;
   onDelete?: (messageId: string) => void;
   chatId?: string;
@@ -300,6 +301,7 @@ export function ChatMessage({
   role,
   createdAt: _createdAt,
   isLoading,
+  isStreaming,
   streamAborted,
   onDelete,
   chatId,
@@ -787,17 +789,17 @@ export function ChatMessage({
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
-                {/* Always show lightbulb icon, animate it while loading */}
+                {/* Always show lightbulb icon, animate it while streaming */}
                 <Lightbulb
                   className={cn(
                     "h-4 w-4",
-                    isLoading
+                    (isStreaming || isLoading)
                       ? "animate-pulse text-yellow-500 dark:text-yellow-400"
                       : "text-muted-foreground"
                   )}
                 />
-                {/* Show title when expanded or not loading, show latest message when collapsed and loading */}
-                {isThoughtProcessOpen || !isLoading ? (
+                {/* Show title when expanded or not streaming, show latest message when collapsed and streaming */}
+                {isThoughtProcessOpen || (!isLoading && !isStreaming) ? (
                   "Agent thought process"
                 ) : (
                   <span className="text-xs italic text-muted-foreground truncate max-w-[400px]">
