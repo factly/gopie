@@ -92,34 +92,48 @@ type SSEEvent struct {
 func (s *downloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
 	ctx := context.Background()
 
+	// This is a synchronous error before the stream starts.
 	downloadJob, err := s.store.CreateDownload(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create download record: %w", err)
 	}
 
 	jobIDStr := downloadJob.ID.String()
-	sseChan := make(chan models.DownloadsSSEData, 10) // Buffered channel
+	sseChan := make(chan models.DownloadsSSEData, 10)
 
 	go func() {
 		defer close(sseChan)
 
+		// 1. Manually format and send the 'job_created' event first.
+		jobCreatedPayload, _ := json.Marshal(downloadJob)
+		jobCreatedMsg := fmt.Sprintf("event: job_created\ndata: %s\n\n", jobCreatedPayload)
+		sseChan <- models.DownloadsSSEData{Data: []byte(jobCreatedMsg)}
+
+		// Helper to format subsequent progress updates as 'data' only, like the reference.
 		sendEvent := func(eventType, message string) {
-			event := SSEEvent{
+			eventPayload := SSEEvent{
 				DownloadID: jobIDStr,
 				Type:       eventType,
 				Message:    message,
 			}
-			eventJSON, _ := json.Marshal(event)
-			sseChan <- models.DownloadsSSEData{Data: eventJSON}
+			payloadBytes, _ := json.Marshal(eventPayload)
+			// Subsequent events are just 'data:', as per your reference handler's loop.
+			sseMessage := fmt.Sprintf("data: %s\n\n", payloadBytes)
+			sseChan <- models.DownloadsSSEData{Data: []byte(sseMessage)}
 		}
 
+		// Helper to format a terminal error.
 		handleFailure := func(failErr error) {
 			errMsg := failErr.Error()
 			failReq := &models.SetDownloadFailedRequest{ErrorMessage: errMsg}
 			s.store.SetDownloadAsFailed(ctx, jobIDStr, failReq)
-			sseChan <- models.DownloadsSSEData{Error: failErr}
+
+			errorPayload, _ := json.Marshal(map[string]string{"type": "error", "message": errMsg})
+			errorMsg := fmt.Sprintf("event: error\ndata: %s\n\n", errorPayload)
+			sseChan <- models.DownloadsSSEData{Data: []byte(errorMsg)}
 		}
 
+		// 2. Proceed with the rest of the job, sending formatted status updates.
 		if _, err := s.store.SetDownloadToProcessing(ctx, jobIDStr); err != nil {
 			handleFailure(fmt.Errorf("failed to set job to processing: %w", err))
 			return
@@ -138,9 +152,7 @@ func (s *downloadService) CreateAndStream(req *models.CreateDownloadRequest) (<-
 
 		sendEvent("status_update", "Streaming data to storage...")
 		dbErr := s.olap.ExecuteQueryAndStreamCSV(ctx, downloadJob.SQL, pw)
-
 		pw.CloseWithError(dbErr)
-
 		uploadErr := <-uploadErrChan
 
 		if dbErr != nil || uploadErr != nil {
