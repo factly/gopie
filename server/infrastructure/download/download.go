@@ -12,7 +12,7 @@ type downloadServerRepository struct {
 	baseURL string
 }
 
-func NewDownloadServerRepository(cfg *config.DownloadsServerConfig) repositories.DownloadRepository {
+func NewDownloadServerRepository(cfg *config.DownloadsServerConfig) repositories.DownloadServerRepository {
 	return &downloadServerRepository{
 		client:  &http.Client{},
 		baseURL: cfg.Url,
