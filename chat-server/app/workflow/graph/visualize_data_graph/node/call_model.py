@@ -29,7 +29,6 @@ def should_continue(state: State):
     Determines the next workflow step based on the last AI message and its tool calls.
     """
     last_message = state["messages"][-1]
-
     tool_call_count = state.get("tool_call_count", 0)
 
     if tool_call_count > settings.MAX_VISUALIZATION_TOOL_CALL_LIMIT:
@@ -53,7 +52,7 @@ def should_continue(state: State):
                 )
             return Command(
                 goto="tools",
-                update={"tool_call_count": state.get("tool_call_count", 0) + 1},
+                update={"tool_call_count": tool_call_count + 1},
             )
         else:
             state_update = {
@@ -63,5 +62,5 @@ def should_continue(state: State):
 
     return Command(
         goto="tools",
-        update={"tool_call_count": state.get("tool_call_count", 0) + 1},
+        update={"tool_call_count": tool_call_count + 1},
     )

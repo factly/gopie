@@ -67,6 +67,23 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
 
         visualization_results.data = final_result_data
 
+        # Additionally, try to fetch PNG counterparts for brief image-based summary in respond node
+        png_images_b64: list[str] = []
+        try:
+            png_file_names = [
+                p.rsplit("-", 1)[0].strip().replace(".json", ".png") for p in result_path
+            ]
+            png_bytes_list = await get_visualization_result_data(
+                sandbox=sandbox, file_names=png_file_names
+            )
+            import base64
+
+            for img in png_bytes_list:
+                if isinstance(img, (bytes, bytearray)):
+                    png_images_b64.append(base64.b64encode(img).decode("utf-8"))
+        except Exception:
+            png_images_b64 = []
+
         await adispatch_custom_event(
             "gopie-agent",
             {
@@ -85,6 +102,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             ],
             "result": visualization_results,
             "s3_paths": s3_paths,
+            "result_images_b64": png_images_b64,
         }
 
     except Exception as e:
@@ -95,4 +113,5 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             "messages": [ErrorMessage(content=error_msg)],
             "result": visualization_results,
             "s3_paths": [],
+            "result_images_b64": [],
         }
