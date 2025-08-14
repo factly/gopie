@@ -21,15 +21,17 @@ type S3ObjectStore struct {
 	config        appConfig.S3Config
 	logger        *logger.Logger
 	client        *s3.Client
+	bucket        string
 	presignClient *s3.PresignClient
 	uploader      *manager.Uploader
 }
 
 // NewS3ObjectStore creates a new, uninitialized instance of S3ObjectStore.
-func NewS3ObjectStore(config appConfig.S3Config, logger *logger.Logger) repositories.S3SourceRepository {
+func NewS3ObjectStore(config appConfig.S3Config, bucket string, logger *logger.Logger) repositories.S3SourceRepository {
 	return &S3ObjectStore{
 		config: config,
 		logger: logger,
+		bucket: bucket,
 	}
 }
 
@@ -73,29 +75,29 @@ func (s *S3ObjectStore) Connect(ctx context.Context) error {
 
 // UploadFile now uses the multipart uploader for robust, non-seekable stream uploads.
 func (s *S3ObjectStore) UploadFile(ctx context.Context, key string, body io.Reader) (*manager.UploadOutput, error) {
-	s.logger.Info("Starting file upload to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key))
+	s.logger.Info("Starting file upload to S3", zap.String("bucket", s.bucket), zap.String("key", key))
 
 	// The uploader handles the non-seekable stream gracefully, uploading it in chunks.
 	output, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(s.config.Bucket),
+		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 		Body:   body,
 	})
 	if err != nil {
-		s.logger.Error("Failed to upload file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.Error(err))
+		s.logger.Error("Failed to upload file to S3", zap.String("bucket", s.bucket), zap.String("key", key), zap.Error(err))
 		return nil, err
 	}
 
-	s.logger.Info("Successfully uploaded file to S3", zap.String("bucket", s.config.Bucket), zap.String("key", key), zap.String("upload_id", output.UploadID))
+	s.logger.Info("Successfully uploaded file to S3", zap.String("bucket", s.bucket), zap.String("key", key), zap.String("upload_id", output.UploadID))
 	return output, nil
 }
 
 // GetPresignedURL generates a temporary, pre-signed URL that grants access to an S3 object for a limited time.
 func (s *S3ObjectStore) GetPresignedURL(ctx context.Context, key string, lifetime time.Duration) (string, error) {
-	s.logger.Info("Generating pre-signed URL", zap.String("bucket", s.config.Bucket), zap.String("key", key))
+	s.logger.Info("Generating pre-signed URL", zap.String("bucket", s.bucket), zap.String("key", key))
 
 	request, err := s.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s.config.Bucket),
+		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = lifetime

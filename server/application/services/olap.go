@@ -18,14 +18,12 @@ import (
 
 type OlapService struct {
 	olap   repositories.OlapRepository
-	source repositories.S3SourceRepository
 	logger *logger.Logger
 }
 
-func NewOlapService(olap repositories.OlapRepository, source repositories.S3SourceRepository, logger *logger.Logger) *OlapService {
+func NewOlapService(olap repositories.OlapRepository, logger *logger.Logger) *OlapService {
 	return &OlapService{
 		olap:   olap,
-		source: source,
 		logger: logger,
 	}
 }

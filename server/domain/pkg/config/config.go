@@ -28,7 +28,6 @@ type S3Config struct {
 	AccessKey string
 	SecretKey string
 	Region    string
-	Bucket    string
 	Endpoint  string
 	SSL       bool
 }
@@ -95,6 +94,7 @@ type AIAgentConfig struct {
 }
 
 type DownloadsServerConfig struct {
+	Bucket string
 	Enable bool
 	Url    string
 }
@@ -153,6 +153,8 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 
 	if config.DownloadsServer.Enable {
 		validations = append(validations, validation{config.DownloadsServer.Url, "downloads url"})
+	} else {
+		validations = append(validations, validation{config.DownloadsServer.Bucket, "downloads bucket name"})
 	}
 
 	if config.OlapDB.DB == "" {
@@ -314,6 +316,7 @@ func LoadConfig() (*GopieConfig, error) {
 		DownloadsServer: DownloadsServerConfig{
 			Enable: viper.GetBool("GOPIE_DOWNLOADS_USE_SERVER"),
 			Url:    viper.GetString("GOPIE_DOWNLOADS_SERVER_URL"),
+			Bucket: viper.GetString("GOPIE_DOWNLOADS_S3_BUCKET"),
 		},
 
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),

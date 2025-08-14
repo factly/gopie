@@ -50,7 +50,6 @@ func ServeHttp() error {
 	appLogger.Info("logger initialized")
 
 	// Initialize repositories and services
-	source := s3.NewS3ObjectStore(cfg.S3, appLogger)
 	olap, err := duckdb.NewOlapDBDriver(&cfg.OlapDB, appLogger, &cfg.S3)
 	if err != nil {
 		appLogger.Error("error connecting to olap database", zap.Error(err))
@@ -73,10 +72,10 @@ func ServeHttp() error {
 	chatStore := chats.NewChatStoreRepository(storeRepo.GetDB(), appLogger)
 	dbSourceStore := database_source.NewDatabaseSourceStore(storeRepo.GetDB(), appLogger, cfg)
 	downloadsStore := downloads.NewPostgresDownloadsStore(storeRepo.GetDB(), appLogger)
-	s3Repo := s3.NewS3ObjectStore(cfg.S3, appLogger)
+	s3Repo := s3.NewS3ObjectStore(cfg.S3, cfg.DownloadsServer.Bucket, appLogger)
 	aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
 
-	olapService := services.NewOlapService(olap, source, appLogger)
+	olapService := services.NewOlapService(olap, appLogger)
 	// Initialize services
 	aiService := services.NewAiDriver(porkeyClient)
 	projectService := services.NewProjectService(projectStore)
