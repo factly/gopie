@@ -854,31 +854,29 @@ export function ChatMessage({
                           )}
                         </div>
                       </CollapsibleTrigger>
-                      {!isLoading && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const queryToRun =
-                              editedQueries[index] ?? formatSqlQuery(query);
-                            resetPagination();
-                            setOnPageChange((page: number, limit: number) => {
-                              handleRunQuery(queryToRun, page, limit);
-                            });
-                            handleRunQuery(queryToRun, 1, rowsPerPage);
-                          }}
-                          disabled={isExecuting}
-                          className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
-                        >
-                          {isExecuting ? (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                          ) : (
-                            <Play className="mr-1 h-3 w-3" />
-                          )}
-                          Run
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const queryToRun =
+                            editedQueries[index] ?? formatSqlQuery(query);
+                          resetPagination();
+                          setOnPageChange((page: number, limit: number) => {
+                            handleRunQuery(queryToRun, page, limit);
+                          });
+                          handleRunQuery(queryToRun, 1, rowsPerPage);
+                        }}
+                        disabled={isExecuting || isLoading}
+                        className="h-7 px-2 text-xs ml-2 flex-shrink-0 hover:bg-primary hover:text-primary-foreground"
+                      >
+                        {isExecuting ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <Play className="mr-1 h-3 w-3" />
+                        )}
+                        Run
+                      </Button>
                     </div>
                     <CollapsibleContent className="border-t border-border">
                       <div className="p-3 pt-2">
