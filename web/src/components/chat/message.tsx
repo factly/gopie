@@ -881,17 +881,19 @@ export function ChatMessage({
                       )}
                     </div>
                     <CollapsibleContent className="border-t border-border">
-                      <div className="p-3 pt-2">
-                        <SqlEditor
-                          value={editedQueries[index] ?? formatSqlQuery(query)}
-                          onChange={(newValue) => {
-                            setEditedQueries((prev) => ({
-                              ...prev,
-                              [index]: newValue,
-                            }));
-                          }}
-                          datasetId={""}
-                        />
+                      <div className="p-3 pt-2 overflow-hidden">
+                        <div className="w-full min-w-0">
+                          <SqlEditor
+                            value={editedQueries[index] ?? formatSqlQuery(query)}
+                            onChange={(newValue) => {
+                              setEditedQueries((prev) => ({
+                                ...prev,
+                                [index]: newValue,
+                              }));
+                            }}
+                            datasetId={""}
+                          />
+                        </div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>

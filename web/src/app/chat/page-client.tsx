@@ -444,7 +444,7 @@ const ChatView = React.memo(
           messages.length > 0 ? "opacity-100" : "opacity-0"
         } transition-opacity duration-300`}
       />
-      <ScrollArea ref={scrollRef} className="h-full w-full">
+      <ScrollArea ref={scrollRef} className="h-full w-full [&>div>div]:!block [&>div>div]:!min-w-0">
         <div className="px-4 pb-32 pt-8">
           {/* Load more button for pagination */}
           {hasNextPage && selectedChatId && (
