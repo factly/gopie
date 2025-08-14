@@ -115,6 +115,7 @@ async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset] | None
     for file_name, csv_data in csv_files:
         tasks.append(sandbox.files.write(file_name, csv_data))
     await asyncio.gather(*tasks)
+    return [file_name for file_name, _ in csv_files]
 
 
 @traceable(run_type="chain", name="run_python_code")
@@ -134,7 +135,7 @@ async def run_python_code(
 @traceable(run_type="chain", name="get_visualization_result_data")
 async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[str]) -> list[str]:
     """
-    Asynchronously reads the contents of multiple files from the sandbox environment.
+    Asynchronously reads multiple text files (e.g., JSON) from the sandbox.
 
     Parameters:
         file_names (list[str]): List of file names to read from the sandbox.
@@ -145,6 +146,25 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
     tasks = []
     for file_name in file_names:
         tasks.append(sandbox.files.read(file_name))
+    return await asyncio.gather(*tasks)
+
+
+@traceable(run_type="chain", name="get_visualization_result_bytes")
+async def get_visualization_result_bytes(
+    sandbox: AsyncSandbox, file_names: list[str]
+) -> list[bytes]:
+    """
+    Asynchronously reads multiple binary files (e.g., PNG) from the sandbox.
+
+    Parameters:
+        file_names (list[str]): List of file names to read from the sandbox.
+
+    Returns:
+        list[bytes]: Raw bytes of the files, in the same order as the provided file names.
+    """
+    tasks = []
+    for file_name in file_names:
+        tasks.append(sandbox.files.read(file_name, format="bytes"))
     return await asyncio.gather(*tasks)
 
 

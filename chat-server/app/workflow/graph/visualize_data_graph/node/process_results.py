@@ -8,6 +8,7 @@ from app.models.message import ErrorMessage
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph.utils import (
     add_context_to_python_code,
+    get_visualization_result_bytes,
     get_visualization_result_data,
     upload_visualization_result_data,
 )
@@ -73,7 +74,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             png_file_names = [
                 p.rsplit("-", 1)[0].strip().replace(".json", ".png") for p in result_path
             ]
-            png_bytes_list = await get_visualization_result_data(
+            png_bytes_list = await get_visualization_result_bytes(
                 sandbox=sandbox, file_names=png_file_names
             )
             import base64
