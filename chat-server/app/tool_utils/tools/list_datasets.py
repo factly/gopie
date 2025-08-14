@@ -69,9 +69,12 @@ async def list_projects(limit: int = 10, page: int = 1) -> list[dict]:
 
 
 @tool
-async def get_all_datasets() -> list[dict]:
+async def get_all_datasets(status_message: str = "") -> list[dict]:
     """
     Get all datasets from all projects.
+
+    status_message: Short, friendly message to show the user about this action
+            (<= 120 chars). Mention if this is a retry and why you're retrying, when applicable.
 
     Args:
         base_url: Base URL of the API
@@ -99,7 +102,7 @@ async def get_all_datasets() -> list[dict]:
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    return "Listing all available datasets"
+    return args.get("status_message") or "Listing all available datasets"
 
 
 __tool__ = get_all_datasets

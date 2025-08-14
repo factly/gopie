@@ -13,6 +13,7 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 async def get_datasets_schemas(
     dataset_ids: list[str] = [],
     project_ids: list[str] = [],
+    status_message: str = "",
 ) -> str:
     """
     Get the schema of a specific tables from Qdrant database.
@@ -31,6 +32,8 @@ async def get_datasets_schemas(
     Args:
         dataset_ids: The ids of the datasets to retrieve schema for.
         project_ids: The ids of the projects to retrieve schema for.
+        status_message: Short, friendly message to show the user about this action
+            (<= 120 chars). Mention if this is a retry and why you're retrying, when applicable.
 
         Caution:
             - Requires atleast one of the dataset_ids or project_ids.
@@ -85,19 +88,7 @@ async def get_datasets_schemas(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    dataset_ids = args.get("dataset_ids") or []
-    project_ids = args.get("project_ids") or []
-    parts = []
-    if dataset_ids:
-        parts.append(
-            f"datasets: {', '.join(map(str, dataset_ids[:3]))}{'...' if len(dataset_ids) > 3 else ''}"
-        )
-    if project_ids:
-        parts.append(
-            f"projects: {', '.join(map(str, project_ids[:3]))}{'...' if len(project_ids) > 3 else ''}"
-        )
-    suffix = " (" + "; ".join(parts) + ")" if parts else ""
-    return f"Retrieving dataset schemas{suffix}"
+    return args.get("status_message") or "Retrieving dataset schemas"
 
 
 __tool__ = get_datasets_schemas

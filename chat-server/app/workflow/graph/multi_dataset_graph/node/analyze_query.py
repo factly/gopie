@@ -1,11 +1,11 @@
 from datetime import datetime
 from typing import Any
 
-from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
@@ -126,13 +126,7 @@ async def _handle_tool_call_response(
 ) -> dict:
     ai_message = response if isinstance(response, BaseMessage) else AIMessage(content=str(response))
 
-    content = ai_message.content
-    await adispatch_custom_event(
-        "gopie-agent",
-        {
-            "content": content or "Working out the next step with the right tool...",
-        },
-    )
+    logger.debug(ai_message.content)
 
     return {
         "query_result": query_result,

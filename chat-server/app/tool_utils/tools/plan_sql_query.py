@@ -10,6 +10,7 @@ async def plan_sql_query(
     user_query: str,
     schemas: list[dict],
     config: RunnableConfig,
+    status_message: str = "",
 ) -> dict:
     """
     Plan a SQL query given a user natural language query and dataset schemas.
@@ -55,13 +56,7 @@ async def plan_sql_query(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    uq = (args.get("user_query") or "").strip().replace("\n", " ")
-    if len(uq) > 70:
-        uq = uq[:67] + "..."
-    schemas = args.get("schemas") or []
-    num_tables = len(schemas)
-    suffix = f" using {num_tables} schema(s)" if num_tables else ""
-    return f"Planning SQL{suffix}: {uq}" if uq else f"Planning SQL{suffix}"
+    return args.get("status_message") or "Using SQL query planner tool to plan the query..."
 
 
 __tool__ = plan_sql_query

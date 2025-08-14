@@ -48,10 +48,7 @@ async def run_python_code(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    status = (args.get("status_message") or "").strip()
-    if status:
-        return status
-    return "Getting your visualization ready"
+    return args.get("status_message") or "Getting your visualization ready"
 
 
 __tool__ = run_python_code

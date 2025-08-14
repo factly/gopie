@@ -21,10 +21,7 @@ def result_paths(visualization_result_paths: list[str], status_message: str = ""
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    status = (args.get("status_message") or "").strip()
-    if status:
-        return status
-    return "Finalizing visualization results"
+    return args.get("status_message") or "Finalizing visualization results"
 
 
 __tool__ = result_paths

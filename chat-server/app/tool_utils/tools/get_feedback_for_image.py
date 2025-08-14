@@ -167,10 +167,7 @@ async def get_feedback_for_image(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    status = (args.get("status_message") or "").strip()
-    if status:
-        return status
-    return "Reviewing the generated Visualization"
+    return args.get("status_message") or "Reviewing the generated Visualization"
 
 
 __tool__ = get_feedback_for_image
