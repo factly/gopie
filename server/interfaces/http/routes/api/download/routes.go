@@ -8,11 +8,11 @@ import (
 )
 
 type httpHandler struct {
-	service *services.DownloadService
+	service *services.DownloadServerService
 	logger  *logger.Logger
 }
 
-func Routes(router fiber.Router, service *services.DownloadService, logger *logger.Logger) {
+func Routes(router fiber.Router, service *services.DownloadServerService, logger *logger.Logger) {
 	h := httpHandler{service, logger}
 	router.Post("/", h.createAndStream)
 	router.Get("/", h.list)

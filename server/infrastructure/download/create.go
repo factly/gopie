@@ -11,7 +11,7 @@ import (
 	"github.com/factly/gopie/domain/models"
 )
 
-func (r *downloadRepository) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
+func (r *downloadServerRepository) CreateAndStream(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
 	url := fmt.Sprintf("%s/downloads", r.baseURL)
 
 	payload, err := json.Marshal(req)

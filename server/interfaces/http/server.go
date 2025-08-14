@@ -73,7 +73,7 @@ func ServeHttp() error {
 	chatStore := chats.NewChatStoreRepository(storeRepo.GetDB(), appLogger)
 	dbSourceStore := database_source.NewDatabaseSourceStore(storeRepo.GetDB(), appLogger, cfg)
 	aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
-	downloadsRepo := download.NewDownloadRepository(&cfg.DownloadsServer)
+	downloadsRepo := download.NewDownloadServerRepository(&cfg.DownloadsServer)
 
 	olapService := services.NewOlapService(olap, source, appLogger)
 	// Initialize services
@@ -83,7 +83,7 @@ func ServeHttp() error {
 	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
 	aiAgentService := services.NewAIService(aiAgentRepo)
 	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, appLogger)
-	downloadService := services.NewDownloadService(downloadsRepo, appLogger)
+	downloadService := services.NewDownloadServerService(downloadsRepo, appLogger)
 
 	// Create ServerParams to pass to both servers
 	params := &ServerParams{

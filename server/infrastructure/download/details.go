@@ -8,7 +8,7 @@ import (
 	"github.com/factly/gopie/domain/models"
 )
 
-func (r *downloadRepository) Get(downloadID, userID, orgID string) (*models.Download, error) {
+func (r *downloadServerRepository) Get(downloadID, userID, orgID string) (*models.Download, error) {
 	url := fmt.Sprintf("%s/downloads/%s", r.baseURL, downloadID)
 	httpReq, _ := http.NewRequest("GET", url, nil)
 	httpReq.Header.Set("x-user-id", userID)
