@@ -5,7 +5,7 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, Loader2, Database } from "lucide-react";
+import { PlayIcon, Loader2, Database, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +43,13 @@ const fadeInVariants = {
   transition: { duration: 0.2 },
 };
 
+interface ErrorDetails {
+  message: string;
+  details?: string;
+  suggestion?: string;
+  code?: number;
+}
+
 export default function SqlPage({
   params,
 }: {
@@ -57,6 +64,7 @@ export default function SqlPage({
   const [columns, setColumns] = React.useState<string[] | undefined>(undefined);
   const [executionTime, setExecutionTime] = React.useState<number | undefined>(undefined);
   const [isExecuting, setIsExecuting] = React.useState(false);
+  const [queryError, setQueryError] = React.useState<ErrorDetails | null>(null);
   const executeSql = useDatasetSql();
   const nl2Sql = useNl2Sql();
   const [naturalQuery, setNaturalQuery] = React.useState("");
@@ -90,11 +98,12 @@ export default function SqlPage({
     async (queryToExecute: string, page: number = 1, limit: number = 10) => {
       const offset = (page - 1) * limit;
 
-      // Clear previous results when starting new query execution
+      // Clear previous results and errors when starting new query execution
       setResults(null);
       setTotalCount(0);
       setColumns(undefined);
       setExecutionTime(undefined);
+      setQueryError(null);
       
       setIsExecuting(true);
       try {
@@ -109,8 +118,54 @@ export default function SqlPage({
         setColumns(response.columns);
         setExecutionTime(response.executionTime);
         setCurrentQuery(queryToExecute);
+        setQueryError(null);
 
         return response;
+      } catch (error: any) {
+        // Parse error response
+        let errorDetails: ErrorDetails = {
+          message: "Failed to execute query",
+          details: undefined,
+          suggestion: undefined,
+          code: undefined,
+        };
+
+        if (error?.errorData) {
+          const errorData = error.errorData;
+          
+          // Extract meaningful error information from server response
+          if (errorData.message) {
+            errorDetails.message = errorData.message;
+          }
+          if (errorData.error) {
+            // If error is a string, use it as details
+            if (typeof errorData.error === 'string') {
+              errorDetails.details = errorData.error;
+            }
+          }
+          if (errorData.code) {
+            errorDetails.code = errorData.code;
+          }
+          
+          // Add suggestions based on error type
+          if (errorData.code === 404 || errorDetails.message.includes("dataset does not exist")) {
+            errorDetails.suggestion = "Check that the table name is correct and that the dataset has been properly loaded.";
+          } else if (errorData.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
+            errorDetails.suggestion = "Only SELECT queries are allowed. Please modify your query to retrieve data without making changes.";
+          } else if (errorDetails.details?.includes("Syntax Error") || errorDetails.details?.includes("Parser Error")) {
+            errorDetails.suggestion = "Check your SQL syntax. Common issues include missing commas, unclosed quotes, or incorrect keywords.";
+          } else if (errorDetails.details?.includes("column") && errorDetails.details?.includes("not found")) {
+            errorDetails.suggestion = "The column name might be incorrect. Check the available columns in the schema.";
+          } else if (errorDetails.details?.includes("Binder Error")) {
+            errorDetails.suggestion = "There's an issue with table or column references. Verify that all referenced tables and columns exist.";
+          }
+        } else if (error instanceof Error) {
+          errorDetails.message = error.message;
+        }
+
+        setQueryError(errorDetails);
+        setResults(null);
+        throw error;
       } finally {
         setIsExecuting(false);
       }
@@ -141,10 +196,9 @@ export default function SqlPage({
       // Continue with original query if formatting fails
     }
 
-    toast.promise(executeQueryWithPagination(formattedQuery, 1, 20), {
-      loading: "Executing SQL query...",
-      success: () => "Query executed successfully",
-      error: (err) => `Failed to execute query: ${err.message}`,
+    executeQueryWithPagination(formattedQuery, 1, 20).catch(() => {
+      // Error is already handled in executeQueryWithPagination
+      // No need to show toast here as we'll display in the UI
     });
   }, [query, executeQueryWithPagination, setQuery]);
 
@@ -152,10 +206,8 @@ export default function SqlPage({
     (page: number, limit: number) => {
       if (!currentQuery) return;
 
-      toast.promise(executeQueryWithPagination(currentQuery, page, limit), {
-        loading: "Loading page...",
-        success: () => `Loaded page ${page}`,
-        error: (err) => `Failed to load page: ${err.message}`,
+      executeQueryWithPagination(currentQuery, page, limit).catch(() => {
+        // Error is already handled in executeQueryWithPagination
       });
     },
     [currentQuery, executeQueryWithPagination]
@@ -171,10 +223,8 @@ export default function SqlPage({
 
       // Execute the initial query with pagination
       if (initialQuery.trim()) {
-        toast.promise(executeQueryWithPagination(initialQuery, 1, 20), {
-          loading: "Executing SQL query...",
-          success: () => "Query executed successfully",
-          error: (err) => `Failed to execute query: ${err.message}`,
+        executeQueryWithPagination(initialQuery, 1, 20).catch(() => {
+          // Error is already handled in executeQueryWithPagination
         });
       }
 
@@ -239,9 +289,14 @@ export default function SqlPage({
 
       toast.success("Query executed successfully", { id: promiseId });
     } catch (error) {
-      toast.error("Failed to process question: " + (error as Error).message, {
-        id: promiseId,
-      });
+      // Only show toast for NL2SQL generation errors, not SQL execution errors
+      if (!queryError) {
+        toast.error("Failed to process question: " + (error as Error).message, {
+          id: promiseId,
+        });
+      } else {
+        toast.dismiss(promiseId);
+      }
     }
   };
 
@@ -399,8 +454,8 @@ export default function SqlPage({
           />
 
           {/* Results Header */}
-          <div className="border-b bg-muted/50 p-3 ml-4 border">
-            <div className="flex items-center justify-between">
+          <div className="border-b bg-muted/50 p-3 border">
+            <div className="flex items-center justify-between px-4">
               <h3 className="font-medium">Results</h3>
               {!isExecuting && executionTime !== undefined && (
                 <span className="text-sm text-muted-foreground">
@@ -411,24 +466,96 @@ export default function SqlPage({
           </div>
 
           {/* Results Content */}
-          <div className="mt-4 ml-4 flex-1 min-h-0 overflow-auto">
+          <div className="flex-1 min-h-0 overflow-auto">
             {isExecuting ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin opacity-50" />
                 <p className="text-sm">Executing query...</p>
               </div>
+            ) : queryError ? (
+              <div className="flex h-full items-center justify-center px-8 pb-32">
+                <div className="w-full max-w-3xl">
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                        <svg
+                          className="h-5 w-5 text-destructive"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <h3 className="text-base font-semibold text-destructive">
+                            Query Execution Failed
+                          </h3>
+                          <p className="mt-1 text-sm text-destructive/90">
+                            {queryError.message}
+                          </p>
+                        </div>
+                        
+                        {queryError.details && (
+                          <div className="rounded-md bg-background/50 p-3">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">
+                              Error Details:
+                            </p>
+                            <p className="text-sm text-foreground/80">
+                              {queryError.details}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {currentQuery && (
+                          <div className="rounded-md bg-muted/30 p-3">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              Query that failed:
+                            </p>
+                            <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
+                              {currentQuery}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        {queryError.suggestion && (
+                          <div className="flex items-start gap-2 rounded-md bg-primary/5 p-3">
+                            <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-primary mb-1">
+                                Suggestion:
+                              </p>
+                              <p className="text-sm text-foreground/80">
+                                {queryError.suggestion}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : results ? (
-              <ResultsTable
-                results={results}
-                total={totalCount}
-                columns={columns}
-                onPageChange={handlePageChange}
-                loading={isExecuting}
-                sqlQuery={currentQuery}
-                datasetId={dataset?.name}
-              />
+              <div className="p-4">
+                <ResultsTable
+                  results={results}
+                  total={totalCount}
+                  columns={columns}
+                  onPageChange={handlePageChange}
+                  loading={isExecuting}
+                  sqlQuery={currentQuery}
+                  datasetId={dataset?.name}
+                />
+              </div>
             ) : (
-              <div className="p-4 text-center text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-muted-foreground">
                 No results to display. Execute a query to see results.
               </div>
             )}

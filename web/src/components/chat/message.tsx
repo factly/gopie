@@ -574,12 +574,53 @@ export function ChatMessage({
         });
         setSqlPanelOpen(true);
         setActiveTab("sql"); // Switch to SQL tab when running a query
-      } catch (error) {
+      } catch (error: any) {
+        let errorDetails = {
+          message: "Failed to execute query",
+          details: undefined as string | undefined,
+          suggestion: undefined as string | undefined,
+          code: undefined as number | undefined,
+        };
+
+        // Parse error response from server
+        if (error?.errorData) {
+          const errorData = error.errorData;
+          
+          // Extract meaningful error information from server response
+          if (errorData.message) {
+            errorDetails.message = errorData.message;
+          }
+          if (errorData.error) {
+            // If error is a string, use it as details
+            if (typeof errorData.error === 'string') {
+              errorDetails.details = errorData.error;
+            }
+          }
+          if (errorData.code) {
+            errorDetails.code = errorData.code;
+          }
+          
+          // Add suggestions based on error type
+          if (errorData.code === 404 || errorDetails.message.includes("dataset does not exist")) {
+            errorDetails.suggestion = "Check that the table name is correct and that the dataset has been properly loaded.";
+          } else if (errorData.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
+            errorDetails.suggestion = "Only SELECT queries are allowed. Please modify your query to retrieve data without making changes.";
+          } else if (errorDetails.details?.includes("Syntax Error") || errorDetails.details?.includes("Parser Error")) {
+            errorDetails.suggestion = "Check your SQL syntax. Common issues include missing commas, unclosed quotes, or incorrect keywords.";
+          } else if (errorDetails.details?.includes("column") && errorDetails.details?.includes("not found")) {
+            errorDetails.suggestion = "The column name might be incorrect. Check the available columns in the schema.";
+          } else if (errorDetails.details?.includes("Binder Error")) {
+            errorDetails.suggestion = "There's an issue with table or column references. Verify that all referenced tables and columns exist.";
+          }
+        } else if (error instanceof Error) {
+          errorDetails.message = error.message;
+        }
+
         setResults({
           data: [],
           total: 0,
-          error:
-            error instanceof Error ? error.message : "Failed to execute query",
+          error: errorDetails.message,
+          errorDetails,
           query,
           chatId,
         });
