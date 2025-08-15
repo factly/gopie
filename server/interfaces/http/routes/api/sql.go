@@ -20,14 +20,14 @@ type sqlRequestBody struct {
 }
 
 // @Summary Execute SQL query
-// @Description Execute a SQL query on a dataset (only SELECT statements are allowed)
+// @Description Execute a SQL query on a dataset (only read-only queries are allowed: SELECT, WITH, DESCRIBE, SUMMARIZE)
 // @Tags query
 // @Accept json
 // @Produce json
 // @Param query body sqlRequestBody true "SQL query"
 // @Success 200 {array} map[string]interface{} "Query results"
 // @Failure 400 {object} responses.ErrorResponse "Invalid SQL query"
-// @Failure 403 {object} responses.ErrorResponse "Non-SELECT statement"
+// @Failure 403 {object} responses.ErrorResponse "Non-read-only query"
 // @Failure 404 {object} responses.ErrorResponse "Table not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /v1/api/sql [post]
@@ -76,7 +76,7 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 			case domain.ErrNotSelectStatement:
 				return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error":   err.Error(),
-					"message": "Only SELECT statements are allowed",
+					"message": "Only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE)",
 					"code":    fiber.StatusForbidden,
 				})
 			default:

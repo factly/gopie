@@ -42,8 +42,8 @@ export function categorizeSqlError(errorData: unknown): SqlErrorDetails {
   // Add suggestions based on error type
   if (errorDetails.code === 404 || errorDetails.message.includes("dataset does not exist")) {
     errorDetails.suggestion = "Check that the table name is correct and that the dataset has been properly loaded.";
-  } else if (errorDetails.code === 403 || errorDetails.message.includes("Only SELECT statements")) {
-    errorDetails.suggestion = "Only SELECT queries are allowed. Please modify your query to retrieve data without making changes.";
+  } else if (errorDetails.code === 403 || errorDetails.message.includes("Only SELECT statements") || errorDetails.message.includes("only read-only queries")) {
+    errorDetails.suggestion = "Only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE). Please modify your query to retrieve data without making changes.";
   } else if (errorDetails.details?.includes("Syntax Error") || errorDetails.details?.includes("Parser Error")) {
     errorDetails.suggestion = "Check your SQL syntax. Common issues include missing commas, unclosed quotes, or incorrect keywords.";
   } else if (errorDetails.details?.includes("column") && errorDetails.details?.includes("not found")) {

@@ -1,13 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "GoPie API documentation",
-        "title": "GoPie API",
-        "contact": {},
-        "version": "1.1"
+        "contact": {}
     },
-    "host": "localhost:8000",
-    "basePath": "/",
     "paths": {
         "/api/chats/{chat_id}/visibility": {
             "put": {
@@ -1862,7 +1857,7 @@
         },
         "/v1/api/sql": {
             "post": {
-                "description": "Execute a SQL query on a dataset (only SELECT statements are allowed)",
+                "description": "Execute a SQL query on a dataset (only read-only queries are allowed: SELECT, WITH, DESCRIBE, SUMMARIZE)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1902,7 +1897,7 @@
                         }
                     },
                     "403": {
-                        "description": "Non-SELECT statement",
+                        "description": "Non-read-only query",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }

@@ -1868,7 +1868,7 @@ const docTemplate = `{
         },
         "/v1/api/sql": {
             "post": {
-                "description": "Execute a SQL query on a dataset (only SELECT statements are allowed)",
+                "description": "Execute a SQL query on a dataset (only read-only queries are allowed: SELECT, WITH, DESCRIBE, SUMMARIZE)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1908,7 +1908,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Non-SELECT statement",
+                        "description": "Non-read-only query",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }
@@ -2819,12 +2819,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.1",
-	Host:             "localhost:8000",
-	BasePath:         "/",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "GoPie API",
-	Description:      "GoPie API documentation",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

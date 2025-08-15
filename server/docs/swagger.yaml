@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   ai.genColumnsDescBody:
     type: object
@@ -610,12 +609,8 @@ definitions:
     - file_path
     - project_id
     type: object
-host: localhost:8000
 info:
   contact: {}
-  description: GoPie API documentation
-  title: GoPie API
-  version: "1.1"
 paths:
   /api/chats/{chat_id}/visibility:
     put:
@@ -1823,7 +1818,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Execute a SQL query on a dataset (only SELECT statements are allowed)
+      description: 'Execute a SQL query on a dataset (only read-only queries are allowed:
+        SELECT, WITH, DESCRIBE, SUMMARIZE)'
       parameters:
       - description: SQL query
         in: body
@@ -1846,7 +1842,7 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
         "403":
-          description: Non-SELECT statement
+          description: Non-read-only query
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
         "404":
