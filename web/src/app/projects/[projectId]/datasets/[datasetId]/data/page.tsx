@@ -5,7 +5,7 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { Button } from "@/components/ui/button";
-import { PlayIcon, Loader2, Database, Lightbulb, CheckCircle2 } from "lucide-react";
+import { PlayIcon, Loader2, Database, Lightbulb, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ResultsTable } from "@/components/dataset/sql/results-table";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,6 +76,7 @@ export default function SqlPage({
     "idle" | "processing" | "converting" | "executing" | "completed"
   >("idle");
   const [queryGenerated, setQueryGenerated] = React.useState(false);
+  const [isFixingQuery, setIsFixingQuery] = React.useState(false);
 
   const { data: dataset, isLoading: datasetLoading } = useDataset({
     variables: {
@@ -264,6 +265,59 @@ export default function SqlPage({
       if (!queryError) {
         toast.error("Failed to process question: " + (error as Error).message);
       }
+    }
+  };
+
+  const handleFixAndExecute = async () => {
+    if (!queryError || !currentQuery || !dataset?.name) {
+      return;
+    }
+
+    setIsFixingQuery(true);
+    setQueryGenerated(false);
+
+    try {
+      // Construct error context to pass to the NL2SQL API
+      const errorContext = `Fix this SQL query that failed with the following error:
+Error Message: ${queryError.message}
+${queryError.details ? `Error Details: ${queryError.details}` : ''}
+Failed Query: ${currentQuery}
+${queryError.suggestion ? `Suggestion: ${queryError.suggestion}` : ''}
+
+Please provide a corrected SQL query that will work.`;
+
+      // Use the same NL2SQL API to fix the query
+      const fixedQuery = await nl2Sql.mutateAsync({
+        query: errorContext,
+        datasetId: dataset.name,
+      });
+
+      // Format and set the fixed SQL in the main editor
+      let formattedSQL = fixedQuery.sql;
+      try {
+        formattedSQL = format(fixedQuery.sql, {
+          language: "sql",
+          tabWidth: 2,
+          useTabs: false,
+          keywordCase: "lower",
+          linesBetweenQueries: 2,
+        });
+      } catch (error) {
+        console.warn("Failed to format AI-fixed SQL:", error);
+        // Use original SQL if formatting fails
+      }
+      setQuery(formattedSQL);
+      setQueryGenerated(true);
+
+      // Execute the fixed query
+      await executeQueryWithPagination(formattedSQL, 1, 20);
+      
+      // Show success message
+      toast.success("Query fixed and executed successfully");
+    } catch (error) {
+      toast.error("Failed to fix query: " + (error as Error).message);
+    } finally {
+      setIsFixingQuery(false);
     }
   };
 
@@ -539,6 +593,26 @@ export default function SqlPage({
                             </div>
                           </div>
                         )}
+                        
+                        {/* Fix with AI button - shows only when there's an error */}
+                        <Button
+                          onClick={handleFixAndExecute}
+                          disabled={isFixingQuery || isPending}
+                          className="w-full mt-3 justify-center"
+                          variant="default"
+                        >
+                          {isFixingQuery ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Fixing query...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Fix with AI & Execute
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </div>
