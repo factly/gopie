@@ -136,3 +136,12 @@ func (s *PgDatasetStore) ListALlDatasetsFromProject(ctx context.Context, project
 
 	return datasets, nil
 }
+
+func (s *PgDatasetStore) GetProjectForDataset(ctx context.Context, datasetID string) (string, error) {
+	projectID, err := s.q.GetProjectForDataset(ctx, datasetID)
+	if err != nil {
+		s.logger.Error("Error fetching project for dataset", zap.String("datasetID", datasetID), zap.Error(err))
+		return "", err
+	}
+	return projectID, nil
+}

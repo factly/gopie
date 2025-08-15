@@ -1016,6 +1016,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/api/datasets/{datasetID}/project": {
+            "get": {
+                "description": "Get the project ID for a specific dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Get project for dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No project found for dataset",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/downloads": {
             "get": {
                 "security": [
@@ -1821,7 +1868,7 @@ const docTemplate = `{
         },
         "/v1/api/sql": {
             "post": {
-                "description": "Execute a SQL query on a dataset (only SELECT statements are allowed)",
+                "description": "Execute a SQL query on a dataset (only read-only queries are allowed: SELECT, WITH, DESCRIBE, SUMMARIZE)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1861,7 +1908,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Non-SELECT statement",
+                        "description": "Non-read-only query",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }

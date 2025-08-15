@@ -123,6 +123,17 @@ func (q *Queries) ListAllDatasetsFromProject(ctx context.Context, projectID stri
 	return items, nil
 }
 
+const getProjectForDataset = `-- name: GetProjectForDataset :one
+select pd.project_id from project_datasets pd where pd.dataset_id = $1
+`
+
+func (q *Queries) GetProjectForDataset(ctx context.Context, datasetID string) (string, error) {
+	row := q.db.QueryRow(ctx, getProjectForDataset, datasetID)
+	var project_id string
+	err := row.Scan(&project_id)
+	return project_id, err
+}
+
 const listProjectDatasets = `-- name: ListProjectDatasets :many
 select 
     d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.size, d.file_path, d.columns, d.org_id, d.custom_prompt,

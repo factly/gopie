@@ -46,6 +46,8 @@ import { useProject } from "@/lib/queries/project/get-project";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { UIMessage } from "ai";
+import { apiClient } from "@/lib/api-client";
+import { parseSqlError } from "@/lib/sql-error-utils";
 
 interface MessageContent {
   type: "text" | "sql";
@@ -156,11 +158,7 @@ function ContextDisplay({ projectIds, datasetIds }: ContextDisplayProps) {
         <DatasetItem
           key={datasetId}
           datasetId={datasetId}
-          projectId={
-            datasetIds.length === 1 && projectIds.length === 1
-              ? projectIds[0]
-              : undefined
-          }
+          // Don't pass projectId - let DatasetItem fetch it
         />
       ))}
     </div>
@@ -217,28 +215,50 @@ function ProjectItem({ projectId }: ProjectItemProps) {
 // New component for dataset details
 interface DatasetItemProps {
   datasetId: string;
-  projectId?: string;
 }
 
-function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
+function DatasetItem({ datasetId }: DatasetItemProps) {
   const {
     data: dataset,
-    isLoading,
-    isError,
+    isLoading: datasetLoading,
+    isError: datasetError,
   } = useDatasetById({
     variables: { datasetId },
   });
 
-  if (isLoading) {
+  // Fetch the dataset's project
+  const [projectId, setProjectId] = useState<string | undefined>();
+  const [isLoadingProject, setIsLoadingProject] = useState(true);
+
+  useEffect(() => {
+    // Fetch the project ID for this dataset
+    if (dataset) {
+      apiClient.get(`v1/api/datasets/${encodeURIComponent(datasetId)}/project`)
+        .json<{ project_id: string }>()
+        .then((result) => {
+          if (result?.project_id) {
+            setProjectId(result.project_id);
+          }
+        })
+        .catch((error) => {
+          console.warn(`Could not fetch project for dataset ${datasetId}:`, error);
+        })
+        .finally(() => {
+          setIsLoadingProject(false);
+        });
+    }
+  }, [dataset, datasetId]);
+
+  if (datasetLoading || isLoadingProject) {
     return (
       <Badge variant="secondary" className="text-xs">
         <Loader2 className="h-3 w-3 animate-spin mr-1" />
-        {datasetId.substring(0, 8)}...
+        Loading...
       </Badge>
     );
   }
 
-  if (isError || !dataset) {
+  if (datasetError || !dataset) {
     return (
       <Badge variant="destructive" className="text-xs">
         {datasetId.substring(0, 8)}...
@@ -246,18 +266,31 @@ function DatasetItem({ datasetId, projectId }: DatasetItemProps) {
     );
   }
 
+  // If we have a project ID, show as a link
+  if (projectId) {
+    return (
+      <Badge variant="secondary" className="text-xs font-normal">
+        <Link
+          href={`/projects/${projectId}/datasets/${datasetId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <Database className="h-3 w-3" />
+          {dataset.alias}
+          <ExternalLink className="h-3 w-3 ml-0.5" />
+        </Link>
+      </Badge>
+    );
+  }
+
+  // If no project ID is available, show the dataset without a link
   return (
     <Badge variant="secondary" className="text-xs font-normal">
-      <Link
-        href={`/projects/${projectId}/datasets/${datasetId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:underline"
-      >
+      <div className="flex items-center gap-1">
         <Database className="h-3 w-3" />
         {dataset.alias}
-        <ExternalLink className="h-3 w-3 ml-0.5" />
-      </Link>
+      </div>
     </Badge>
   );
 }
@@ -520,6 +553,8 @@ export function ChatMessage({
 
   const handleRunQuery = useCallback(
     async (query: string, page: number = 1, limit: number = 20) => {
+      // Clear previous results when starting new query execution
+      setResults(null);
       setIsExecuting(true);
       setIsLoading(true);
       const offset = (page - 1) * limit;
@@ -534,17 +569,21 @@ export function ChatMessage({
           data: result.data ?? [],
           total: result.count ?? result.data?.length ?? 0,
           columns: result.columns,
+          executionTime: result.executionTime,
           query,
           chatId,
         });
         setSqlPanelOpen(true);
         setActiveTab("sql"); // Switch to SQL tab when running a query
-      } catch (error) {
+      } catch (error: unknown) {
+        // Use the shared error categorization utility
+        const errorDetails = parseSqlError(error);
+
         setResults({
           data: [],
           total: 0,
-          error:
-            error instanceof Error ? error.message : "Failed to execute query",
+          error: errorDetails.message,
+          errorDetails,
           query,
           chatId,
         });
@@ -848,17 +887,19 @@ export function ChatMessage({
                       )}
                     </div>
                     <CollapsibleContent className="border-t border-border">
-                      <div className="p-3 pt-2">
-                        <SqlEditor
-                          value={editedQueries[index] ?? formatSqlQuery(query)}
-                          onChange={(newValue) => {
-                            setEditedQueries((prev) => ({
-                              ...prev,
-                              [index]: newValue,
-                            }));
-                          }}
-                          datasetId={""}
-                        />
+                      <div className="p-3 pt-2 overflow-hidden">
+                        <div className="w-full min-w-0">
+                          <SqlEditor
+                            value={editedQueries[index] ?? formatSqlQuery(query)}
+                            onChange={(newValue) => {
+                              setEditedQueries((prev) => ({
+                                ...prev,
+                                [index]: newValue,
+                              }));
+                            }}
+                            datasetId={""}
+                          />
+                        </div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
@@ -1025,7 +1066,6 @@ export function ChatMessage({
           {displayDatasets.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border/50">
               <p className="text-xs text-muted-foreground font-medium mb-1.5 flex items-center">
-                <Database className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/80" />
                 Agent utilized the following dataset(s):
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -1033,13 +1073,7 @@ export function ChatMessage({
                   <DatasetItem
                     key={datasetId}
                     datasetId={datasetId}
-                    projectId={
-                      datasetId && datasetId.includes("/")
-                        ? datasetId.split("/")[0]
-                        : contextProjectIds.length > 0
-                        ? contextProjectIds[0]
-                        : undefined
-                    }
+                    // Don't pass projectId - let DatasetItem fetch it
                   />
                 ))}
               </div>

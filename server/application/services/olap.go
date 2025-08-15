@@ -143,13 +143,9 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int)
 		return nil, domain.ErrMultipleSqlStatements
 	}
 
-	isSelect, err := pkg.IsSelectStatement(sql)
-	if err != nil {
-		d.logger.Error("Invalid query", zap.Error(err))
-		return nil, fmt.Errorf("failed to validate query type: %w", err)
-	}
-	if !isSelect && !strings.HasPrefix(strings.ToLower(sql), "with") {
-		d.logger.Error("Only SELECT statement is allowed", zap.String("query", sql))
+	// Check if the query is a read-only operation
+	if !pkg.IsReadOnlyQuery(sql) {
+		d.logger.Error("Only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE)", zap.String("query", sql))
 		return nil, domain.ErrNotSelectStatement
 	}
 
@@ -164,9 +160,10 @@ func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int)
 	}
 
 	return map[string]any{
-		"count":   queryResult.Count,
-		"data":    queryResult.Rows,
-		"columns": queryResult.Columns,
+		"count":         queryResult.Count,
+		"data":          queryResult.Rows,
+		"columns":       queryResult.Columns,
+		"executionTime": queryResult.ExecutionTime,
 	}, nil
 }
 
@@ -196,10 +193,11 @@ func (d *OlapService) GetDatasetSummary(tableName string) (*[]models.DatasetSumm
 }
 
 type queryResult struct {
-	Rows    *[]map[string]any
-	Columns []string
-	Count   int64
-	Err     error
+	Rows          *[]map[string]any
+	Columns       []string
+	Count         int64
+	ExecutionTime int64 // milliseconds
+	Err           error
 }
 
 type asyncResult[T any] struct {
@@ -244,18 +242,25 @@ func (d *OlapService) getResultsWithCount(sql string, limit, offset int, imposeL
 	go d.executeDataQuery(sql, limit, offset, rowsChan, imposeLim)
 	go d.executeCountQuery(sql, countChan)
 
+	// Get both results first
 	countResult := <-countChan
-	if countResult.err != nil {
-		return nil, fmt.Errorf("count query failed: %w", countResult.err)
-	}
-
 	rowsResult := <-rowsChan
+
+	// Check data query first since it's the primary operation
 	if rowsResult.err != nil {
-		return nil, fmt.Errorf("rows query failed: %w", rowsResult.err)
+		// Return the actual error from the data query without prefixing
+		return nil, rowsResult.err
 	}
 
-	// Update the count in the queryResult
-	rowsResult.data.Count = countResult.data
+	// If count query fails, log it but don't fail the entire operation
+	// Set count to -1 to indicate count is unavailable
+	if countResult.err != nil {
+		d.logger.Warn("Count query failed, continuing with data results", zap.Error(countResult.err))
+		rowsResult.data.Count = -1
+	} else {
+		// Update the count in the queryResult
+		rowsResult.data.Count = countResult.data
+	}
 
 	return rowsResult.data, nil
 }
@@ -265,7 +270,7 @@ func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResul
 
 	countResult, err := d.olap.Query(sql, countTransformer)
 	if err != nil {
-		result.err = fmt.Errorf("query execution failed: %w", err)
+		result.err = err
 		resultChan <- result
 		return
 	}
@@ -273,7 +278,7 @@ func (d *OlapService) executeCountQuery(sql string, resultChan chan<- asyncResul
 
 	countResultMap, err := countResult.RowsToMap()
 	if err != nil {
-		result.err = fmt.Errorf("rows to map conversion failed: %w", err)
+		result.err = err
 		resultChan <- result
 		return
 	}
@@ -328,7 +333,7 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 	}
 
 	if err != nil {
-		result.err = fmt.Errorf("query execution failed: %w", err)
+		result.err = err
 		resultChan <- result
 		return
 	}
@@ -336,17 +341,18 @@ func (d *OlapService) executeDataQuery(sql string, limit, offset int, resultChan
 
 	resultMap, columns, err := dbResult.RowsToMapWithColumns()
 	if err != nil {
-		result.err = fmt.Errorf("rows to map conversion failed: %w", err)
+		result.err = err
 		resultChan <- result
 		return
 	}
 
 	// Create a temporary queryResult with columns info
 	tempResult := &queryResult{
-		Rows:    resultMap,
-		Columns: columns,
-		Count:   0, // Count will be set by the parent function
-		Err:     nil,
+		Rows:          resultMap,
+		Columns:       columns,
+		Count:         0, // Count will be set by the parent function
+		ExecutionTime: dbResult.ExecutionTime.Milliseconds(),
+		Err:           nil,
 	}
 
 	result.data = tempResult
@@ -374,8 +380,9 @@ func (d *OlapService) RestQuery(params models.RestParams) (map[string]any, error
 	}
 
 	return map[string]any{
-		"data":  result.Rows,
-		"count": result.Count,
+		"data":          result.Rows,
+		"count":         result.Count,
+		"executionTime": result.ExecutionTime,
 	}, nil
 }
 

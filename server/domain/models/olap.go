@@ -3,10 +3,12 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Result struct {
 	*sql.Rows
+	ExecutionTime time.Duration
 }
 
 func (r *Result) RowsToMap() (*[]map[string]any, error) {

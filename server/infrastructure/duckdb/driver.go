@@ -36,6 +36,15 @@ type OlapDBDriver struct {
 	s3Config *config.S3Config
 }
 
+// Compile regex patterns once at package level for better performance
+var (
+	didYouMeanRegex             = regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
+	didYouMeanSingleQuoteRegex  = regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
+	didYouMeanNoQuotesRegex     = regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
+	candidateTablesRegex        = regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
+	whitespaceRegex             = regexp.MustCompile(`\s+`)
+)
+
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (repositories.OlapRepository, error) {
 	olap := OlapDBDriver{
@@ -500,7 +509,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 	}
 
 	rows, err := m.db.Query(transformedQuery)
-	latencyInMs := time.Since(start).Milliseconds()
+	executionTime := time.Since(start)
+	latencyInMs := executionTime.Milliseconds()
 
 	if err != nil {
 		m.logger.Error("error executing query",
@@ -516,7 +526,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 		zap.Int64("latency_ms", latencyInMs))
 
 	result := models.Result{
-		Rows: rows,
+		Rows:          rows,
+		ExecutionTime: executionTime,
 	}
 	return &result, nil
 }
@@ -1035,7 +1046,34 @@ func parseError(err error) error {
 
 	var duckErr *duckdb.Error
 	if errors.As(err, &duckErr) {
-		return fmt.Errorf("DuckDB %v error: %w", duckErr.Type, err)
+		// Sanitize the error message to remove table name suggestions
+		sanitizedMsg := sanitizeErrorMessage(err.Error())
+		return fmt.Errorf("DuckDB %v error: %s", duckErr.Type, sanitizedMsg)
 	}
-	return err
+	
+	// Also sanitize non-DuckDB errors in case they contain suggestions
+	return fmt.Errorf("%s", sanitizeErrorMessage(err.Error()))
+}
+
+// sanitizeErrorMessage removes table name suggestions from DuckDB error messages
+// to prevent exposing potentially sensitive table names to users
+func sanitizeErrorMessage(msg string) string {
+	// Remove "Did you mean" suggestions that expose table names
+	// Pattern: Did you mean "table_name"?
+	msg = didYouMeanRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Did you mean" with single quotes
+	msg = didYouMeanSingleQuoteRegex.ReplaceAllString(msg, "")
+	
+	// Remove suggestions without quotes
+	msg = didYouMeanNoQuotesRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Candidate tables:" followed by table list
+	msg = candidateTablesRegex.ReplaceAllString(msg, "")
+	
+	// Clean up any double spaces or trailing spaces that might be left
+	msg = whitespaceRegex.ReplaceAllString(msg, " ")
+	msg = strings.TrimSpace(msg)
+	
+	return msg
 }
