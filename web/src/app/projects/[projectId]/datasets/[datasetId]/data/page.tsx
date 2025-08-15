@@ -104,6 +104,9 @@ export default function SqlPage({
       setExecutionTime(undefined);
       setQueryError(null);
       
+      // Set the current query BEFORE execution so it's available in error display
+      setCurrentQuery(queryToExecute);
+      
       setIsExecuting(true);
       try {
         const response = await executeSql.mutateAsync({
@@ -116,7 +119,6 @@ export default function SqlPage({
         setTotalCount(response.count);
         setColumns(response.columns);
         setExecutionTime(response.executionTime);
-        setCurrentQuery(queryToExecute);
         setQueryError(null);
 
         return response;
