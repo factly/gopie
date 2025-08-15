@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
+          <CardTitle className="text-xl text-center">Reset Password</CardTitle>
           <CardDescription className="text-center">
             Enter your email address and we&apos;ll send you a link to reset
             your password
