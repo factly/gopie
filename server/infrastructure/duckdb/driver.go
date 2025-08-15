@@ -36,6 +36,15 @@ type OlapDBDriver struct {
 	s3Config *config.S3Config
 }
 
+// Compile regex patterns once at package level for better performance
+var (
+	didYouMeanRegex             = regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
+	didYouMeanSingleQuoteRegex  = regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
+	didYouMeanNoQuotesRegex     = regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
+	candidateTablesRegex        = regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
+	whitespaceRegex             = regexp.MustCompile(`\s+`)
+)
+
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (repositories.OlapRepository, error) {
 	olap := OlapDBDriver{
@@ -1051,23 +1060,19 @@ func parseError(err error) error {
 func sanitizeErrorMessage(msg string) string {
 	// Remove "Did you mean" suggestions that expose table names
 	// Pattern: Did you mean "table_name"?
-	didYouMeanRegex := regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
 	msg = didYouMeanRegex.ReplaceAllString(msg, "")
 	
 	// Remove "Did you mean" with single quotes
-	didYouMeanSingleQuoteRegex := regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
 	msg = didYouMeanSingleQuoteRegex.ReplaceAllString(msg, "")
 	
 	// Remove suggestions without quotes
-	didYouMeanNoQuotesRegex := regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
 	msg = didYouMeanNoQuotesRegex.ReplaceAllString(msg, "")
 	
 	// Remove "Candidate tables:" followed by table list
-	candidateTablesRegex := regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
 	msg = candidateTablesRegex.ReplaceAllString(msg, "")
 	
 	// Clean up any double spaces or trailing spaces that might be left
-	msg = regexp.MustCompile(`\s+`).ReplaceAllString(msg, " ")
+	msg = whitespaceRegex.ReplaceAllString(msg, " ")
 	msg = strings.TrimSpace(msg)
 	
 	return msg

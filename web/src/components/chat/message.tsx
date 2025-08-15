@@ -233,7 +233,7 @@ function DatasetItem({ datasetId }: DatasetItemProps) {
   useEffect(() => {
     // Fetch the project ID for this dataset
     if (dataset) {
-      apiClient.get(`v1/api/datasets/${datasetId}/project`)
+      apiClient.get(`v1/api/datasets/${encodeURIComponent(datasetId)}/project`)
         .json<{ project_id: string }>()
         .then((result) => {
           if (result?.project_id) {
