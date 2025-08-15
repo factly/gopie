@@ -1037,7 +1037,38 @@ func parseError(err error) error {
 
 	var duckErr *duckdb.Error
 	if errors.As(err, &duckErr) {
-		return fmt.Errorf("DuckDB %v error: %w", duckErr.Type, err)
+		// Sanitize the error message to remove table name suggestions
+		sanitizedMsg := sanitizeErrorMessage(err.Error())
+		return fmt.Errorf("DuckDB %v error: %s", duckErr.Type, sanitizedMsg)
 	}
-	return err
+	
+	// Also sanitize non-DuckDB errors in case they contain suggestions
+	return fmt.Errorf("%s", sanitizeErrorMessage(err.Error()))
+}
+
+// sanitizeErrorMessage removes table name suggestions from DuckDB error messages
+// to prevent exposing potentially sensitive table names to users
+func sanitizeErrorMessage(msg string) string {
+	// Remove "Did you mean" suggestions that expose table names
+	// Pattern: Did you mean "table_name"?
+	didYouMeanRegex := regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
+	msg = didYouMeanRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Did you mean" with single quotes
+	didYouMeanSingleQuoteRegex := regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
+	msg = didYouMeanSingleQuoteRegex.ReplaceAllString(msg, "")
+	
+	// Remove suggestions without quotes
+	didYouMeanNoQuotesRegex := regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
+	msg = didYouMeanNoQuotesRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Candidate tables:" followed by table list
+	candidateTablesRegex := regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
+	msg = candidateTablesRegex.ReplaceAllString(msg, "")
+	
+	// Clean up any double spaces or trailing spaces that might be left
+	msg = regexp.MustCompile(`\s+`).ReplaceAllString(msg, " ")
+	msg = strings.TrimSpace(msg)
+	
+	return msg
 }
