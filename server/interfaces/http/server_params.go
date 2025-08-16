@@ -18,5 +18,5 @@ type ServerParams struct {
 	ChatService      *services.ChatService
 	AIAgentService   *services.AIService
 	DbSourceService  *services.DatabaseSourceService
-	DownloadsService *services.DownloadService
+	DownloadsService services.DownloadsService
 }

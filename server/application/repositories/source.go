@@ -1,10 +1,15 @@
 package repositories
 
-import "context"
+import (
+	"context"
+	"io"
+	"time"
 
-type SourceRepository interface {
-	// DownloadFile downloads a file from the source like s3, local file system, etc.
-	DownloadFile(ctx context.Context, cfg map[string]any) (string, int64, error)
-	// UploadFile uploads a file to the source like s3, local file system, etc.
-	UploadFile(ctx context.Context, bucket, filePath string) (string, error)
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+)
+
+type S3SourceRepository interface {
+	Connect(ctx context.Context) error
+	UploadFile(ctx context.Context, key string, body io.Reader) (*manager.UploadOutput, error)
+	GetPresignedURL(ctx context.Context, key string, lifetime time.Duration) (string, error)
 }

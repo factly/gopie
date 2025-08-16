@@ -18,14 +18,12 @@ import (
 
 type OlapService struct {
 	olap   repositories.OlapRepository
-	source repositories.SourceRepository
 	logger *logger.Logger
 }
 
-func NewOlapService(olap repositories.OlapRepository, source repositories.SourceRepository, logger *logger.Logger) *OlapService {
+func NewOlapService(olap repositories.OlapRepository, logger *logger.Logger) *OlapService {
 	return &OlapService{
 		olap:   olap,
-		source: source,
 		logger: logger,
 	}
 }
@@ -47,79 +45,79 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	}, err
 }
 
-func (d *OlapService) IngestFile(ctx context.Context, filepath string, name string, alterColumnNames map[string]string, ignoreError bool) (*models.UploadDatasetResult, error) {
-	// parse filepath to bucketname and path
-	// s3://bucketname/path/to/file
-	bucket, path, err := parseFilepath(filepath)
-	if err != nil {
-		return nil, err
-	}
+// func (d *OlapService) IngestFile(ctx context.Context, filepath string, name string, alterColumnNames map[string]string, ignoreError bool) (*models.UploadDatasetResult, error) {
+// 	// parse filepath to bucketname and path
+// 	// s3://bucketname/path/to/file
+// 	bucket, path, err := parseFilepath(filepath)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	filepath, size, err := d.source.DownloadFile(ctx, map[string]any{
+// 		"bucket":   bucket,
+// 		"filepath": path,
+// 		"name":     name,
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	// extract file format and table name from filepath
+// 	pathParts := strings.Split(filepath, "/")
+// 	filenameParts := strings.Split(pathParts[2], ".")
+//
+// 	tableName := filenameParts[0]
+// 	format := filenameParts[1]
+// 	res := models.UploadDatasetResult{
+// 		FilePath:  filepath,
+// 		TableName: tableName,
+// 		Size:      int(size),
+// 	}
+//
+// 	err = d.olap.CreateTable(filepath, tableName, format, alterColumnNames, ignoreError)
+// 	if err != nil {
+// 		return &res, err
+// 	}
+//
+// 	return &res, nil
+// }
 
-	filepath, size, err := d.source.DownloadFile(ctx, map[string]any{
-		"bucket":   bucket,
-		"filepath": path,
-		"name":     name,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// extract file format and table name from filepath
-	pathParts := strings.Split(filepath, "/")
-	filenameParts := strings.Split(pathParts[2], ".")
-
-	tableName := filenameParts[0]
-	format := filenameParts[1]
-	res := models.UploadDatasetResult{
-		FilePath:  filepath,
-		TableName: tableName,
-		Size:      int(size),
-	}
-
-	err = d.olap.CreateTable(filepath, tableName, format, alterColumnNames, ignoreError)
-	if err != nil {
-		return &res, err
-	}
-
-	return &res, nil
-}
-
-func parseFilepath(filepath string) (string, string, error) {
-	// s3://bucketname/path/to/file
-	// remove s3:// prefix if exists
-	if len(filepath) > 5 && filepath[:5] == "s3://" {
-		filepath = filepath[5:]
-	}
-
-	if filepath == "" {
-		return "", "", fmt.Errorf("empty filepath provided")
-	}
-
-	// find the first slash after bucket name
-	slashIndex := -1
-	for i, char := range filepath {
-		if char == '/' {
-			slashIndex = i
-			break
-		}
-	}
-
-	if slashIndex == -1 {
-		return "", "", fmt.Errorf("invalid filepath format: missing path separator '/'")
-	}
-
-	bucket := filepath[:slashIndex]
-	if bucket == "" {
-		return "", "", fmt.Errorf("empty bucket name")
-	}
-
-	path := filepath[slashIndex+1:]
-	if path == "" {
-		return "", "", fmt.Errorf("empty file path")
-	}
-
-	return bucket, path, nil
-}
+// func parseFilepath(filepath string) (string, string, error) {
+// 	// s3://bucketname/path/to/file
+// 	// remove s3:// prefix if exists
+// 	if len(filepath) > 5 && filepath[:5] == "s3://" {
+// 		filepath = filepath[5:]
+// 	}
+//
+// 	if filepath == "" {
+// 		return "", "", fmt.Errorf("empty filepath provided")
+// 	}
+//
+// 	// find the first slash after bucket name
+// 	slashIndex := -1
+// 	for i, char := range filepath {
+// 		if char == '/' {
+// 			slashIndex = i
+// 			break
+// 		}
+// 	}
+//
+// 	if slashIndex == -1 {
+// 		return "", "", fmt.Errorf("invalid filepath format: missing path separator '/'")
+// 	}
+//
+// 	bucket := filepath[:slashIndex]
+// 	if bucket == "" {
+// 		return "", "", fmt.Errorf("empty bucket name")
+// 	}
+//
+// 	path := filepath[slashIndex+1:]
+// 	if path == "" {
+// 		return "", "", fmt.Errorf("empty file path")
+// 	}
+//
+// 	return bucket, path, nil
+// }
 
 func (d *OlapService) SqlQuery(sql string, imposeLimits bool, limit, offset int) (map[string]any, error) {
 	// Check for truly empty identifiers (not just quoted ones)
