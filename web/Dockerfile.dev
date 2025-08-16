@@ -9,11 +9,17 @@ RUN apk add --no-cache unzip curl bash && \
     curl -fsSL https://bun.sh/install | bash && \
     ln -s $HOME/.bun/bin/bun /usr/local/bin/bun
 
-# Copying source files
-COPY . /app
+# Copy package files first for better caching
+COPY package.json bun.lockb* ./
 
 # Installing dependencies
 RUN bun install --frozen-lockfile
+
+# Copy source files (this will be overridden by volume mount in development)
+COPY . /app
+
+# Expose port
+EXPOSE 3000
 
 # Running the app
 CMD ["bun", "dev"]
