@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -8,7 +8,9 @@ from app.utils.prompts import escape_value
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
 
 
-def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
+def create_plan_query_prompt(
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 

@@ -10,61 +10,79 @@ from app.workflow.prompts.formatters.format_query_result import (
 )
 
 
-def create_validate_result_prompt(
-    **kwargs,
-) -> list[BaseMessage] | ChatPromptTemplate:
+def create_validate_result_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
-    Constructs a prompt for an expert agent to validate query results against a user's original question.
+    Create a prompt for validating query results against the user's original question.
 
-    Depending on the `prompt_template` argument, returns either a `ChatPromptTemplate` or a list of messages containing detailed validation instructions and the provided input. The prompt guides the agent to assess the adequacy, relevance, and quality of query results, assign a confidence score, and select an appropriate recommendation based on whether the query involved a single or multiple datasets. The agent's response is expected in a structured JSON format.
+    This function generates a prompt that instructs an expert agent to validate query results,
+    assess their adequacy and relevance, and provide recommendations for next steps.
+
+    Args:
+        **kwargs: Keyword arguments containing:
+            prompt_template (bool, optional): If True, returns a ChatPromptTemplate for
+                dynamic input; otherwise, returns a list of message objects. Defaults to False.
+            input (str, optional): The input content to be validated. Defaults to "".
+
+    Returns:
+        list[BaseMessage] | ChatPromptTemplate: Either a list of message objects or a
+            ChatPromptTemplate for result validation.
     """
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
-    system_content = """You are an expert query result validator. Your task is to analyze query results and determine if they adequately answer the user's original question.
+    system_content = """
+You are an expert query result validator responsible for analyzing query results and
+determining if they adequately answer the user's original question.
 
-WHAT YOU'LL RECEIVE:
+INPUT CONTEXT:
+You will receive:
 - Query type (single_dataset or multi_dataset)
 - Original user query
 - Query results (successful SQL queries, failed queries, errors, non-SQL responses)
 - Dataset context
 
-NOTE:
-    - Visualization is not processed by this agent, it is processed by another agent.
-    So, don't focus on visualization not being present in the results.
-    - The subqueries which are not processed shouldn't be validated, just validate that part of the user query for which the subqueries are already executed.
+IMPORTANT NOTES:
+- Visualization processing is handled by a separate agent - do not focus on missing visualizations
+- Only validate executed subqueries - ignore unprocessed subqueries
+- Focus on the portion of the user query that has been executed
 
-YOUR VALIDATION PROCESS:
-1. Compare the user's intent with what the results actually provide
+VALIDATION PROCESS:
+1. Compare user intent with actual results provided
 2. Assess data quality, completeness, and relevance
 3. Evaluate if failed queries prevent answering the question
 4. Consider if partial results still provide meaningful insights
-5. Tell what improvements are needed to make the results better or fix any issues.
-6. Please try to add sufficient context from query results to the response to make it more helpful.
+5. Identify improvements needed to enhance results or fix issues
+6. Include sufficient context from query results to make response helpful
 
-VALIDATION DECISION CRITERIA:
-* MARK AS VALID when:
+VALIDATION CRITERIA:
+
+MARK AS VALID when:
 - Results directly answer the user's question (even if partial)
 - Data is relevant and provides meaningful insights
 - Any failures don't prevent a useful response
-- User can get value from the available information
+- User can derive value from available information
 
-* MARK AS INVALID when:
+MARK AS INVALID when:
 - Critical queries failed, preventing any useful answer
 - Results don't address the user's actual question
 - Data quality issues make results unreliable
-- Missing essential information that user specifically requested
+- Missing essential information specifically requested by user
 
-RECOMMENDATION FIELD (choose the most appropriate):
-- If you are validating a **single_dataset** result, only use:
-    - "pass_on_results": Results are sufficient to answer the user's question.
-    - "rerun_query": Minor issues detected; retrying the query may help.
-- If you are validating a **multi-dataset** result, you only use the following recommendations:
-    - "replan": The query logic or approach needs to be changed (not just retried).
-    - "reidentify_datasets": The selected datasets are wrong, insufficient, or do not match the user's intent; new datasets should be identified.
-    - "route_response": Results are sufficient to answer the user's question.
+RECOMMENDATION OPTIONS:
 
-KEY PRINCIPLE: Focus on whether the user can get meaningful value from these results, not perfection. Your response should be actionable and concise, providing clear reasoning and next steps based on your analysis."""
+For SINGLE_DATASET results:
+- "pass_on_results": Results are sufficient to answer the user's question
+- "rerun_query": Minor issues detected; retrying the query may help
+
+For MULTI-DATASET results:
+- "replan": Query logic or approach needs to be changed (not just retried)
+- "reidentify_datasets": Selected datasets are wrong, insufficient, or don't match user intent
+- "route_response": Results are sufficient to answer the user's question
+
+CORE PRINCIPLE:
+Focus on whether the user can get meaningful value from these results rather than
+seeking perfection. Provide actionable, concise reasoning and clear next steps.
+"""
 
     human_template_str = "{input}"
 

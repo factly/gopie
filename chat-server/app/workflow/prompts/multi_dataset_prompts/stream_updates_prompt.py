@@ -1,11 +1,11 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
 )
 
 
-def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
+def create_stream_update_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Generate a prompt for analyzing subquery execution and determining next steps in JSON format.
 
@@ -26,47 +26,61 @@ def create_stream_update_prompt(**kwargs) -> list | ChatPromptTemplate:
     subquery_messages = kwargs.get("subquery_messages", "")
 
     system_content = """
-You need to analyze the subquery execution and provide both a user-friendly update AND decide if execution should continue.
+You are responsible for analyzing subquery execution results and providing both user-friendly
+updates and execution continuation decisions.
 
-FOR THE STREAM UPDATE MESSAGE:
-1. First, determine if this subquery was successful or failed by examining the data.
-2. If the subquery FAILED:
+STREAM UPDATE MESSAGE GUIDELINES:
+
+1. EXECUTION STATUS ASSESSMENT:
+   First determine if the subquery was successful or failed by examining the data
+
+2. FAILURE HANDLING:
    - Never expose technical errors, stack traces, or system messages
-   - Identify the issue in user-friendly terms (e.g., "couldn't find the requested information", "data not available")
-   - Focus on what this means for the user's query rather than technical details
-3. If the subquery was SUCCESSFUL:
-   - Provide a clear and concise summary of the results
-   - Focus on the actual data retrieved and its relevance to the user's question
-   - Highlight any interesting patterns or insights
-4. If the subquery returned TRUNCATED RESULTS:
-   - Acknowledge that this part returned a large dataset that was limited due to large result sizes
-   - Note that the data is already displayed to the user for analysis
-5. Keep your response concise (2-3 sentences)
-6. If the query is asking for visualizations, do not mention it as it is out of scope for you to answer.
+   - Describe issues in user-friendly terms (e.g., "couldn't find requested information")
+   - Focus on implications for the user's query rather than technical details
 
-FOR THE EXECUTION DECISION:
-1. Set continue_execution to false if:
-   - The subquery failed critically and prevents further processing
-   - The current results already provide sufficient information to answer the user's query
-   - There's an error that would affect remaining subqueries
-2. Set continue_execution to true if:
-   - The subquery was successful and more data is needed
-   - The failure doesn't prevent other subqueries from running
-   - Additional subqueries would provide valuable context
+3. SUCCESS REPORTING:
+   - Provide clear, concise summary of retrieved results
+   - Focus on actual data retrieved and relevance to user's question
+   - Highlight interesting patterns or insights discovered
 
-WHAT TO AVOID:
-- Technical jargon, SQL errors, or system implementation details
-- Exposing errors or execution failures
-- Blame language about system or user mistakes
+4. TRUNCATED RESULTS:
+   - Acknowledge when large datasets were limited due to size constraints
+   - Note that complete data is displayed to the user for analysis
+
+5. RESPONSE GUIDELINES:
+   - Keep responses concise (2-3 sentences maximum)
+   - Ignore visualization requests as they are handled separately
+
+EXECUTION DECISION LOGIC:
+
+SET continue_execution = FALSE when:
+- Subquery failed critically and prevents further processing
+- Current results provide sufficient information to answer user's query
+- Errors would affect remaining subqueries
+
+SET continue_execution = TRUE when:
+- Subquery was successful and more data is needed
+- Failure doesn't prevent other subqueries from running
+- Additional subqueries would provide valuable context
+
+CONTENT RESTRICTIONS:
+- Avoid technical jargon, SQL errors, or system implementation details
+- Never expose errors or execution failures to users
+- Eliminate blame language about system or user mistakes
+- Maintain professional, helpful tone throughout
 """
 
     human_template_str = """
-Original User Query: "{original_user_query}"
+ORIGINAL USER QUERY: "{original_user_query}"
 
+SUBQUERY CONTEXT:
 {subquery_messages}
 
-Subquery Result Information:
+SUBQUERY RESULT INFORMATION:
 {subquery_result}
+
+TASK: Analyze the above information and provide both a user-friendly update and execution decision.
 """
 
     if prompt_template:

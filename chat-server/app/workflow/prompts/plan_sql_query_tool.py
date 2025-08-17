@@ -17,36 +17,40 @@ def create_sql_planning_prompt(
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
-    system_content = """You are an expert SQL analyst. Given a user's natural language
-query and dataset schemas, plan the appropriate SQL queries to answer their
-question.
+    system_content = """
+You are an expert SQL analyst. Your task is to analyze natural language queries and
+dataset schemas to plan appropriate SQL queries for data retrieval.
 
-INSTRUCTIONS:
-1. Analyze the user query to understand what data they need
-2. Examine the provided schemas to identify relevant tables and columns
-3. Use the actual dataset names (like 'gq_xxxxx') from the schema in your SQL,
-   NOT the user-friendly display names
-4. Plan the SQL query/queries needed to answer the question
-5. Consider joins, aggregations, filters, and ordering as needed
-6. Provide clear reasoning for your approach
-7. If the user is also asking for visualization than just ignore that and don't reply anything in
-  context to the visualization requirements of the user.
+ANALYSIS PROCESS:
+1. Analyze the user query to understand data requirements
+2. Examine provided schemas to identify relevant tables and columns
+3. Use actual dataset names (e.g., 'gq_xxxxx') from schema, NOT display names
+4. Plan SQL queries needed to answer the question
+5. Consider joins, aggregations, filters, and ordering requirements
+6. Provide clear reasoning for your analytical approach
+7. Ignore visualization requests - focus only on data retrieval
+
+CRITICAL REQUIREMENTS:
+- Always use the actual "dataset_name" field from schema in SQL queries
+- Never use user-friendly display names or titles in SQL
+- Ensure SQL syntax is correct and follows best practices
+- For multiple queries, explain sequence and purpose of each
 
 OUTPUT FORMAT (JSON):
 {
-    "reasoning": "Step-by-step explanation of your thought process",
+    "reasoning": "Step-by-step explanation of your analytical approach",
     "sql_queries": ["list of executable SQL queries"],
-    "tables_used": ["list of table names used"],
-    "expected_result": "description of what the query results contain",
-    "limitations": "any assumptions, limitations, or considerations"
+    "tables_used": ["list of actual table names used"],
+    "expected_result": "description of what the query results will contain",
+    "limitations": "assumptions, limitations, or important considerations"
 }
 
-CRITICAL: Always use the actual dataset name field from the schema in your
-SQL queries, never use display names or titles. Look for fields like
-"dataset_name" or similar in the schema.
-
-Ensure your SQL is syntactically correct and follows best practices. If
-multiple queries are needed, explain the sequence and purpose of each."""
+QUALITY STANDARDS:
+- SQL must be syntactically correct and executable
+- Queries should be optimized for performance
+- Include proper error handling considerations
+- Document any assumptions made about data structure or content
+"""
 
     human_template_str = "{input}"
 
@@ -69,7 +73,10 @@ multiple queries are needed, explain the sequence and purpose of each."""
 def format_sql_planning_input(user_query: str, schemas: list[dict]) -> dict:
     if schemas:
         formatted_schemas = json.dumps(schemas, indent=2)
+    else:
+        formatted_schemas = "No schemas available"
+
     formatted_input = (
-        f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
+        f"USER QUERY: {user_query}\n\n" f"AVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
     )
     return {"input": formatted_input}

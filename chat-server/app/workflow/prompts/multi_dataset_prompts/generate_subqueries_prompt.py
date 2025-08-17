@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 
 def create_assess_query_complexity_prompt(
     **kwargs,
-) -> list | ChatPromptTemplate:
+) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     user_input = kwargs.get("user_input", "")
 

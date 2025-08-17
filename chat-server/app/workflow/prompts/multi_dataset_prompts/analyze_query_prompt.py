@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -11,7 +11,7 @@ from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
 
 def create_analyze_query_prompt(
     **kwargs,
-) -> list | ChatPromptTemplate:
+) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Generate a prompt for classifying a user query as either "data_query" or "conversational" based on detailed guidelines and context.
 

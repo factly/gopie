@@ -65,10 +65,9 @@ NodeName = Literal[
 class PromptSelector:
     def __init__(self):
         """
-        Initialize the PromptSelector with mappings for prompt creation and input formatting functions.
-
         Sets up dictionaries that associate node names with their corresponding prompt generation and input formatting functions, enabling dynamic retrieval and formatting of prompts for various query processing tasks.
         """
+
         self.prompt_map = {
             "plan_query": create_plan_query_prompt,
             "identify_datasets": create_identify_datasets_prompt,
