@@ -41,3 +41,4 @@ class State(TypedDict):
     executed_python_code: str | None
     relevant_sql_queries: list[str] | None
     result_images_b64: list[str]
+    tool_call_count: int

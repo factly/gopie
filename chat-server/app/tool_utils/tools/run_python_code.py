@@ -12,6 +12,7 @@ from langgraph.types import Command
 async def run_python_code(
     code: str,
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
+    tool_call_count: Annotated[int, InjectedState("tool_call_count")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
     status_message: str = "",
@@ -29,6 +30,7 @@ async def run_python_code(
     execution = await sandbox.run_code(code)
     state_update = {
         "executed_python_code": code,
+        "tool_call_count": tool_call_count + 1,
         "messages": [
             ToolMessage(
                 tool_call_id=tool_call_id,
