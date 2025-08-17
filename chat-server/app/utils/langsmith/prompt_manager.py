@@ -1,4 +1,5 @@
 from langchain_core.messages import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda
 
 from app.core.config import settings
@@ -13,55 +14,70 @@ class PromptManager:
     Manages prompt retrieval from LangSmith with fallback support.
     """
 
-    def is_langsmith_enabled(self) -> bool:
+    def __init__(self, prompt_name: NodeName, **kwargs):
+        self.prompt_selector = PromptSelector()
+        self.prompt_name: NodeName = prompt_name
+        self.kwargs = kwargs
+
+    def _get_formatted_input(self) -> dict | None:
+        return self.prompt_selector.format_prompt_input(node_name=self.prompt_name, **self.kwargs)
+
+    def _is_langsmith_enabled(self) -> bool:
         return settings.LANGSMITH_PROMPT
 
-    def get_prompt(
-        self,
-        langsmith_prompt_name: NodeName,
-        *args,
-        **kwargs,
-    ) -> list[BaseMessage]:
+    def get_prompt_template(self) -> ChatPromptTemplate:
         """
-        Get a prompt from LangSmith hub if enabled, otherwise return fallback.
-        Returns:
-            LangSmith prompt template or formatted fallback prompt string
+        Get a prompt template from LangSmith hub if enabled, otherwise return fallback.
         """
 
-        formatted_input = PromptSelector().format_prompt_input(
-            langsmith_prompt_name, *args, **kwargs
-        )
-
-        if self.is_langsmith_enabled():
+        if self._is_langsmith_enabled():
             try:
-                langsmith_prompt = pull_prompt(langsmith_prompt_name)
-
-                if formatted_input:
-                    formatted_prompt = langsmith_prompt.format_messages(**formatted_input)
-                else:
-                    formatted_prompt = langsmith_prompt.format_messages(*args, **kwargs)
-
-                return formatted_prompt
+                langsmith_prompt = pull_prompt(self.prompt_name)
+                return langsmith_prompt
 
             except Exception as e:
                 logger.warning(
                     f"Failed to load LangSmith prompt "
-                    f"'{langsmith_prompt_name}': {e}. "
+                    f"'{self.prompt_name}': {e}. "
                     f"Using fallback prompt instead."
                 )
 
-                return self.get_fallback_prompt(langsmith_prompt_name, *args, **kwargs)
+                return self.prompt_selector.get_prompt_template(self.prompt_name)
 
         else:
-            return self.get_fallback_prompt(langsmith_prompt_name, *args, **kwargs)
+            return self.prompt_selector.get_prompt_template(self.prompt_name)
 
-    def get_fallback_prompt(self, node_name: NodeName, *args, **kwargs) -> list[BaseMessage]:
-        return PromptSelector().get_prompt(node_name, *args, **kwargs)
+    def get_prompt(self) -> list[BaseMessage]:
+        """
+        Get a prompt from LangSmith hub if enabled, otherwise return fallback.
+        """
+
+        formatted_input = self._get_formatted_input()
+
+        if self._is_langsmith_enabled():
+            try:
+                langsmith_prompt = pull_prompt(self.prompt_name)
+                return (
+                    langsmith_prompt.format_messages(**formatted_input)
+                    if formatted_input
+                    else langsmith_prompt.format_messages(**self.kwargs)
+                )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load LangSmith prompt "
+                    f"'{self.prompt_name}': {e}. "
+                    f"Using fallback prompt instead."
+                )
+
+                return self.prompt_selector.get_prompt(self.prompt_name, **self.kwargs)
+
+        else:
+            return self.prompt_selector.get_prompt(self.prompt_name, **self.kwargs)
 
 
-def get_prompt(node_name: NodeName, *args, **kwargs) -> list[BaseMessage]:
-    input_messages = PromptManager().get_prompt(node_name, *args, **kwargs)
-    return input_messages
+def get_prompt(node_name: NodeName, **kwargs) -> list[BaseMessage]:
+    return PromptManager(node_name, **kwargs).get_prompt()
 
 
 def get_prompt_llm_chain(
@@ -80,12 +96,20 @@ def get_prompt_llm_chain(
     This keeps the runnable input as the original variables.
     """
 
-    def _format_prompt(variables: dict[str, object] | None) -> list[BaseMessage]:
-        input_vars: dict[str, object] = variables or {}
-        return PromptManager().get_prompt(node_name, **input_vars)
+    prompt_template = PromptManager(node_name).get_prompt_template()
 
-    formatter: Runnable = RunnableLambda(_format_prompt).with_config(
-        {"run_name": f"format_{node_name}_prompt"}
+    def format_prompt(variables: dict | None) -> list[BaseMessage]:
+        input_vars = variables or {}
+
+        formatted_input = PromptSelector().format_prompt_input(node_name=node_name, **input_vars)
+
+        if formatted_input:
+            return prompt_template.invoke(formatted_input).to_messages()
+        else:
+            return prompt_template.invoke(input_vars).to_messages()
+
+    formatter: Runnable = RunnableLambda(format_prompt).with_config(
+        {"run_name": f"format_{node_name}_prompt", "callbacks": []}
     )
 
     llm = get_configured_llm_for_node(

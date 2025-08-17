@@ -2,6 +2,7 @@ from typing import Literal
 
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 
 from .multi_dataset_prompts.analyze_query_prompt import (
     create_analyze_query_prompt,
@@ -103,13 +104,14 @@ class PromptSelector:
         if node_name not in self.prompt_map:
             raise ValueError(f"No prompt available for node: {node_name}")
 
-        formatted_input = self.format_prompt_input(node_name, **kwargs)
+        formatted_input = self.format_prompt_input(node_name=node_name, **kwargs)
 
         if formatted_input:
-            return self.prompt_map[node_name](input=formatted_input["input"])
+            return self.prompt_map[node_name](**formatted_input)
         else:
             return self.prompt_map[node_name](**kwargs)
 
+    @traceable
     def format_prompt_input(self, node_name: NodeName, **kwargs) -> dict | None:
         if node_name not in self.format_prompt_input_map:
             return None
