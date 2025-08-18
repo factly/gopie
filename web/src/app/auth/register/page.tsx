@@ -196,7 +196,7 @@ export default function RegisterPage() {
                 priority
               />
             </div>
-            <CardTitle className="text-2xl text-center text-green-600">
+            <CardTitle className="text-xl text-center text-green-600">
               Registration Successful!
             </CardTitle>
             <CardDescription className="text-center">
@@ -240,7 +240,7 @@ export default function RegisterPage() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+          <CardTitle className="text-xl text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
             Enter your information to create your account
           </CardDescription>

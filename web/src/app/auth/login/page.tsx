@@ -200,9 +200,7 @@ function LoginPageInner() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl text-center">
-            Log in to your account
-          </CardTitle>
+          <CardTitle className="text-xl text-center">Log in to your account</CardTitle>
           <CardDescription className="text-center">
             <div>
               <Link
