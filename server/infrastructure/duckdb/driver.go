@@ -3,8 +3,10 @@ package duckdb
 import (
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -1076,4 +1078,61 @@ func sanitizeErrorMessage(msg string) string {
 	msg = strings.TrimSpace(msg)
 	
 	return msg
+}
+
+func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string, writer io.Writer) error {
+	// Ensure the writer is closed if it has a Close method.
+	defer func() {
+		if closer, ok := writer.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	rows, err := m.db.QueryContext(ctx, sql)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	csvWriter := csv.NewWriter(writer)
+	defer csvWriter.Flush()
+
+	// Write CSV headers from column names.
+	headers, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	if err := csvWriter.Write(headers); err != nil {
+		return err
+	}
+
+	// Prepare to scan row values.
+	values := make([]any, len(headers))
+	scanArgs := make([]any, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	// Iterate over rows and write to CSV.
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			return err
+		}
+
+		record := make([]string, len(values))
+		for i, val := range values {
+			if val == nil {
+				record[i] = "" // Represent NULL as an empty string.
+			} else {
+				record[i] = fmt.Sprintf("%v", val)
+			}
+		}
+
+		if err := csvWriter.Write(record); err != nil {
+			return err
+		}
+	}
+
+	// Check for any errors encountered during iteration.
+	return rows.Err()
 }
