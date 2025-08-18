@@ -7,7 +7,7 @@ class ResultPathsSchema(BaseModel):
     Use this to return the paths to both json and png files created by the agent, after visualization
     """
 
-    visualization_result_paths: list[str]
+    visualization_json_paths: list[str]
     visualization_png_paths: list[str]
 
 
