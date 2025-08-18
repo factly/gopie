@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { zitadelClient } from "@/lib/auth/zitadel-client";
-import { cookies } from "next/headers";
-import { COOKIE_MAX_AGE, USER_ID_COOKIE } from "@/constants/zitade";
 
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),

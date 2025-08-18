@@ -61,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           return { success: true, userId: data.userId, isMFAEnabled: data.isMFAEnabled, callbackUrl: data.callbackUrl };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
           set({
             error: error.message,

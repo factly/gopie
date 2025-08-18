@@ -31,6 +31,7 @@ export async function getSession(): Promise<UserSession | null> {
       expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     };
   } catch (error) {
+    console.error("Failed to get session from Zitadel:", error);
     // Clear invalid session
     await clearSession();
     return null;

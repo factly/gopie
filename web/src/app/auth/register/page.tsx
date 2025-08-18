@@ -101,7 +101,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const { success, error , userId } = await register({
+    const { success, userId } = await register({
       username: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -144,6 +144,7 @@ export default function RegisterPage() {
         setError(errorData.error || 'MFA verification failed');
       }
     } catch (error) {
+      console.error("MFA verification error:", error);
       setError('An unexpected error occurred during MFA verification.');
     }
     setMfaLoading(false);

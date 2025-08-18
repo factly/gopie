@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const existingAuthRequestId = req.cookies.get(AUTH_REQUEST_COOKIE)?.value;
     const existingPkceVerifier = req.cookies.get(PKCE_VERIFIER_COOKIE)?.value;
     const existingState = req.cookies.get(PKCE_STATE_COOKIE)?.value;
-
+    
     // If we have existing auth request data, validate it first
     if (existingAuthRequestId && existingPkceVerifier && existingState) {
       try {
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         }
       } catch (error) {
         // Auth request is invalid, continue to create new one
-        console.log("Existing auth request invalid, creating new one");
+        console.log("authorise request error ", error);
       }
     }
 
@@ -115,17 +115,3 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Helper function to clear auth cookies
-export function clearAuthCookies(response: NextResponse) {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    maxAge: 0,
-    path: "/",
-  };
-
-  response.cookies.set(AUTH_REQUEST_COOKIE, "", cookieOptions);
-  response.cookies.set(PKCE_VERIFIER_COOKIE, "", cookieOptions);
-  response.cookies.set(PKCE_STATE_COOKIE, "", cookieOptions);
-}
