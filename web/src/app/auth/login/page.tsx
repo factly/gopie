@@ -18,6 +18,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useAuthRequest } from "@/hooks/use-auth-request";
+import TotpInput from "@/components/auth/TotpInput";
 
 function LoginPageInner() {
   const router = useRouter();
@@ -32,20 +34,27 @@ function LoginPageInner() {
     setError,
   } = useAuthStore();
   const returnUrl = searchParams.get("returnUrl") || "/";
-
+  const [userId, setUserId] = useState<string | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [isMfaRequired, setIsMfaRequired] = useState(false);
+  const [isMfaLoading, setIsMfaLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
   const [formData, setFormData] = useState({
     loginName: "",
     password: "",
   });
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Use the auth request hook - only initialize after session check
+  const { isInitializing } = useAuthRequest(setError);
 
   useEffect(() => {
     // Check if user is already authenticated
-    checkSession();
+    const checkUserSession = async () => {
+      setSessionLoading(true);
+      await checkSession();
+      setSessionLoading(false);
+    };
+    checkUserSession();
   }, [checkSession]);
 
   useEffect(() => {
@@ -75,6 +84,15 @@ function LoginPageInner() {
     }
   }, [searchParams, setError]);
 
+  // Show loading screen while checking session
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -84,10 +102,17 @@ function LoginPageInner() {
       return;
     }
 
-    const success = await login(formData.loginName, formData.password);
+    const response = await login(formData.loginName, formData.password);
 
-    if (success) {
-      router.push(returnUrl);
+    if (response.success) {
+      if (response.isMFAEnabled) {
+        setUserId(response.userId);
+        setIsMfaRequired(true);
+      } else {
+        window.location.href = response.callbackUrl;
+      }
+    } else {
+      setError(response.error || "Login failed");
     }
   };
 
@@ -102,6 +127,56 @@ function LoginPageInner() {
         [field]: e.target.value,
       }));
     };
+
+  const handleMfaSubmit = async (code: string) => {
+    setIsMfaLoading(true);
+    try {
+      const response = await fetch("/api/auth/mfa/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, userId }),
+      });
+
+      if (response.ok) {
+        window.location.href = "/";
+      } else {
+        const errorData = await response.json();
+        setErrors({ form: errorData.error || "Invalid verification code." });
+      }
+    } catch (error) {
+      setErrors({ form: "An unexpected error occurred." });
+    }
+    setIsMfaLoading(false);
+  };
+
+  // Show loading state while auth request is being initialized
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+            <CardDescription className="text-center">
+              Initializing authentication...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isMfaRequired) {
+    return (
+      <TotpInput
+        onSubmit={handleMfaSubmit}
+        isLoading={isMfaLoading}
+        error={errors.form}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -125,7 +200,9 @@ function LoginPageInner() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl text-center">Log in to your account</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            Log in to your account
+          </CardTitle>
           <CardDescription className="text-center">
             <div>
               <Link
@@ -185,47 +262,39 @@ function LoginPageInner() {
             </div>
           </div>
 
-          {mounted ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="loginName">Email</Label>
-                <Input
-                  id="loginName"
-                  type="text"
-                  placeholder="Enter your email"
-                  value={formData.loginName}
-                  onChange={handleInputChange("loginName")}
-                  disabled={isLoading}
-                  required
-                  autoComplete="username"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleInputChange("password")}
-                  disabled={isLoading}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              <div className="h-[180px] flex items-center justify-center">
-                <div className="text-muted-foreground">Loading form...</div>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="loginName">Email</Label>
+              <Input
+                id="loginName"
+                type="text"
+                placeholder="Enter your email"
+                value={formData.loginName}
+                onChange={handleInputChange("loginName")}
+                disabled={isLoading}
+                required
+                autoComplete="username"
+              />
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleInputChange("password")}
+                disabled={isLoading}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing In..." : "Sign In"}
+            </Button>
+          </form>
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4">

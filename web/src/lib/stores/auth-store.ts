@@ -11,12 +11,11 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  sessionToken: string | null;
   accessToken: string | null;
   organizationId: string | null;
 
   // Actions
-  login: (loginName: string, password: string) => Promise<boolean>;
+  login: (loginName: string, password: string) => Promise<{ success: boolean; userId: string; isMFAEnabled: boolean; error?: string; callbackUrl: string }>;
   loginWithOAuth: (returnUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: {
@@ -25,7 +24,7 @@ interface AuthState {
     firstName: string;
     lastName: string;
     password: string;
-  }) => Promise<boolean>;
+  }) => Promise<{ success: boolean; userId: string; error?: string }>;
   checkSession: () => Promise<void>;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -38,13 +37,11 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
-      sessionToken: null,
       accessToken: null,
       organizationId: null,
 
-      login: async (loginName: string, password: string): Promise<boolean> => {
+      login: async (loginName, password) => {
         set({ isLoading: true, error: null });
-
         try {
           const response = await fetch("/api/auth/login", {
             method: "POST",
@@ -58,35 +55,24 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.error || "Login failed");
           }
 
-          set({
-            user: data.user,
-            isAuthenticated: true,
-            sessionToken: null, // sessionToken is managed via cookies
-            accessToken: data.accessToken,
-            organizationId: data.user.organizationId ?? null,
-            isLoading: false,
-            error: null,
-          });
+          if (!data.isMFAEnabled && data.user) {
+            set({ isAuthenticated: true, user: data.user, accessToken: data.accessToken });
+            setGlobalAccessToken(data.accessToken);
+          }
 
-          setGlobalAccessToken(data.accessToken);
-          setGlobalOrganizationId(data.user.organizationId ?? null);
-
-          return true;
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Login failed";
+          return { success: true, userId: data.userId, isMFAEnabled: data.isMFAEnabled, callbackUrl: data.callbackUrl };
+        } catch (error: any) {
           set({
-            error: errorMessage,
+            error: error.message,
             isLoading: false,
             isAuthenticated: false,
             user: null,
-            sessionToken: null,
             accessToken: null,
-            organizationId: null,
           });
           setGlobalAccessToken(null);
-          setGlobalOrganizationId(null);
-          return false;
+          return { success: false, userId: '', isMFAEnabled: false, error: error.message, callbackUrl: '' };
+        } finally {
+          set({ isLoading: false });
         }
       },
 
@@ -95,12 +81,12 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const baseUrl = window.location.origin;
-          const successUrl = `${baseUrl}/api/auth/oauth/callback${
+          const successUrl = `${baseUrl}/api/oauth/callback/google${
             returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
           }`;
           const failureUrl = `${baseUrl}/auth/login?error=oauth_failed`;
 
-          const response = await fetch("/api/auth/oauth/initiate", {
+          const response = await fetch("/api/oauth/initiate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ successUrl, failureUrl }),
@@ -125,12 +111,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       register: async (userData: {
-        username: string;
-        email: string;
         firstName: string;
         lastName: string;
-        password: string;
-      }): Promise<boolean> => {
+        email: string;
+        password?: string;
+      }): Promise<{ success: boolean; userId: string; error?: string }> => {
         set({ isLoading: true, error: null });
 
         try {
@@ -147,7 +132,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           set({ isLoading: false, error: null });
-          return true;
+          return { success: true, userId: data.userId };
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Registration failed";
@@ -155,7 +140,7 @@ export const useAuthStore = create<AuthState>()(
             error: errorMessage,
             isLoading: false,
           });
-          return false;
+          return { success: false, error: errorMessage, userId: '' };
         }
       },
 
@@ -172,7 +157,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             isAuthenticated: false,
-            sessionToken: null,
             accessToken: null,
             organizationId: null,
             isLoading: false,
@@ -192,18 +176,15 @@ export const useAuthStore = create<AuthState>()(
             set({
               user: data.user,
               isAuthenticated: true,
-              sessionToken: null, // sessionToken is managed via cookies
               accessToken: data.accessToken,
-              organizationId: data.user.organizationId ?? null,
+              organizationId: data.user.organizationId,
             });
-
             setGlobalAccessToken(data.accessToken);
-            setGlobalOrganizationId(data.user.organizationId ?? null);
+            setGlobalOrganizationId(data.user.organisationId);
           } else {
             set({
               user: null,
               isAuthenticated: false,
-              sessionToken: null,
               accessToken: null,
               organizationId: null,
             });
@@ -215,7 +196,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             isAuthenticated: false,
-            sessionToken: null,
             accessToken: null,
             organizationId: null,
           });
@@ -232,7 +212,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        sessionToken: state.sessionToken,
         accessToken: state.accessToken,
         organizationId: state.organizationId,
       }),
