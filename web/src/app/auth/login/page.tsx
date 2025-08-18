@@ -38,6 +38,7 @@ function LoginPageInner() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [isMfaRequired, setIsMfaRequired] = useState(false);
   const [isMfaLoading, setIsMfaLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [errors, setErrors] = useState<any>({});
   const [formData, setFormData] = useState({
     loginName: "",
@@ -144,6 +145,7 @@ function LoginPageInner() {
         setErrors({ form: errorData.error || "Invalid verification code." });
       }
     } catch (error) {
+      console.error("MFA validation error:", error);
       setErrors({ form: "An unexpected error occurred." });
     }
     setIsMfaLoading(false);

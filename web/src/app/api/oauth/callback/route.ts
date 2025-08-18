@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { zitadelClient } from "@/lib/auth/zitadel-client";
-import { clearAuthCookies } from "../authorize/route";
 import {
   PKCE_STATE_COOKIE,
   PKCE_VERIFIER_COOKIE,
   ACCESS_TOKEN_COOKIE,
   SESSION_ID_COOKIE,
   SESSION_TOKEN_COOKIE,
+  AUTH_REQUEST_COOKIE,
 } from "@/constants/zitade";
 import { cookies } from "next/headers";
 
@@ -115,4 +115,19 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.redirect(loginUrl);
   }
+}
+
+// Helper function to clear auth cookies
+function clearAuthCookies(response: NextResponse) {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge: 0,
+    path: "/",
+  };
+
+  response.cookies.set(AUTH_REQUEST_COOKIE, "", cookieOptions);
+  response.cookies.set(PKCE_VERIFIER_COOKIE, "", cookieOptions);
+  response.cookies.set(PKCE_STATE_COOKIE, "", cookieOptions);
 }

@@ -17,7 +17,7 @@ export function useAuthRequest(setError: (error: string | null) => void): UseAut
       // If no auth request ID in URL, generate one via OAuth authorize endpoint
       const response = await fetch('/api/oauth/authorize');
       const data = await response.json();
-      
+
       if (!data.authRequestId) {
         const errorMsg = 'Failed to initialize authentication request';
         setLocalError(errorMsg);

@@ -10,6 +10,7 @@ export interface ZitadelUser {
 }
 
 export interface ZitadelUserInfo {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
   sub: string;
   name: string;

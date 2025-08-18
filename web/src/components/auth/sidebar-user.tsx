@@ -90,7 +90,7 @@ export function SidebarUser() {
           >
             <Avatar className="h-8 w-8">
               <AvatarImage
-                src={user.profilePicture || ""}
+                src={ ""}
                 alt={user.displayName || "User"}
               />
               <AvatarFallback>
