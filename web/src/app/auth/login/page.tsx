@@ -83,6 +83,30 @@ function LoginPageInner() {
           setError("An error occurred during login. Please try again.");
       }
     }
+
+    // Check for MFA requirement from query params
+    const mfaParam = searchParams.get("mfa");
+    if (mfaParam === "enable") {
+      // Get userId from cookie
+      const getUserIdFromCookie = () => {
+        const cookies = document.cookie.split(";");
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "mfa_user_id") {
+            return decodeURIComponent(value);
+          }
+        }
+        return null;
+      };
+
+      const cookieUserId = getUserIdFromCookie();
+      if (cookieUserId) {
+        setUserId(cookieUserId);
+        setIsMfaRequired(true);
+      } else {
+        setError("MFA session expired. Please try logging in again.");
+      }
+    }
   }, [searchParams, setError]);
 
   // Show loading screen while checking session
@@ -132,6 +156,15 @@ function LoginPageInner() {
   const handleMfaSubmit = async (code: string) => {
     setIsMfaLoading(true);
     try {
+      // Use userId from state (which comes from cookie for MFA flow)
+      if (!userId) {
+        setErrors({
+          form: "User session not found. Please try logging in again.",
+        });
+        setIsMfaLoading(false);
+        return;
+      }
+
       const response = await fetch("/api/auth/mfa/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,7 +235,9 @@ function LoginPageInner() {
               priority
             />
           </div>
-          <CardTitle className="text-xl text-center">Log in to your account</CardTitle>
+          <CardTitle className="text-xl text-center">
+            Log in to your account
+          </CardTitle>
           <CardDescription className="text-center">
             <div>
               <Link
