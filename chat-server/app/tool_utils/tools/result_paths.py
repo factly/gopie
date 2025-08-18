@@ -4,20 +4,29 @@ from pydantic import BaseModel
 
 class ResultPathsSchema(BaseModel):
     """
-    Use this to return the paths to the json files created by the agent, after visualization
+    Use this to return the paths to both json and png files created by the agent, after visualization
     """
 
     visualization_result_paths: list[str]
+    visualization_png_paths: list[str]
 
 
 @tool
-def result_paths(visualization_result_paths: list[str], status_message: str = ""):
-    """Use this to return the paths to the json files created by the agent, after visualization.
+def result_paths(
+    visualization_result_paths: list[str],
+    visualization_png_paths: list[str],
+    status_message: str = "",
+):
+    """Use this to return the paths to both json and png files created by the agent, after visualization.
 
     Args:
         visualization_result_paths: A list of paths to the json files containing the visualizations.
+        visualization_png_paths: A list of paths to the png files containing the visualization images.
     """
-    return {"visualization_result_paths": visualization_result_paths}
+    return {
+        "visualization_result_paths": visualization_result_paths,
+        "visualization_png_paths": visualization_png_paths,
+    }
 
 
 def get_dynamic_tool_text(args: dict) -> str:
