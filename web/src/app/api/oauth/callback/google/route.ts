@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (
-      !authMethods.authMethodTypes?.includes("AUTHENTICATION_METHOD_TYPE_TOTP")
+      authMethods.authMethodTypes?.includes("AUTHENTICATION_METHOD_TYPE_TOTP")
     ) {
       data.isMFAEnabled = true;
     } else {
