@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
     ) {
       data.isMFAEnabled = true;
     } else {
-
     // Step 4: Finalize auth request 
     const authRequestResponse = await zitadelClient.finalizeAuthRequest(
       authRequestId,
