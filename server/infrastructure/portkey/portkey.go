@@ -222,8 +222,8 @@ func (c *PortkeyClient) GenerateDatasetDescription(ctx context.Context, datasetN
 	4. Describes the data's relevance and possible insights that can be derived
 	
 	IMPORTANT CONSTRAINTS:
-	- Target length: 200-300 characters for optimal detail
-	- MAXIMUM length:  350 characters (STRICTLY ENFORCED)
+	- Target length: 600-900 characters for optimal detail
+	- MAXIMUM length: 950 characters (STRICTLY ENFORCED)
 	- Provide ONLY the description text, no additional formatting or explanations
 	`, datasetName, columnInfo, rows, summary)
 
