@@ -41,6 +41,7 @@ type DatasetStoreRepository interface {
 	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
 	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
 	ListALlDatasetsFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error)
+	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
 }
 
 type ChatStoreRepository interface {
@@ -53,4 +54,14 @@ type ChatStoreRepository interface {
 
 	GetChatMessages(ctx context.Context, chatID string) ([]*models.ChatMessage, error)
 	AddNewMessage(ctx context.Context, chatID string, messages []models.ChatMessage) ([]models.ChatMessage, error)
+}
+
+type DownloadsRepository interface {
+	CreateDownload(ctx context.Context, req *models.CreateDownloadRequest) (*models.Download, error)
+	DeleteDownload(ctx context.Context, id, orgID string) error
+	GetDownload(ctx context.Context, id, orgID string) (*models.Download, error)
+	ListDownloadsByUser(ctx context.Context, userID, orgID string, limit, offset int32) ([]*models.Download, error)
+	SetDownloadToProcessing(ctx context.Context, id string) (*models.Download, error)
+	SetDownloadAsCompleted(ctx context.Context, id string, req *models.SetDownloadCompletedRequest) (*models.Download, error)
+	SetDownloadAsFailed(ctx context.Context, id string, req *models.SetDownloadFailedRequest) (*models.Download, error)
 }

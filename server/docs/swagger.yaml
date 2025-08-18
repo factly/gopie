@@ -1262,6 +1262,37 @@ paths:
       summary: Update dataset column descriptions
       tags:
       - datasets
+  /v1/api/datasets/{datasetID}/project:
+    get:
+      consumes:
+      - application/json
+      description: Get the project ID for a specific dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: datasetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No project found for dataset
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get project for dataset
+      tags:
+      - datasets
   /v1/api/downloads:
     get:
       consumes:
@@ -1787,7 +1818,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Execute a SQL query on a dataset (only SELECT statements are allowed)
+      description: 'Execute a SQL query on a dataset (only read-only queries are allowed:
+        SELECT, WITH, DESCRIBE, SUMMARIZE)'
       parameters:
       - description: SQL query
         in: body
@@ -1810,7 +1842,7 @@ paths:
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
         "403":
-          description: Non-SELECT statement
+          description: Non-read-only query
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
         "404":

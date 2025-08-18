@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useAuthRequest } from "@/hooks/use-auth-request";
-import TotpInput from '@/components/auth/TotpInput';
+import TotpInput from "@/components/auth/TotpInput";
 
 function LoginPageInner() {
   const router = useRouter();
@@ -42,7 +43,7 @@ function LoginPageInner() {
     loginName: "",
     password: "",
   });
-  
+
   // Use the auth request hook - only initialize after session check
   const { isInitializing } = useAuthRequest(setError);
 
@@ -130,9 +131,9 @@ function LoginPageInner() {
   const handleMfaSubmit = async (code: string) => {
     setIsMfaLoading(true);
     try {
-      const response = await fetch('/api/auth/mfa/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/mfa/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, userId }),
       });
 
@@ -140,10 +141,10 @@ function LoginPageInner() {
         window.location.href = "/";
       } else {
         const errorData = await response.json();
-        setErrors({ form: errorData.error || 'Invalid verification code.' });
+        setErrors({ form: errorData.error || "Invalid verification code." });
       }
     } catch (error) {
-      setErrors({ form: 'An unexpected error occurred.' });
+      setErrors({ form: "An unexpected error occurred." });
     }
     setIsMfaLoading(false);
   };
@@ -168,16 +169,49 @@ function LoginPageInner() {
   }
 
   if (isMfaRequired) {
-    return <TotpInput onSubmit={handleMfaSubmit} isLoading={isMfaLoading} error={errors.form} />;
+    return (
+      <TotpInput
+        onSubmit={handleMfaSubmit}
+        isLoading={isMfaLoading}
+        error={errors.form}
+      />
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/GoPie_Logo.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="dark:hidden"
+              priority
+            />
+            <Image
+              src="/GoPie_Logo_Dark.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="hidden dark:block"
+              priority
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">
+            Log in to your account
+          </CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            <div>
+              <Link
+                href="/auth/register"
+                className="text-primary hover:underline"
+              >
+                Don&apos;t have an account? Sign up
+              </Link>
+            </div>
           </CardDescription>
         </CardHeader>
 
@@ -239,6 +273,7 @@ function LoginPageInner() {
                 onChange={handleInputChange("loginName")}
                 disabled={isLoading}
                 required
+                autoComplete="username"
               />
             </div>
 
@@ -252,6 +287,7 @@ function LoginPageInner() {
                 onChange={handleInputChange("password")}
                 disabled={isLoading}
                 required
+                autoComplete="current-password"
               />
             </div>
 
@@ -263,14 +299,6 @@ function LoginPageInner() {
 
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-sm text-center space-y-2">
-            <div>
-              <Link
-                href="/auth/register"
-                className="text-primary hover:underline"
-              >
-                Don&apos;t have an account? Sign up
-              </Link>
-            </div>
             <div>
               <Link
                 href="/auth/forgot-password"

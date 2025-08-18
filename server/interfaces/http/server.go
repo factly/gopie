@@ -10,13 +10,13 @@ import (
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/aiagent"
-	"github.com/factly/gopie/infrastructure/download"
 	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/portkey"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
 	"github.com/factly/gopie/infrastructure/postgres/store/database_source"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
+	"github.com/factly/gopie/infrastructure/postgres/store/downloads"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
 	"go.uber.org/zap"
@@ -50,7 +50,6 @@ func ServeHttp() error {
 	appLogger.Info("logger initialized")
 
 	// Initialize repositories and services
-	source := s3.NewS3SourceRepository(&cfg.S3, appLogger)
 	olap, err := duckdb.NewOlapDBDriver(&cfg.OlapDB, appLogger, &cfg.S3)
 	if err != nil {
 		appLogger.Error("error connecting to olap database", zap.Error(err))
@@ -72,10 +71,11 @@ func ServeHttp() error {
 	datasetStore := datasets.NewPostgresDatasetStore(storeRepo.GetDB(), appLogger)
 	chatStore := chats.NewChatStoreRepository(storeRepo.GetDB(), appLogger)
 	dbSourceStore := database_source.NewDatabaseSourceStore(storeRepo.GetDB(), appLogger, cfg)
+	downloadsStore := downloads.NewPostgresDownloadsStore(storeRepo.GetDB(), appLogger)
+	s3Repo := s3.NewS3ObjectStore(cfg.S3, cfg.DownloadsServer.Bucket, appLogger)
 	aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
-	downloadsRepo := download.NewDownloadRepository(&cfg.DownloadsServer)
 
-	olapService := services.NewOlapService(olap, source, appLogger)
+	olapService := services.NewOlapService(olap, appLogger)
 	// Initialize services
 	aiService := services.NewAiDriver(porkeyClient)
 	projectService := services.NewProjectService(projectStore)
@@ -83,7 +83,17 @@ func ServeHttp() error {
 	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
 	aiAgentService := services.NewAIService(aiAgentRepo)
 	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, appLogger)
-	downloadService := services.NewDownloadService(downloadsRepo, appLogger)
+	downloadService, err := services.NewDownloadsService(services.DownloadsServiceParams{
+		Cfg:    cfg.DownloadsServer,
+		Store:  downloadsStore,
+		S3:     s3Repo,
+		Olap:   olap,
+		Logger: appLogger,
+	})
+	if err != nil {
+		appLogger.Fatal("error initializing downloads service", zap.Error(err))
+		return err
+	}
 
 	// Create ServerParams to pass to both servers
 	params := &ServerParams{

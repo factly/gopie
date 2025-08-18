@@ -20,6 +20,24 @@ import (
 // @Router /v1/api/chat/{chatID}/messages [get]
 func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 	chatID := ctx.Params("chatID")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+
+	chat, err := s.chatSvc.GetChatByID(chatID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching chat details",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	if chat.CreatedBy != userID && chat.Visibility != "public" {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":   "Forbidden",
+			"message": "You do not have permission to view this chat messages",
+			"code":    fiber.StatusForbidden,
+		})
+	}
 
 	messages, err := s.chatSvc.GetChatMessages(chatID)
 	if err != nil {
@@ -33,7 +51,7 @@ func (s *httpHandler) getChatMessages(ctx *fiber.Ctx) error {
 		msg.ChatID = chatID
 	}
 
-	return ctx.JSON(map[string]interface{}{
+	return ctx.JSON(map[string]any{
 		"data": messages,
 	})
 }

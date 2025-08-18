@@ -205,7 +205,7 @@ func (c *PortkeyClient) GenerateDatasetDescription(ctx context.Context, datasetN
 	}
 
 	systemPrompt := fmt.Sprintf(`
-	!! IMPORTANT: Generate a comprehensive dataset description (target 600-900 characters, maximum 950 characters) that explains what this dataset contains and its potential use cases. !!
+	!! CRITICAL: The generated description MUST be less than 950 characters. This is a strict requirement - descriptions exceeding 950 characters will be rejected. !!
 	
 	Dataset Name: %s
 	
@@ -221,8 +221,10 @@ func (c *PortkeyClient) GenerateDatasetDescription(ctx context.Context, datasetN
 	3. Suggests multiple potential analytical use cases
 	4. Describes the data's relevance and possible insights that can be derived
 	
-	IMPORTANT: Aim for 600-900 characters to provide comprehensive information while staying under the 950 character maximum limit.
-	Provide ONLY the description text, no additional formatting or explanations.
+	IMPORTANT CONSTRAINTS:
+	- Target length: 600-900 characters for optimal detail
+	- MAXIMUM length: 950 characters (STRICTLY ENFORCED)
+	- Provide ONLY the description text, no additional formatting or explanations
 	`, datasetName, columnInfo, rows, summary)
 
 	resp, err := c.GenerateResponse(systemPrompt)

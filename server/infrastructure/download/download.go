@@ -7,13 +7,13 @@ import (
 	"github.com/factly/gopie/domain/pkg/config"
 )
 
-type downloadRepository struct {
+type downloadServerRepository struct {
 	client  *http.Client
 	baseURL string
 }
 
-func NewDownloadRepository(cfg *config.DownloadsServerConfig) repositories.DownloadRepository {
-	return &downloadRepository{
+func NewDownloadServerRepository(cfg *config.DownloadsServerConfig) repositories.DownloadServerRepository {
+	return &downloadServerRepository{
 		client:  &http.Client{},
 		baseURL: cfg.Url,
 	}

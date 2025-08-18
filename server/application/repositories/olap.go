@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"context"
+	"io"
+
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
 )
@@ -18,4 +21,5 @@ type OlapRepository interface {
 	Close() error
 	CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error
 	CreateTableFromMySql(connectionString, sqlQuery, tableName string) error
+	ExecuteQueryAndStreamCSV(ctx context.Context, sql string, writer io.Writer) error
 }

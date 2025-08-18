@@ -1,12 +1,21 @@
 import { create } from "zustand";
 
+interface ErrorDetails {
+  message: string;
+  details?: string;
+  suggestion?: string;
+  code?: number;
+}
+
 interface SqlResult {
   data: Record<string, unknown>[];
   total: number;
   columns?: string[];
   error?: string;
+  errorDetails?: ErrorDetails;
   query: string;
   chatId?: string;
+  executionTime?: number; // in milliseconds
 }
 
 interface SqlStore {

@@ -23,6 +23,7 @@ func NewHTTPHandler(router fiber.Router, datasetsSvc *services.DatasetService, o
 	// Setup routes
 	datasetsRouter := router.Group("/datasets")
 	datasetsRouter.Get("/:datasetID", handler.details)
+	datasetsRouter.Get("/:datasetID/project", handler.getProjectForDataset)
 	datasetsRouter.Get("/:datasetID/column-descriptions", handler.getColumnDescriptions)
 	datasetsRouter.Patch("/:datasetID/column-descriptions", handler.updateColumnDescriptions)
 }
