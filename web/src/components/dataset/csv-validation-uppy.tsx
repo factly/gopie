@@ -243,7 +243,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
       restrictions: {
         maxNumberOfFiles: 1,
         allowedFileTypes: [...supportedExtensions, ...supportedMimeTypes],
-        maxFileSize: 4000 * 1000 * 1000, // 4GB limit
+        maxFileSize: 1000 * 1000 * 1000, // 1GB limit
       },
       autoProceed: false,
       allowMultipleUploads: false,
@@ -394,10 +394,10 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     try {
       const fileSize = file.size;
 
-      // Reject files > 4GB completely
-      if (fileSize > 4000 * 1000 * 1000) {
+      // Reject files > 1GB completely
+      if (fileSize > 1000 * 1000 * 1000) {
         toast.error(
-          `File is too large (${(fileSize / (1000 * 1000 * 1000)).toFixed(1)}GB). Maximum file size is 4GB.`
+          `File is too large (${(fileSize / (1000 * 1000 * 1000)).toFixed(1)}GB). Maximum file size is 1GB.`
         );
         // Reset file selection since we're rejecting it
         setSelectedFile(null);
