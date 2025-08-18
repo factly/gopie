@@ -46,7 +46,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         tool_call = last_message.tool_calls[0]
         response = tool_call["args"]
         sandbox = state.get("sandbox")
-        result_path = response.get("visualization_result_paths", [])
+        result_path = response.get("visualization_json_paths", [])
         png_paths = response.get("visualization_png_paths", [])
         executed_python_code = state["executed_python_code"]
 
@@ -62,6 +62,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             # convert the result to string
             result = orjson.dumps(result)
             final_result_data.append(result)
+
         python_code_with_context = await add_context_to_python_code(
             python_code=executed_python_code, datasets=datasets
         )
@@ -71,19 +72,17 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
 
         visualization_results.data = final_result_data
 
-        # Additionally, try to fetch PNG counterparts for brief image-based summary in respond node
         png_images_b64: list[str] = []
-        try:
-            if png_paths:
+        if png_paths and sandbox:
+            try:
                 png_bytes_list = await get_visualization_result_bytes(
                     sandbox=sandbox, file_names=png_paths
                 )
-
                 for img in png_bytes_list:
-                    if isinstance(img, (bytes, bytearray)):
+                    if isinstance(img, (bytes, bytearray)) and len(img) > 0:
                         png_images_b64.append(base64.b64encode(img).decode("utf-8"))
-        except Exception:
-            png_images_b64 = []
+            except Exception:
+                pass
 
         await adispatch_custom_event(
             "gopie-agent",

@@ -44,7 +44,10 @@ async def get_python_code_files(viz_paths: list[str]):
         if python_code_path not in python_code_paths:
             python_code_paths.append(python_code_path)
     python_code_files = await asyncio.gather(
-        *[get_python_code_from_viz(python_code_path) for python_code_path in python_code_paths]
+        *[
+            get_python_code_from_viz(viz_path=python_code_path)
+            for python_code_path in python_code_paths
+        ]
     )
     return python_code_files
 
@@ -203,7 +206,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
     s3_host = settings.S3_HOST
 
     if not all([access_key_id, secret_access_key, bucket_name]):
-        raise ValueError("AWS credentials or bucket name not set in environment variables")
+        raise ValueError("S3 credentials or bucket name not set in environment variables")
 
     session = aioboto3.Session()
     s3_paths = []
@@ -225,6 +228,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
                 Key=json_file_key,
                 Body=item_data,
             )
+
             upload_tasks.append(json_task)
             s3_path = f"{s3_host}/{bucket_name}/{json_file_key}"
             s3_paths.append(s3_path)

@@ -110,9 +110,12 @@ class PromptSelector:
         else:
             return self.prompt_map[node_name](**kwargs)
 
-    @traceable
     def format_prompt_input(self, node_name: NodeName, **kwargs) -> dict | None:
         if node_name not in self.format_prompt_input_map:
             return None
 
-        return self.format_prompt_input_map[node_name](**kwargs)
+        @traceable
+        def _format_prompt_input_traced():
+            return self.format_prompt_input_map[node_name](**kwargs)
+
+        return _format_prompt_input_traced()

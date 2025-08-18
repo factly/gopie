@@ -47,9 +47,9 @@ async def pre_model_hook(state: State, config: RunnableConfig):
 
             previous_python_code = ""
 
-            if state.get("previous_visualization_result_paths"):
+            if state.get("previous_visualization_json_paths"):
                 previous_python_code_files = await get_python_code_files(
-                    viz_paths=state["previous_visualization_result_paths"]
+                    viz_paths=state["previous_visualization_json_paths"]
                 )
                 previous_python_code = "\n".join(previous_python_code_files)
 

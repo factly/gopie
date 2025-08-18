@@ -17,7 +17,7 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
     input_state = {
         "user_query": state["user_query"],
         "datasets": state.get("datasets", []),
-        "previous_visualization_result_paths": state.get("previous_json_paths", []),
+        "previous_visualization_json_paths": state.get("previous_json_paths", []),
         "relevant_sql_queries": state.get("relevant_sql_queries", []),
     }
     config["recursion_limit"] = 50
