@@ -96,7 +96,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
 
   if (isEditing) {
     return (
-      <Card className="bg-gradient-to-b from-background to-muted/30 border shadow-sm">
+      <Card className="border shadow-sm">
         <CardContent className="p-6">
           <div className="space-y-4 animate-in fade-in">
             <div className="flex items-start gap-3">
@@ -159,7 +159,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-b from-background to-muted/30 border shadow-sm relative">
+    <Card className="border shadow-sm relative">
       <div className="absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 ease-in-out opacity-100" />
       
       <CardContent className="p-6">

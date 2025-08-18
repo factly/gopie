@@ -8,7 +8,7 @@ import (
 	"github.com/factly/gopie/domain/models"
 )
 
-func (r *downloadRepository) List(userID, orgID string, limit, offset int) ([]models.Download, error) {
+func (r *downloadServerRepository) List(userID, orgID string, limit, offset int32) ([]*models.Download, error) {
 	url := fmt.Sprintf("%s/downloads?limit=%d&offset=%d", r.baseURL, limit, offset)
 	httpReq, _ := http.NewRequest("GET", url, nil)
 	httpReq.Header.Set("x-user-id", userID)
@@ -24,7 +24,7 @@ func (r *downloadRepository) List(userID, orgID string, limit, offset int) ([]mo
 		return nil, fmt.Errorf("server returned status %d", resp.StatusCode)
 	}
 
-	var downloads []models.Download
+	var downloads []*models.Download
 	if err := json.NewDecoder(resp.Body).Decode(&downloads); err != nil {
 		return nil, err
 	}

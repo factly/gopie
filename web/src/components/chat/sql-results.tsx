@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
-import { Database, Download, Loader2 } from "lucide-react";
-import { cn, downloadCsv } from "@/lib/utils";
+import { Database, Download, Loader2, CheckCircleIcon, Lightbulb } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Pagination,
   PaginationContent,
@@ -21,17 +21,141 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { useCreateDownload } from "@/lib/mutations/download/create-download";
+import { useDownloadStore } from "@/lib/stores/download-store";
+import { format as formatSQL } from "sql-formatter";
+import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
+import { useToast } from "@/hooks/use-toast";
+
+// Dynamically import Monaco Editor to avoid SSR issues
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
+
+// Helper function to format SQL queries safely
+function formatSqlQuery(sql: string): string {
+  try {
+    return formatSQL(sql, {
+      language: "sql",
+      tabWidth: 2,
+      useTabs: false,
+      keywordCase: "upper",
+      linesBetweenQueries: 2,
+    });
+  } catch (error) {
+    console.error("Failed to format SQL:", error);
+    return sql; // Return original SQL if formatting fails
+  }
+}
 
 export function SqlResults() {
   const { results, currentPage, rowsPerPage, setCurrentPage, setRowsPerPage, onPageChange, isLoading } = useSqlStore();
+  const { resolvedTheme } = useTheme();
+  const { toast } = useToast();
   
-  const handleDownload = () => {
-    if (!results?.data?.length) return;
-    downloadCsv(
-      results.data,
-      `sql_results_${new Date().toISOString().split("T")[0]}.csv`
-    );
+  // Download state
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = React.useState(false);
+  const [downloadFormat, setDownloadFormat] = React.useState<"csv" | "json" | "parquet">("csv");
+  const [downloadSql, setDownloadSql] = React.useState("");
+  const [completedDownloadUrl, setCompletedDownloadUrl] = React.useState<string | null>(null);
+  const { createDownload } = useCreateDownload();
+  const { currentDownloadProgress, setCurrentDownloadProgress } = useDownloadStore();
+  
+  // Extract dataset ID from the query if it exists
+  const extractDatasetId = (query: string): string | null => {
+    // Look for patterns like FROM "dataset_id" or FROM 'dataset_id' or FROM dataset_id
+    // Also handle cases with schema like FROM schema.table or FROM "schema"."table"
+    const patterns = [
+      /FROM\s+["']?([^"'\s,]+)["']?/i,  // Basic pattern
+      /FROM\s+["']?[\w]+["']?\.["']?([^"'\s,]+)["']?/i,  // Schema.table pattern
+    ];
+    
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match) {
+        // Get the last match group (table name in case of schema.table)
+        return match[match.length - 1];
+      }
+    }
+    return null;
   };
+  
+  const handleDownload = async () => {
+    // If we have a completed download URL, just open it
+    if (completedDownloadUrl) {
+      window.open(completedDownloadUrl, "_blank");
+      return;
+    }
+
+    try {
+      // Extract dataset ID from the query
+      const datasetId = extractDatasetId(downloadSql);
+      
+      if (!datasetId) {
+        toast({
+          title: "Error",
+          description: "Could not identify dataset from the SQL query",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const result = await createDownload({
+        dataset_id: datasetId,
+        sql: downloadSql,
+        format: downloadFormat,
+      });
+
+      // Store the completed URL for re-download
+      if (result.url) {
+        setCompletedDownloadUrl(result.url);
+        // Automatically open the download URL in a new tab
+        window.open(result.url, "_blank");
+      }
+
+      toast({
+        title: "Download ready",
+        description: "Your download has been prepared and opened in a new tab.",
+      });
+
+      // Don't close the dialog, just update the state to show completion
+      // User can close manually or download again
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Failed to create download",
+        variant: "destructive",
+      });
+      setCompletedDownloadUrl(null);
+    }
+  };
+  
+  // Reset download progress and URL when dialog closes, format SQL when dialog opens
+  React.useEffect(() => {
+    if (!isDownloadDialogOpen) {
+      setCurrentDownloadProgress(null);
+      setCompletedDownloadUrl(null);
+    } else if (results?.query) {
+      // Format the SQL query when dialog opens
+      setDownloadSql(formatSqlQuery(results.query));
+    }
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress, results?.query]);
 
   const handleRowsPerPageChange = (value: string) => {
     const newRowsPerPage = Number(value);
@@ -64,9 +188,11 @@ export function SqlResults() {
             <span className="text-xs text-destructive">Error</span>
           ) : (
             <>
-              <span className="text-xs text-muted-foreground">
-                {results?.total || 0} total rows
-              </span>
+              {results?.executionTime !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  Query Execution Time: {results.executionTime}ms
+                </span>
+              )}
               {results?.data && results.data.length > 0 && (
                 <>
                   <div className="flex items-center gap-2">
@@ -90,7 +216,7 @@ export function SqlResults() {
                     </Select>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    Showing {results.data.length} rows
+                    Showing {results.data.length} of {results?.total || 0} rows
                   </span>
                 </>
               )}
@@ -99,25 +225,250 @@ export function SqlResults() {
         </div>
         <div className="flex gap-2">
           {results?.data && results.data.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleDownload}
-              title="Download as CSV"
+            <Dialog
+              open={isDownloadDialogOpen}
+              onOpenChange={setIsDownloadDialogOpen}
             >
-              <Download className="h-4 w-4" />
-            </Button>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Download Results"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Download Results</DialogTitle>
+                  <DialogDescription>
+                    Export your query results in your preferred format
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Format
+                    </label>
+                    <Select
+                      value={downloadFormat}
+                      onValueChange={(value) =>
+                        setDownloadFormat(
+                          value as "csv" | "json" | "parquet"
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="csv">
+                          CSV - Comma-separated values
+                        </SelectItem>
+                        <SelectItem value="json">
+                          JSON - JavaScript Object Notation
+                        </SelectItem>
+                        <SelectItem value="parquet">
+                          Parquet - Columnar storage format
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">
+                        SQL Query
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const formatted = formatSqlQuery(downloadSql);
+                          setDownloadSql(formatted);
+                        }}
+                        className="h-7 text-xs"
+                      >
+                        Format SQL
+                      </Button>
+                    </div>
+                    <div className="border rounded-md overflow-hidden">
+                      <Editor
+                        height="150px"
+                        defaultLanguage="sql"
+                        value={downloadSql}
+                        onChange={(value) => setDownloadSql(value || "")}
+                        theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: "on",
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          wordWrap: "on",
+                          wrappingIndent: "indent",
+                          formatOnPaste: true,
+                          formatOnType: true,
+                          scrollbar: {
+                            vertical: "auto",
+                            horizontal: "auto",
+                          },
+                          padding: {
+                            top: 8,
+                            bottom: 8,
+                          },
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Customize the SQL query to filter or transform
+                      your data before download
+                    </p>
+                  </div>
+                  {currentDownloadProgress && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {currentDownloadProgress.message}
+                        </span>
+                        <span className="font-medium">
+                          {currentDownloadProgress.progress}%
+                        </span>
+                      </div>
+                      <Progress
+                        value={currentDownloadProgress.progress}
+                      />
+                    </div>
+                  )}
+                  {completedDownloadUrl &&
+                    !currentDownloadProgress && (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircleIcon className="h-4 w-4" />
+                          <span>
+                            Download completed successfully! The file
+                            has been opened in a new tab.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsDownloadDialogOpen(false);
+                      setCompletedDownloadUrl(null);
+                    }}
+                    disabled={
+                      currentDownloadProgress?.status === "processing"
+                    }
+                  >
+                    {completedDownloadUrl ? "Close" : "Cancel"}
+                  </Button>
+                  <Button
+                    onClick={handleDownload}
+                    disabled={
+                      !downloadSql ||
+                      currentDownloadProgress?.status === "processing"
+                    }
+                  >
+                    {currentDownloadProgress?.status ===
+                    "processing" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : completedDownloadUrl ? (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download File
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto p-4">
+      <div className="flex-1 min-h-0 overflow-auto">
         {results?.error ? (
-          <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">{results.error}</p>
-            <pre className="mt-2 text-xs text-muted-foreground">
-              {results.query}
-            </pre>
+          <div className="flex h-full items-center justify-center p-8">
+            <div className="w-full max-w-3xl">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                    <svg
+                      className="h-5 w-5 text-destructive"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-destructive">
+                        Query Execution Failed
+                      </h3>
+                      <p className="mt-1 text-sm text-destructive/90">
+                        {results.errorDetails?.message || results.error}
+                      </p>
+                    </div>
+                    
+                    {results.errorDetails?.details && (
+                      <div className="rounded-md bg-background/50 p-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Error Details:
+                        </p>
+                        <p className="text-sm text-foreground/80">
+                          {results.errorDetails.details}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {results.query && (
+                      <div className="rounded-md bg-muted/30 p-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          Query that failed:
+                        </p>
+                        <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
+                          {results.query}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {results.errorDetails?.suggestion && (
+                      <div className="flex items-start gap-2 rounded-md bg-primary/5 p-3">
+                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-primary mb-1">
+                            Suggestion:
+                          </p>
+                          <p className="text-sm text-foreground/80">
+                            {results.errorDetails.suggestion}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -125,7 +476,7 @@ export function SqlResults() {
             <p className="text-sm">Loading results...</p>
           </div>
         ) : results?.data?.length ? (
-          <>
+          <div className="p-4">
             <div className="w-full overflow-x-auto border">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10">
@@ -227,7 +578,7 @@ export function SqlResults() {
                 </Pagination>
               </div>
             )}
-          </>
+          </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <Database className="h-12 w-12 opacity-20" />

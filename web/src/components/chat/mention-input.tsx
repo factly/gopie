@@ -13,6 +13,7 @@ import {
   CommandGroup,
   CommandItem,
   CommandList,
+  CommandInput,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -33,7 +34,6 @@ import { Dataset } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { debounce } from "@/lib/utils";
 
 interface MentionInputProps {
   value: string;
@@ -96,15 +96,6 @@ export function MentionInput({
     variables: { limit: 1000 },
   });
 
-  // Define a debounced search function
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(
-    debounce((query: string) => {
-      setSearchQuery(query);
-    }, 300),
-    []
-  );
-
   // Auto-resize textarea
   const autoResizeTextarea = useCallback(() => {
     if (textareaRef.current) {
@@ -147,10 +138,16 @@ export function MentionInput({
     const mentionMatch = textBeforeCursor.match(/@([^@\s]*)$/);
 
     if (mentionMatch) {
+      // Get the text after @ - this will be empty string when just @ is typed
+      const queryText = mentionMatch[1] || "";
+      
+      // Only set search query if there's actual text after @
+      // Otherwise keep it empty for a fresh search
+      setSearchQuery(queryText);
       setShowMentionPopover(true);
-      debouncedSearch(mentionMatch[1]);
     } else {
       setShowMentionPopover(false);
+      setSearchQuery("");
     }
 
     // Set cursor position after React updates the DOM
@@ -169,8 +166,11 @@ export function MentionInput({
   // Handle @ key press to explicitly open the menu
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "@") {
-      setShowMentionPopover(true);
-      debouncedSearch("");
+      // Clear search query before opening popover
+      setSearchQuery("");
+      setTimeout(() => {
+        setShowMentionPopover(true);
+      }, 0);
     } else if (e.key === "Escape") {
       setShowMentionPopover(false);
     } else if (e.key === "Enter") {
@@ -237,6 +237,21 @@ export function MentionInput({
     };
   }, []);
 
+  // Clear search when popover opens
+  useEffect(() => {
+    if (showMentionPopover) {
+      // Check if this is a fresh open (just @ typed)
+      const currentValue = textareaRef.current?.value || "";
+      const cursorPos = textareaRef.current?.selectionStart || 0;
+      const textBeforeCursor = currentValue.substring(0, cursorPos);
+      
+      // If the text before cursor ends with just "@", clear the search
+      if (textBeforeCursor.endsWith("@")) {
+        setSearchQuery("");
+      }
+    }
+  }, [showMentionPopover]);
+
   // Effect to search projects and datasets when searchQuery changes
   useEffect(() => {
     const loadMentionResults = async () => {
@@ -263,7 +278,7 @@ export function MentionInput({
           try {
             const queryKey = [
               "datasets",
-              { projectId: project.id, limit: 100, query: searchQuery },
+              { projectId: project.id, limit: 100 },
             ];
             const cachedData = queryClient.getQueryData(queryKey);
 
@@ -279,7 +294,6 @@ export function MentionInput({
                 const result = await useDatasets.fetcher({
                   projectId: project.id,
                   limit: 100,
-                  query: searchQuery,
                 });
                 return result;
               },
@@ -298,7 +312,7 @@ export function MentionInput({
         // Wait for all dataset queries to complete
         const datasetResults = await Promise.all(datasetPromises);
 
-        // Process dataset results
+        // Process dataset results and filter by search query
         datasetResults.forEach(({ data }) => {
           // Type guard to ensure data has results property and it's an array
           const hasResults =
@@ -308,8 +322,13 @@ export function MentionInput({
             Array.isArray(data.results);
 
           if (hasResults) {
+            // Filter datasets by search query
+            const filteredDatasets = data.results.filter((d: Dataset) =>
+              d.alias.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            
             results.datasets.push(
-              ...data.results.map((d: Dataset) => ({
+              ...filteredDatasets.map((d: Dataset) => ({
                 id: d.id,
                 name: d.alias,
                 projectId: d.id.split("/")[0],
@@ -364,8 +383,9 @@ export function MentionInput({
       }, 10);
     }
 
-    // Close the popover
+    // Close the popover and clear search
     setShowMentionPopover(false);
+    setSearchQuery("");
   };
 
   const handleStopMessageStream = useCallback(
@@ -533,11 +553,14 @@ export function MentionInput({
           open={showMentionPopover}
           onOpenChange={(open) => {
             setShowMentionPopover(open);
-            // Re-focus the input when popover closes
-            if (!open && textareaRef.current) {
-              setTimeout(() => {
-                textareaRef.current?.focus();
-              }, 0);
+            // Re-focus the input when popover closes and clear search
+            if (!open) {
+              setSearchQuery("");
+              if (textareaRef.current) {
+                setTimeout(() => {
+                  textareaRef.current?.focus();
+                }, 0);
+              }
             }
           }}
         >
@@ -553,6 +576,16 @@ export function MentionInput({
             onClick={(e) => e.stopPropagation()}
           >
             <Command shouldFilter={false} className="overflow-hidden">
+              <CommandInput 
+                placeholder="Search projects and datasets..." 
+                value={searchQuery}
+                onValueChange={(value) => {
+                  // Remove @ if it's at the beginning of the search
+                  const cleanValue = value.startsWith('@') ? value.slice(1) : value;
+                  setSearchQuery(cleanValue);
+                }}
+                className="h-9"
+              />
               <CommandList>
                 {mentionResults.projects.length === 0 &&
                 mentionResults.datasets.length === 0 ? (

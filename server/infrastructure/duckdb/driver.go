@@ -3,8 +3,10 @@ package duckdb
 import (
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -35,6 +37,15 @@ type OlapDBDriver struct {
 	// S3 configuration to reapply for each S3 operation
 	s3Config *config.S3Config
 }
+
+// Compile regex patterns once at package level for better performance
+var (
+	didYouMeanRegex             = regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
+	didYouMeanSingleQuoteRegex  = regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
+	didYouMeanNoQuotesRegex     = regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
+	candidateTablesRegex        = regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
+	whitespaceRegex             = regexp.MustCompile(`\s+`)
+)
 
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
 func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *config.S3Config) (repositories.OlapRepository, error) {
@@ -500,7 +511,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 	}
 
 	rows, err := m.db.Query(transformedQuery)
-	latencyInMs := time.Since(start).Milliseconds()
+	executionTime := time.Since(start)
+	latencyInMs := executionTime.Milliseconds()
 
 	if err != nil {
 		m.logger.Error("error executing query",
@@ -516,7 +528,8 @@ func (m *OlapDBDriver) Query(query string, transformers ...repositories.QueryTra
 		zap.Int64("latency_ms", latencyInMs))
 
 	result := models.Result{
-		Rows: rows,
+		Rows:          rows,
+		ExecutionTime: executionTime,
 	}
 	return &result, nil
 }
@@ -1035,7 +1048,91 @@ func parseError(err error) error {
 
 	var duckErr *duckdb.Error
 	if errors.As(err, &duckErr) {
-		return fmt.Errorf("DuckDB %v error: %w", duckErr.Type, err)
+		// Sanitize the error message to remove table name suggestions
+		sanitizedMsg := sanitizeErrorMessage(err.Error())
+		return fmt.Errorf("DuckDB %v error: %s", duckErr.Type, sanitizedMsg)
 	}
-	return err
+	
+	// Also sanitize non-DuckDB errors in case they contain suggestions
+	return fmt.Errorf("%s", sanitizeErrorMessage(err.Error()))
+}
+
+// sanitizeErrorMessage removes table name suggestions from DuckDB error messages
+// to prevent exposing potentially sensitive table names to users
+func sanitizeErrorMessage(msg string) string {
+	// Remove "Did you mean" suggestions that expose table names
+	// Pattern: Did you mean "table_name"?
+	msg = didYouMeanRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Did you mean" with single quotes
+	msg = didYouMeanSingleQuoteRegex.ReplaceAllString(msg, "")
+	
+	// Remove suggestions without quotes
+	msg = didYouMeanNoQuotesRegex.ReplaceAllString(msg, "")
+	
+	// Remove "Candidate tables:" followed by table list
+	msg = candidateTablesRegex.ReplaceAllString(msg, "")
+	
+	// Clean up any double spaces or trailing spaces that might be left
+	msg = whitespaceRegex.ReplaceAllString(msg, " ")
+	msg = strings.TrimSpace(msg)
+	
+	return msg
+}
+
+func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string, writer io.Writer) error {
+	// Ensure the writer is closed if it has a Close method.
+	defer func() {
+		if closer, ok := writer.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	rows, err := m.db.QueryContext(ctx, sql)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	csvWriter := csv.NewWriter(writer)
+	defer csvWriter.Flush()
+
+	// Write CSV headers from column names.
+	headers, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	if err := csvWriter.Write(headers); err != nil {
+		return err
+	}
+
+	// Prepare to scan row values.
+	values := make([]any, len(headers))
+	scanArgs := make([]any, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	// Iterate over rows and write to CSV.
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			return err
+		}
+
+		record := make([]string, len(values))
+		for i, val := range values {
+			if val == nil {
+				record[i] = "" // Represent NULL as an empty string.
+			} else {
+				record[i] = fmt.Sprintf("%v", val)
+			}
+		}
+
+		if err := csvWriter.Write(record); err != nil {
+			return err
+		}
+	}
+
+	// Check for any errors encountered during iteration.
+	return rows.Err()
 }

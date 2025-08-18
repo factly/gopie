@@ -17,7 +17,7 @@ type uploadRequestBody struct {
 	// S3 path of the file to upload
 	FilePath string `json:"file_path" validate:"required,min=1" example:"my-bucket/data/sales.csv"`
 	// Description of the dataset
-	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"Sales data for Q1 2024"`
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=1000" example:"Sales data for Q1 2024"`
 	// ID of the project to add the dataset to
 	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// User ID of the creator

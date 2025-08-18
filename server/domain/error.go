@@ -19,7 +19,7 @@ func (e SqlError) String() string {
 	case ErrMultipleSqlStatements:
 		return "multiple sql statements are not allowed"
 	case ErrNotSelectStatement:
-		return "only select statement is allowed"
+		return "only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE)"
 	case ErrInvalidQuery:
 		return "invalid query"
 	case ErrTableNotFound:

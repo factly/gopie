@@ -26,7 +26,7 @@ func (h *httpHandler) list(c *fiber.Ctx) error {
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 
-	downloads, err := h.service.List(userID, orgID, limit, offset)
+	downloads, err := h.service.List(userID, orgID, int32(limit), int32(offset))
 	if err != nil {
 		h.logger.Error("Failed to list downloads", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not retrieve downloads"})

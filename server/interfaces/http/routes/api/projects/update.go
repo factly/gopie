@@ -14,7 +14,7 @@ type updateProjectBody struct {
 	// Name of the project
 	Name string `json:"name,omitempty" validate:"required,min=3,max=50" example:"Updated Project Name"`
 	// Description of the project
-	Description  string `json:"description,omitempty" validate:"omitempty,max=500" example:"Updated project description"`
+	Description  string `json:"description,omitempty" validate:"omitempty,max=1000" example:"Updated project description"`
 	CustomPrompt string `json:"custom_prompt"`
 }
 

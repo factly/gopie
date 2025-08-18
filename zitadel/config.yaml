@@ -5,9 +5,9 @@ Log:
 # Make ZITADEL accessible over HTTP, not HTTPS
 ExternalSecure: false
 
-Port: 4455
-ExternalPort: 4455
-# ExternalDomain: "localhost"
+Port: 8080
+ExternalPort: 80
+ExternalDomain: zitadel.gopie.io
 
 # If not using the docker compose example, adjust these values for connecting ZITADEL to your PostgreSQL
 Database:

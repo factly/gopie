@@ -25,7 +25,7 @@ type createRequestBody struct {
 	// SQL query to execute
 	SQLQuery string `json:"sql_query" validate:"required" example:"SELECT * FROM users"`
 	// Description of the dataset
-	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=500" example:"User data from our production database"`
+	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=1000" example:"User data from our production database"`
 	// ID of the project to add the dataset to
 	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// User ID of the creator

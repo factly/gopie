@@ -16,6 +16,8 @@ import {
   FileText,
   Loader2Icon,
   CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +28,8 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -47,11 +51,38 @@ import {
 import { useCreateDownload } from "@/lib/mutations/download/create-download";
 import { useDownloadStore } from "@/lib/stores/download-store";
 import { Progress } from "@/components/ui/progress";
+import { format as formatSQL } from "sql-formatter";
+
+// Dynamically import Monaco Editor to avoid SSR issues
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
+      <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
 
 interface DatasetHeaderProps {
   dataset: Dataset;
   projectId: string;
   onUpdate?: () => Promise<void>;
+}
+
+// Helper function to format SQL queries safely
+function formatSqlQuery(sql: string): string {
+  try {
+    return formatSQL(sql, {
+      language: "sql",
+      tabWidth: 2,
+      useTabs: false,
+      keywordCase: "upper",
+      linesBetweenQueries: 2,
+    });
+  } catch (error) {
+    console.error("Failed to format SQL:", error);
+    return sql; // Return original SQL if formatting fails
+  }
 }
 
 // Helper function to determine dataset source (commented out as unused)
@@ -111,6 +142,7 @@ export function DatasetHeader({
   const { toast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { resolvedTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedAlias, setEditedAlias] = useState(dataset.alias || "");
@@ -120,6 +152,7 @@ export function DatasetHeader({
   const [editedCustomPrompt, setEditedCustomPrompt] = useState(
     dataset.custom_prompt || ""
   );
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // Download state
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
@@ -127,7 +160,7 @@ export function DatasetHeader({
     "csv" | "json" | "parquet"
   >("csv");
   const [downloadSql, setDownloadSql] = useState(
-    `SELECT * FROM "${dataset.name}"`
+    formatSqlQuery(`SELECT * FROM "${dataset.name}"`)
   );
   const [completedDownloadUrl, setCompletedDownloadUrl] = useState<
     string | null
@@ -252,13 +285,16 @@ export function DatasetHeader({
     }
   };
 
-  // Reset download progress and URL when dialog closes
+  // Reset download progress and URL when dialog closes, format SQL when dialog opens
   useEffect(() => {
     if (!isDownloadDialogOpen) {
       setCurrentDownloadProgress(null);
       setCompletedDownloadUrl(null);
+    } else {
+      // Format the SQL when dialog opens
+      setDownloadSql(formatSqlQuery(`SELECT * FROM "${dataset.name}"`));
     }
-  }, [isDownloadDialogOpen, setCurrentDownloadProgress]);
+  }, [isDownloadDialogOpen, setCurrentDownloadProgress, dataset.name]);
 
   return (
     <div className="space-y-6">
@@ -277,7 +313,7 @@ export function DatasetHeader({
         </Button>
 
         {/* Left Section - Main Info */}
-        <div className="flex items-start gap-4 flex-1 min-w-0 pr-[60px]">
+        <div className="flex items-start gap-4 flex-1 min-w-0 pr-[10px]">
           <div className="flex-1 min-w-0 space-y-3">
             {/* Title and Badge */}
             {isEditing ? (
@@ -344,9 +380,44 @@ export function DatasetHeader({
                 {/* Description */}
                 <div className="group">
                   <div className="flex items-start gap-2">
-                    <p className="text-muted-foreground leading-relaxed flex-1 min-h-[60px] pr-8">
-                      {dataset.description || "No description provided"}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      {dataset.description && dataset.description.length > 200 ? (
+                        isDescriptionExpanded ? (
+                          <div className="text-muted-foreground leading-relaxed">
+                            <span>{dataset.description}</span>
+                            {" "}
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-primary hover:text-primary/80 font-medium inline-flex items-center align-baseline"
+                              onClick={() => setIsDescriptionExpanded(false)}
+                            >
+                              <ChevronUpIcon className="h-3 w-3 mr-0.5" />
+                              Less
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground leading-relaxed">
+                            <p className="line-clamp-2 mb-1">
+                              {dataset.description}
+                            </p>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-primary hover:text-primary/80 font-medium inline-flex items-center"
+                              onClick={() => setIsDescriptionExpanded(true)}
+                            >
+                              <ChevronDownIcon className="h-3 w-3 mr-0.5" />
+                              More
+                            </Button>
+                          </div>
+                        )
+                      ) : (
+                        <p className="text-muted-foreground leading-relaxed">
+                          {dataset.description || "No description provided"}
+                        </p>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -383,8 +454,8 @@ export function DatasetHeader({
                 )}
 
                 {/* Quick Stats */}
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                     <div className="flex items-center gap-2">
                       <TableIcon className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
@@ -408,10 +479,12 @@ export function DatasetHeader({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 text-muted-foreground hover:text-foreground"
+                          className="h-7 text-muted-foreground hover:text-foreground inline-flex"
+                          title="Column Descriptions"
                         >
-                          <FileText className="h-4 w-4 mr-1" />
-                          Column Descriptions
+                          <FileText className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline lg:hidden">Columns</span>
+                          <span className="hidden lg:inline">Column Descriptions</span>
                         </Button>
                       }
                     />
@@ -421,9 +494,10 @@ export function DatasetHeader({
                           variant="ghost"
                           size="sm"
                           className="h-7 text-muted-foreground hover:text-foreground"
+                          title="More details"
                         >
-                          <InfoIcon className="h-4 w-4 mr-1" />
-                          More details
+                          <InfoIcon className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">More details</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-md">
@@ -536,7 +610,7 @@ export function DatasetHeader({
 
                   {/* Action Buttons */}
                   {!isEditing && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <Dialog
                         open={isDownloadDialogOpen}
                         onOpenChange={setIsDownloadDialogOpen}
@@ -545,13 +619,13 @@ export function DatasetHeader({
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 hover:bg-secondary/80"
+                            className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-secondary/80"
                             title="Download Dataset"
                           >
-                            <DownloadIcon className="h-5 w-5" />
+                            <DownloadIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
+                        <DialogContent className="sm:max-w-[600px]">
                           <DialogHeader>
                             <DialogTitle>Download Dataset</DialogTitle>
                             <DialogDescription>
@@ -588,15 +662,52 @@ export function DatasetHeader({
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                SQL Query
-                              </label>
-                              <Textarea
-                                value={downloadSql}
-                                onChange={(e) => setDownloadSql(e.target.value)}
-                                placeholder="Enter SQL query..."
-                                className="min-h-[100px] font-mono text-sm"
-                              />
+                              <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">
+                                  SQL Query
+                                </label>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const formatted = formatSqlQuery(downloadSql);
+                                    setDownloadSql(formatted);
+                                  }}
+                                  className="h-7 text-xs"
+                                >
+                                  Format SQL
+                                </Button>
+                              </div>
+                              <div className="border rounded-md overflow-hidden">
+                                <Editor
+                                  height="150px"
+                                  defaultLanguage="sql"
+                                  value={downloadSql}
+                                  onChange={(value) => setDownloadSql(value || "")}
+                                  theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+                                  options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    lineNumbers: "on",
+                                    roundedSelection: false,
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    wordWrap: "on",
+                                    wrappingIndent: "indent",
+                                    formatOnPaste: true,
+                                    formatOnType: true,
+                                    scrollbar: {
+                                      vertical: "auto",
+                                      horizontal: "auto",
+                                    },
+                                    padding: {
+                                      top: 8,
+                                      bottom: 8,
+                                    },
+                                  }}
+                                />
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 Customize the SQL query to filter or transform
                                 your data before download
@@ -677,10 +788,10 @@ export function DatasetHeader({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9 hover:bg-secondary/80"
+                          className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-secondary/80"
                           title="Query Dataset"
                         >
-                          <DatabaseIcon className="h-5 w-5" />
+                          <DatabaseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                         </Button>
                       </Link>
                       <Link
@@ -689,10 +800,10 @@ export function DatasetHeader({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9 hover:bg-secondary/80"
+                          className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-secondary/80"
                           title="API Playground"
                         >
-                          <CodeIcon className="h-5 w-5" />
+                          <CodeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                         </Button>
                       </Link>
                     </div>

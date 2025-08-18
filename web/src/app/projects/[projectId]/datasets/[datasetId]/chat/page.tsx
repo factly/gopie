@@ -477,7 +477,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                       {/* Messages */}
                       <ScrollArea
                         ref={scrollRef}
-                        className="flex-1 px-4 py-6"
+                        className="flex-1 px-4 py-6 [&>div>div]:!block [&>div>div]:!min-w-0"
                         onScroll={handleScroll}
                       >
                         {isLoadingMessages && !isFetchingNextPage ? (

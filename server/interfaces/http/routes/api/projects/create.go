@@ -13,7 +13,7 @@ type createRequestBody struct {
 	// Name of the project
 	Name string `json:"name" validate:"required,min=3,max=50" example:"My New Project"`
 	// Description of the project
-	Description  string `json:"description" validate:"required,min=10,max=500" example:"This is a detailed description of my new project"`
+	Description  string `json:"description" validate:"required,min=10,max=1000" example:"This is a detailed description of my new project"`
 	CustomPrompt string `json:"custom_prompt"`
 }
 

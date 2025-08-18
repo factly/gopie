@@ -15,7 +15,7 @@ type CreateDatabaseSourceParams struct {
 	ConnectionString string `json:"connection_string" validate:"required"`
 	SQLQuery         string `json:"sql_query" validate:"required"`
 	Alias            string `json:"alias" validate:"required,min=3"`
-	Description      string `json:"description,omitempty" validate:"omitempty,min=10,max=500"`
+	Description      string `json:"description,omitempty" validate:"omitempty,min=10,max=1000"`
 	ProjectID        string `json:"project_id" validate:"required,uuid"`
 	CreatedBy        string `json:"created_by" validate:"required"`
 	OrganizationID   string `json:"organization_id" validate:"required,string"`

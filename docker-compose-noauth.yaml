@@ -94,6 +94,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   createbuckets:
     image: minio/mc
     depends_on:
@@ -103,11 +104,12 @@ services:
       - gopie
     entrypoint: >
       /bin/sh -c "
-        echo 'Minio is up. Creating the bucket!!' &&
+        echo 'Minio is up. Creating required buckets...' &&
         /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
+        /usr/bin/mc mb -p myminio/downloads &&
         /usr/bin/mc anonymous set public myminio/gopie/visualizations
-      " 
+      "
 
 include:
   - ./chat-server/docker-compose.yaml

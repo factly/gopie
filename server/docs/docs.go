@@ -484,6 +484,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/api/ai/generate-dataset-description": {
+            "post": {
+                "description": "Generate a comprehensive description for a dataset using AI analysis of column information and sample data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ai"
+                ],
+                "summary": "Generate AI-powered dataset description",
+                "parameters": [
+                    {
+                        "description": "Dataset description request parameters",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ai.genDatasetDescBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset description generated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or missing required fields",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to generate dataset description",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/api/chat": {
             "get": {
                 "description": "Get all chats for a specific user with pagination",
@@ -954,6 +1003,53 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/datasets/{datasetID}/project": {
+            "get": {
+                "description": "Get the project ID for a specific dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "datasets"
+                ],
+                "summary": "Get project for dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "datasetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No project found for dataset",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }
@@ -1772,7 +1868,7 @@ const docTemplate = `{
         },
         "/v1/api/sql": {
             "post": {
-                "description": "Execute a SQL query on a dataset (only SELECT statements are allowed)",
+                "description": "Execute a SQL query on a dataset (only read-only queries are allowed: SELECT, WITH, DESCRIBE, SUMMARIZE)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1812,7 +1908,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Non-SELECT statement",
+                        "description": "Non-read-only query",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse"
                         }
@@ -1907,6 +2003,9 @@ const docTemplate = `{
     },
     "definitions": {
         "ai.genColumnsDescBody": {
+            "type": "object"
+        },
+        "ai.genDatasetDescBody": {
             "type": "object"
         },
         "api.nl2SqlRequest": {
@@ -2025,7 +2124,7 @@ const docTemplate = `{
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "minLength": 10,
                     "example": "User data from our production database"
                 },
@@ -2523,7 +2622,7 @@ const docTemplate = `{
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "minLength": 10,
                     "example": "This is a detailed description of my new project"
                 },
@@ -2549,7 +2648,7 @@ const docTemplate = `{
                 "description": {
                     "description": "Description of the project",
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "example": "Updated project description"
                 },
                 "name": {
@@ -2627,7 +2726,7 @@ const docTemplate = `{
                 "description": {
                     "description": "Updated description of the dataset (optional)",
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "minLength": 10,
                     "example": "Updated sales data for Q1 2024"
                 },
@@ -2695,7 +2794,7 @@ const docTemplate = `{
                 "description": {
                     "description": "Description of the dataset",
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "minLength": 10,
                     "example": "Sales data for Q1 2024"
                 },
