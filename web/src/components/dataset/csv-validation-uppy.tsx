@@ -597,15 +597,6 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
         name: path, // This is the file path for storage
         type: fileToUpload.type,
         data: fileToUpload,
-        meta: {
-          alias: alias, // Store the dataset name as 'alias' to be more clear
-          datasetName: alias, // Also store as datasetName for redundancy
-          projectId,
-          type: "dataset",
-          description: description || "Uploaded from GoPie Web",
-          processedWithDuckDB: modifiedFile !== null, // Flag to indicate if the file was processed with DuckDB
-          fileFormat: detectedFormat, // Store the detected file format
-        },
       });
 
       // Log files before upload
