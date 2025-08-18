@@ -1,3 +1,5 @@
+import base64
+
 import orjson
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, ToolMessage
@@ -44,7 +46,8 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         tool_call = last_message.tool_calls[0]
         response = tool_call["args"]
         sandbox = state.get("sandbox")
-        result_path = response["visualization_result_paths"]
+        result_path = response.get("visualization_result_paths", [])
+        png_paths = response.get("visualization_png_paths", [])
         executed_python_code = state["executed_python_code"]
 
         result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
@@ -71,17 +74,14 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         # Additionally, try to fetch PNG counterparts for brief image-based summary in respond node
         png_images_b64: list[str] = []
         try:
-            png_file_names = [
-                p.rsplit("-", 1)[0].strip().replace(".json", ".png") for p in result_path
-            ]
-            png_bytes_list = await get_visualization_result_bytes(
-                sandbox=sandbox, file_names=png_file_names
-            )
-            import base64
+            if png_paths:
+                png_bytes_list = await get_visualization_result_bytes(
+                    sandbox=sandbox, file_names=png_paths
+                )
 
-            for img in png_bytes_list:
-                if isinstance(img, (bytes, bytearray)):
-                    png_images_b64.append(base64.b64encode(img).decode("utf-8"))
+                for img in png_bytes_list:
+                    if isinstance(img, (bytes, bytearray)):
+                        png_images_b64.append(base64.b64encode(img).decode("utf-8"))
         except Exception:
             png_images_b64 = []
 
