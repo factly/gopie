@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: COOKIE_MAX_AGE, // 24 hours
+      maxAge: COOKIE_MAX_AGE,
       path: "/",
     };
 

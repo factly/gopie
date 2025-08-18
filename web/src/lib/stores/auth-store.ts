@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const baseUrl = window.location.origin;
-          const successUrl = `${baseUrl}/api/oauth/callback${
+          const successUrl = `${baseUrl}/api/oauth/callback/google${
             returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
           }`;
           const failureUrl = `${baseUrl}/auth/login?error=oauth_failed`;
