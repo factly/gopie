@@ -44,8 +44,8 @@ ANALYSIS CRITERIA:
    • Output the IDs of selected SQL queries
 
 5. ENHANCED QUERY (`enhanced_query`):
-   • Rewrite the user query to be self-contained and unambiguous
-   • Inject critical context from chat history and special instructions
+   • Rewrite the user query as a NATURAL LANGUAGE QUESTION (never SQL)
+   • Make it self-contained and unambiguous by injecting critical context
    • Include: dates, filters, dataset names, and other relevant context
    • Preserve user's intent and wording where possible
    • Clarify if user needs: more data, new datasets, or visualization
@@ -59,6 +59,7 @@ ANALYSIS CRITERIA:
 
 IMPORTANT GUIDELINES:
 - Always incorporate special instructions into the enhanced query
+- The enhanced_query field MUST be natural language, never SQL or code
 - Maintain consistency with previous analysis patterns
 - Ensure all analysis fields are properly populated
 - Consider both explicit and implicit user requirements

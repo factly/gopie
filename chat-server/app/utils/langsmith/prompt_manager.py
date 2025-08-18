@@ -109,7 +109,7 @@ def get_prompt_llm_chain(
             return prompt_template.invoke(input_vars).to_messages()
 
     formatter: Runnable = RunnableLambda(format_prompt).with_config(
-        {"run_name": f"format_{node_name}_prompt", "callbacks": []}
+        {"run_name": f"{node_name}_prompt_chain", "callbacks": []}
     )
 
     llm = get_configured_llm_for_node(

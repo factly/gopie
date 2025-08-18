@@ -115,7 +115,7 @@ class PromptSelector:
             return None
 
         @traceable
-        def _format_prompt_input_traced():
+        def format_input():
             return self.format_prompt_input_map[node_name](**kwargs)
 
-        return _format_prompt_input_traced()
+        return format_input()

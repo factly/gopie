@@ -12,6 +12,8 @@ def create_visualize_data_prompt(
     user_query = kwargs.get("user_query", "")
     datasets_csv_info = kwargs.get("datasets_csv_info", "")
     previous_python_code = kwargs.get("previous_python_code", "")
+    feedback_count = kwargs.get("feedback_count", 0)
+    tool_call_count = kwargs.get("tool_call_count", 0)
 
     system_content = """
 You are an expert data visualization engineer specializing in creating accessible and
@@ -57,6 +59,10 @@ IMPORTANT NOTES:
 The following are the datasets and their descriptions for the present query:
 
 {datasets_csv_info}
+
+CURRENT TOOL USAGE STATUS:
+- Python code executions (run_python_code): {tool_call_count} times
+- Feedback requests (get_feedback_for_image): {feedback_count} times
 """
     if prompt_template:
         return ChatPromptTemplate.from_messages(
@@ -79,6 +85,8 @@ may have changed, so use the new paths provided in your current implementation.
     human_content = human_template_str.format(
         user_query=user_query,
         datasets_csv_info=datasets_csv_info,
+        tool_call_count=tool_call_count,
+        feedback_count=feedback_count,
     )
 
     if previous_python_code:

@@ -58,6 +58,8 @@ async def pre_model_hook(state: State, config: RunnableConfig):
                 user_query=state["user_query"],
                 datasets_csv_info=datasets_csv_info,
                 previous_python_code=previous_python_code,
+                feedback_count=state.get("feedback_count", 0),
+                tool_call_count=state.get("tool_call_count", 0),
             )
 
         return {
