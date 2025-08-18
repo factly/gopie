@@ -32,7 +32,14 @@ export async function GET(request: NextRequest) {
 
     const userData = idpInfo.rawInformation.User;
 
-    let session: { sessionId: string; sessionToken: string };
+    let session: { sessionId: string; sessionToken: string; };
+
+    const data ={
+      isMFAEnabled: false,
+      userId:   "",
+      callbackUrl: ""
+    }
+
 
     if (userId) {
       session = await zitadelClient.createSessionWithUserAndIdp(
@@ -70,6 +77,8 @@ export async function GET(request: NextRequest) {
         idpIntentId,
         idpIntentToken
       );
+
+      userId = existingUserId;
     } else {
       // User doesn't exist, register them first
       console.log("User not found, registering new user");
@@ -126,6 +135,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    data.userId = userId;
+
     // Check auth Methods
     const authMethods = await zitadelClient.getAuthMethods(
       userId,
@@ -135,7 +146,7 @@ export async function GET(request: NextRequest) {
     if (
       !authMethods.authMethodTypes?.includes("AUTHENTICATION_METHOD_TYPE_TOTP")
     ) {
-      return NextResponse.redirect(new URL("/auth/login/mfa"));
+      data.isMFAEnabled = true;
     } else {
       const authRequestId = cookieStore.get(AUTH_REQUEST_COOKIE)?.value;
       if (!authRequestId) {
@@ -149,12 +160,13 @@ export async function GET(request: NextRequest) {
         session.sessionId,
         session.sessionToken
       );
-
-      return NextResponse.json({
-        success: true,
-        callbackUrl: authRequestResponse.callbackUrl,
-      });
+      data.callbackUrl = authRequestResponse.callbackUrl;
     }
+    
+    return NextResponse.json({
+      success: true,
+      ...data,
+    });
   } catch (error) {
     console.error("OAuth callback error:", error);
     return NextResponse.redirect(
