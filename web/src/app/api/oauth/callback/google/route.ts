@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZitadelClient } from "@/lib/auth/zitadel-client";
 import { cookies } from "next/headers";
+import {
+  AUTH_REQUEST_COOKIE,
+  COOKIE_MAX_AGE,
+  SESSION_ID_COOKIE,
+  SESSION_TOKEN_COOKIE,
+} from "@/constants/zitade";
 
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   try {
     const searchParams = request.nextUrl.searchParams;
     const idpIntentId = searchParams.get("id");
     const idpIntentToken = searchParams.get("token");
-    const error = searchParams.get("error");
-
-    if (error) {
-      const failureUrl =
-        searchParams.get("state") || "/auth/login?error=oauth_failed";
-      return NextResponse.redirect(new URL(failureUrl, baseUrl));
-    }
+    let userId = searchParams.get("userId");
 
     if (!idpIntentId || !idpIntentToken) {
       return NextResponse.redirect(
@@ -30,16 +30,22 @@ export async function GET(request: NextRequest) {
       idpIntentToken
     );
 
-    console.log("IDP Information:", JSON.stringify(idpInfo, null, 2));
-
     const userData = idpInfo.rawInformation.User;
+
+    let session: { sessionId: string; sessionToken: string };
+
+    if (userId) {
+      session = await zitadelClient.createSessionWithUserAndIdp(
+        userId,
+        idpIntentId,
+        idpIntentToken
+      );
+    }
 
     // Check if user exists in Zitadel by searching for their email
     const existingUserId = await zitadelClient.findUserIdByLoginName(
       userData.email
     );
-
-    let session: { sessionId: string; sessionToken: string };
 
     if (existingUserId) {
       // User exists, add IDP link to their account first (if not already linked)
@@ -64,6 +70,8 @@ export async function GET(request: NextRequest) {
         idpIntentId,
         idpIntentToken
       );
+
+      userId = existingUserId;
     } else {
       // User doesn't exist, register them first
       console.log("User not found, registering new user");
@@ -92,32 +100,71 @@ export async function GET(request: NextRequest) {
         idpIntentId,
         idpIntentToken
       );
-    }
 
+      userId = newUserId;
+    }
     // Set session cookies properly - match what auth utils expects
     const cookieStore = await cookies();
-
-    // Store session ID under 'zitadel-session'
-    cookieStore.set("zitadel-session", session.sessionId, {
+    const cookieOptions: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: "lax" | "strict" | "none" | boolean;
+      maxAge: number;
+      path: string;
+    } = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60, // 24 hours
+      maxAge: COOKIE_MAX_AGE,
       path: "/",
-    });
+    };
 
-    // Store session token under 'zitadel-session-token'
-    cookieStore.set("zitadel-session-token", session.sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60, // 24 hours
-      path: "/",
-    });
+    cookieStore.set(SESSION_ID_COOKIE, session.sessionId, cookieOptions);
+    cookieStore.set(SESSION_TOKEN_COOKIE, session.sessionToken, cookieOptions);
 
-    // Redirect to dashboard or original destination
-    const returnUrl = searchParams.get("returnUrl") || "/";
-    return NextResponse.redirect(new URL(returnUrl, baseUrl));
+    if (!userId) {
+      return NextResponse.redirect(
+        new URL("/auth/login?error=missing_user_id", baseUrl)
+      );
+    }
+
+    // Check auth Methods
+    const authMethods = await zitadelClient.getAuthMethods(
+      userId,
+      session.sessionToken
+    );
+
+    if (
+      authMethods.authMethodTypes?.includes("AUTHENTICATION_METHOD_TYPE_TOTP")
+    ) {
+      // Set userId in cookie for 10 minutes and redirect to MFA login
+      const response = NextResponse.redirect(
+        new URL("/auth/login?mfa=enable", baseUrl)
+      );
+      response.cookies.set("mfa_user_id", userId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 10 * 60, // 10 minutes
+        path: "/",
+      });
+      return response;
+    } else {
+      const authRequestId = cookieStore.get(AUTH_REQUEST_COOKIE)?.value;
+      if (!authRequestId) {
+        return NextResponse.redirect(
+          new URL("/auth/login?error=missing_auth_request_id", baseUrl)
+        );
+      }
+
+      const authRequestResponse = await zitadelClient.finalizeAuthRequest(
+        authRequestId,
+        session.sessionId,
+        session.sessionToken
+      );
+      // Redirect to callback URL instead of returning JSON
+      return NextResponse.redirect(new URL(authRequestResponse.callbackUrl));
+    }
   } catch (error) {
     console.error("OAuth callback error:", error);
     return NextResponse.redirect(

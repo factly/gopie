@@ -1,13 +1,23 @@
 export interface ZitadelUser {
   id: string;
-  loginName: string;
   displayName: string;
   firstName?: string;
   lastName?: string;
   email: string;
   emailVerified: boolean;
-  profilePicture?: string;
-  organizationId?: string;
+  roles?: Record<string, string[]>;
+  organisationId: string;
+}
+
+export interface ZitadelUserInfo {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+  sub: string;
+  name: string;
+  given_name: string;
+  family_name: string;
+  email: string;
+  email_verified: boolean;
 }
 
 export interface ZitadelSession {
@@ -39,6 +49,12 @@ export interface IdpIntent {
   authUrl: string;
 }
 
+export interface CodeVerifierParams {
+  codeVerifier: string;
+  codeChallenge: string;
+  state: string;
+}
+
 export interface IdpInformation {
   idpId: string;
   userId: string;
@@ -59,27 +75,71 @@ export interface IdpInformation {
 export class ZitadelClient {
   private authority: string;
   private clientId: string;
-  private clientSecret: string;
   private pat: string;
   private idpId: string;
+  private redirectUri: string;
+  private serviceUserId: string;
+  private projectId: string;
+
+  // code verifier utility functions
+  private generateRandomString(length: number): string {
+    const charset =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return result;
+  }
+
+  private async sha256(plain: string): Promise<ArrayBuffer> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    return await crypto.subtle.digest("SHA-256", data);
+  }
+
+  private base64URLEncode(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+  }
+
+  private isEmailFormat(input: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(input);
+  }
+
+  async generateCodeVerifier(): Promise<CodeVerifierParams> {
+    const codeVerifier = this.generateRandomString(128);
+    const hashed = await this.sha256(codeVerifier);
+    const codeChallenge = this.base64URLEncode(hashed);
+    const state = this.generateRandomString(32);
+
+    return {
+      codeVerifier,
+      codeChallenge,
+      state,
+    };
+  }
 
   constructor() {
     this.authority = process.env.ZITADEL_AUTHORITY!;
     this.clientId = process.env.ZITADEL_CLIENT_ID!;
-    this.clientSecret = process.env.ZITADEL_CLIENT_SECRET!;
     this.pat = process.env.ZITADEL_PAT!;
     this.idpId = process.env.ZITADEL_IDP_ID!;
-
-    console.log("ZITADEL_AUTHORITY:", process.env.ZITADEL_AUTHORITY);
-    console.log("ZITADEL_CLIENT_ID:", process.env.ZITADEL_CLIENT_ID);
-    console.log("ZITADEL_CLIENT_SECRET:", process.env.ZITADEL_CLIENT_SECRET);
-    console.log("ZITADEL_PAT:", process.env.ZITADEL_PAT);
-    console.log("ZITADEL_IDP_ID:", process.env.ZITADEL_IDP_ID);
+    this.redirectUri = process.env.ZITADEL_REDIRECT_URI!;
+    this.serviceUserId = process.env.ZITADEL_SERVICE_USER_ID!;
+    this.projectId = process.env.ZITADEL_PROJECT_ID!;
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${this.authority}${endpoint}`;
-
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -97,23 +157,115 @@ export class ZitadelClient {
     return response.json();
   }
 
-  private async makeOAuthRequest(endpoint: string, options: RequestInit = {}) {
-    const url = `${this.authority}${endpoint}`;
+  async makeOAuthRequest(
+    endpoint: string,
+    codeVerifierParams: CodeVerifierParams
+  ) {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: this.redirectUri,
+      response_type: "code",
+      scope:
+        "openid profile email urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
+        this.projectId +
+        ":roles",
+      code_challenge: codeVerifierParams.codeChallenge,
+      code_challenge_method: "S256",
+      state: codeVerifierParams.state,
+    });
+
+    const url = `${this.authority}${endpoint}?${params.toString()}`;
 
     const response = await fetch(url, {
-      ...options,
+      redirect: "manual",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        ...options.headers,
+        "X-Zitadel-Login-Client": this.serviceUserId,
       },
     });
 
+    if (response.status >= 300 && response.status < 405) {
+      const location = response.headers.get("Location");
+
+      if (location) {
+        return location;
+      }
+    }
+
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Zitadel OAuth error: ${response.status} - ${error}`);
+      throw new Error(`Zitadel OAuth error: ${response.status}`);
     }
 
     return response.json();
+  }
+
+  async getAuthRequest(authRequestId: string): Promise<AuthRequest> {
+    const response = await this.makeRequest(
+      `/v2/oidc/auth_requests/${authRequestId}`
+    );
+    return response.authRequest;
+  }
+
+  //TODO: handle auth grant request failure
+  async finalizeAuthRequest(
+    authRequestId: string,
+    sessionId: string,
+    sessionToken: string
+  ): Promise<{ callbackUrl: string }> {
+    const response = await this.makeRequest(
+      `/v2/oidc/auth_requests/${authRequestId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          session: {
+            sessionId: sessionId,
+            sessionToken: sessionToken,
+          },
+        }),
+      }
+    );
+
+    return { callbackUrl: response.callbackUrl };
+  }
+
+  async getUserInfo(accessToken: string): Promise<ZitadelUser> {
+    // Get session info which includes user data
+    const userResponse: ZitadelUserInfo = await this.makeRequest(
+      "/oidc/v1/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const mappedUser = {
+      id: userResponse.sub,
+      displayName: userResponse.name,
+      firstName: userResponse.given_name,
+      lastName: userResponse.family_name,
+      email: userResponse.email,
+      emailVerified: userResponse.email_verified,
+      roles: {},
+      organisationId: userResponse['urn:zitadel:iam:user:resourceowner:id'],
+    };
+
+    const projectRoles = userResponse[`urn:zitadel:iam:org:project:${this.projectId}:roles`];
+    if (projectRoles) {
+      const rolesByOrg = Object.entries(projectRoles).reduce((acc: Record<string, string[]>, [role, orgs]) => {
+        Object.keys(orgs as Record<string, unknown>).forEach(orgId => {
+          acc[orgId] = acc[orgId] ? [...acc[orgId], role] : [role];
+        });
+        return acc;
+      }, {});
+
+      mappedUser.roles = rolesByOrg;
+      const orgIds = Object.keys(rolesByOrg);
+      if (orgIds.length > 0) {
+        mappedUser.organisationId = orgIds[0];
+      }
+    }
+
+    return mappedUser;
   }
 
   async createSession(loginName: string): Promise<ZitadelSession> {
@@ -133,11 +285,6 @@ export class ZitadelClient {
       sessionToken: response.sessionToken,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     };
-  }
-
-  private isEmailFormat(input: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(input);
   }
 
   async updateSession(
@@ -162,33 +309,36 @@ export class ZitadelClient {
     };
   }
 
-  async getAccessToken(userId: string): Promise<AccessTokenResponse> {
-    // Exchange the PAT (actor_token) together with the target userId to
-    // obtain a user-scoped opaque access_token via the Token Exchange grant.
-
-    const body = new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-      // The subject we want a token for is the user identified by their ID.
-      subject_token: userId,
-      subject_token_type: "urn:zitadel:params:oauth:token-type:user_id",
-      // Our service-user PAT acts as the actor_token performing the impersonation.
-      actor_token: this.pat,
-      actor_token_type: "urn:ietf:params:oauth:token-type:access_token",
-      scope:
-        "openid profile email urn:zitadel:iam:user:metadata urn:zitadel:iam:user:resourceowner urn:zitadel:iam:org:project:id:zitadel:aud urn:zitadel:iam:org:project:" +
-        process.env.ZITADEL_PROJECT_ID +
-        ":roles",
+  async getSession(sessionId: string): Promise<ZitadelSession> {
+    const response = await this.makeRequest(`/v2/sessions/${sessionId}`, {
+      method: "GET",
     });
 
-    const basicAuth = Buffer.from(
-      `${this.clientId}:${this.clientSecret}`
-    ).toString("base64");
+    return {
+      sessionId: response.session.id,
+      sessionToken: "", //TODO: get session token from response
+      user: response.session.factors?.user,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    };
+  }
+
+  // Exchange authorization code for access token using PKCE OIDC flow
+  async getAccessToken(
+    authorizationCode: string,
+    codeVerifier: string
+  ): Promise<AccessTokenResponse> {
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      code: authorizationCode,
+      redirect_uri: this.redirectUri,
+      client_id: this.clientId,
+      code_verifier: codeVerifier,
+    });
 
     const response = await fetch(`${this.authority}/oauth/v2/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${basicAuth}`,
       },
       body: body.toString(),
     });
@@ -201,70 +351,6 @@ export class ZitadelClient {
     }
 
     return (await response.json()) as AccessTokenResponse;
-  }
-
-  async getUserInfo(sessionId: string): Promise<ZitadelUser> {
-    // Get session info which includes user data
-    const sessionResponse = await this.makeRequest(`/v2/sessions/${sessionId}`);
-
-    if (!sessionResponse.session?.factors?.user?.id) {
-      throw new Error("No user found in session");
-    }
-
-    const userId = sessionResponse.session.factors.user.id;
-
-    // Get detailed user information
-    const userResponse = await this.makeRequest(`/v2/users/${userId}`);
-
-    const user = userResponse.user;
-
-    const mappedUser = {
-      id: user.id || userId, // Use the userId from session if user.id is not available
-      loginName:
-        user.preferredLoginName ||
-        user.username ||
-        sessionResponse.session.factors.user.loginName,
-      displayName:
-        user.human?.profile?.displayName ||
-        user.username ||
-        sessionResponse.session.factors.user.displayName,
-      firstName: user.human?.profile?.givenName,
-      lastName: user.human?.profile?.familyName,
-      email: user.human?.email?.email,
-      emailVerified: user.human?.email?.isVerified || false,
-      profilePicture: user.human?.profile?.avatarUrl,
-      organizationId: user.details?.resourceOwner,
-    };
-
-    return mappedUser;
-  }
-
-  async getAuthRequest(authRequestId: string): Promise<AuthRequest> {
-    const response = await this.makeRequest(
-      `/v2/oidc/auth_requests/${authRequestId}`
-    );
-    return response.authRequest;
-  }
-
-  async finalizeAuthRequest(
-    authRequestId: string,
-    sessionId: string,
-    sessionToken: string
-  ): Promise<{ callbackUrl: string }> {
-    const response = await this.makeRequest(
-      `/v2/oidc/auth_requests/${authRequestId}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          session: {
-            sessionId: sessionId,
-            sessionToken: sessionToken,
-          },
-        }),
-      }
-    );
-
-    return { callbackUrl: response.callbackUrl };
   }
 
   async registerUser(userData: {
@@ -572,6 +658,66 @@ export class ZitadelClient {
         },
       }),
     });
+  }
+
+  async getAuthMethods(userId: string, sessionToken: string) {
+    const response = await this.makeRequest(
+      `/v2/users/${userId}/authentication_methods`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      }
+    );
+    return response;
+  }
+
+  async startTOTPRegistration(userId: string, token: string, data = {}) {
+    const response = await this.makeRequest(`/v2/users/${userId}/totp`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    return {
+      uri: response.uri,
+      secret: response.secret,
+    };
+  }
+
+  async verifyTOTPRegistration(userId: string, token: string, code: string) {
+    const response = await this.makeRequest(`/v2/users/${userId}/totp/verify`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ code }),
+    });
+
+    return response;
+  }
+
+  async checkTOTP(sessionId: string, sessionToken: string, code: string) {
+    const response = await this.makeRequest(`/v2/sessions/${sessionId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        sessionToken,
+        checks: {
+          totp: {
+            code,
+          },
+        },
+      }),
+    });
+
+    return response;
   }
 }
 

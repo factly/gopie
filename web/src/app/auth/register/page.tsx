@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useAuthRequest } from "@/hooks/use-auth-request";
+import MfaSetup from '@/components/auth/MfaSetup';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,7 +34,6 @@ export default function RegisterPage() {
   } = useAuthStore();
 
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     firstName: "",
     lastName: "",
@@ -40,10 +42,22 @@ export default function RegisterPage() {
   });
 
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [registrationUserId, setRegistrationUserId] = useState<string | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  // Use the auth request hook - only initialize after session check
+  const {isInitializing } = useAuthRequest(setError);
 
   useEffect(() => {
     // Check if user is already authenticated
-    checkSession();
+    const checkUserSession = async () => {
+      setSessionLoading(true);
+      await checkSession();
+      setSessionLoading(false);
+    };
+    checkUserSession();
   }, [checkSession]);
 
   useEffect(() => {
@@ -53,9 +67,17 @@ export default function RegisterPage() {
     }
   }, [isAuthenticated, router]);
 
+  // Show loading screen while checking session
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     // Validation
     if (
@@ -79,20 +101,22 @@ export default function RegisterPage() {
       return;
     }
 
-    const success = await register({
-      username: formData.email, // Use email as username for seamless email login
-      email: formData.email,
+    const { success, userId } = await register({
+      username: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
+      email: formData.email,
       password: formData.password,
     });
 
-    if (success) {
-      setRegistrationSuccess(true);
+    if (success && userId) {
+      setRegistrationUserId(userId);
+      // Instead of showing success message directly, show MFA setup
+      setShowMfaSetup(true);
     }
   };
 
-  const handleGoogleRegister = async () => {
+  const handleOAuthLogin = async () => {
     await loginWithOAuth("/");
   };
 
@@ -104,12 +128,76 @@ export default function RegisterPage() {
       }));
     };
 
+  const handleMfaVerify = async (code: string) => {
+    setMfaLoading(true);
+    try {
+      const response = await fetch('/api/auth/mfa/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId: registrationUserId }),
+      });
+      if (response.ok) {
+        setRegistrationSuccess(true);
+        setShowMfaSetup(false);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'MFA verification failed');
+      }
+    } catch (error) {
+      console.error("MFA verification error:", error);
+      setError('An unexpected error occurred during MFA verification.');
+    }
+    setMfaLoading(false);
+  };
+
+  const handleMfaSkip = () => {
+    setRegistrationSuccess(true);
+    setShowMfaSetup(false);
+  };
+
+  // Show loading state while auth request is being initialized
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+            <CardDescription className="text-center">
+              Initializing authentication...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (registrationSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center text-green-600">
+            <div className="flex justify-center mb-2">
+              <Image
+                src="/GoPie_Logo.svg"
+                alt="GoPie Logo"
+                width={150}
+                height={40}
+                className="dark:hidden"
+                priority
+              />
+              <Image
+                src="/GoPie_Logo_Dark.svg"
+                alt="GoPie Logo"
+                width={150}
+                height={40}
+                className="hidden dark:block"
+                priority
+              />
+            </div>
+            <CardTitle className="text-xl text-center text-green-600">
               Registration Successful!
             </CardTitle>
             <CardDescription className="text-center">
@@ -127,11 +215,33 @@ export default function RegisterPage() {
     );
   }
 
+  if (showMfaSetup && registrationUserId) {
+    return <MfaSetup onVerify={handleMfaVerify} onSkip={handleMfaSkip} isLoading={mfaLoading} userId={registrationUserId} email={formData.email} password={formData.password}/>;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+          <div className="flex justify-center mb-2">
+            <Image
+              src="/GoPie_Logo.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="dark:hidden"
+              priority
+            />
+            <Image
+              src="/GoPie_Logo_Dark.svg"
+              alt="GoPie Logo"
+              width={150}
+              height={40}
+              className="hidden dark:block"
+              priority
+            />
+          </div>
+          <CardTitle className="text-xl text-center">Create Account</CardTitle>
           <CardDescription className="text-center">
             Enter your information to create your account
           </CardDescription>
@@ -149,7 +259,7 @@ export default function RegisterPage() {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={handleGoogleRegister}
+            onClick={handleOAuthLogin}
             disabled={isLoading}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">

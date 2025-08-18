@@ -63,8 +63,8 @@ export async function POST(req: Request) {
     if (isAuthEnabled && session) {
       headers["Authorization"] = `Bearer ${session.accessToken}`;
 
-      if (session.user.organizationId) {
-        headers["x-organization-id"] = session.user.organizationId;
+      if (session.user.organisationId) {
+        headers["x-organization-id"] = session.user.organisationId;
       }
     } else {
       // Auth disabled: use admin headers

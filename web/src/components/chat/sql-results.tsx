@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { Button } from "@/components/ui/button";
-import { Database, Download, Loader2, CheckCircleIcon } from "lucide-react";
+import { Database, Download, Loader2, CheckCircleIcon, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Pagination,
@@ -188,9 +188,11 @@ export function SqlResults() {
             <span className="text-xs text-destructive">Error</span>
           ) : (
             <>
-              <span className="text-xs text-muted-foreground">
-                {results?.total || 0} total rows
-              </span>
+              {results?.executionTime !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  Query Execution Time: {results.executionTime}ms
+                </span>
+              )}
               {results?.data && results.data.length > 0 && (
                 <>
                   <div className="flex items-center gap-2">
@@ -214,7 +216,7 @@ export function SqlResults() {
                     </Select>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    Showing {results.data.length} rows
+                    Showing {results.data.length} of {results?.total || 0} rows
                   </span>
                 </>
               )}
@@ -397,13 +399,76 @@ export function SqlResults() {
           )}
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto p-4">
+      <div className="flex-1 min-h-0 overflow-auto">
         {results?.error ? (
-          <div className="w-full border border-destructive/50 bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">{results.error}</p>
-            <pre className="mt-2 text-xs text-muted-foreground">
-              {results.query}
-            </pre>
+          <div className="flex h-full items-center justify-center p-8">
+            <div className="w-full max-w-3xl">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                    <svg
+                      className="h-5 w-5 text-destructive"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-destructive">
+                        Query Execution Failed
+                      </h3>
+                      <p className="mt-1 text-sm text-destructive/90">
+                        {results.errorDetails?.message || results.error}
+                      </p>
+                    </div>
+                    
+                    {results.errorDetails?.details && (
+                      <div className="rounded-md bg-background/50 p-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Error Details:
+                        </p>
+                        <p className="text-sm text-foreground/80">
+                          {results.errorDetails.details}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {results.query && (
+                      <div className="rounded-md bg-muted/30 p-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          Query that failed:
+                        </p>
+                        <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
+                          {results.query}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {results.errorDetails?.suggestion && (
+                      <div className="flex items-start gap-2 rounded-md bg-primary/5 p-3">
+                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-primary mb-1">
+                            Suggestion:
+                          </p>
+                          <p className="text-sm text-foreground/80">
+                            {results.errorDetails.suggestion}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -411,7 +476,7 @@ export function SqlResults() {
             <p className="text-sm">Loading results...</p>
           </div>
         ) : results?.data?.length ? (
-          <>
+          <div className="p-4">
             <div className="w-full overflow-x-auto border">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10">
@@ -513,7 +578,7 @@ export function SqlResults() {
                 </Pagination>
               </div>
             )}
-          </>
+          </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <Database className="h-12 w-12 opacity-20" />

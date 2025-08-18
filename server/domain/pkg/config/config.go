@@ -94,7 +94,9 @@ type AIAgentConfig struct {
 }
 
 type DownloadsServerConfig struct {
-	Url string
+	Bucket string
+	Enable bool
+	Url    string
 }
 
 type ZitadelConfig struct {
@@ -135,7 +137,6 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.User, "postgres user"},
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
-		{config.DownloadsServer.Url, "donwloads server url"},
 		{config.EncryptionKey, "encryption key"},
 	}
 
@@ -148,6 +149,12 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		if viper.GetString("GOPIE_ZITADEL_PROTOCOL") != "https" {
 			validations = append(validations, validation{config.Zitadel.InsecurePort, "zitadel insecure port"})
 		}
+	}
+
+	if config.DownloadsServer.Enable {
+		validations = append(validations, validation{config.DownloadsServer.Url, "downloads url"})
+	} else {
+		validations = append(validations, validation{config.DownloadsServer.Bucket, "downloads bucket name"})
 	}
 
 	if config.OlapDB.DB == "" {
@@ -244,6 +251,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
 	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH", "./motherduck")
+	viper.SetDefault("GOPIE_DOWNLOADS_USE_SERVER", false)
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -306,7 +314,9 @@ func LoadConfig() (*GopieConfig, error) {
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
 		DownloadsServer: DownloadsServerConfig{
-			Url: viper.GetString("GOPIE_DOWNLOADS_SERVER_URL"),
+			Enable: viper.GetBool("GOPIE_DOWNLOADS_USE_SERVER"),
+			Url:    viper.GetString("GOPIE_DOWNLOADS_SERVER_URL"),
+			Bucket: viper.GetString("GOPIE_DOWNLOADS_S3_BUCKET"),
 		},
 
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),

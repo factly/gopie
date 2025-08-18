@@ -1,89 +1,46 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { zitadelClient, type ZitadelUser } from "./zitadel-client";
-
-const SESSION_COOKIE_NAME = "zitadel-session";
-const SESSION_TOKEN_COOKIE_NAME = "zitadel-session-token";
+import {
+  SESSION_ID_COOKIE,
+  ACCESS_TOKEN_COOKIE,
+  SESSION_TOKEN_COOKIE,
+} from "@/constants/zitade";
 
 export interface UserSession {
   user: ZitadelUser;
-  sessionId: string;
-  sessionToken: string;
   accessToken: string;
   expiresAt: number;
 }
 
 export async function getSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const sessionToken = cookieStore.get(SESSION_TOKEN_COOKIE_NAME)?.value;
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 
-  if (!sessionId || !sessionToken) {
+  if (!accessToken) {
     return null;
   }
 
   try {
     // Verify session is still valid by fetching user info
-    const user = await zitadelClient.getUserInfo(sessionId);
-
-    // Get fresh access token
-    const tokenResponse = await zitadelClient.getAccessToken(user.id);
+    const user = await zitadelClient.getUserInfo(accessToken);
 
     return {
       user,
-      sessionId,
-      sessionToken,
-      accessToken: tokenResponse.access_token,
+      accessToken,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     };
   } catch (error) {
-    console.error("Session validation failed:", error);
+    console.error("Failed to get session from Zitadel:", error);
     // Clear invalid session
     await clearSession();
     return null;
   }
 }
 
-export async function createSession(
-  sessionId: string,
-  sessionToken: string
-): Promise<UserSession> {
-  const user = await zitadelClient.getUserInfo(sessionId);
-
-  // Get access token for client-side use
-  const tokenResponse = await zitadelClient.getAccessToken(user.id);
-
-  const cookieStore = await cookies();
-  const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
-  cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 24 * 60 * 60, // 24 hours in seconds
-    path: "/",
-  });
-
-  cookieStore.set(SESSION_TOKEN_COOKIE_NAME, sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 24 * 60 * 60, // 24 hours in seconds
-    path: "/",
-  });
-
-  return {
-    user,
-    sessionId,
-    sessionToken,
-    accessToken: tokenResponse.access_token,
-    expiresAt,
-  };
-}
-
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const sessionId = cookieStore.get(SESSION_ID_COOKIE)?.value;
 
   if (sessionId) {
     try {
@@ -93,8 +50,9 @@ export async function clearSession(): Promise<void> {
     }
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME);
-  cookieStore.delete(SESSION_TOKEN_COOKIE_NAME);
+  cookieStore.delete(SESSION_ID_COOKIE);
+  cookieStore.delete(SESSION_TOKEN_COOKIE);
+  cookieStore.delete(ACCESS_TOKEN_COOKIE);
 }
 
 export async function requireAuth(): Promise<UserSession> {

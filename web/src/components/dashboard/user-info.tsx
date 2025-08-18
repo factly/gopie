@@ -38,7 +38,7 @@ export function UserInfo() {
         <div className="flex items-center space-x-4">
           <Avatar className="h-16 w-16">
             <AvatarImage
-              src={user.profilePicture || ""}
+              src={""}
               alt={user.displayName || "User"}
             />
             <AvatarFallback className="text-lg">
@@ -47,7 +47,7 @@ export function UserInfo() {
           </Avatar>
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">{user.displayName}</h3>
-            <p className="text-sm text-muted-foreground">@{user.loginName}</p>
+            <p className="text-sm text-muted-foreground">@{user.email}</p>
           </div>
         </div>
 

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const SESSION_COOKIE_NAME = "zitadel-session";
-const SESSION_TOKEN_COOKIE_NAME = "zitadel-session-token";
+import { ACCESS_TOKEN_COOKIE, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE } from "@/constants/zitade";
+import { zitadelClient } from "@/lib/auth/zitadel-client";
 
 // Protected routes that require authentication
 const protectedRoutes = [
@@ -21,33 +20,6 @@ const publicRoutes = [
   "/auth/forgot-password",
   "/auth/reset-password",
 ];
-
-async function validateSession(sessionId: string): Promise<boolean> {
-  try {
-    // Validate session by calling Zitadel's session API
-    const sessionResponse = await fetch(
-      `${process.env.ZITADEL_AUTHORITY}/v2/sessions/${sessionId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.ZITADEL_PAT}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      return false;
-    }
-
-    const sessionData = await sessionResponse.json();
-
-    // Check if session exists and has a valid user
-    return !!sessionData.session?.factors?.user?.id;
-  } catch (error) {
-    console.error("Session validation failed:", error);
-    return false;
-  }
-}
 
 // This middleware protects all routes
 export async function middleware(request: NextRequest) {
@@ -73,11 +45,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check for session cookies
-  const sessionId = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const sessionToken = request.cookies.get(SESSION_TOKEN_COOKIE_NAME)?.value;
+  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 
   // If no session cookies, redirect to login for protected routes
-  if (!sessionId || !sessionToken) {
+  if (!accessToken) {
     if (
       protectedRoutes.some(
         (route) => pathname === route || pathname.startsWith(route + "/")
@@ -102,15 +73,16 @@ export async function middleware(request: NextRequest) {
       (route) => pathname === route || pathname.startsWith(route + "/")
     )
   ) {
-    const isValid = await validateSession(sessionId);
+    const user = await zitadelClient.getUserInfo(accessToken);
 
-    if (!isValid) {
+    if (!user) {
       // Clear invalid session cookies
       const response = NextResponse.redirect(
         new URL("/auth/login", request.url)
       );
-      response.cookies.delete(SESSION_COOKIE_NAME);
-      response.cookies.delete(SESSION_TOKEN_COOKIE_NAME);
+      response.cookies.delete(ACCESS_TOKEN_COOKIE);
+      response.cookies.delete(SESSION_TOKEN_COOKIE);
+      response.cookies.delete(SESSION_ID_COOKIE);
       return response;
     }
   }

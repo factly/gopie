@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (r *downloadRepository) Delete(downloadID, userID, orgID string) error {
+func (r *downloadServerRepository) Delete(downloadID, userID, orgID string) error {
 	url := fmt.Sprintf("%s/downloads/%s", r.baseURL, downloadID)
 	httpReq, _ := http.NewRequest("DELETE", url, nil)
 	httpReq.Header.Set("x-user-id", userID)
