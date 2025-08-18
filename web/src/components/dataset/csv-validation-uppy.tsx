@@ -394,12 +394,12 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     try {
       const fileSize = file.size;
 
-      // Skip detailed validation for files > 1GB
-      if (fileSize > 1000 * 1000 * 1000) {
+      // Skip detailed validation for files > 4GB
+      if (fileSize > 4000 * 1000 * 1000) {
         setValidationResult({
           isValid: true,
           format,
-          error: `File is larger than 1GB. Will be uploaded and validated on the server.`,
+          error: `File is larger than 4GB. Will be uploaded and validated on the server.`,
         });
         toast.info(
           `Large ${getFileFormatDisplay(
