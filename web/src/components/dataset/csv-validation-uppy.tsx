@@ -243,7 +243,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
       restrictions: {
         maxNumberOfFiles: 1,
         allowedFileTypes: [...supportedExtensions, ...supportedMimeTypes],
-        // No maxFileSize - allow files of any size
+        maxFileSize: 4000 * 1000 * 1000, // 4GB limit
       },
       autoProceed: false,
       allowMultipleUploads: false,
@@ -394,18 +394,18 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
     try {
       const fileSize = file.size;
 
-      // Skip detailed validation for files > 4GB
+      // Reject files > 4GB completely
       if (fileSize > 4000 * 1000 * 1000) {
-        setValidationResult({
-          isValid: true,
-          format,
-          error: `File is larger than 4GB. Will be uploaded and validated on the server.`,
-        });
-        toast.info(
-          `Large ${getFileFormatDisplay(
-            format
-          )} file detected. Client-side validation skipped, will validate on server.`
+        toast.error(
+          `File is too large (${(fileSize / (1000 * 1000 * 1000)).toFixed(1)}GB). Maximum file size is 4GB.`
         );
+        // Reset file selection since we're rejecting it
+        setSelectedFile(null);
+        setOriginalFileName('');
+        setModifiedFile(null);
+        setDetectedFormat(null);
+        resetColumnMappings();
+        clearColumnDescriptions();
         return;
       }
 
