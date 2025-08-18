@@ -85,7 +85,7 @@ async def check_further_execution_requirement(state: State, config: RunnableConf
         llm = GenericFakeChatModel(
             messages=iter([last_message]), metadata=config.get("metadata", {})
         )
-        await llm.ainvoke(input=last_message.content)
+        await llm.ainvoke(input=last_message.content, config=config)
 
     if continue_execution:
         return "next_sub_query"

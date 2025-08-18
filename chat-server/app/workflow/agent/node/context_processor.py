@@ -120,6 +120,11 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
 
         await fake_streaming_response(parsed_response.status_message, config)
 
+        logger.info(f"Relevant SQL Queries: {relevant_sql_queries}")
+        logger.info(f"Relevant Datasets IDs: {relevant_datasets_ids}")
+        logger.info(f"Generate Visualization: {generate_visualization}")
+        logger.info(f"Last Vizpaths: {last_vizpaths}")
+        logger.info(f"Is New Data Needed: {is_new_data_needed}")
         if generate_visualization and not (last_vizpaths or relevant_sql_queries):
             is_new_data_needed = True
 

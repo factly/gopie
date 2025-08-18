@@ -33,7 +33,7 @@ ANALYSIS CRITERIA:
 3. VISUALIZATION REQUIREMENTS (`generate_visualization`):
    • Determine whether the query requires visualization based on:
      - Explicit requests: chart types (pie, bar, line, scatter, histogram, etc.)
-     - Keywords: "visualize", "plot", "graph", "chart", "show me"
+     - Keywords: "visualize", "plot", "graph", "chart".
      - Consider special instructions when evaluating visualization needs
 
 4. RELEVANT SQL QUERIES (`relevant_sql_queries`):

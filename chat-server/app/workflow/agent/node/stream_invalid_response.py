@@ -30,7 +30,7 @@ async def stream_invalid_response(state: AgentState, config: RunnableConfig):
         pass
 
     llm = GenericFakeChatModel(messages=iter([last_message]), metadata=config.get("metadata", {}))
-    response = await llm.ainvoke(input=last_message.content)
+    response = await llm.ainvoke(input=last_message.content, config=config)
 
     return {
         "messages": [AIMessage(content=response.content)],

@@ -65,6 +65,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             "sandbox": sandbox,
             "result": result,
             "is_input_prepared": True,
+            "tool_call_count": state.get("tool_call_count", 0),
         }
 
     except Exception as e:
@@ -77,6 +78,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             "result": result,
             "sandbox": state.get("sandbox"),
             "is_input_prepared": state.get("is_input_prepared", False),
+            "tool_call_count": state.get("tool_call_count", 0),
         }
 
 

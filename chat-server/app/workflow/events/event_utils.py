@@ -125,7 +125,7 @@ async def fake_streaming_response(response: str, config: RunnableConfig):
             messages=iter([AIMessage(content=response)]),
         )
 
-        await llm.ainvoke(input=response)
+        await llm.ainvoke(input=response, config=config)
     finally:
         if prev_metadata is not None:
             config.update(metadata=prev_metadata)

@@ -73,7 +73,7 @@ async def stream_graph_updates(
             metadata={"role": Role.AI.value, "progress_message": ""},
         )
 
-        async for event in llm.astream_events(error_text):
+        async for event in llm.astream_events(error_text, config=config):
             extracted_event_data = event_stream_handler.handle_events_stream(event)
             if extracted_event_data.role:
                 yield extracted_event_data
