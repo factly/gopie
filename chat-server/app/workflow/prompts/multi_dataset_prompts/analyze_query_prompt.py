@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -11,7 +11,7 @@ from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
 
 def create_analyze_query_prompt(
     **kwargs,
-) -> list | ChatPromptTemplate:
+) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Generate a prompt for classifying a user query as either "data_query" or "conversational" based on detailed guidelines and context.
 
@@ -107,7 +107,9 @@ CONFIDENCE SCORE:
 - 8-10: High confidence in classification decision
 
 IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
-    Call the appropriate tool directly in your response and do not output any JSON.
+    - Call the appropriate tool directly in your response (no JSON).
+    - Also set your assistant message content to a short, user-friendly status update (<= 120 characters) that explains what you're doing. This content will be shown to the user in the UI.
+    - If you are using a tool than you can directly output the status message in the assistant message content.
 
 IF NO TOOL CALL IS REQUIRED:
     FORMAT YOUR RESPONSE AS JSON:
@@ -115,7 +117,8 @@ IF NO TOOL CALL IS REQUIRED:
         "query_type": "data_query" OR "conversational",
         "confidence_score": <integer from 1 to 10>,
         "reasoning": "Brief explanation of classification decision",
-        "clarification_needed": "If conversational due to vagueness, specify what you need"
+        "clarification_needed": "If conversational due to vagueness, specify what you need",
+        "status_message": "A short, user-friendly 1–2 sentence update (<= 120 characters) summarizing what you will do next"
     }
 """
 

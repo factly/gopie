@@ -44,7 +44,10 @@ async def get_python_code_files(viz_paths: list[str]):
         if python_code_path not in python_code_paths:
             python_code_paths.append(python_code_path)
     python_code_files = await asyncio.gather(
-        *[get_python_code_from_viz(python_code_path) for python_code_path in python_code_paths]
+        *[
+            get_python_code_from_viz(viz_path=python_code_path)
+            for python_code_path in python_code_paths
+        ]
     )
     return python_code_files
 
@@ -115,6 +118,7 @@ async def upload_csv_files(sandbox: AsyncSandbox, datasets: list[Dataset] | None
     for file_name, csv_data in csv_files:
         tasks.append(sandbox.files.write(file_name, csv_data))
     await asyncio.gather(*tasks)
+    return [file_name for file_name, _ in csv_files]
 
 
 @traceable(run_type="chain", name="run_python_code")
@@ -134,7 +138,7 @@ async def run_python_code(
 @traceable(run_type="chain", name="get_visualization_result_data")
 async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[str]) -> list[str]:
     """
-    Asynchronously reads the contents of multiple files from the sandbox environment.
+    Asynchronously reads multiple text files (e.g., JSON) from the sandbox.
 
     Parameters:
         file_names (list[str]): List of file names to read from the sandbox.
@@ -145,6 +149,25 @@ async def get_visualization_result_data(sandbox: AsyncSandbox, file_names: list[
     tasks = []
     for file_name in file_names:
         tasks.append(sandbox.files.read(file_name))
+    return await asyncio.gather(*tasks)
+
+
+@traceable(run_type="chain", name="get_visualization_result_bytes")
+async def get_visualization_result_bytes(
+    sandbox: AsyncSandbox, file_names: list[str]
+) -> list[bytes]:
+    """
+    Asynchronously reads multiple binary files (e.g., PNG) from the sandbox.
+
+    Parameters:
+        file_names (list[str]): List of file names to read from the sandbox.
+
+    Returns:
+        list[bytes]: Raw bytes of the files, in the same order as the provided file names.
+    """
+    tasks = []
+    for file_name in file_names:
+        tasks.append(sandbox.files.read(file_name, format="bytes"))
     return await asyncio.gather(*tasks)
 
 
@@ -183,7 +206,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
     s3_host = settings.S3_HOST
 
     if not all([access_key_id, secret_access_key, bucket_name]):
-        raise ValueError("AWS credentials or bucket name not set in environment variables")
+        raise ValueError("S3 credentials or bucket name not set in environment variables")
 
     session = aioboto3.Session()
     s3_paths = []
@@ -205,6 +228,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
                 Key=json_file_key,
                 Body=item_data,
             )
+
             upload_tasks.append(json_task)
             s3_path = f"{s3_host}/{bucket_name}/{json_file_key}"
             s3_paths.append(s3_path)

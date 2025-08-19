@@ -27,14 +27,19 @@ async def analyze_dataset(state: State) -> dict:
         if not column_assumptions:
             raise ValueError("No column assumptions found in the datasets_info.")
 
-        column_mappings = await match_column_values(column_assumptions)
+        column_mappings = await match_column_values(column_assumptions=column_assumptions)
 
         datasets_info["correct_column_requirements"] = column_mappings
         datasets_info["column_assumptions"] = None
 
+        message_content = f"""
+Here are results from the analysis of the datasets:
+{column_mappings.model_dump()}
+        """
+
         return {
             "datasets_info": datasets_info,
-            "messages": [IntermediateStep.from_json(column_mappings.model_dump())],
+            "messages": [IntermediateStep(content=message_content)],
         }
 
     except Exception as e:

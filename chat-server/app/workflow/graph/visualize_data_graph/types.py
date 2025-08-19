@@ -20,7 +20,7 @@ class VisualizationResult(BaseModel):
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset] | None
-    previous_visualization_result_paths: list[str] | None
+    previous_visualization_json_paths: list[str] | None
     relevant_sql_queries: list[str] | None
 
 
@@ -30,14 +30,15 @@ class OutputState(TypedDict):
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    previous_visualization_result_paths: list[str] | None
+    previous_visualization_json_paths: list[str] | None
     datasets: list[Dataset] | None
     user_query: str
     result: VisualizationResult
     sandbox: AsyncSandbox | None
     is_input_prepared: bool
     s3_paths: list[str]
-    tool_call_count: int
     feedback_count: int
     executed_python_code: str | None
     relevant_sql_queries: list[str] | None
+    result_images_b64: list[str]
+    tool_call_count: int

@@ -1,7 +1,6 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 
-from app.core.config import settings
 from app.core.log import logger
 from app.models.message import ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt
@@ -28,15 +27,6 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     Prepares the environment and prompt messages for the data visualization agent.
     Handles tool call counting and initial setup.
     """
-    tool_call_count = state.get("tool_call_count", 0)
-
-    if tool_call_count > settings.MAX_TOOL_CALL_LIMIT:
-        result = state.get("result", VisualizationResult(data=[], errors=[]))
-        result.errors.append("Maximum tool call limit reached during visualization generation")
-        return {
-            "messages": [ErrorMessage(content="Tool call limit exceeded")],
-            "result": result,
-        }
 
     result = state.get("result", VisualizationResult(data=[], errors=[]))
 
@@ -57,9 +47,9 @@ async def pre_model_hook(state: State, config: RunnableConfig):
 
             previous_python_code = ""
 
-            if state.get("previous_visualization_result_paths"):
+            if state.get("previous_visualization_json_paths"):
                 previous_python_code_files = await get_python_code_files(
-                    viz_paths=state["previous_visualization_result_paths"]
+                    viz_paths=state["previous_visualization_json_paths"]
                 )
                 previous_python_code = "\n".join(previous_python_code_files)
 
@@ -68,14 +58,16 @@ async def pre_model_hook(state: State, config: RunnableConfig):
                 user_query=state["user_query"],
                 datasets_csv_info=datasets_csv_info,
                 previous_python_code=previous_python_code,
+                feedback_count=state.get("feedback_count", 0),
+                tool_call_count=state.get("tool_call_count", 0),
             )
 
         return {
             "messages": messages,
             "sandbox": sandbox,
             "result": result,
-            "tool_call_count": tool_call_count,
             "is_input_prepared": True,
+            "tool_call_count": state.get("tool_call_count", 0),
         }
 
     except Exception as e:
@@ -86,9 +78,9 @@ async def pre_model_hook(state: State, config: RunnableConfig):
         return {
             "messages": [ErrorMessage(content=err_msg)],
             "result": result,
-            "tool_call_count": tool_call_count,
             "sandbox": state.get("sandbox"),
             "is_input_prepared": state.get("is_input_prepared", False),
+            "tool_call_count": state.get("tool_call_count", 0),
         }
 
 

@@ -1,5 +1,6 @@
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables import RunnableConfig
+from langsmith import traceable
 
 from app.core.config import settings
 from app.core.constants import (
@@ -10,7 +11,7 @@ from app.core.constants import (
     VISUALIZATION_RESULT,
     VISUALIZATION_RESULT_ARG,
 )
-from app.utils.model_registry.model_provider import get_chat_history
+from app.utils.model_registry.model_selection import get_chat_history
 
 from .sliding_window import apply_sliding_window
 
@@ -101,6 +102,7 @@ class ChatHistoryProcessor:
             self.sql_queries_mapping[i] = sql_query
         return text
 
+    @traceable(run_type="tool", name="ids_to_sql_queries")
     def ids_to_sql_queries(self, ids: list[int]) -> list[str]:
         sql_queries = [self.sql_queries_mapping.get(id, "") for id in ids]
         return [sql_query for sql_query in sql_queries if sql_query]

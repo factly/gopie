@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -8,7 +8,9 @@ from app.utils.prompts import escape_value
 from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
 
 
-def create_plan_query_prompt(**kwargs) -> list | ChatPromptTemplate:
+def create_plan_query_prompt(
+    **kwargs,
+) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -17,15 +19,15 @@ You are a DuckDB and data expert. Analyze the user's question and available data
 
 ## INTERNAL VALIDATION (DO NOT EXPOSE IN RESPONSE)
 Before deciding on your response, internally validate:
-1. **Data Compatibility**: Can the available datasets answer the user's question?
-2. **Column Availability**: Are required columns present in the datasets?
-3. **Join Feasibility**: If multiple datasets are needed, can they be properly joined?
+1. Data Compatibility: Can the available datasets answer the user's question?
+2. Column Availability: Are required columns present in the datasets?
+3. Join Feasibility: If multiple datasets are needed, can they be properly joined?
 
 Based on this internal validation, choose ONE response path:
 
 ## RESPONSE PATHS
-**Path A - Generate SQL Queries**: If validation passes and datasets can fulfill the query
-**Path B - No-SQL Response**: If datasets are insufficient, incompatible, or query cannot be answered
+Path A - Generate SQL Queries: If validation passes and datasets can fulfill the query
+Path B - No-SQL Response: If datasets are insufficient, incompatible, or query cannot be answered
 
 ## DATABASE COMPATIBILITY
 - SQL queries MUST be compatible with DuckDB
@@ -34,8 +36,8 @@ Based on this internal validation, choose ONE response path:
 - Use double quotes for table/column names, single quotes for values
 
 ## DATASET RELATIONSHIP ANALYSIS
-**Related Datasets**: Create a SINGLE query with appropriate JOINs
-**Unrelated Datasets**: Create MULTIPLE independent queries
+Related Datasets: Create a SINGLE query with appropriate JOINs
+Unrelated Datasets: Create MULTIPLE independent queries
 
 ## SQL RULES
 - Use EXACT column names from dataset schema
@@ -44,7 +46,9 @@ Based on this internal validation, choose ONE response path:
 - Exclude 'Total' categories and state='All India' when filtering
 - Include units/unit columns when displaying values
 
-**Response Guidelines**:
+Note: Take into account the validation result to improve the response according to the issues mentioned in the validation result.
+
+Response Guidelines:
 - If SQL can be generated: populate `sql_queries` array, leave `response_for_no_sql` empty
 - If SQL cannot be generated: populate `response_for_no_sql`, leave `sql_queries` array empty
 - Always include `limitations` field
@@ -77,11 +81,15 @@ def format_plan_query_input(
     error_messages: list | None = None,
     retry_count: int = 0,
     previous_sql_queries: list | None = None,
+    validation_result: str | None = None,
 ) -> dict:
     input_str = f"❓ USER QUERY: {user_query}\n"
 
     if retry_count > 0:
         input_str += f"🔄 RETRY ATTEMPT: {retry_count}/3\n"
+
+    if validation_result:
+        input_str += f"\n\n🔄 VALIDATION RESULT:\n{validation_result}"
 
     if datasets_info:
         schemas = datasets_info.get("schemas", [])

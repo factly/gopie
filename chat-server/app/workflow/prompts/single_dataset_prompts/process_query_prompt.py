@@ -34,6 +34,7 @@ INSTRUCTIONS:
 1. If the user's question can be answered using the sample data or previous context, generate a response with empty SQL queries and provide a response for non-SQL queries.
 2. If new data analysis is needed, generate appropriate SQL queries.
 3. If the user is also asking for visualization than just ignore that and don't reply anything in context to the visualization requirements of the user.
+4. Consider validation results and previous query results as context to improve over the previous query results.
 
 RULES FOR SQL QUERIES (when needed):
 - No semicolon at end of query
@@ -74,23 +75,29 @@ def format_process_query_input(
     dataset_name: str,
     dataset_schema: DatasetSchema,
     rows_csv: str,
+    validation_result: str | None = None,
     prev_query_result: QueryResult | None = None,
     previous_sql_queries: list | None = None,
     **kwargs,
 ) -> dict:
     """
-    Format user query, dataset information, sample data, and optional previous results and validation into a single prompt string for language model input.
+    Format user query, dataset information, and sample data for prompt input.
 
-    Parameters:
-        user_query (str): The user's question to be answered.
-        dataset_name (str): Name of the dataset being queried.
-        dataset_schema (DatasetSchema): Schema object providing a formatted schema string.
-        rows_csv (str): Sample data from the dataset in CSV format.
-        prev_query_result (QueryResult | None): Optional previous query result to include as context.
-        validation_result (ValidationResult | None): Optional validation analysis of the previous query result.
+    Combines user query, dataset schema, sample data, and optional context (previous results
+    and validation) into a structured prompt string for language model processing.
+
+    Args:
+        user_query (str): The user's question to be answered
+        dataset_name (str): Name of the dataset being queried
+        dataset_schema (DatasetSchema): Schema object providing formatted schema information
+        rows_csv (str): Sample data from the dataset in CSV format
+        validation_result (str | None, optional): Validation analysis from previous query
+        prev_query_result (QueryResult | None, optional): Previous query result for context
+        previous_sql_queries (list | None, optional): Previously executed SQL queries
+        **kwargs: Additional keyword arguments
 
     Returns:
-        dict: A dictionary with a single key "input" containing the fully formatted prompt string.
+        dict: Dictionary with "input" key containing the fully formatted prompt string
     """
     formatted_schema = dataset_schema.format_for_prompt()
 
@@ -101,6 +108,9 @@ def format_process_query_input(
 
 📄 SAMPLE DATA ({dataset_name}):
 {rows_csv}"""
+
+    if validation_result:
+        input_str += f"\n\n🔄 VALIDATION RESULT:\n{validation_result}"
 
     if prev_query_result:
         formatted_prev_result = format_query_result(prev_query_result)

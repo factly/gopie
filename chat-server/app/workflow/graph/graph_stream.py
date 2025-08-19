@@ -1,8 +1,11 @@
-from langchain_core.messages import BaseMessage
+from langchain_core.language_models.fake_chat_models import (
+    GenericFakeChatModel,
+)
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import logger
-from app.models.chat import EventChunkData, Role
+from app.models.chat import Role
 from app.utils.graph_utils.extract_user_input import extract_user_input
 from app.workflow.agent.graph import agent_graph
 from app.workflow.events.handle_events_stream import EventStreamHandler
@@ -63,10 +66,16 @@ async def stream_graph_updates(
                 yield extracted_event_data
 
     except Exception as e:
-        output = EventChunkData(
-            role=Role.INTERMEDIATE,
-            content="Sorry, something went wrong. Please try again later",
-            category="error",
+        error_text = "Sorry, something went wrong while processing your request. Please try again."
+
+        llm = GenericFakeChatModel(
+            messages=iter([AIMessage(content=error_text)]),
+            metadata={"role": Role.AI.value, "progress_message": ""},
         )
-        yield output
+
+        async for event in llm.astream_events(error_text, config=config):
+            extracted_event_data = event_stream_handler.handle_events_stream(event)
+            if extracted_event_data.role:
+                yield extracted_event_data
+
         logger.exception(e)

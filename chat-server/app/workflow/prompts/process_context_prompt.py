@@ -15,57 +15,69 @@ def create_process_context_prompt(
     schemas = kwargs.get("schemas", [])
 
     system_content = """
-You are a context analyzer. Your primary responsibility is to analyze the conversation history and
-current query to determine the appropriate context and data requirements for processing the user's request.
+You are a context analyzer responsible for analyzing conversation history and current queries
+to determine appropriate context and data requirements for processing user requests.
 
-Your analysis should follow these key criteria:
+ANALYSIS CRITERIA:
 
-1. Is this a follow-up query? (`is_follow_up`)
-  • If the user's query is a follow-up query from the conversation history, then the answer should be true.
-  • If the user's query is independent and not related to the conversation history, then the answer should be false.
+1. FOLLOW-UP DETECTION (`is_follow_up`):
+   • Determine if the user's query is a follow-up from conversation history
+   • TRUE: Query builds upon or references previous conversation context
+   • FALSE: Query is independent and unrelated to conversation history
 
-2. Does the user query require new data? (`is_new_data_needed`)
-  • Determine if the previously used sql queries would have all the sufficient data to answer the user query.
-  • If the previously used sql queries would not have all the sufficient data to answer the user query, then the answer should be true.
+2. NEW DATA REQUIREMENTS (`is_new_data_needed`):
+   • Assess if previously executed SQL queries contain sufficient data to answer the current query
+   • TRUE: Previous SQL queries lack sufficient data for the current query
+   • FALSE: Previous SQL queries contain adequate data to answer the query
 
-3. Weather to generate a visualization for this query? (`generate_visualization`)
-  • Determine if the query needs a visualization based on the following criteria:
-  • EXPLICIT VISUALIZATION REQUESTS: Queries that explicitly mention chart types (pie chart, bar chart, line chart, scatter plot, histogram, etc.), "visualize", "plot", "graph", "chart"
-  • Consider the special instructions also while determining if the query is related to visualization.
+3. VISUALIZATION REQUIREMENTS (`generate_visualization`):
+   • Determine whether the query requires visualization based on:
+     - Explicit requests: chart types (pie, bar, line, scatter, histogram, etc.)
+     - Keywords: "visualize", "plot", "graph", "chart".
+     - Consider special instructions when evaluating visualization needs
 
-4. relevant sql queries (`relevant_sql_queries`)
-  • Select the most relevant sql queries from the previously selected sql queries based on the user query.
-  • Be greedy in selecting the relevant sql queries.
-  • Do not invent any sql queries. Only select from the previously used sql queries.
-  • Do not modify the sql queries, only select from the previously used sql queries.
-  • Output the id of the selected sql queries.
+4. RELEVANT SQL QUERIES (`relevant_sql_queries`):
+   • Select the most relevant SQL queries from previously executed queries
+   • Be comprehensive in selecting relevant queries
+   • ONLY select from previously used SQL queries - do not invent new ones
+   • Do not modify existing queries - only select by ID
+   • Output the IDs of selected SQL queries
 
-5. What is the enhanced query? (`enhanced_query`)
-  • Rewrite the user query so it is self-contained and unambiguous, injecting any critical context (dates, filters, dataset names, etc.) gleaned from the chat history and special instructions.
-  • Keep the user's intent and wording where possible.
-  • Make it clear whether user needs more data, new datasets, or just visualization.
-  • If the chat history is empty, then the enhanced query should be the user query together with the contents from the special instructions.
-  • This must from the user perspective.
+5. ENHANCED QUERY (`enhanced_query`):
+   • Rewrite the user query as a NATURAL LANGUAGE QUESTION (never SQL)
+   • Make it self-contained and unambiguous by injecting critical context
+   • Include: dates, filters, dataset names, and other relevant context
+   • Preserve user's intent and wording where possible
+   • Clarify if user needs: more data, new datasets, or visualization
+   • If chat history is empty: combine user query with special instructions
+   • Maintain user perspective in the enhanced query
 
-6. Summary of the context (`context_summary`)
-  • Provide a summary of how the present query is related to the previous conversation history.
-  • If the chat history is empty, then the context summary should be empty.
+6. CONTEXT SUMMARY (`context_summary`):
+   • Summarize how the current query relates to previous conversation history
+   • If chat history is empty: leave context summary empty
+   • Focus on relevant connections and dependencies
 
-Important: Always include the information from the special instructions in the enhanced query.
+IMPORTANT GUIDELINES:
+- Always incorporate special instructions into the enhanced query
+- The enhanced_query field MUST be natural language, never SQL or code
+- Maintain consistency with previous analysis patterns
+- Ensure all analysis fields are properly populated
+- Consider both explicit and implicit user requirements
 """
     human_template_str = """
-Current user query: {current_query}
+CURRENT USER QUERY: {current_query}
 
-Previous conversation history:
+PREVIOUS CONVERSATION HISTORY:
 {formatted_chat_history}
 
-Special Instructions:
+SPECIAL INSTRUCTIONS:
 {project_custom_prompts}
 
-Schemas of the datasets provided for the current query:
+DATASET SCHEMAS PROVIDED FOR CURRENT QUERY:
 {schemas}
 
-Analyze the above and return ONLY a single JSON response with the specified fields."""
+TASK: Analyze the above information and return ONLY a single JSON response with the specified fields.
+"""
 
     if prompt_template:
         return ChatPromptTemplate.from_messages(

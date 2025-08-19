@@ -3,8 +3,8 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.models.message import ErrorMessage, IntermediateStep
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import stream_dynamic_message
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -26,14 +26,10 @@ async def generate_subqueries(state: State, config: RunnableConfig):
     query_result = state.get("query_result")
 
     try:
-        assessment_prompt = get_prompt(
-            "assess_query_complexity",
-            user_input=user_input,
+        assessment_llm = get_prompt_llm_chain(
+            "assess_query_complexity", config, schema=AssessQueryComplexityOutput
         )
-        llm = get_configured_llm_for_node(
-            "generate_subqueries", config, schema=AssessQueryComplexityOutput
-        )
-        assessment_response = await llm.ainvoke(assessment_prompt)
+        assessment_response = await assessment_llm.ainvoke({"user_input": user_input})
 
         needs_breakdown = assessment_response.needs_breakdown
         explanation = assessment_response.explanation
@@ -41,31 +37,24 @@ async def generate_subqueries(state: State, config: RunnableConfig):
         subqueries = []
 
         if needs_breakdown:
-            subqueries_prompt = get_prompt(
-                "generate_subqueries",
-                user_input=user_input,
-            )
-            subqueries_llm = get_configured_llm_for_node(
+            subqueries_llm = get_prompt_llm_chain(
                 "generate_subqueries", config, schema=GenerateSubqueriesOutput
             )
-            subqueries_response = await subqueries_llm.ainvoke(subqueries_prompt)
+            subqueries_response = await subqueries_llm.ainvoke({"user_input": user_input})
 
             subqueries = subqueries_response.subqueries
 
-            subqueries_message = (
-                "I'll break down your query into steps to give you a more complete answer:"
-            )
+            await stream_dynamic_message(
+                f"""
+Create a short message that tells the user displaying the subqueries nicely.
+Don't care about characters over here, but ensure that you display the whole subqueries properly.
 
-            for i, subquery in enumerate(subqueries, 1):
-                subqueries_message += f"\n\nStep {i}: {subquery}"
+I'll break down your query into steps to give you a more complete answer:
+{subqueries}
 
-            subqueries_message += "\n\nPlease wait while I process these steps."
-
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": subqueries_message,
-                },
+Please wait while I process these steps.
+                """,
+                config,
             )
 
             if len(subqueries) > 2:

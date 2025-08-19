@@ -1,5 +1,3 @@
-import json
-
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
@@ -17,36 +15,54 @@ def create_sql_planning_prompt(
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
-    system_content = """You are an expert SQL analyst. Given a user's natural language
-query and dataset schemas, plan the appropriate SQL queries to answer their
-question.
+    system_content = """
+You are a DuckDB and data expert. Analyze the user's question and available datasets to determine if valid SQL queries can be generated.
 
-INSTRUCTIONS:
-1. Analyze the user query to understand what data they need
-2. Examine the provided schemas to identify relevant tables and columns
-3. Use the actual dataset names (like 'gq_xxxxx') from the schema in your SQL,
-   NOT the user-friendly display names
-4. Plan the SQL query/queries needed to answer the question
-5. Consider joins, aggregations, filters, and ordering as needed
-6. Provide clear reasoning for your approach
-7. If the user is also asking for visualization than just ignore that and don't reply anything in
-  context to the visualization requirements of the user.
+## INTERNAL VALIDATION (DO NOT EXPOSE IN RESPONSE)
+Before deciding on your response, internally validate:
+1. Data Compatibility: Can the available datasets answer the user's question?
+2. Column Availability: Are required columns present in the datasets?
+3. Join Feasibility: If multiple datasets are needed, can they be properly joined?
+
+Based on this internal validation, choose ONE response path:
+
+## RESPONSE PATHS
+Path A - Generate SQL Queries: If validation passes and datasets can fulfill the query
+Path B - No-SQL Response: If datasets are insufficient, incompatible, or query cannot be answered
+
+## DATABASE COMPATIBILITY
+- SQL queries MUST be compatible with DuckDB
+- Use exact dataset_name (table name) from schema, not user-friendly names
+- No semicolons at end of queries
+- Use double quotes for table/column names, single quotes for values
+
+## DATASET RELATIONSHIP ANALYSIS
+Related Datasets: Create a SINGLE query with appropriate JOINs
+Unrelated Datasets: Create MULTIPLE independent queries
+
+## SQL RULES
+- Use EXACT column names from dataset schema
+- Case-insensitive text matching: LOWER(column) = LOWER('value')
+- No ILIKE or LIKE operators
+- Exclude 'Total' categories and state='All India' when filtering
+- Include units/unit columns when displaying values
 
 OUTPUT FORMAT (JSON):
 {
-    "reasoning": "Step-by-step explanation of your thought process",
+    "reasoning": "Step-by-step explanation of your analytical approach",
     "sql_queries": ["list of executable SQL queries"],
-    "tables_used": ["list of table names used"],
-    "expected_result": "description of what the query results contain",
-    "limitations": "any assumptions, limitations, or considerations"
+    "tables_used": ["list of actual table names used"],
+    "expected_result": "description of what the query results will contain",
+    "limitations": "assumptions, limitations, or important considerations"
 }
 
-CRITICAL: Always use the actual dataset name field from the schema in your
-SQL queries, never use display names or titles. Look for fields like
-"dataset_name" or similar in the schema.
-
-Ensure your SQL is syntactically correct and follows best practices. If
-multiple queries are needed, explain the sequence and purpose of each."""
+QUALITY STANDARDS:
+- SQL must be syntactically correct and executable
+- Queries should be optimized for performance
+- Include proper error handling considerations
+- Document any assumptions made about data structure or content
+- Ignore visualization requirements in user queries
+"""
 
     human_template_str = "{input}"
 
@@ -66,10 +82,8 @@ multiple queries are needed, explain the sequence and purpose of each."""
     ]
 
 
-def format_sql_planning_input(user_query: str, schemas: list[dict]) -> dict:
-    if schemas:
-        formatted_schemas = json.dumps(schemas, indent=2)
+def format_sql_planning_input(user_query: str, dataset_info: str) -> dict:
     formatted_input = (
-        f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
+        f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{dataset_info}\n"
     )
     return {"input": formatted_input}

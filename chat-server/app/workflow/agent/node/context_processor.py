@@ -10,9 +10,11 @@ from app.services.qdrant.get_schema import (
     get_schema_from_qdrant,
 )
 from app.utils.chat_history.processor import ChatHistoryProcessor
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
-from app.workflow.events.event_utils import configure_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import (
+    configure_node,
+    fake_streaming_response,
+)
 
 from ..types import AgentState
 
@@ -41,20 +43,29 @@ class ProcessContextOutput(BaseModel):
     context_summary: str = Field(
         description="Summary of how the present query relates to previous conversation", default=""
     )
+    status_message: str = Field(
+        description="""Create a short user friendly message that tells what it understand from the input
+        user query, this message will be displayed to the user in the UI. It should be a 1-2 sentence message.""",
+        default="",
+    )
 
 
 async def get_project_custom_prompts(
-    dataset_ids: list[str], project_ids: list[str]
-) -> tuple[list[str], list[DatasetSchema]]:
-    tasks = [get_schema_from_qdrant(dataset_id) for dataset_id in dataset_ids]
-    for project_id in project_ids:
-        tasks.append(get_project_schema(project_id))
+    dataset_ids: list[str] | None, project_ids: list[str] | None
+) -> tuple[list[str], list[DatasetSchema | None]]:
+    tasks = [get_schema_from_qdrant(dataset_id=dataset_id) for dataset_id in dataset_ids or []]
+
+    for project_id in project_ids or []:
+        tasks.append(get_project_schema(project_id=project_id))
+
     schemas = await asyncio.gather(*tasks)
+
     project_custom_prompts = []
     for schema in schemas:
         if schema:
             if schema.project_custom_prompt:
                 project_custom_prompts.append(schema.project_custom_prompt)
+
     return list(set(project_custom_prompts)), schemas
 
 
@@ -73,19 +84,20 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     relevant_datasets_ids = history_context["datasets_used"]
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
-    project_custom_prompts, schemas = await get_project_custom_prompts(dataset_ids, project_ids)
-    prompt_messages = get_prompt(
-        "process_context",
-        current_query=user_input,
-        formatted_chat_history=formatted_chat_history,
-        project_custom_prompts=project_custom_prompts,
-        schemas="\n".join([schema.format_for_prompt() for schema in schemas if schema]),
+    project_custom_prompts, schemas = await get_project_custom_prompts(
+        dataset_ids=dataset_ids, project_ids=project_ids
     )
+    chain_input = {
+        "current_query": user_input,
+        "formatted_chat_history": formatted_chat_history,
+        "project_custom_prompts": project_custom_prompts,
+        "schemas": "\n".join([schema.format_for_prompt() for schema in schemas if schema]),
+    }
 
-    llm = get_configured_llm_for_node("process_context", config, schema=ProcessContextOutput)
+    chain = get_prompt_llm_chain("process_context", config, schema=ProcessContextOutput)
 
     try:
-        parsed_response = await llm.ainvoke(prompt_messages)
+        parsed_response = await chain.ainvoke(chain_input)
 
         is_follow_up = parsed_response.is_follow_up
         is_new_data_needed = parsed_response.is_new_data_needed
@@ -105,6 +117,8 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             """
         else:
             final_query = enhanced_query
+
+        await fake_streaming_response(parsed_response.status_message, config)
 
         if generate_visualization and not (last_vizpaths or relevant_sql_queries):
             is_new_data_needed = True

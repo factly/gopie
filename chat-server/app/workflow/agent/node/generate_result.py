@@ -1,8 +1,7 @@
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.agent.types import AgentState
 from app.workflow.events.event_utils import configure_node
 
@@ -32,10 +31,8 @@ async def generate_result(state: AgentState, config: RunnableConfig) -> dict:
 
     query_result = state["query_result"]
 
-    llm = get_configured_llm_for_node("generate_result", config)
-    prompt = get_prompt("generate_result", query_result=query_result)
-
-    response = await llm.ainvoke(prompt)
+    chain = get_prompt_llm_chain("generate_result", config)
+    response = await chain.ainvoke({"query_result": query_result})
 
     return {
         "messages": [AIMessage(content=str(response.content))],

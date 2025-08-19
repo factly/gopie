@@ -2,6 +2,7 @@ from typing import Literal
 
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 
 from .multi_dataset_prompts.analyze_query_prompt import (
     create_analyze_query_prompt,
@@ -64,10 +65,9 @@ NodeName = Literal[
 class PromptSelector:
     def __init__(self):
         """
-        Initialize the PromptSelector with mappings for prompt creation and input formatting functions.
-
         Sets up dictionaries that associate node names with their corresponding prompt generation and input formatting functions, enabling dynamic retrieval and formatting of prompts for various query processing tasks.
         """
+
         self.prompt_map = {
             "plan_query": create_plan_query_prompt,
             "identify_datasets": create_identify_datasets_prompt,
@@ -103,10 +103,10 @@ class PromptSelector:
         if node_name not in self.prompt_map:
             raise ValueError(f"No prompt available for node: {node_name}")
 
-        formatted_input = self.format_prompt_input(node_name, **kwargs)
+        formatted_input = self.format_prompt_input(node_name=node_name, **kwargs)
 
         if formatted_input:
-            return self.prompt_map[node_name](input=formatted_input["input"])
+            return self.prompt_map[node_name](**formatted_input)
         else:
             return self.prompt_map[node_name](**kwargs)
 
@@ -114,4 +114,8 @@ class PromptSelector:
         if node_name not in self.format_prompt_input_map:
             return None
 
-        return self.format_prompt_input_map[node_name](**kwargs)
+        @traceable
+        def format_input(node_name: NodeName, **kwargs):
+            return self.format_prompt_input_map[node_name](**kwargs)
+
+        return format_input(node_name=node_name, **kwargs)

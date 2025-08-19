@@ -7,11 +7,8 @@ from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.get_schema import get_schema_by_dataset_ids
 from app.services.qdrant.schema_search import search_schemas
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import (
-    get_configured_llm_for_node,
-    get_model_provider,
-)
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import (
     ColumnAssumptions,
@@ -57,13 +54,11 @@ async def identify_datasets(state: State, config: RunnableConfig):
     query_result = state.get("query_result", {})
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
-
-    last_message = state.get("messages", [])[-1]
+    validation_result = state.get("validation_result", None)
 
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
     try:
-        llm = get_configured_llm_for_node("identify_datasets", config)
         embeddings_model = get_model_provider(config).get_embeddings_model()
 
         relevant_dataset_schemas = await get_schema_by_dataset_ids(
@@ -101,17 +96,19 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 "messages": [IntermediateStep(content="No relevant datasets found")],
             }
 
-        llm_prompt = get_prompt(
-            "identify_datasets",
-            user_query=user_query,
-            relevant_dataset_schemas=relevant_dataset_schemas,
-            semantic_searched_datasets=semantic_searched_datasets,
-        )
+        chain_input = {
+            "user_query": user_query,
+            "relevant_dataset_schemas": relevant_dataset_schemas,
+            "semantic_searched_datasets": semantic_searched_datasets,
+            "validation_result": validation_result,
+        }
 
-        llm = get_configured_llm_for_node(
-            "identify_datasets", config, schema=IdentifyDatasetsOutput
+        chain = get_prompt_llm_chain(
+            "identify_datasets",
+            config,
+            schema=IdentifyDatasetsOutput,
         )
-        response = await llm.ainvoke(llm_prompt + [last_message])
+        response = await chain.ainvoke(chain_input)
 
         selected_datasets = response.selected_dataset
         if query_result.subqueries and len(query_result.subqueries) > query_index:
@@ -150,7 +147,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "query_result": query_result,
             "datasets_info": datasets_info,
             "identified_datasets": selected_datasets,
-            "messages": [IntermediateStep(content=f"Selected datasets: {selected_datasets}")],
+            "messages": [IntermediateStep(content=node_message)],
         }
 
     except Exception as e:

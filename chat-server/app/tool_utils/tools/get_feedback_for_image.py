@@ -2,18 +2,17 @@ import base64
 from typing import Annotated
 
 from e2b_code_interpreter import AsyncSandbox
+from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
+from pydantic import BaseModel
 
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
 from app.workflow.graph.visualize_data_graph.types import Dataset
 from app.workflow.graph.visualize_data_graph.utils import format_dataset_info
-from pydantic import BaseModel
-from langgraph.types import Command
-from langchain_core.messages import ToolMessage, SystemMessage
-
 
 SYSTEM_PROMPT = """\
 You are an expert data visualization analyst. Your task is to analyze a data visualization image and provide comprehensive feedback based on the dataset description and user query.
@@ -48,11 +47,11 @@ You are an expert data visualization analyst. Your task is to analyze a data vis
 
 ## Response Fields:
 Provide your feedback in a structured format:
-1. **Overall Assessment**: Brief summary of visualization effectiveness and justification for the assessment and rating
-2. **Strengths**: What works well in the current visualization
-3. **Areas for Improvement**: Specific issues and recommendations
-4. **Alternative Suggestions**: If the user query does not specify any specific visualization type then suggest a visualization type, else suggest improvements to the current visualization
-5. **Final Rating**: Score from 1-10
+1. Overall Assessment: Brief summary of visualization effectiveness and justification for the assessment and rating
+2. Strengths: What works well in the current visualization
+3. Areas for Improvement: Specific issues and recommendations
+4. Alternative Suggestions: If the user query does not specify any specific visualization type then suggest a visualization type, else suggest improvements to the current visualization
+5. Final Rating: Score from 1-10
 
 
 Response Format:
@@ -62,7 +61,7 @@ Response Format:
     "areas_for_improvement": str,
     "alternative_suggestions": str,
     "final_rating": float
-}   
+}
 
 Be constructive, specific, and actionable in your feedback. Focus on helping improve the visualization's ability to communicate insights effectively.
 """
@@ -77,7 +76,7 @@ Datasets Description
 # Define prompt
 prompt = ChatPromptTemplate(
     [
-       SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=SYSTEM_PROMPT),
         {
             "role": "user",
             "content": [
@@ -97,12 +96,14 @@ prompt = ChatPromptTemplate(
 def image_to_base64(image: bytearray) -> str:
     return base64.b64encode(image).decode("utf-8")
 
+
 class Feedback(BaseModel):
     overall_assessment: str
     strengths: str
     areas_for_improvement: str
     alternative_suggestions: str
     final_rating: float
+
 
 @tool
 async def get_feedback_for_image(
@@ -113,23 +114,24 @@ async def get_feedback_for_image(
     user_query: Annotated[str, InjectedState("user_query")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
+    status_message: str = "",
 ):
-    """\
+    """
     Analyzes a data visualization image to provide comprehensive feedback based on the dataset description and user query.
 
     This tool evaluates the visual design, data representation accuracy, query alignment, and best practices of the visualization.
     """
     if feedback_count < 2:
         llm = get_configured_llm_for_node("visualize_data", config, schema=Feedback)
-        chain = prompt | llm
         image = await sandbox.files.read(png_path, format="bytes")
-        response = await chain.ainvoke(
+        prompt_value = prompt.invoke(
             {
                 "image_data": image_to_base64(image),
-                "dataset_description": format_dataset_info(datasets),
+                "dataset_description": format_dataset_info(datasets=datasets),
                 "user_query": user_query,
             }
         )
+        response = await llm.ainvoke(prompt_value.to_messages())
     else:
         response = Feedback(
             overall_assessment="",
@@ -138,18 +140,20 @@ async def get_feedback_for_image(
             alternative_suggestions="",
             final_rating=8,
         )
+
     feedback_text = "The visualization is good. You can return the final result."
     if response.final_rating < 7:
         feedback_text = ""
         if response.overall_assessment:
-            feedback_text += f"**Overall Assessment:**\n\n{response.overall_assessment}\n\n"
+            feedback_text += f"Overall Assessment:\n\n{response.overall_assessment}\n\n"
         if response.strengths:
-            feedback_text += f"**Strengths:**\n\n{response.strengths}\n\n"
+            feedback_text += f"Strengths:\n\n{response.strengths}\n\n"
         if response.areas_for_improvement:
-            feedback_text += f"**Areas for Improvement:**\n\n{response.areas_for_improvement}\n\n"
+            feedback_text += f"Areas for Improvement\n\n{response.areas_for_improvement}\n\n"
         if response.alternative_suggestions:
-            feedback_text += f"**Alternative Suggestions:**\n\n{response.alternative_suggestions}\n\n"
-        feedback_text += f"Final Rating: {response.final_rating}/10" 
+            feedback_text += f"Alternative Suggestions\n\n{response.alternative_suggestions}\n\n"
+        feedback_text += f"Final Rating: {response.final_rating}/10"
+
     state_update = {
         "feedback_count": feedback_count + 1,
         "messages": [
@@ -163,7 +167,7 @@ async def get_feedback_for_image(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    return "Reviewing the generated Visualization"
+    return args.get("status_message") or "Reviewing the generated Visualization"
 
 
 __tool__ = get_feedback_for_image

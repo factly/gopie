@@ -20,9 +20,11 @@ from app.services.gopie.sql_executor import (
     truncate_if_too_large,
 )
 from app.services.qdrant.get_schema import get_schema_from_qdrant
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
-from app.workflow.events.event_utils import configure_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import (
+    configure_node,
+    stream_dynamic_message,
+)
 from app.workflow.graph.single_dataset_graph.types import State
 
 
@@ -35,6 +37,11 @@ class ProcessQueryOutput(BaseModel):
     )
     response_for_non_sql: str = Field(
         description="Brief explanation for non-sql response", default=""
+    )
+    user_friendly_response: str = Field(
+        description="A short user friendly (no technical jargon or error messages revealed in this field) "
+        "message not more than 200 characters telling why there was no SQL query generated otherwise this field should be empty",
+        default="",
     )
 
 
@@ -107,7 +114,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
     dataset_id = state.get("dataset_id", None)
     prev_query_result = state.get("query_result", None)
     previous_sql_queries = state.get("previous_sql_queries", [])
-    last_validation_message = state.get("messages", [])[-1]
+    validation_result = state.get("validation_result", None)
 
     query_result = QueryResult(
         original_user_query=user_query,
@@ -139,19 +146,23 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         rows_csv = convert_rows_to_csv(sample_data)  # type: ignore
 
-        prompt_messages = get_prompt(
+        chain_input = {
+            "user_query": user_query,
+            "dataset_name": dataset_name,
+            "dataset_schema": dataset_schema,
+            "rows_csv": rows_csv,
+            "prev_query_result": prev_query_result,
+            "previous_sql_queries": previous_sql_queries,
+            "validation_result": validation_result,
+        }
+
+        chain = get_prompt_llm_chain(
             "process_query",
-            user_query=user_query,
-            dataset_name=dataset_name,
-            dataset_schema=dataset_schema,
-            rows_csv=rows_csv,
-            prev_query_result=prev_query_result,
-            previous_sql_queries=previous_sql_queries,
+            config,
+            schema=ProcessQueryOutput,
         )
 
-        llm = get_configured_llm_for_node("process_query", config, schema=ProcessQueryOutput)
-
-        response = await llm.ainvoke(prompt_messages + [last_validation_message])
+        response = await chain.ainvoke(chain_input)
 
         sql_queries = response.sql_queries
         explanations = response.explanations
@@ -163,6 +174,11 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
+            await stream_dynamic_message(
+                f"create a 1 to 2 sentence message saying that here are the generated SQL queries and now let's execute them: {sql_queries}",
+                config,
+            )
+
             sql_results: list[SqlQueryInfo] = []
             for q, exp in zip(sql_queries, explanations):
                 try:
@@ -178,6 +194,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
                             error=None,
                         )
                     )
+
                     await adispatch_custom_event(
                         "gopie-agent",
                         {
@@ -207,6 +224,13 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
 
         else:
             query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
+
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": response.user_friendly_response or "No SQL query generated",
+                },
+            )
 
             return {
                 "messages": [AIMessage(content=json.dumps(query_result.to_dict(), indent=2))],

@@ -55,6 +55,7 @@ class State(TypedDict):
     retry_count: int
     recommendation: str
     continue_execution: bool | None
+    validation_result: str | None
 
 
 class ConfigSchema(TypedDict):

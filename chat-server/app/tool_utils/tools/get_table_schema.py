@@ -13,6 +13,7 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 async def get_datasets_schemas(
     dataset_ids: list[str] = [],
     project_ids: list[str] = [],
+    status_message: str = "",
 ) -> str:
     """
     Get the schema of a specific tables from Qdrant database.
@@ -31,12 +32,16 @@ async def get_datasets_schemas(
     Args:
         dataset_ids: The ids of the datasets to retrieve schema for.
         project_ids: The ids of the projects to retrieve schema for.
+        status_message: Short, friendly message to show the user about this action
+            (<= 120 chars). Mention if this is a retry and why you're retrying, when applicable.
 
         Caution:
             - Requires atleast one of the dataset_ids or project_ids.
 
     Returns:
-        A dictionary with schema information for the provided dataset ids.
+        A string with schema information for the provided dataset ids/project ids.
+        Note:
+            - If the number of schemas returned is more than 10, then it will truncate the result to show only 10 schemas.
     """
     try:
         client = await QdrantSetup.get_async_client()
@@ -78,6 +83,15 @@ async def get_datasets_schemas(
                         logger.warning(f"Error parsing schema JSON: {e}")
                         continue
 
+        if len(schemas) > 10:
+            schemas = schemas[:10]
+            truncation_note = (
+                "The tool returned more than 10 schemas, so it has been truncated to show only 10 schemas. "
+                "Mark the query as data_query if want to access more datasets. Information of around 10 datasets is "
+                "enough for queries like summarizing, describing, etc. and that are not actually a data analysis query."
+            )
+            schemas.append(truncation_note)
+
         return "\n\n".join(schemas)
 
     except Exception as e:
@@ -85,11 +99,7 @@ async def get_datasets_schemas(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    base_text = "Retrieving table schema information"
-    dataset_name = args.get("dataset_name", "")
-    if dataset_name:
-        return f"{base_text} for '{dataset_name}'"
-    return base_text
+    return args.get("status_message") or "Retrieving dataset schemas"
 
 
 __tool__ = get_datasets_schemas

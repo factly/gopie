@@ -55,9 +55,9 @@ def truncate_if_too_large(result: SQL_RESPONSE_TYPE) -> SQL_RESPONSE_TYPE:
     if result is None:
         return result
 
-    is_too_large, reason = is_result_too_large(result)
+    is_too_large, reason = is_result_too_large(result=result)
     if is_too_large:
         logger.info(f"Result is too large, reason: {reason}")
-        truncated_result = truncate_result_for_llm(result)
+        truncated_result = truncate_result_for_llm(result=result)
         return truncated_result
     return result

@@ -2,15 +2,15 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 
 
 @tool
 async def plan_sql_query(
     user_query: str,
-    schemas: list[dict],
+    dataset_info: str,
     config: RunnableConfig,
+    status_message: str = "",
 ) -> dict:
     """
     Plan a SQL query given a user natural language query and dataset schemas.
@@ -29,9 +29,8 @@ async def plan_sql_query(
 
     Args:
         user_query: The natural language query from the user.
-        schemas: List of dataset schema dicts with table and column details.
-                Must include the actual dataset name field (e.g., 'gq_xxxxx')
-                that should be used in SQL queries, not just display names.
+        dataset_info: The information about the datasets that the user provided or you got from
+                      previous tool or already have it.
 
     Returns:
         A dict with keys:
@@ -42,9 +41,8 @@ async def plan_sql_query(
             limitations: any assumptions or limitations
     """
     try:
-        prompt = get_prompt("plan_sql_query_tool", user_query=user_query, schemas=schemas)
-        llm = get_configured_llm_for_node("plan_sql_query_tool", config)
-        response = await llm.ainvoke(prompt)
+        chain = get_prompt_llm_chain("plan_sql_query_tool", config)
+        response = await chain.ainvoke({"user_query": user_query, "dataset_info": dataset_info})
         return response
     except Exception as e:
         await adispatch_custom_event(
@@ -57,8 +55,7 @@ async def plan_sql_query(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    uq = args.get("user_query", "")
-    return f"Planning SQL query for: {uq[:50]}"
+    return args.get("status_message") or "Using SQL query planner tool to plan the query..."
 
 
 __tool__ = plan_sql_query

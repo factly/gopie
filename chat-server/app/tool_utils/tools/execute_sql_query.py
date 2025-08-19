@@ -8,6 +8,7 @@ from app.services.gopie.sql_executor import execute_sql_with_limit
 @tool
 async def execute_sql_query(
     queries: list[str],
+    status_message: str = "",
 ) -> list[dict] | dict:
     """
     Execute a SQL query against the SQL API.
@@ -18,6 +19,8 @@ async def execute_sql_query(
 
     Args:
         queries: The SQL SELECT query to execute. It can be a list of queries.
+        status_message: Short, friendly message to show the user about this action
+            (<= 120 chars). Mention if this is a retry and why you're retrying, when applicable.
 
     Returns:
         List of result rows as dicts, or a dict with error information.
@@ -26,10 +29,15 @@ async def execute_sql_query(
         results = []
         for query in queries:
             result = await execute_sql_with_limit(query=query)
+
+            snippet = query.strip().replace("\n", " ")
+            if len(snippet) > 140:
+                snippet = snippet[:137] + "..."
+
             await adispatch_custom_event(
                 "gopie-agent",
                 {
-                    "content": "SQL Execution tool",
+                    "content": f"Executing SQL: {snippet}",
                     "name": SQL_QUERIES_GENERATED,
                     "values": {SQL_QUERIES_GENERATED_ARG: [query]},
                 },
@@ -41,8 +49,7 @@ async def execute_sql_query(
 
 
 def get_dynamic_tool_text(args: dict) -> str:
-    query_snippets = args.get("queries", [])[:50]
-    return f"Executing SQL queries: {query_snippets}..."
+    return args.get("status_message") or "Executing SQL query"
 
 
 __tool__ = execute_sql_query

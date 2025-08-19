@@ -87,6 +87,7 @@ IMPORTANT:
 * Only use exact_values when completely confident the value exists
 * Make your node_message informative providing context on dataset sources and selection rationale
 * For numeric, date, boolean, or other non-string columns: include them in column_assumptions but omit exact_values and fuzzy_values to prevent SQL type errors
+* Take into account the validation result to improve according to the issues mentioned in the validation result.
 """
 
     human_template_str = """
@@ -113,12 +114,16 @@ def format_identify_datasets_input(
     user_query: str,
     relevant_dataset_schemas: list[DatasetSchema] = [],
     semantic_searched_datasets: list[DatasetSchema] = [],
+    validation_result: str | None = None,
 ) -> dict:
     input_str = f"USER QUERY: {user_query}"
 
     input_str += (
         f"\n\n=== RELEVANT DATASETS (From Chat History): {len(relevant_dataset_schemas)} ==="
     )
+
+    if validation_result:
+        input_str += f"\n\n🔄 VALIDATION RESULT:\n{validation_result}"
 
     if relevant_dataset_schemas:
         input_str += "\nThese datasets were used in previous queries from chat history."

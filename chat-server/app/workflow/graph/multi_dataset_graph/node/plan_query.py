@@ -4,8 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
-from app.utils.langsmith.prompt_manager import get_prompt
-from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
@@ -26,6 +25,11 @@ class PlanQueryOutput(BaseModel):
     )
     response_for_no_sql: str = Field(
         description="Clear explanation when SQL queries cannot be generated", default=""
+    )
+    user_friendly_response: str = Field(
+        description="A short user friendly (no technical jargon or error messages revealed in this field) "
+        "message not more than 200 characters telling why there was no SQL query generated otherwise this field should be empty",
+        default="",
     )
     limitations: str = Field(
         description="Any constraints or assumptions in the analysis", default=""
@@ -60,7 +64,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", {})
     datasets_info = state.get("datasets_info", {})
     previous_sql_queries = state.get("previous_sql_queries", [])
-    last_message = state.get("messages", [])[-1]
+    validation_result = state.get("validation_result", None)
 
     # Reset the SQL queries and tables used for the current subquery (due to validation logic)
     query_result.subqueries[query_index].sql_queries = []
@@ -79,17 +83,17 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         if not datasets_info:
             raise Exception("Could not get preview information for any of the selected datasets")
 
-        llm_prompt = get_prompt(
-            "plan_query",
-            user_query=user_query,
-            datasets_info=datasets_info,
-            error_messages=error_messages,
-            retry_count=retry_count,
-            previous_sql_queries=previous_sql_queries,
-        )
+        chain_input = {
+            "user_query": user_query,
+            "datasets_info": datasets_info,
+            "error_messages": error_messages,
+            "retry_count": retry_count,
+            "previous_sql_queries": previous_sql_queries,
+            "validation_result": validation_result,
+        }
 
-        llm = get_configured_llm_for_node("plan_query", config, schema=PlanQueryOutput)
-        response = await llm.ainvoke(llm_prompt + [last_message])
+        chain = get_prompt_llm_chain("plan_query", config, schema=PlanQueryOutput)
+        response = await chain.ainvoke(chain_input)
 
         sql_queries = response.sql_queries
         response_for_no_sql = response.response_for_no_sql
@@ -97,6 +101,13 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
 
         if response_for_no_sql:
             query_result.subqueries[query_index].no_sql_response = response_for_no_sql
+
+            await adispatch_custom_event(
+                "gopie-agent",
+                {
+                    "content": response.user_friendly_response or "No SQL query generated",
+                },
+            )
 
             query_result.set_node_message(
                 "plan_query",
