@@ -8,7 +8,7 @@ from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 @tool
 async def plan_sql_query(
     user_query: str,
-    schemas: list[dict],
+    dataset_info: str,
     config: RunnableConfig,
     status_message: str = "",
 ) -> dict:
@@ -29,9 +29,8 @@ async def plan_sql_query(
 
     Args:
         user_query: The natural language query from the user.
-        schemas: List of dataset schema dicts with table and column details.
-                Must include the actual dataset name field (e.g., 'gq_xxxxx')
-                that should be used in SQL queries, not just display names.
+        dataset_info: The information about the datasets that the user provided or you got from
+                      previous tool or already have it.
 
     Returns:
         A dict with keys:
@@ -43,7 +42,7 @@ async def plan_sql_query(
     """
     try:
         chain = get_prompt_llm_chain("plan_sql_query_tool", config)
-        response = await chain.ainvoke({"user_query": user_query, "schemas": schemas})
+        response = await chain.ainvoke({"user_query": user_query, "dataset_info": dataset_info})
         return response
     except Exception as e:
         await adispatch_custom_event(

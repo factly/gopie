@@ -1,5 +1,3 @@
-import json
-
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
@@ -84,13 +82,8 @@ QUALITY STANDARDS:
     ]
 
 
-def format_sql_planning_input(user_query: str, schemas: list[dict]) -> dict:
-    if schemas:
-        formatted_schemas = json.dumps(schemas, indent=2)
-    else:
-        formatted_schemas = "No schemas available"
-
+def format_sql_planning_input(user_query: str, dataset_info: str) -> dict:
     formatted_input = (
-        f"USER QUERY: {user_query}\n\n" f"AVAILABLE DATASETS AND SCHEMAS:\n{formatted_schemas}\n"
+        f"USER QUERY: {user_query}\n\nAVAILABLE DATASETS AND SCHEMAS:\n{dataset_info}\n"
     )
     return {"input": formatted_input}

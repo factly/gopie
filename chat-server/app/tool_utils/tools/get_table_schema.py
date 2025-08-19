@@ -39,7 +39,9 @@ async def get_datasets_schemas(
             - Requires atleast one of the dataset_ids or project_ids.
 
     Returns:
-        A dictionary with schema information for the provided dataset ids.
+        A string with schema information for the provided dataset ids/project ids.
+        Note:
+            - If the number of schemas returned is more than 10, then it will truncate the result to show only 10 schemas.
     """
     try:
         client = await QdrantSetup.get_async_client()
@@ -80,6 +82,16 @@ async def get_datasets_schemas(
                     except json.JSONDecodeError as e:
                         logger.warning(f"Error parsing schema JSON: {e}")
                         continue
+
+        if len(schemas) > 10:
+            schemas = schemas[:10]
+            schemas.append(
+                {
+                    "__note__": "The tool returned more than 10 schemas, so it has been truncated to show only 10 schemas. "
+                    "Mark the query as data_query if want to access more datasets. Information of around 10 datasets is "
+                    "enough for queries like summarizing, describing, etc. and that are not actually a data analysis query."
+                }
+            )
 
         return "\n\n".join(schemas)
 
