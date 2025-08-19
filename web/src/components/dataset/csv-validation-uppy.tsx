@@ -148,7 +148,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
         throw new Error('No file selected');
       }
       
-      await handleUpload(datasetName, description);
+      await handleUpload();
     }
   }));
 
@@ -547,8 +547,7 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
   };
 
   // Handle file upload
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleUpload = async (datasetName?: string, description?: string) => {
+  const handleUpload = async () => {
     console.log('handleUpload called');
     console.log('Upload state check:', {
       uppy: !!uppy,
@@ -587,10 +586,6 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
 
       // Format path according to [projectId]/dataset_[time]_filename.ext
       const path = `${projectId}/dataset_${timestamp}_${sanitizedName}`;
-
-      // Use provided dataset name or sanitized filename
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const alias = datasetName || sanitizedName.replace(/\.(csv|parquet|json|xlsx|duckdb|db|ddb)$/, "");
 
       // Add file to Uppy with the custom dataset name stored properly in metadata
       uppy.addFile({

@@ -22,7 +22,7 @@ interface FileInfo {
 
 interface CustomFileUploaderProps {
   onFileSelected: (file: File) => void;
-  onUpload: (datasetName?: string, description?: string) => Promise<void>;
+  onUpload: () => Promise<void>;
   isUploading: boolean;
   progress: number;
   selectedFile: File | null;
@@ -106,12 +106,9 @@ export function CustomFileUploader({
     }
   };
 
-  const handleConfirmUpload = async (
-    datasetName: string,
-    description: string
-  ) => {
+  const handleConfirmUpload = async () => {
     try {
-      await onUpload(datasetName, description);
+      await onUpload();
     } catch (error) {
       toast.error(
         `Upload failed: ${
