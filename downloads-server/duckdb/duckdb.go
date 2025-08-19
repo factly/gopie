@@ -1,6 +1,7 @@
 package duckdb
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/csv"
@@ -12,7 +13,7 @@ import (
 	"time"
 
 	"github.com/xitongsys/parquet-go/schema"
-	parquetwriter "github.com/xitongsys/parquet-go/writer"
+	"github.com/xitongsys/parquet-go/writer"
 
 	"github.com/factly/gopie/downlods-server/models"
 	"github.com/factly/gopie/downlods-server/pkg/config"
@@ -323,9 +324,12 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 	return rows.Err()
 }
 
-func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query string, writer io.Writer) error {
+// ExecuteQueryAndStreamParquet executes a query and streams the results as a Parquet file.
+// It builds the file in an in-memory buffer first to prevent race conditions with the final writer.
+func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query string, finalWriter io.Writer) error {
+	// The calling function is responsible for closing the finalWriter.
 	defer func() {
-		if closer, ok := writer.(io.Closer); ok {
+		if closer, ok := finalWriter.(io.Closer); ok {
 			closer.Close()
 		}
 	}()
@@ -343,6 +347,7 @@ func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query s
 		return fmt.Errorf("failed to get column types: %w", err)
 	}
 
+	// Dynamically create the Parquet schema from database column types.
 	s, err := createParquetSchema(colTypes)
 	if err != nil {
 		return fmt.Errorf("failed to create parquet schema: %w", err)
@@ -351,10 +356,12 @@ func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query s
 
 	sh, err := schema.NewSchemaHandlerFromJSON(s)
 	if err != nil {
-		return fmt.Errorf("failed to create parquet schema: %w", err)
+		return fmt.Errorf("failed to create parquet schema handler: %w", err)
 	}
 
-	pw, err := parquetwriter.NewParquetWriterFromWriter(writer, sh, 4)
+	buf := new(bytes.Buffer)
+
+	pw, err := writer.NewParquetWriterFromWriter(buf, sh, 1)
 	if err != nil {
 		return fmt.Errorf("failed to create parquet writer: %w", err)
 	}
@@ -373,17 +380,16 @@ func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query s
 
 		row := make([]any, len(vals))
 		for i, v := range vals {
-			// A simple type switch to handle values and convert anything
-			// unexpected into a string as a safe fallback.
 			switch t := v.(type) {
 			case nil:
 				row[i] = nil
 			case int64, int32, float64, float32, bool, string:
-				row[i] = t // Pass through standard types
+				row[i] = t
+			case []byte:
+				row[i] = string(t)
 			case time.Time:
-				row[i] = t // Pass through time
+				row[i] = t
 			default:
-				// Convert any other type to a string to prevent corruption
 				row[i] = fmt.Sprintf("%v", t)
 			}
 		}
@@ -398,23 +404,20 @@ func (d *OlapDBDriver) ExecuteQueryAndStreamParquet(ctx context.Context, query s
 		return fmt.Errorf("error during row iteration: %w", err)
 	}
 
-	if rowsWritten == 0 {
-		d.logger.Info("No rows to write for Parquet")
-		return fmt.Errorf("zero rows returned from the query")
-	}
-
-	d.logger.Debug("Finalizing parquet file", zap.Int64("total_rows", rowsWritten))
-
 	if err := pw.WriteStop(); err != nil {
 		d.logger.Error("Failed to stop parquet writer", zap.Error(err))
 		return fmt.Errorf("failed to stop parquet writer: %w", err)
 	}
 
-	d.logger.Info("Successfully streamed Parquet data", zap.Int64("rows_written", rowsWritten))
+	d.logger.Info("Parquet file successfully created in memory", zap.Int64("rows_written", rowsWritten), zap.Int("buffer_size_bytes", buf.Len()))
+
+	if _, err := io.Copy(finalWriter, buf); err != nil {
+		return fmt.Errorf("failed to copy buffer to final writer: %w", err)
+	}
+
 	return nil
 }
 
-// createParquetSchema builds the required JSON schema string for the parquet-go library.
 func createParquetSchema(colTypes []*sql.ColumnType) (string, error) {
 	type ParquetField struct {
 		Tag string `json:"Tag"`
@@ -430,45 +433,43 @@ func createParquetSchema(colTypes []*sql.ColumnType) (string, error) {
 		Fields []ParquetField `json:"Fields"`
 	}
 
-	schema := Schema{
+	schemaRoot := Schema{
 		Tag:    "name=parquet_go_root, repetitiontype=REQUIRED",
 		Fields: fields,
 	}
 
-	schemaJSON, err := json.Marshal(schema)
+	schemaJSON, err := json.Marshal(schemaRoot)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal parquet schema to JSON: %w", err)
 	}
 	return string(schemaJSON), nil
 }
 
-// getParquetFieldTag generates the struct tag required for each field in the Parquet schema.
 func getParquetFieldTag(colType *sql.ColumnType) string {
 	dbType := strings.ToUpper(colType.DatabaseTypeName())
 	colName := colType.Name()
 
-	// Force all columns to be OPTIONAL to robustly handle nulls.
 	repetitionType := "OPTIONAL"
 
 	var typeStr string
 	switch dbType {
-	case "BOOLEAN":
+	case "BOOLEAN", "BOOL":
 		typeStr = "type=BOOLEAN"
-	case "TINYINT", "SMALLINT", "INTEGER":
+	case "TINYINT", "SMALLINT", "INT2", "INTEGER", "INT", "INT4":
 		typeStr = "type=INT32"
-	case "BIGINT", "HUGEINT":
+	case "BIGINT", "HUGEINT", "INT8":
 		typeStr = "type=INT64"
-	case "FLOAT", "REAL":
+	case "FLOAT", "REAL", "FLOAT4":
 		typeStr = "type=FLOAT"
-	case "DOUBLE", "DECIMAL":
+	case "DOUBLE", "DECIMAL", "NUMERIC", "FLOAT8":
 		typeStr = "type=DOUBLE"
 	case "DATE":
 		typeStr = "type=DATE"
-	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMPTZ":
+	case "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMPTZ", "DATETIME":
 		typeStr = "type=TIMESTAMP_MILLIS"
-	case "VARCHAR", "TEXT", "STRING", "UUID":
+	case "VARCHAR", "TEXT", "STRING", "CHAR", "BPCHAR", "UUID":
 		typeStr = "type=BYTE_ARRAY, convertedtype=UTF8"
-	case "BLOB", "BYTEA":
+	case "BLOB", "BYTEA", "BINARY", "VARBINARY":
 		typeStr = "type=BYTE_ARRAY"
 	default:
 		typeStr = "type=BYTE_ARRAY, convertedtype=UTF8"
