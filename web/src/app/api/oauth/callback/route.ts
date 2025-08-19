@@ -11,6 +11,8 @@ import {
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+
   try {
     const { searchParams } = new URL(req.url);
     const authorizationCode = searchParams.get("code");
@@ -20,7 +22,7 @@ export async function GET(req: NextRequest) {
     // Handle OAuth errors
     if (error) {
       console.error("OAuth error:", error);
-      const loginUrl = new URL("/auth/login?error=oauth_failed", req.url);
+      const loginUrl = new URL("/auth/login?error=oauth_failed", baseUrl);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
       console.error("Missing authorization code");
       const loginUrl = new URL(
         "/auth/login?error=missing_oauth_params",
-        req.url
+        baseUrl
       );
       return NextResponse.redirect(loginUrl);
     }
@@ -42,7 +44,7 @@ export async function GET(req: NextRequest) {
       console.error("Missing code verifier in cookies");
       const loginUrl = new URL(
         "/auth/login?error=missing_oauth_params",
-        req.url
+        baseUrl
       );
       return NextResponse.redirect(loginUrl);
     }
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
       console.error("State parameter mismatch");
       const loginUrl = new URL(
         "/auth/login?error=oauth_callback_failed",
-        req.url
+        baseUrl
       );
       return NextResponse.redirect(loginUrl);
     }
@@ -68,7 +70,7 @@ export async function GET(req: NextRequest) {
     // For now, we'll redirect to a success page or dashboard
 
     // Clear auth cookies since we've completed the flow
-    const response = NextResponse.redirect(new URL("/", req.url));
+    const response = NextResponse.redirect(new URL("/", baseUrl));
     clearAuthCookies(response);
 
     // Set session cookies with the new tokens
@@ -111,7 +113,7 @@ export async function GET(req: NextRequest) {
     console.error("OAuth callback error:", error);
     const loginUrl = new URL(
       "/auth/login?error=oauth_callback_failed",
-      req.url
+      baseUrl
     );
     return NextResponse.redirect(loginUrl);
   }
