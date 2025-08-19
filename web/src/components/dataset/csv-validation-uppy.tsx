@@ -451,7 +451,6 @@ export const FileValidationUppy = forwardRef<FileValidationUppyRef, FileValidati
             size: file.size,
             type: file.type,
             data: file,
-            meta: {},
             id: `file-${Date.now()}`
           } as UppyFile<Meta, Record<string, never>>;
           
