@@ -476,10 +476,7 @@ export function UrlUploader({
     }
   };
 
-  const handleConfirmUpload = async (
-    datasetName: string,
-    description: string
-  ) => {
+  const handleConfirmUpload = async () => {
     if (!uppy || (!downloadedFile && !modifiedFile) || !canUpload) {
       toast.error("Please fix all validation errors before uploading");
       return;
@@ -509,16 +506,6 @@ export function UrlUploader({
         name: path,
         type: fileToUpload.type,
         data: fileToUpload,
-        meta: {
-          alias: datasetName,
-          datasetName: datasetName,
-          projectId,
-          type: "dataset",
-          description: description || "Imported from URL",
-          fileFormat: detectedFormat || "csv",
-          originalUrl: url,
-          processedWithDuckDB: modifiedFile !== null,
-        },
       });
 
       // Start upload
