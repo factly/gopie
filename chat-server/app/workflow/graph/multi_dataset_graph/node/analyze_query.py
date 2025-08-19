@@ -5,7 +5,6 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
@@ -57,6 +56,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         tools_names = [
             ToolNames.EXECUTE_SQL_QUERY,
             ToolNames.GET_TABLE_SCHEMA,
+            ToolNames.LIST_DATASETS,
             ToolNames.PLAN_SQL_QUERY,
         ]
 
@@ -125,8 +125,6 @@ async def _handle_tool_call_response(
     tool_call_count: int,
 ) -> dict:
     ai_message = response if isinstance(response, BaseMessage) else AIMessage(content=str(response))
-
-    logger.debug(ai_message.content)
 
     return {
         "query_result": query_result,
