@@ -27,7 +27,7 @@ const uploadFormSchema = z.object({
 interface UploadConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (datasetName: string, description: string) => void;
+  onConfirm: () => void;
   defaultName: string;
   fileName: string;
 }
@@ -78,7 +78,7 @@ export function UploadConfirmationDialog({
 
   const handleConfirm = () => {
     if (validateForm()) {
-      onConfirm(datasetName, description);
+      onConfirm();
       onClose();
     }
   };
