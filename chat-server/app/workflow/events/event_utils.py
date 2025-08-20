@@ -116,8 +116,8 @@ async def fake_streaming_response(response: str, config: RunnableConfig):
     try:
         config.update(
             metadata=NodeEventConfig(
-                role=Role.AI,
-                progress_message="",
+                role=Role.INTERMEDIATE,
+                progress_message=response,
             ).model_dump()
         )
 

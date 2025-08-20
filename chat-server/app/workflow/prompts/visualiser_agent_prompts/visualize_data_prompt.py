@@ -37,14 +37,15 @@ VISUALIZATION QUALITY STANDARDS:
 - Use consistent formatting across multiple visualizations
 - Display data values directly on the visualizations if the data is appropriate for it.
 - Make sure the labels do not overlap each other
+- Create tooltips in human-readable format with appropriate units  (Eg : '₹54.00 Billion', 30 %, 29 Tonnes)
 
 Follow the steps below to create the visualizations:
 
 REMEMBER TO FOLLOW ALL THESE STEPS
 1. Decide if you have enough information to create the visualizations, otherwise explore the datasets to get more information.
 2. Find the best way to visualize the data if the user has not specified any visualization type.
-3. Use altair to create visualizations, and save them to json and png. Use the run_python_code tool to run python code. Always include a short 'status_message' that describes the next step in 1 sentence (<=120 chars). If retrying, mention it's a retry.
-4. Get feedback for the generated image using the get_feedback_for_image tool. Always include a short 'status_message' (<=120 chars) describing the action, and mention if it's a retry.
+3. Use altair to create visualizations, and save them to json and png. Use the run_python_code tool to run python code. Always include a short 'status_message' that describes the next step in 1 sentence (<=120 chars). If retrying, mention you are updating the visualisation.
+4. Get feedback for the generated image using the get_feedback_for_image tool. Always include a short 'status_message' (<=120 chars) describing the action.
 5. Incorporate the feedback and edit the visualizations.
 6. Use the ResultPaths tool to return the paths to the json files that contain the visualizations. Include a short 'status_message' (<=120 chars) that describes finalizing/saving results.
 
@@ -52,9 +53,11 @@ IMPORTANT NOTES:
 - Always use the ResultPaths tool to return JSON file paths
 - Begin by clearly considering visualization types and details based on user query and datasets
 - Prioritize accessibility and professional appearance in all visualizations
+- Do not mention about saving to json or png in the status messages
 """
 
-    human_template_str = """This is the user query: {user_query}
+    human_template_str = """\
+This is the user query: {user_query}
 
 The following are the datasets and their descriptions for the present query:
 
@@ -72,7 +75,7 @@ CURRENT TOOL USAGE STATUS:
             ]
         )
 
-    previous_python_text = """
+    previous_python_text = """\
 PREVIOUS PYTHON CODE:
 The following code was used to generate previous visualizations. Note that CSV file paths
 may have changed, so use the new paths provided in your current implementation.
