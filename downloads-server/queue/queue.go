@@ -82,7 +82,7 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Processing query..."})
 
 	pr, pw := io.Pipe()
-	s3Key := fmt.Sprintf("%s/%s.csv", job.OrgID, job.ID)
+	s3Key := fmt.Sprintf("%s/%s.%s", job.OrgID, job.ID, job.Format)
 
 	errChan := make(chan error, 1)
 
@@ -98,9 +98,20 @@ func (q *DownloadQueue) processJob(job *models.Download) {
 	}()
 
 	q.Manager.Broadcast(ProgressEvent{DownloadID: jobIDStr, Type: "status_update", Message: "Streaming data to storage..."})
-	dbErr := q.olapStore.ExecuteQueryAndStreamCSV(ctx, job.SQL, pw)
+	var dbErr error
 
-	pw.Close()
+	switch job.Format {
+	case "csv":
+		dbErr = q.olapStore.ExecuteQueryAndStreamCSV(ctx, job.SQL, pw)
+	case "parquet":
+		dbErr = q.olapStore.ExecuteQueryAndStreamParquet(ctx, job.SQL, pw)
+	case "json":
+		dbErr = q.olapStore.ExecuteQueryAndStreamJSON(ctx, job.SQL, pw)
+	case "xlsx":
+		dbErr = q.olapStore.ExecuteQueryAndStreamExcel(ctx, job.SQL, pw)
+	default:
+		dbErr = fmt.Errorf("unsupported format: %s", job.Format)
+	}
 
 	uploadErr := <-errChan
 

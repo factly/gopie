@@ -32,7 +32,7 @@ func (h *httpHandler) createAndStream(c *fiber.Ctx) error {
 	req.OrgID = orgID
 
 	// This part remains the same. It initiates the request to the downstream service.
-	dataChan, err := h.service.CreateAndStream(&req)
+	dataChan, err := h.service.CreateDownloadAndStoreInS3(&req)
 	if err != nil {
 		h.logger.Error("Failed to start download stream", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not initiate download stream"})

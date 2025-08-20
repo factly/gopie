@@ -40,11 +40,11 @@ type OlapDBDriver struct {
 
 // Compile regex patterns once at package level for better performance
 var (
-	didYouMeanRegex             = regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
-	didYouMeanSingleQuoteRegex  = regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
-	didYouMeanNoQuotesRegex     = regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
-	candidateTablesRegex        = regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
-	whitespaceRegex             = regexp.MustCompile(`\s+`)
+	didYouMeanRegex            = regexp.MustCompile(`(?i)\s*Did you mean "[^"]+"\??`)
+	didYouMeanSingleQuoteRegex = regexp.MustCompile(`(?i)\s*Did you mean '[^']+'\??`)
+	didYouMeanNoQuotesRegex    = regexp.MustCompile(`(?i)\s*Did you mean \S+\??`)
+	candidateTablesRegex       = regexp.MustCompile(`(?i)\s*Candidate tables:.*`)
+	whitespaceRegex            = regexp.MustCompile(`\s+`)
 )
 
 // NewOlapDBDriver initializes a new DuckDB/MotherDuck driver.
@@ -332,6 +332,24 @@ func (m *OlapDBDriver) applyS3SettingsToTransaction(tx *sql.Tx) error {
 	return nil
 }
 
+func (m *OlapDBDriver) applyS3Settings() error {
+	if m.s3Config == nil {
+		return nil // No S3 config to apply
+	}
+
+	s3Commands := m.generateS3Commands(m.s3Config)
+	for _, cmd := range s3Commands {
+		m.logger.Debug("reapplying S3 setting in transaction", zap.String("command", cmd))
+		if _, err := m.db.Exec(cmd); err != nil {
+			m.logger.Error("failed to reapply S3 setting in transaction",
+				zap.String("command", cmd),
+				zap.Error(err))
+			return fmt.Errorf("failed reapplying S3 setting '%s': %w", cmd, err)
+		}
+	}
+	return nil
+}
+
 // Close closes the database connection(s).
 func (m *OlapDBDriver) Close() error {
 	var firstErr error
@@ -411,7 +429,7 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 		return err
 	}
 
-	if ignoreErrors {
+	if ignoreErrors && format == "csv" {
 		lastParen := strings.LastIndex(readFunc, ")")
 		if lastParen != -1 {
 			// Injects ignore_errors=true into the read function call.
@@ -449,6 +467,8 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 			return fmt.Errorf("failed to apply S3 settings to transaction: %w", err)
 		}
 	}
+
+	m.logger.Info("generated sql", zap.String("createSql", createSql))
 
 	_, err = tx.Exec(createSql)
 	if err != nil {
@@ -740,7 +760,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 	}
 	m.logger.Debug("deparsed SQL query", zap.String("query", sqlQuery))
 
-	// 1. ATTACH statement
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
 
 	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias))
@@ -752,7 +771,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 
 	var detachError error
 	defer func() {
-		// DETACH is also specific
 		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, pgDBAlias) // Quoted alias
 		m.logger.Debug("Executing DETACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", detachSQLCmd))
 		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
@@ -763,7 +781,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 		}
 	}()
 
-	// 2. CREATE TABLE ... AS ... statement
 	quotedTargetSchema := fmt.Sprintf("\"%s\"", m.dbName)
 	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
 
@@ -1052,7 +1069,7 @@ func parseError(err error) error {
 		sanitizedMsg := sanitizeErrorMessage(err.Error())
 		return fmt.Errorf("DuckDB %v error: %s", duckErr.Type, sanitizedMsg)
 	}
-	
+
 	// Also sanitize non-DuckDB errors in case they contain suggestions
 	return fmt.Errorf("%s", sanitizeErrorMessage(err.Error()))
 }
@@ -1063,20 +1080,20 @@ func sanitizeErrorMessage(msg string) string {
 	// Remove "Did you mean" suggestions that expose table names
 	// Pattern: Did you mean "table_name"?
 	msg = didYouMeanRegex.ReplaceAllString(msg, "")
-	
+
 	// Remove "Did you mean" with single quotes
 	msg = didYouMeanSingleQuoteRegex.ReplaceAllString(msg, "")
-	
+
 	// Remove suggestions without quotes
 	msg = didYouMeanNoQuotesRegex.ReplaceAllString(msg, "")
-	
+
 	// Remove "Candidate tables:" followed by table list
 	msg = candidateTablesRegex.ReplaceAllString(msg, "")
-	
+
 	// Clean up any double spaces or trailing spaces that might be left
 	msg = whitespaceRegex.ReplaceAllString(msg, " ")
 	msg = strings.TrimSpace(msg)
-	
+
 	return msg
 }
 
@@ -1135,4 +1152,33 @@ func (m *OlapDBDriver) ExecuteQueryAndStreamCSV(ctx context.Context, sql string,
 
 	// Check for any errors encountered during iteration.
 	return rows.Err()
+}
+
+func (m *OlapDBDriver) ExecuteQueryAndStoreInS3(ctx context.Context, sql, format, outputPath string) error {
+	var formatOptions string
+	switch strings.ToUpper(format) {
+	case "CSV":
+		formatOptions = "(format 'csv', header)"
+	case "PARQUET":
+		formatOptions = "(format 'parquet')"
+	case "JSON":
+		formatOptions = "(format 'json')"
+	default:
+		return fmt.Errorf("unsupported format: %s. Please use csv, parquet, or json", format)
+	}
+
+	finalSQL := fmt.Sprintf("COPY (%s) TO '%s' %s;", sql, outputPath, formatOptions)
+
+	m.logger.Info("Executing export command", zap.String("sql", finalSQL))
+	if m.olapType == "duckdb" {
+		m.applyS3Settings()
+	}
+
+	rows, err := m.db.QueryContext(ctx, finalSQL)
+	if err != nil {
+		return err
+	}
+	rows.Close()
+
+	return nil
 }
