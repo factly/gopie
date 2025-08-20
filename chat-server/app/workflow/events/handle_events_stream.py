@@ -104,7 +104,8 @@ class EventStreamHandler:
 
         elif event_type == "on_chat_model_end":
             content = "\n"
-
+            if role == Role.INTERMEDIATE:
+                return None
         return content
 
     def _handle_custom_events(
