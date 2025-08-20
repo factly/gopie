@@ -429,7 +429,7 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 		return err
 	}
 
-	if ignoreErrors {
+	if ignoreErrors && format == "csv" {
 		lastParen := strings.LastIndex(readFunc, ")")
 		if lastParen != -1 {
 			// Injects ignore_errors=true into the read function call.
@@ -467,6 +467,8 @@ func (m *OlapDBDriver) createTableInternal(sourcePath, tableName, format string,
 			return fmt.Errorf("failed to apply S3 settings to transaction: %w", err)
 		}
 	}
+
+	m.logger.Info("generated sql", zap.String("createSql", createSql))
 
 	_, err = tx.Exec(createSql)
 	if err != nil {
@@ -758,7 +760,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 	}
 	m.logger.Debug("deparsed SQL query", zap.String("query", sqlQuery))
 
-	// 1. ATTACH statement
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE POSTGRES)`, connectionString, pgDBAlias) // Quoting alias just in case, though generated ones are usually safe.
 
 	m.logger.Debug("Executing ATTACH SQL", zap.String("alias", pgDBAlias))
@@ -770,7 +771,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 
 	var detachError error
 	defer func() {
-		// DETACH is also specific
 		detachSQLCmd := fmt.Sprintf(`DETACH "%s"`, pgDBAlias) // Quoted alias
 		m.logger.Debug("Executing DETACH SQL", zap.String("alias", pgDBAlias), zap.String("sql", detachSQLCmd))
 		if _, err := m.helperDB.Exec(detachSQLCmd); err != nil {
@@ -781,7 +781,6 @@ func (m *OlapDBDriver) createTableFromPostgresMotherDuck(connectionString, sqlQu
 		}
 	}()
 
-	// 2. CREATE TABLE ... AS ... statement
 	quotedTargetSchema := fmt.Sprintf("\"%s\"", m.dbName)
 	quotedTargetTableName := fmt.Sprintf("\"%s\"", tableName)
 
@@ -1170,7 +1169,7 @@ func (m *OlapDBDriver) ExecuteQueryAndStoreInS3(ctx context.Context, sql, format
 
 	finalSQL := fmt.Sprintf("COPY (%s) TO '%s' %s;", sql, outputPath, formatOptions)
 
-	m.logger.Info("Executing export command:\n%s\n", zap.String("sql", finalSQL))
+	m.logger.Info("Executing export command", zap.String("sql", finalSQL))
 	if m.olapType == "duckdb" {
 		m.applyS3Settings()
 	}
