@@ -50,7 +50,7 @@ type GopieConfig struct {
 	AIAgent         AIAgentConfig
 	InternalServer  InternalServerConfig
 	EnableZitadel   bool
-	DownloadsServer DownloadsServerConfig
+	DownloadsServer DownloadsConfig
 	EncryptionKey   string
 }
 
@@ -93,10 +93,8 @@ type AIAgentConfig struct {
 	Url string
 }
 
-type DownloadsServerConfig struct {
+type DownloadsConfig struct {
 	Bucket string
-	Enable bool
-	Url    string
 }
 
 type ZitadelConfig struct {
@@ -151,11 +149,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		}
 	}
 
-	if config.DownloadsServer.Enable {
-		validations = append(validations, validation{config.DownloadsServer.Url, "downloads url"})
-	} else {
-		validations = append(validations, validation{config.DownloadsServer.Bucket, "downloads bucket name"})
-	}
+	validations = append(validations, validation{config.DownloadsServer.Bucket, "downloads bucket name"})
 
 	if config.OlapDB.DB == "" {
 		return nil, fmt.Errorf("missing olapdb dbtype")
@@ -313,9 +307,7 @@ func LoadConfig() (*GopieConfig, error) {
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},
-		DownloadsServer: DownloadsServerConfig{
-			Enable: viper.GetBool("GOPIE_DOWNLOADS_USE_SERVER"),
-			Url:    viper.GetString("GOPIE_DOWNLOADS_SERVER_URL"),
+		DownloadsServer: DownloadsConfig{
 			Bucket: viper.GetString("GOPIE_DOWNLOADS_S3_BUCKET"),
 		},
 
