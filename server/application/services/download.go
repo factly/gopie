@@ -11,6 +11,8 @@ import (
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type DownloadsServiceParams struct {
@@ -67,41 +69,68 @@ func (s *DownloadsService) Delete(downloadID, userID, orgID string) error {
 
 func (s *DownloadsService) CreateDownloadAndStoreInS3(req *models.CreateDownloadRequest) (<-chan models.DownloadsSSEData, error) {
 	ctx := context.Background()
+	id, _ := uuid.NewV6()
+	jobIDStr := id.String()
+	req.ID = jobIDStr
 
-	downloadJob, err := s.store.CreateDownload(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create download record: %w", err)
+	sseChan := make(chan models.DownloadsSSEData, 10)
+
+	sendEvent := func(eventType, message string) {
+		eventPayload := SSEEvent{
+			DownloadID: jobIDStr,
+			Type:       eventType,
+			Message:    message,
+		}
+		payloadBytes, _ := json.Marshal(eventPayload)
+		sseMessage := fmt.Sprintf("data: %s\n\n", payloadBytes)
+		sseChan <- models.DownloadsSSEData{Data: []byte(sseMessage)}
 	}
 
-	jobIDStr := downloadJob.ID.String()
-	sseChan := make(chan models.DownloadsSSEData, 10)
+	handleFailure := func(failErr error) {
+		errMsg := failErr.Error()
+		failReq := &models.SetDownloadFailedRequest{ErrorMessage: errMsg}
+		s.store.SetDownloadAsFailed(ctx, jobIDStr, failReq)
+
+		errorPayload, _ := json.Marshal(map[string]string{"type": "error", "message": errMsg})
+		errorMsg := fmt.Sprintf("event: error\ndata: %s\n\n", errorPayload)
+		sseChan <- models.DownloadsSSEData{Data: []byte(errorMsg)}
+	}
 
 	go func() {
 		defer close(sseChan)
-
-		jobCreatedPayload, _ := json.Marshal(downloadJob)
-		jobCreatedMsg := fmt.Sprintf("event: job_created\ndata: %s\n\n", jobCreatedPayload)
-		sseChan <- models.DownloadsSSEData{Data: []byte(jobCreatedMsg)}
-
-		sendEvent := func(eventType, message string) {
-			eventPayload := SSEEvent{
-				DownloadID: jobIDStr,
-				Type:       eventType,
-				Message:    message,
-			}
-			payloadBytes, _ := json.Marshal(eventPayload)
-			sseMessage := fmt.Sprintf("data: %s\n\n", payloadBytes)
-			sseChan <- models.DownloadsSSEData{Data: []byte(sseMessage)}
+		sendEvent("status_update", "checking for existing valid urls")
+		existingDownload, exists, err := s.store.FindExistingValidDownload(ctx, req.DatasetID, req.UserID, req.OrgID, req.SQL, req.Format)
+		if err != nil {
+			s.logger.Error("Error fetching existing download...")
+			handleFailure(fmt.Errorf("error fetching existing download %w", err))
+			return
 		}
 
-		handleFailure := func(failErr error) {
-			errMsg := failErr.Error()
-			failReq := &models.SetDownloadFailedRequest{ErrorMessage: errMsg}
-			s.store.SetDownloadAsFailed(ctx, jobIDStr, failReq)
+		if exists {
+			sendEvent("status_update", "valid url exists, checking if it is the latest")
+			dataset, err := s.store.GetDataset(ctx, req.DatasetID, req.OrgID)
+			if err != nil {
+				s.logger.Error("Error fetching dataset info...")
+				handleFailure(fmt.Errorf("error fetching datast info %w", err))
+				return
+			}
+			if !(dataset.UpdatedAt.After(existingDownload.CreatedAt)) {
+				if existingDownload.Status == "pending" || existingDownload.Status == "processing" {
+					sendEvent("status_update", "An identical download request is already in progress. We'll notify you when it's complete.")
+					return
+				}
+				sendEvent("status_update", "founding existing presigned url")
+				sendEvent("complete", *existingDownload.PreSignedURL)
+				return
+			}
+		}
+		sendEvent("status_update", "creating new download job")
 
-			errorPayload, _ := json.Marshal(map[string]string{"type": "error", "message": errMsg})
-			errorMsg := fmt.Sprintf("event: error\ndata: %s\n\n", errorPayload)
-			sseChan <- models.DownloadsSSEData{Data: []byte(errorMsg)}
+		downloadJob, err := s.store.CreateDownload(ctx, req)
+		if err != nil {
+			s.logger.Error("Error creating downloadin job", zap.Error(err))
+			handleFailure(fmt.Errorf("Error creating donwloading job %w", err))
+			return
 		}
 
 		if _, err := s.store.SetDownloadToProcessing(ctx, jobIDStr); err != nil {

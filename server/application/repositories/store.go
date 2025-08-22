@@ -64,4 +64,6 @@ type DownloadsRepository interface {
 	SetDownloadToProcessing(ctx context.Context, id string) (*models.Download, error)
 	SetDownloadAsCompleted(ctx context.Context, id string, req *models.SetDownloadCompletedRequest) (*models.Download, error)
 	SetDownloadAsFailed(ctx context.Context, id string, req *models.SetDownloadFailedRequest) (*models.Download, error)
+	FindExistingValidDownload(ctx context.Context, datasetID, userID, orgID, sql, format string) (*models.Download, bool, error)
+	GetDataset(ctx context.Context, datasetID string, orgID string) (*models.Dataset, error)
 }

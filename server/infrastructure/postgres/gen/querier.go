@@ -31,6 +31,7 @@ type Querier interface {
 	DeleteDownload(ctx context.Context, arg DeleteDownloadParams) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
+	FindExistingValidDownload(ctx context.Context, arg FindExistingValidDownloadParams) (Download, error)
 	GetChatById(ctx context.Context, id string) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
@@ -45,6 +46,7 @@ type Querier interface {
 	GetProject(ctx context.Context, arg GetProjectParams) (GetProjectRow, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
+	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
 	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
 	ListAllDatasets(ctx context.Context) ([]Dataset, error)
 	ListAllDatasetsFromProject(ctx context.Context, projectID string) ([]Dataset, error)
