@@ -1,7 +1,7 @@
 # All possible options and their defaults: https://github.com/zitadel/zitadel/blob/main/cmd/setup/steps.yaml
 
 FirstInstance:
-  InstanceName: GoPie
+  InstanceName: Gopie
   Org:
     Name: Factly
     Human:

@@ -108,7 +108,7 @@ Sentry.init({
               labelComments: "What were you doing when this error occurred?",
               labelClose: "Close",
               labelSubmit: "Send Report",
-              successMessage: "Thank you for your feedback! This helps us improve GoPie.",
+              successMessage: "Thank you for your feedback! This helps us improve Gopie.",
               onLoad: () => {
                 console.log("Crash report dialog opened for event:", event.event_id);
               },

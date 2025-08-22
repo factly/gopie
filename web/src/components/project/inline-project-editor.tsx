@@ -39,6 +39,16 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       toast.error("Project name is required");
       return;
     }
+    
+    if (name.trim().length < 3 || name.trim().length > 50) {
+      toast.error("Project name must be between 3 and 50 characters");
+      return;
+    }
+    
+    if (description.trim().length < 10) {
+      toast.error("Project description must be at least 10 characters");
+      return;
+    }
 
     setIsUpdating(true);
     try {
@@ -130,13 +140,19 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
                 </Button>
               </div>
             </div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter project description"
-              className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
-              rows={3}
-            />
+            <div className="space-y-1">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
+                placeholder="Enter project description"
+                className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
+                rows={3}
+                maxLength={1000}
+              />
+              <p className="text-xs text-muted-foreground">
+                {description.length}/1000 characters
+              </p>
+            </div>
             <Textarea
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}

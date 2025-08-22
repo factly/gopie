@@ -38,7 +38,7 @@ const formSchema = z.object({
   description: z
     .string()
     .min(10, "Description must be at least 10 characters")
-    .max(500, "Description must be less than 500 characters"),
+    .max(1000, "Description must be less than 1000 characters"),
   custom_prompt: z
     .string()
     .max(2000, "Custom prompt must be less than 2000 characters")
@@ -136,9 +136,13 @@ export function CreateProjectDialog() {
                     <Textarea
                       placeholder="Description of your project"
                       {...field}
+                      maxLength={1000}
                     />
                   </FormControl>
                   <FormMessage />
+                  <p className="text-xs text-muted-foreground">
+                    {field.value?.length || 0}/1000 characters
+                  </p>
                 </FormItem>
               )}
             />

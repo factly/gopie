@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/")
 async def root():
-    return {"message": "Welcome to the GoPie Chat Server API"}
+    return {"message": "Welcome to the Gopie Chat Server API"}
 
 
 @router.post("/chat/completions")

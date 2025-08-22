@@ -30,7 +30,7 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 	spec := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title":       "GoPie Project API - Dataset Endpoints",
+			"title":       "Gopie Project API - Dataset Endpoints",
 			"description": "API endpoints for all datasets in project: " + projectID,
 			"version":     "1.0.0",
 		},

@@ -38,12 +38,12 @@ type LoggerConfig struct {
 	Mode    string
 }
 
-type GoPieConfig struct {
+type GopieConfig struct {
 	Server          ServerConfig
 	S3              S3Config
 	Logger          LoggerConfig
 	OlapDB          OlapDBConfig
-	PortKey         PortKeyConfig
+	OpenAI          OpenAIConfig
 	Meterus         MeterusConfig
 	Postgres        PostgresConfig
 	Zitadel         ZitadelConfig
@@ -74,7 +74,7 @@ type MotherDuckConfig struct {
 	HelperDBDirPath string
 }
 
-type PortKeyConfig struct {
+type OpenAIConfig struct {
 	VirtualKey string
 	Apikey     string
 	BaseUrl    string
@@ -118,17 +118,17 @@ func initializeViper() error {
 	return nil
 }
 
-func validateConfig(config *GoPieConfig) (*GoPieConfig, error) {
+func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 	type validation struct {
 		value string
 		name  string
 	}
 
 	validations := []validation{
-		{config.PortKey.VirtualKey, "portkey virtual key"},
-		{config.PortKey.Apikey, "portkey api key"},
-		{config.PortKey.BaseUrl, "portkey base url"},
-		{config.PortKey.AIModel, "portkey ai model"},
+		{config.OpenAI.VirtualKey, "OpenAI virtual key"},
+		{config.OpenAI.Apikey, "OpenAI api key"},
+		{config.OpenAI.BaseUrl, "OpenAI base url"},
+		{config.OpenAI.AIModel, "OpenAI ai model"},
 		{config.Postgres.Host, "postgres host"},
 		{config.Postgres.Port, "postgres port"},
 		{config.Postgres.Database, "postgres database"},
@@ -248,14 +248,14 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DOWNLOADS_USE_SERVER", false)
 }
 
-func LoadConfig() (*GoPieConfig, error) {
+func LoadConfig() (*GopieConfig, error) {
 	if err := initializeViper(); err != nil {
 		return nil, err
 	}
 
 	setDefaults()
 
-	config := &GoPieConfig{
+	config := &GopieConfig{
 		Server: ServerConfig{
 			Host: viper.GetString("GOPIE_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_SERVER_PORT"),
@@ -280,7 +280,7 @@ func LoadConfig() (*GoPieConfig, error) {
 			DB:         viper.GetString("GOPIE_OLAPDB_DBTYPE"),
 			AccessMode: viper.GetString("GOPIE_OLAPDB_ACCESS_MODE"),
 		},
-		PortKey: PortKeyConfig{
+		OpenAI: OpenAIConfig{
 			AIModel:    viper.GetString("GOPIE_PORTKEY_MODEL"),
 			VirtualKey: viper.GetString("GOPIE_PORTKEY_VIRTUALKEY"),
 			Apikey:     viper.GetString("GOPIE_PORTKEY_APIKEY"),

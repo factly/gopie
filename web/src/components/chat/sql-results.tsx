@@ -446,9 +446,11 @@ export function SqlResults() {
                         <p className="text-xs font-medium text-muted-foreground mb-2">
                           Query that failed:
                         </p>
-                        <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
-                          {results.query}
-                        </pre>
+                        <div className="max-h-[300px] overflow-y-auto overflow-x-auto border border-muted/50 rounded">
+                          <pre className="text-xs text-muted-foreground whitespace-pre p-2">
+                            {results.query}
+                          </pre>
+                        </div>
                       </div>
                     )}
                     

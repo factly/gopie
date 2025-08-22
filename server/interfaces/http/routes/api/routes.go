@@ -12,7 +12,7 @@ type httpHandler struct {
 	driverSvc *services.OlapService
 	aiSvc     *services.AiDriver
 	logger    *logger.Logger
-	config    *config.GoPieConfig
+	config    *config.GopieConfig
 }
 
 func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, logger *logger.Logger) {
@@ -29,7 +29,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	datasets.NewHTTPHandler(router, datasetsSvc, driverSvc, logger)
 }
 
-func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GoPieConfig) {
+func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {
 	// httpHandler := httpHandler{logger: logger, config: config}
 	// router.Post("/authorize", httpHandler.authorize)
 }

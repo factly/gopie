@@ -14,7 +14,7 @@ import (
 
 var ZitadelInterceptor *middleware.Interceptor[*oauth.IntrospectionContext]
 
-func SetupZitadelInterceptor(cfg *config.GoPieConfig, logger *logger.Logger) {
+func SetupZitadelInterceptor(cfg *config.GopieConfig, logger *logger.Logger) {
 	ctx := context.Background()
 
 	zt := zitadel.New(cfg.Zitadel.Domain)

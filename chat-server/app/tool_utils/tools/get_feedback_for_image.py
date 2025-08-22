@@ -108,10 +108,11 @@ class Feedback(BaseModel):
 @tool
 async def get_feedback_for_image(
     png_path: str,
-    datasets: list[Dataset],
+    dataset_paths: list[str],
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
     feedback_count: Annotated[int, InjectedState("feedback_count")],
     user_query: Annotated[str, InjectedState("user_query")],
+    datasets: Annotated[list[Dataset] | None, InjectedState("datasets")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
     status_message: str = "",
@@ -122,12 +123,19 @@ async def get_feedback_for_image(
     This tool evaluates the visual design, data representation accuracy, query alignment, and best practices of the visualization.
     """
     if feedback_count < 2:
+        # Fetch datasets from state using dataset_paths
+        selected_datasets = []
+        if datasets:
+            for dataset in datasets:
+                if dataset.csv_path in dataset_paths:
+                    selected_datasets.append(dataset)
+        
         llm = get_configured_llm_for_node("visualize_data", config, schema=Feedback)
         image = await sandbox.files.read(png_path, format="bytes")
         prompt_value = prompt.invoke(
             {
                 "image_data": image_to_base64(image),
-                "dataset_description": format_dataset_info(datasets=datasets),
+                "dataset_description": format_dataset_info(datasets=selected_datasets),
                 "user_query": user_query,
             }
         )

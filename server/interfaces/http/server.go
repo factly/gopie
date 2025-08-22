@@ -11,7 +11,7 @@ import (
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/aiagent"
 	"github.com/factly/gopie/infrastructure/duckdb"
-	"github.com/factly/gopie/infrastructure/portkey"
+	"github.com/factly/gopie/infrastructure/openai"
 	"github.com/factly/gopie/infrastructure/postgres/store"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
 	"github.com/factly/gopie/infrastructure/postgres/store/database_source"
@@ -56,7 +56,7 @@ func ServeHttp() error {
 		return err
 	}
 
-	porkeyClient := portkey.NewPortKeyClient(cfg.PortKey, appLogger)
+	openaiClient := openai.NewOpenAIClient(cfg.OpenAI, appLogger)
 
 	// Store setup
 	storeRepo := store.NewPostgresStoreRepository(appLogger)
@@ -77,10 +77,10 @@ func ServeHttp() error {
 
 	olapService := services.NewOlapService(olap, appLogger)
 	// Initialize services
-	aiService := services.NewAiDriver(porkeyClient)
+	aiService := services.NewAiDriver(openaiClient)
 	projectService := services.NewProjectService(projectStore)
 	datasetService := services.NewDatasetService(datasetStore)
-	chatService := services.NewChatService(chatStore, porkeyClient, aiAgentRepo)
+	chatService := services.NewChatService(chatStore, openaiClient, aiAgentRepo)
 	aiAgentService := services.NewAIService(aiAgentRepo)
 	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, appLogger)
 	downloadService, err := services.NewDownloadsService(services.DownloadsServiceParams{

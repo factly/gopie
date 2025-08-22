@@ -19,12 +19,12 @@ import (
 type DatabaseSourceStore struct {
 	q      *gen.Queries
 	logger *logger.Logger
-	config *config.GoPieConfig
+	config *config.GopieConfig
 	db     *pgxpool.Pool
 }
 
 // NewDatabaseSourceStore creates a new DatabaseSourceStore
-func NewDatabaseSourceStore(db interface{}, logger *logger.Logger, config *config.GoPieConfig) repositories.DatabaseSourceStoreRepository {
+func NewDatabaseSourceStore(db interface{}, logger *logger.Logger, config *config.GopieConfig) repositories.DatabaseSourceStoreRepository {
 	return &DatabaseSourceStore{
 		q:      gen.New(db.(*pgxpool.Pool)),
 		logger: logger,

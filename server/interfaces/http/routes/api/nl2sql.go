@@ -101,14 +101,16 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	---------------------
 
 	NOTE: 
-	- IMP: Return only an syntactially correct DuckDB SQL and nothing else
+	- CRITICAL: The database is a DuckDB database. Return only an syntactially correct DuckDB SQL and nothing else.
+	- CRITICAL: Only read-only queries are allowed (SELECT, WITH, DESCRIBE, SUMMARIZE). 
+	- IMPORTANT: Use DuckDB specific functions where applicable.
+	- Return SUMMARIZE <table_name> as the queryt if user as for the summary of the table.
 	- Do not end the statement with a semicolon ';' 
 	- Do not wrap the response in code blocks or quotes
 	- Always use double quotes for the table and column names in SQL and use single quotes for values
 	- Do not send responses with patterns like "query: select * from table", "sql: select * from table" these are invalid. Valid response patterns are "select * from table", "select * from table where col = val"
 	- Use Table Schema provided in JSON to understand the columns and their data types
 	- Use Random 50 Rows provided in CSV to understand the data in the table. This is not complete data, just a sample of 50 rows to understand the data in the table. Use your understanding of the data to write the query.
-	- The data has 'All India' with totals for all states as a part of 'state' column. This should be excluded from queries when filtering on 'state' column or aggregating data based on 'state' column.
 	- If user asks for 'share' of column, it means the percentage of the column value in the total of the column. For example, if user asks for 'share of sales', it means the percentage of sales in the total sales.
 	- In some datasets 'Total' is part of categorical columns. Calculations go wrong in such cases. Please exclude 'Total' from calculations for all categorical fields in the queries. 
 	- Most tables have 'units' or 'unit' column which is explanation of the value columns in the row. Eg content for units: 'value in absolute number', 'amount_spent in rupees', 'capital in rupees, exports in percentage' where 'value', 'amount_spent, 'capital', 'exports' are column names. 

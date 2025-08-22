@@ -1,5 +1,5 @@
 {
-  description = "GoPie dev environment";
+  description = "Gopie dev environment";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -38,7 +38,7 @@
               if [ -f config.env ]; then
                 source config.env
               fi
-              echo "Welcome to GoPie Development Environment"
+              echo "Welcome to Gopie Development Environment"
               echo "Available Commands:"
               echo "  air        - Start development server with live reload"
               echo "  go test    - Run tests"

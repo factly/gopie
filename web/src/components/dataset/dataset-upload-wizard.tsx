@@ -272,12 +272,12 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       // If we don't have the URL yet, trigger upload through the CSV validation component
       if (!uploadURL && csvValidationRef.current) {
         console.log(
-          "No URL found, triggering S3 upload through CSV validation component..."
+          "No URL found, triggering storage upload through CSV validation component..."
         );
 
         try {
           // Show loading state
-          toast.loading("Uploading file to S3...", { id: "s3-upload" });
+          toast.loading("Uploading file to storage...", { id: "s3-upload" });
 
           // Trigger the upload through the ref
           await csvValidationRef.current.triggerUpload(
@@ -313,7 +313,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
             );
           }
 
-          toast.success("File uploaded to S3 successfully!", {
+          toast.success("File uploaded to storage successfully!", {
             id: "s3-upload",
           });
         } catch (error) {
@@ -388,7 +388,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               const bucket = pathParts[0];
               const key = pathParts.slice(1).join("/");
               s3Url = `s3://${bucket}/${key}`;
-              console.log("Parsed non-AWS S3 URL:", { bucket, key, s3Url });
             } else if (pathParts.length === 1) {
               // Only one path part, assume it's just the bucket
               s3Url = `s3://${pathParts[0]}`;
@@ -572,6 +571,29 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     } else {
       router.push(`/projects/${projectId}`);
     }
+  };
+
+  const handleCreateAnother = () => {
+    // Reset all state to start fresh
+    resetUploadState();
+    resetColumnMappings();
+    clearColumnDescriptions();
+    setCreatedDataset(null);
+    setUploadError(null);
+    setDatasetNameTouched(false);
+    setDatasetDescriptionTouched(false);
+    setDatasetCustomPromptTouched(false);
+    setDatasetCustomPrompt("");
+    hasAutoNavigatedRef.current = false;
+    setDescriptionsGenerated(false);
+    setDescriptionsError(null);
+    setIsGeneratingDescriptions(false);
+    setDatasetDescGenerated(false);
+    setDatasetDescError(null);
+    setIsGeneratingDatasetDesc(false);
+    
+    // Go back to step 1
+    setCurrentStep(1);
   };
 
   // const canProceedFromStep1 = uploadedFile && validationResult;
@@ -1354,8 +1376,11 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                 <p className="text-muted-foreground">
                   Your dataset has been uploaded and is ready for analysis.
                 </p>
-                <div className="pt-4">
+                <div className="pt-4 flex gap-3 justify-center">
                   <Button onClick={handleFinish}>View Dataset</Button>
+                  <Button variant="outline" onClick={handleCreateAnother}>
+                    Create Another Dataset
+                  </Button>
                 </div>
               </div>
             </div>

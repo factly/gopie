@@ -71,7 +71,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 	spec := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title":       "GoPie Dataset API - " + tableName,
+			"title":       "Gopie Dataset API - " + tableName,
 			"description": "API for interacting with " + tableName + " dataset",
 			"version":     "1.0.0",
 		},

@@ -21,7 +21,7 @@ import (
 )
 
 // serve starts the web application server
-func serve(cfg *config.GoPieConfig, params *ServerParams, ctx context.Context) error {
+func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
 	var authMiddleware []fiber.Handler
 	if cfg.EnableZitadel {
 		// zitadel interceptor setup
@@ -155,7 +155,7 @@ func serve(cfg *config.GoPieConfig, params *ServerParams, ctx context.Context) e
 	return nil
 }
 
-func serveInternal(cfg *config.GoPieConfig, params *ServerParams, ctx context.Context) error {
+func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
 	appLogger := params.Logger
 
 	appLogger.Info("Initializing internal server",
