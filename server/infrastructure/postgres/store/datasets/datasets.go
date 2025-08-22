@@ -1,0 +1,20 @@
+package datasets
+
+import (
+	"github.com/factly/gopie/application/repositories"
+	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/postgres/gen"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type PgDatasetStore struct {
+	q      *gen.Queries
+	logger *logger.Logger
+}
+
+func NewPostgresDatasetStore(db any, logger *logger.Logger) repositories.DatasetStoreRepository {
+	return &PgDatasetStore{
+		q:      gen.New(db.(*pgxpool.Pool)),
+		logger: logger,
+	}
+}

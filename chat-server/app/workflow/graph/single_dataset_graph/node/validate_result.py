@@ -1,0 +1,110 @@
+from typing import Literal
+
+from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
+
+from app.core.config import settings
+from app.models.message import AIMessage, ErrorMessage
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import configure_node
+from app.workflow.graph.single_dataset_graph.types import State
+
+RECOMMENDATION_LIST = ["pass_on_results", "rerun_query"]
+
+
+class ValidateResultOutput(BaseModel):
+    recommendation: Literal["pass_on_results", "rerun_query"] = Field(
+        description="Recommendation based on validation"
+    )
+    response: str = Field(
+        description="A brief, reasoning-based explanation of what to do next, what happened, what went wrong (if anything), and a brief analysis."
+    )
+    status_update_response: str = Field(
+        description="A short status update message to the user, no more than 50 characters"
+    )
+
+
+@configure_node(
+    role="intermediate",
+    progress_message="Validating query result...",
+)
+async def validate_result(state: State, config: RunnableConfig) -> dict:
+    """
+    Validate the query result using a language model and return the validation outcome, updated retry count, and workflow messages.
+
+    If the language model's recommendation is "rerun_query", the retry count is incremented.
+    If the recommendation is not recognized, an error is raised and an error message is returned in the messages list.
+    On successful validation, returns the parsed validation result and an intermediate step message;
+    on failure, returns `None` for the validation result and an error message.
+
+    Returns:
+        dict: A dictionary containing the updated `retry_count`, the `validation_result` (or `None` on error), and a list of workflow messages.
+    """
+    query_result = state.get("query_result", None)
+    retry_count = state.get("retry_count", 0)
+
+    # Validate the result with the LLM
+    try:
+        chain = get_prompt_llm_chain(
+            "validate_result",
+            config,
+            schema=ValidateResultOutput,
+        )
+        parsed_response = await chain.ainvoke({"prev_query_result": query_result})
+
+        recommendation = parsed_response.recommendation
+        response = parsed_response.response
+        status_update_response = parsed_response.status_update_response
+
+        if recommendation not in RECOMMENDATION_LIST:
+            raise ValueError(f"Invalid recommendation: {recommendation}")
+
+        if recommendation == "rerun_query":
+            retry_count += 1
+
+        await adispatch_custom_event(
+            "gopie-agent",
+            {
+                "content": status_update_response,
+            },
+        )
+
+        return {
+            "retry_count": retry_count,
+            "messages": [AIMessage(content=response)],
+            "recommendation": recommendation,
+            "validation_result": response,
+        }
+
+    except Exception as e:
+        return {
+            "retry_count": retry_count,
+            "messages": [
+                ErrorMessage(content=f"Validation error: {str(e)}. Proceeding with response.")
+            ],
+        }
+
+
+async def route_result_validation(state: State) -> str:
+    """
+    Determine the next workflow action based on the validation result, retry count, and last message.
+
+    Returns:
+        str: The recommended action, either "pass_on_results" or "rerun_query", based on validation outcome and workflow state.
+    """
+    recommendation = state.get("recommendation", "pass_on_results")
+    retry_count = state.get("retry_count", 0)
+    last_message = state.get("messages", [])[-1]
+
+    if (
+        recommendation == "pass_on_results"
+        or retry_count >= settings.MAX_VALIDATION_RETRY_COUNT
+        or isinstance(last_message, ErrorMessage)
+    ):
+        return "pass_on_results"
+
+    if recommendation in RECOMMENDATION_LIST:
+        return recommendation
+
+    return "pass_on_results"

@@ -1,0 +1,44 @@
+package chats
+
+import (
+	"github.com/factly/gopie/interfaces/http/middleware"
+	"github.com/gofiber/fiber/v2"
+)
+
+// GetChatDetails godoc
+// @Summary Get chat details
+// @Description Retrieve detailed information about a specific chat by its ID
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param chatID path string true "Chat ID"
+// @Param userID header string true "User ID"
+// @Success 200 {object} map[string]interface{} "Chat details retrieved successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request - Chat ID is required"
+// @Failure 401 {object} map[string]interface{} "Unauthorized - User ID is required"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /v1/api/chat/{chatID} [get]
+func (h *httpHandler) details(ctx *fiber.Ctx) error {
+	chatID := ctx.Params("chatID")
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	chat, err := h.chatSvc.GetChatByID(chatID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching chat details",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	if chat.CreatedBy != userID && chat.Visibility != "public" {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":   "Forbidden",
+			"message": "You do not have permission to view this chat",
+			"code":    fiber.StatusForbidden,
+		})
+	}
+
+	return ctx.JSON(map[string]any{
+		"data": chat,
+	})
+}

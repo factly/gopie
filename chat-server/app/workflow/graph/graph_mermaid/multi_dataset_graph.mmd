@@ -1,0 +1,41 @@
+---
+config:
+  flowchart:
+    curve: basis
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	generate_subqueries(generate_subqueries)
+	identify_datasets(identify_datasets)
+	analyze_query(analyze_query)
+	plan_query(plan_query)
+	execute_query(execute_query)
+	analyze_dataset(analyze_dataset)
+	stream_updates(stream_updates)
+	validate_result(validate_result)
+	tools(tools)
+	route_response(route_response)
+	pass_on_results(pass_on_results)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> analyze_query;
+	analyze_dataset --> plan_query;
+	analyze_query -.-> generate_subqueries;
+	analyze_query -. &nbsp;basic_conversation&nbsp; .-> route_response;
+	analyze_query -.-> tools;
+	execute_query --> validate_result;
+	generate_subqueries --> identify_datasets;
+	identify_datasets -.-> analyze_dataset;
+	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
+	plan_query --> execute_query;
+	route_response -.-> pass_on_results;
+	route_response -.-> stream_updates;
+	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;
+	stream_updates -. &nbsp;next_sub_query&nbsp; .-> identify_datasets;
+	tools --> analyze_query;
+	validate_result -. &nbsp;reidentify_datasets&nbsp; .-> identify_datasets;
+	validate_result -. &nbsp;replan&nbsp; .-> plan_query;
+	validate_result -.-> route_response;
+	pass_on_results --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

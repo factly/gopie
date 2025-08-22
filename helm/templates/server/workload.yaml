@@ -1,0 +1,60 @@
+---
+{{- if eq .Values.dbtype "motherduck" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "server.name" . }}
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{ include "server.labels" . | nindent 4 }}
+  annotations:
+    {{ include "server.annotations" . | nindent 4 }}
+spec:
+{{- if not .Values.deployment.autoscaling.enabled }}
+  replicas: {{ .Values.deployment.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{ include "server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "server.PodLabels" . | nindent 8 }}
+      annotations:
+        {{ include "server.PodAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "deployment.pod" . | nindent 6 }}
+
+{{- else if eq .Values.dbtype "duckdb" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "server.name" . }}
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{ include "server.labels" . | nindent 4 }}
+  annotations:
+    {{ include "server.annotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.stateful.replicaCount }}
+  selector:
+    matchLabels:
+      {{ include "server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "server.PodLabels" . | nindent 8 }}
+      annotations:
+        {{ include "server.PodAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "stateful.pod" . | nindent 6 }}
+
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Gi
+{{- end }}

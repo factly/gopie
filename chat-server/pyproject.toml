@@ -1,0 +1,75 @@
+[project]
+name = "gopie-chat-server"
+version = "0.1.0"
+description = "A multidataset-SQL agent for GoPie"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+  "aioboto3>=14.3.0",
+  "e2b-code-interpreter>=1.5.1",
+  "fastapi[standard]>=0.115.12",
+  "langchain>=0.3.21",
+  "langchain-community>=0.3.20",
+  "langchain-openai>=0.3.9",
+  "langchain-qdrant>=0.2.0",
+  "langgraph==0.5.2",
+  "langgraph-cli[inmem]>=0.3.3",
+  "langsmith>=0.3.42",
+  "logging>=0.4.9.6",
+  "portkey-ai>=1.11.1",
+  "pre-commit>=4.2.0",
+  "pydantic>=2.10.6",
+  "qdrant-client>=1.13.3",
+]
+
+[tool.black]
+line-length = 100
+include = '\.pyi?$'
+exclude = '''
+/(
+   .eggs
+  | .git
+  | .venv
+  | .eggs
+  | .cache
+  | __pycache__
+  | _build
+  | build
+  | dist
+  | app/core/system_prompt.py
+  | app/workflow/prompts/
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests/e2e", "tests/unit"]
+addopts = """
+    --tb=short
+    --strict-markers
+    --durations=5
+    -v
+"""
+pythonpath = ["."]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+markers = [
+  "e2e: marks tests as end-to-end (deselect with '-m \"not e2e\"')",
+  "unit: marks tests as unit tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+cache_dir = "tests/.pytest_cache"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4.1",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cache>=1.0",
+  "pytest-sugar>=1.0.0",
+  "pytest-testmon>=2.1.3",
+  "pytest-xdist>=3.8.0",
+]

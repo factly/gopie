@@ -1,0 +1,18 @@
+[flake8]
+ignore = E203,W503
+max-line-length = 200
+max-complexity = 18
+exclude =
+    .eggs,
+    *.egg-info,
+    .git,
+    .hg,
+    .tox,
+    __pycache__,
+    .vscode,
+    .venv,
+    __init__.py,
+    .mypy_cache,
+    .pytest_cache,
+    app/workflow/prompts/*,
+    tests/*,

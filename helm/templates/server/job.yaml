@@ -1,0 +1,57 @@
+{{- if .Values.reIndexingJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "server.name" . }}-re-indexing-job
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{- include "server.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.reIndexingJob.backoffLimit | default 1 }}
+  ttlSecondsAfterFinished: {{ .Values.reIndexingJob.ttlSecondsAfterFinished | default 3600 }}
+  template:
+    metadata:
+      labels:
+        {{- include "server.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: re-indexing
+          image: "{{ .Values.reIndexingJob.image.repository }}:{{ .Values.reIndexingJob.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.reIndexingJob.image.pullPolicy | default "IfNotPresent" }}
+          {{- if .Values.reIndexingJob.command }}
+          command: {{- toYaml .Values.reIndexingJob.command | nindent 12 }}
+          {{- end }}
+          {{- if .Values.reIndexingJob.args }}
+          args: {{- toYaml .Values.reIndexingJob.args | nindent 12 }}
+          {{- end }}
+          env:
+            - name: GOPIE_POSTGRES_HOST
+              value: {{ printf "%s-postgresql" .Release.Name | quote }}
+            - name: GOPIE_POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database }}
+            - name: GOPIE_POSTGRES_USER
+              value: {{ .Values.postgresql.auth.username }}
+            - name: GOPIE_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-postgresql" .Release.Name }}
+                  key: postgres-password
+            - name: GOPIE_AIAGENT_URL
+              value: {{ printf "http://%s-chatserver:%v" .Release.Name (.Values.chatserver.service.portNumber | default 8000) }}
+          {{- if .Values.reIndexingJob.env }}
+          {{- range .Values.reIndexingJob.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+          {{- end }}
+          {{- end }}
+          volumeMounts:
+            {{- range .Values.reIndexingJob.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              subPath: {{ .subPath | default "" }}
+              readOnly: {{ .readOnly | default false }}
+            {{- end }}
+      volumes:
+        {{- toYaml .Values.reIndexingJob.volumes | nindent 8 }}
+{{- end }}
