@@ -1,0 +1,21 @@
+rank,team,win,loss,draw,goals,conceded,points,last5,top_scorer,keeper
+1,Liverpool,25,4,8,85,40,83,W W L D L,Mohamed Salah,Alisson
+2,Arsenal,19,4,14,67,33,71,W D L D W,Kai Havertz,David Raya
+3,Manchester City,20,9,8,70,44,68,W W W D W,Erling Haaland,Ederson
+4,Newcastle Utd,20,11,6,68,46,66,L W D W L,Alexander Isak,Nick Pope
+5,Chelsea,19,9,9,63,43,66,W W W L W,Cole Palmer,Robert Sánchez
+6,Aston Villa,19,9,9,58,49,66,W L W W W,Ollie Watkins,Emiliano Martínez
+7,Nott'ham Forest,19,10,8,58,45,65,W L D D W,Chris Wood,Matz Sels
+8,Brighton,15,9,13,62,58,58,L W D W W,"Kaoru Mitoma, Danny Welbeck...",Bart Verbruggen
+9,Brentford,16,14,7,65,56,55,W W W W L,"Yoane Wissa, Bryan Mbeumo",Mark Flekken
+10,Fulham,15,13,9,54,52,54,L W L L W,Raúl Jiménez,Bernd Leno
+11,Bournemouth,14,12,11,56,46,53,D D W L L,Justin Kluivert,Kepa Arrizabalaga
+12,Crystal Palace,13,11,13,50,50,52,D D D W W,Jean-Philippe Mateta,Dean Henderson
+13,Everton,10,12,15,41,44,45,L L D W W,Iliman Ndiaye,Jordan Pickford
+14,Wolves,12,20,5,53,68,41,W W L L L,Matheus Cunha,José Sá
+15,West Ham,10,17,10,43,61,40,D L D W L,Jarrod Bowen,Alphonse Areola
+16,Manchester Utd,10,18,9,42,54,39,L D L L L,Bruno Fernandes,André Onana
+17,Tottenham,11,21,5,63,61,38,L L D L L,Brennan Johnson,Guglielmo Vicario
+18,Leicester City,6,24,7,33,78,25,L L W D W,Jamie Vardy,Mads Hermansen
+19,Ipswich Town,4,23,10,35,79,22,L L D L L,Liam Delap,Arijanet Muric
+20,Southampton,2,29,6,25,84,12,D L L D L,Paul Onuachu,Aaron Ramsdale
