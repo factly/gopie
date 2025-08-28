@@ -44,7 +44,7 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	}
 
 	// Validate table exists
-	schemaRes, err := h.driverSvc.GetTableSchema(body.TableName)
+	schemaRes, err := h.olapSvc.GetTableSchema(body.TableName)
 	if err != nil {
 		h.logger.Error("Error getting table schema", zap.Error(err))
 		if strings.Contains(err.Error(), "does not exist") {
@@ -68,7 +68,7 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusOK).JSON(sql)
 	}
 
-	randomNRows, err := h.driverSvc.ExecuteQuery(fmt.Sprintf("select * from %s order by random() limit 50", body.TableName))
+	randomNRows, err := h.olapSvc.ExecuteQuery(fmt.Sprintf("select * from %s order by random() limit 50", body.TableName))
 	if err != nil {
 		h.logger.Error("Error fetching sample data", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

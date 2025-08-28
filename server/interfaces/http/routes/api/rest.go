@@ -44,7 +44,7 @@ func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 		ImposeLimits: imposeLimits,
 	}
 
-	result, err := h.driverSvc.RestQuery(params)
+	result, err := h.olapSvc.RestQuery(params)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 

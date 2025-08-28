@@ -27,16 +27,3 @@ func NewHTTPHandler(router fiber.Router, datasetsSvc *services.DatasetService, o
 	datasetsRouter.Get("/:datasetID/column-descriptions", handler.getColumnDescriptions)
 	datasetsRouter.Patch("/:datasetID/column-descriptions", handler.updateColumnDescriptions)
 }
-
-func NewHTTPHandlerInternal(router fiber.Router, datasetsSvc *services.DatasetService, olapSvc *services.OlapService, logger *logger.Logger) {
-	handler := &httpHandler{
-		datasetsSvc: datasetsSvc,
-		olapSvc:     olapSvc,
-		logger:      logger,
-	}
-
-	datasetsRouter := router.Group("/datasets")
-	datasetsRouter.Get("/:datasetID", handler.getByID)
-	datasetsRouter.Get("/:datasetID/column-descriptions", handler.getColumnDescriptions)
-	datasetsRouter.Patch("/:datasetID/column-descriptions", handler.updateColumnDescriptions)
-}
