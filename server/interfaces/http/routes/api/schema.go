@@ -20,7 +20,7 @@ import (
 func (h *httpHandler) schemas(ctx *fiber.Ctx) error {
 	tableName := ctx.Params("tableName")
 
-	schema, err := h.driverSvc.GetTableSchema(tableName)
+	schema, err := h.olapSvc.GetTableSchema(tableName)
 	if err != nil {
 		h.logger.Error("Error getting table schema", zap.Error(err))
 		if strings.HasPrefix(err.Error(), "DuckDB") {

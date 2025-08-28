@@ -75,10 +75,10 @@ type MotherDuckConfig struct {
 }
 
 type OpenAIConfig struct {
-	VirtualKey string
-	Apikey     string
-	BaseUrl    string
-	AIModel    string
+	Options string
+	Apikey  string
+	BaseUrl string
+	AIModel string
 }
 
 type PostgresConfig struct {
@@ -125,7 +125,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 	}
 
 	validations := []validation{
-		{config.OpenAI.VirtualKey, "OpenAI virtual key"},
+		{config.OpenAI.Options, "OpenAI virtual key"},
 		{config.OpenAI.Apikey, "OpenAI api key"},
 		{config.OpenAI.BaseUrl, "OpenAI base url"},
 		{config.OpenAI.AIModel, "OpenAI ai model"},
@@ -281,10 +281,10 @@ func LoadConfig() (*GopieConfig, error) {
 			AccessMode: viper.GetString("GOPIE_OLAPDB_ACCESS_MODE"),
 		},
 		OpenAI: OpenAIConfig{
-			AIModel:    viper.GetString("GOPIE_PORTKEY_MODEL"),
-			VirtualKey: viper.GetString("GOPIE_PORTKEY_VIRTUALKEY"),
-			Apikey:     viper.GetString("GOPIE_PORTKEY_APIKEY"),
-			BaseUrl:    viper.GetString("GOPIE_PORTKEY_BASEURL"),
+			AIModel: viper.GetString("GOPIE_OPENAI_MODEL"),
+			Options: viper.GetString("GOPIE_OPENAI_OPTIONS"),
+			Apikey:  viper.GetString("GOPIE_OPENAI_APIKEY"),
+			BaseUrl: viper.GetString("GOPIE_OPENAI_BASEURL"),
 		},
 		Meterus: MeterusConfig{
 			Addr:   viper.GetString("GOPIE_METERUS_ADDR"),

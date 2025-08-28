@@ -61,7 +61,7 @@ func (h *httpHandler) sql(ctx *fiber.Ctx) error {
 
 	}
 
-	result, err := h.driverSvc.SqlQuery(body.Query, imposeLimits, body.Limit, body.Offset)
+	result, err := h.olapSvc.SqlQuery(body.Query, imposeLimits, body.Limit, body.Offset)
 	if err != nil {
 		h.logger.Error("Error executing query", zap.Error(err))
 

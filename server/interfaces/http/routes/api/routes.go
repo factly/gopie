@@ -9,14 +9,15 @@ import (
 )
 
 type httpHandler struct {
-	driverSvc *services.OlapService
-	aiSvc     *services.AiDriver
-	logger    *logger.Logger
-	config    *config.GopieConfig
+	olapSvc     *services.OlapService
+	datasetsSvc *services.DatasetService
+	aiSvc       *services.AiDriver
+	logger      *logger.Logger
+	config      *config.GopieConfig
 }
 
 func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, logger *logger.Logger) {
-	httpHandler := httpHandler{driverSvc, aiSvc, logger, nil}
+	httpHandler := httpHandler{driverSvc, datasetsSvc, aiSvc, logger, nil}
 	router.Post("/sql", httpHandler.sql)
 	router.Get("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
@@ -32,4 +33,13 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {
 	// httpHandler := httpHandler{logger: logger, config: config}
 	// router.Post("/authorize", httpHandler.authorize)
+}
+
+func InternalRoutes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, logger *logger.Logger) {
+	httpHandler := httpHandler{driverSvc, datasetsSvc, aiSvc, logger, nil}
+	router.Post("/sql", httpHandler.sql)
+	router.Get("/tables/:tableName", httpHandler.rest)
+	router.Post("/nl2sql", httpHandler.nl2sql)
+	router.Get("/schemas/:tableName", httpHandler.schemas)
+	router.Get("/summary/:tableName", httpHandler.summary)
 }

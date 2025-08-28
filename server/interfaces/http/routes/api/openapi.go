@@ -17,7 +17,7 @@ func (h *httpHandler) datasetOpenAPI(c *fiber.Ctx) error {
 	}
 
 	// Fetch the actual schema for this table to include in the OpenAPI spec
-	schema, err := h.driverSvc.GetTableSchema(tableName)
+	schema, err := h.olapSvc.GetTableSchema(tableName)
 	if err != nil {
 		h.logger.Error("Error getting table schema for OpenAPI spec", zap.Error(err))
 		// Continue with empty schema if we can't fetch it
