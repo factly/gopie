@@ -8,6 +8,7 @@ import (
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/sashabaranov/go-openai"
@@ -38,8 +39,10 @@ func (t *defaultHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 func NewOpenAIClient(cfg config.OpenAIConfig, logger *logger.Logger) *OpenAIClient {
 	// set OpenAI config headers for request
 	header := http.Header{}
-	header.Set("x-portkey-virtual-key", cfg.VirtualKey)
-	header.Set("x-portkey-api-key", cfg.Apikey)
+
+	for key, value := range pkg.ParseConfigOptions(cfg.Options) {
+		header.Set(key, value)
+	}
 
 	// create custom http client for OpenAI to work
 	httpClient := &http.Client{
@@ -50,7 +53,7 @@ func NewOpenAIClient(cfg config.OpenAIConfig, logger *logger.Logger) *OpenAIClie
 	}
 
 	// X is used instead of an actual api_key because it is handled by the proxy
-	oaConfig := openai.DefaultConfig("X")
+	oaConfig := openai.DefaultConfig(cfg.Apikey)
 	oaConfig.HTTPClient = httpClient
 	oaConfig.BaseURL = cfg.BaseUrl
 

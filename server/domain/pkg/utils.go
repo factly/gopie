@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
@@ -69,4 +70,24 @@ func ChatMessageFromError(err error) models.ChatMessage {
 			},
 		},
 	}
+}
+
+func ParseConfigOptions(options string) map[string]string {
+	if strings.TrimSpace(options) == "" {
+		return make(map[string]string)
+	}
+	pairs := strings.Split(options, ",")
+	opts := make(map[string]string, len(pairs))
+
+	for _, pair := range pairs {
+		key, value, found := strings.Cut(pair, "=")
+		key = strings.TrimSpace(key)
+
+		if !found || key == "" {
+			continue
+		}
+
+		opts[key] = value
+	}
+	return opts
 }

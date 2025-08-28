@@ -191,7 +191,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 
 	apiGroup := app.Group("/v1/api")
 
-	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, appLogger)
+	api.InternalRoutes(apiGroup, params.OlapService, params.AIService, params.DatasetService, appLogger)
 
 	projectApi.InternalRoutes(apiGroup.Group("/projects"), projectApi.RouterParams{
 		Logger:         appLogger,
