@@ -24,6 +24,8 @@ type Querier interface {
 	CreateDownload(ctx context.Context, arg CreateDownloadParams) (Download, error)
 	CreateFailedDatasetUpload(ctx context.Context, arg CreateFailedDatasetUploadParams) (FailedDatasetUpload, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	DatasetWithIDsBelongsToOrg(ctx context.Context, arg DatasetWithIDsBelongsToOrgParams) (bool, error)
+	DatasetWithNamesBelongsToOrg(ctx context.Context, arg DatasetWithNamesBelongsToOrgParams) (bool, error)
 	DeleteChat(ctx context.Context, arg DeleteChatParams) error
 	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
 	DeleteDataset(ctx context.Context, arg DeleteDatasetParams) error
@@ -45,6 +47,7 @@ type Querier interface {
 	GetProject(ctx context.Context, arg GetProjectParams) (GetProjectRow, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
+	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
 	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
 	ListAllDatasets(ctx context.Context) ([]Dataset, error)
 	ListAllDatasetsFromProject(ctx context.Context, projectID string) ([]Dataset, error)
@@ -55,6 +58,7 @@ type Querier interface {
 	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
 	ListPendingDownloads(ctx context.Context) ([]Download, error)
 	ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error)
+	ProjectsBelongToOrg(ctx context.Context, arg ProjectsBelongToOrgParams) (bool, error)
 	RemoveDatasetFromProject(ctx context.Context, arg RemoveDatasetFromProjectParams) error
 	SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error)
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)

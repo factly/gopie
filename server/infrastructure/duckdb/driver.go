@@ -19,6 +19,7 @@ import (
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/infrastructure/duckdb/duckdbsql"
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/marcboeker/go-duckdb/v2"
@@ -410,6 +411,21 @@ func (m *OlapDBDriver) renameTableColumns(tx *sql.Tx, tableName string, alterCol
 	}
 	logger.Info("successfully renamed columns", zap.String("tableName", tableName))
 	return nil
+}
+
+func (m *OlapDBDriver) TableNames(sql string) ([]string, error) {
+	ast, err := duckdbsql.Parse(m.db, sql)
+	if err != nil {
+		m.logger.Error("failed to parse SQL for table name extraction", zap.String("sql", sql), zap.Error(err))
+		return nil, fmt.Errorf("failed to parse SQL: %w", err)
+	}
+
+	tableNames, err := ast.TableNames()
+	if err != nil {
+		m.logger.Error("failed to extract table names from AST", zap.String("sql", sql), zap.Error(err))
+		return nil, fmt.Errorf("failed to extract table names: %w", err)
+	}
+	return tableNames, nil
 }
 
 // createTableInternal is the shared logic for CreateTable and CreateTableFromS3.

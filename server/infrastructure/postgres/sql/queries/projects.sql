@@ -60,3 +60,18 @@ select count(*) from projects where org_id = $1;
 
 -- name: GetProjectByID :one
 select * from projects where id = $1;
+
+-- name: ProjectsBelongToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM projects
+WHERE id = ANY($1) AND org_id = $2;
+
+-- name: DatasetWithNamesBelongsToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM datasets
+WHERE name = ANY($1) AND org_id = $2;
+
+-- name: DatasetWithIDsBelongsToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM datasets
+WHERE id = ANY($1) AND org_id = $2;

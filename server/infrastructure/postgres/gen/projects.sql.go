@@ -56,6 +56,42 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 	return i, err
 }
 
+const datasetWithIDsBelongsToOrg = `-- name: DatasetWithIDsBelongsToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM datasets
+WHERE id = ANY($1) AND org_id = $2
+`
+
+type DatasetWithIDsBelongsToOrgParams struct {
+	Cardinality interface{}
+	OrgID       pgtype.Text
+}
+
+func (q *Queries) DatasetWithIDsBelongsToOrg(ctx context.Context, arg DatasetWithIDsBelongsToOrgParams) (bool, error) {
+	row := q.db.QueryRow(ctx, datasetWithIDsBelongsToOrg, arg.Cardinality, arg.OrgID)
+	var all_belong_to_org bool
+	err := row.Scan(&all_belong_to_org)
+	return all_belong_to_org, err
+}
+
+const datasetWithNamesBelongsToOrg = `-- name: DatasetWithNamesBelongsToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM datasets
+WHERE name = ANY($1) AND org_id = $2
+`
+
+type DatasetWithNamesBelongsToOrgParams struct {
+	Cardinality interface{}
+	OrgID       pgtype.Text
+}
+
+func (q *Queries) DatasetWithNamesBelongsToOrg(ctx context.Context, arg DatasetWithNamesBelongsToOrgParams) (bool, error) {
+	row := q.db.QueryRow(ctx, datasetWithNamesBelongsToOrg, arg.Cardinality, arg.OrgID)
+	var all_belong_to_org bool
+	err := row.Scan(&all_belong_to_org)
+	return all_belong_to_org, err
+}
+
 const deleteProject = `-- name: DeleteProject :exec
 delete from projects where id = $1 and org_id = $2
 `
@@ -183,6 +219,24 @@ func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const projectsBelongToOrg = `-- name: ProjectsBelongToOrg :one
+SELECT count(*) = cardinality($1) AS all_belong_to_org
+FROM projects
+WHERE id = ANY($1) AND org_id = $2
+`
+
+type ProjectsBelongToOrgParams struct {
+	Cardinality interface{}
+	OrgID       pgtype.Text
+}
+
+func (q *Queries) ProjectsBelongToOrg(ctx context.Context, arg ProjectsBelongToOrgParams) (bool, error) {
+	row := q.db.QueryRow(ctx, projectsBelongToOrg, arg.Cardinality, arg.OrgID)
+	var all_belong_to_org bool
+	err := row.Scan(&all_belong_to_org)
+	return all_belong_to_org, err
 }
 
 const searchProjects = `-- name: SearchProjects :many

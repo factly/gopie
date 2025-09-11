@@ -21,6 +21,8 @@ type ProjectStoreRepository interface {
 	SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error)
 	GetProjectByID(ctx context.Context, datasetID string) (*models.Project, error)
 	ListAllProjects(ctx context.Context) ([]*models.Project, error)
+	DatasetsBelongToOrg(ctx context.Context, datasetNames []string, orgID string) (bool, error)
+	ProjectsBelongToOrg(ctx context.Context, projectIDs []string, orgID string) (bool, error)
 }
 
 type DatasetStoreRepository interface {

@@ -50,6 +50,14 @@ func (service *ProjectService) List(query string, limit, offset int, orgID strin
 	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
 }
 
+func (service *ProjectService) ProjectsBelongToOrg(projectIDs []string, orgID string) (bool, error) {
+	return service.projectRepo.ProjectsBelongToOrg(context.Background(), projectIDs, orgID)
+}
+
+func (service *ProjectService) DatasetsBelongToOrg(datasetNames []string, orgID string) (bool, error) {
+	return service.projectRepo.DatasetsBelongToOrg(context.Background(), datasetNames, orgID)
+}
+
 func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {
 	return service.projectRepo.ListAllProjects(context.Background())
 }

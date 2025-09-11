@@ -3,6 +3,7 @@ package projects
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/factly/gopie/domain"
@@ -60,4 +61,42 @@ func (s *PostgresProjectStore) GetProjectByID(ctx context.Context, id string) (*
 		OrgID:        p.OrgID.String,
 		CustomPrompt: p.CustomPrompt.String,
 	}, nil
+}
+
+func (s *PostgresProjectStore) ProjectsBelongToOrg(ctx context.Context, projectIDs []string, orgID string) (bool, error) {
+	belongs, err := s.q.ProjectsBelongToOrg(ctx, gen.ProjectsBelongToOrgParams{
+		Cardinality: projectIDs,
+		OrgID:       pgtype.Text{String: orgID, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error checking projects belong to org", zap.Error(err))
+		return false, err
+	}
+
+	return belongs, nil
+}
+
+func (s *PostgresProjectStore) DatasetsBelongToOrg(ctx context.Context, datasetNames []string, orgID string) (bool, error) {
+	if len(datasetNames) > 0 && datasetNames[0] != "" && strings.HasPrefix(datasetNames[0], "gs_") {
+		belongs, err := s.q.DatasetWithNamesBelongsToOrg(ctx, gen.DatasetWithNamesBelongsToOrgParams{
+			Cardinality: datasetNames,
+			OrgID:       pgtype.Text{String: orgID, Valid: true},
+		})
+		if err != nil {
+			s.logger.Error("Error checking datasets belong to org", zap.Error(err))
+			return false, err
+		}
+		return belongs, nil
+	}
+
+	belongs, err := s.q.DatasetWithIDsBelongsToOrg(ctx, gen.DatasetWithIDsBelongsToOrgParams{
+		Cardinality: datasetNames,
+		OrgID:       pgtype.Text{String: orgID, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error checking datasets belong to org", zap.Error(err))
+		return false, err
+	}
+
+	return belongs, nil
 }

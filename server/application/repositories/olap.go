@@ -21,4 +21,5 @@ type OlapRepository interface {
 	CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error
 	CreateTableFromMySql(connectionString, sqlQuery, tableName string) error
 	ExecuteQueryAndStoreInS3(ctx context.Context, sql, format, outputPath string) error
+	TableNames(sql string) ([]string, error)
 }

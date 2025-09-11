@@ -422,3 +422,7 @@ func (d *OlapService) CreateTableFromPostgres(connectionString, sqlQuery, tableN
 func (d *OlapService) CreateTableFromMySql(connectionString, sqlQuery, tableName string) error {
 	return d.olap.CreateTableFromMySql(connectionString, sqlQuery, tableName)
 }
+
+func (d *OlapService) TableNames(sql string) ([]string, error) {
+	return d.olap.TableNames(sql)
+}
