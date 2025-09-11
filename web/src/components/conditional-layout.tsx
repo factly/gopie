@@ -9,6 +9,8 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
   const isLandingPage = pathname === "/";
+  const isChatPage = pathname.startsWith("/chat");
+  const chatStyles = isChatPage ? "overflow-hidden" : "";
 
   // Don't show sidebar on auth pages or landing page
   if (isAuthPage || isLandingPage) {
@@ -18,8 +20,8 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
-        <AppHeader />
+      <SidebarInset className={chatStyles}>
+        <AppHeader/>
         {children}
       </SidebarInset>
     </SidebarProvider>
