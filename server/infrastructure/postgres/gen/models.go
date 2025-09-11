@@ -99,6 +99,20 @@ func (ns NullDownloadStatus) Value() (driver.Value, error) {
 	return string(ns.DownloadStatus), nil
 }
 
+type ApiKey struct {
+	ID          pgtype.UUID
+	Name        string
+	KeyHash     string
+	CreatedBy   string
+	Description pgtype.Text
+	LastUsedAt  pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	IsRevoked   bool
+	OrgID       string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
 type Chat struct {
 	ID             string
 	Title          pgtype.Text
