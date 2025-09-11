@@ -16,6 +16,7 @@ type Querier interface {
 	BatchAddDatasetsToProject(ctx context.Context, arg BatchAddDatasetsToProjectParams) error
 	BatchRemoveDatasetsFromProject(ctx context.Context, arg BatchRemoveDatasetsFromProjectParams) error
 	CountChatsByUser(ctx context.Context, arg CountChatsByUserParams) (int64, error)
+	CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error)
 	CreateChat(ctx context.Context, arg CreateChatParams) (Chat, error)
 	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
 	CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error)
@@ -26,6 +27,7 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DatasetWithIDsBelongsToOrg(ctx context.Context, arg DatasetWithIDsBelongsToOrgParams) (bool, error)
 	DatasetWithNamesBelongsToOrg(ctx context.Context, arg DatasetWithNamesBelongsToOrgParams) (bool, error)
+	DeleteAPIKey(ctx context.Context, arg DeleteAPIKeyParams) error
 	DeleteChat(ctx context.Context, arg DeleteChatParams) error
 	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
 	DeleteDataset(ctx context.Context, arg DeleteDatasetParams) error
@@ -33,6 +35,9 @@ type Querier interface {
 	DeleteDownload(ctx context.Context, arg DeleteDownloadParams) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
+	GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, error)
+	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
+	GetAPIKeysCount(ctx context.Context, orgID string) (int64, error)
 	GetChatById(ctx context.Context, id string) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
@@ -49,22 +54,27 @@ type Querier interface {
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
 	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
 	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
+	ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]ApiKey, error)
 	ListAllDatasets(ctx context.Context) ([]Dataset, error)
 	ListAllDatasetsFromProject(ctx context.Context, projectID string) ([]Dataset, error)
 	ListAllProjects(ctx context.Context) ([]Project, error)
 	ListChatsByUser(ctx context.Context, arg ListChatsByUserParams) ([]Chat, error)
 	ListDatabaseSources(ctx context.Context, arg ListDatabaseSourcesParams) ([]DatabaseSource, error)
 	ListDownloadsByUser(ctx context.Context, arg ListDownloadsByUserParams) ([]Download, error)
+	ListExpiredAPIKeys(ctx context.Context, arg ListExpiredAPIKeysParams) ([]ApiKey, error)
 	ListFailedDatasetUploads(ctx context.Context) ([]FailedDatasetUpload, error)
 	ListPendingDownloads(ctx context.Context) ([]Download, error)
 	ListProjectDatasets(ctx context.Context, arg ListProjectDatasetsParams) ([]ListProjectDatasetsRow, error)
 	ProjectsBelongToOrg(ctx context.Context, arg ProjectsBelongToOrgParams) (bool, error)
 	RemoveDatasetFromProject(ctx context.Context, arg RemoveDatasetFromProjectParams) error
+	RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (ApiKey, error)
+	SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([]ApiKey, error)
 	SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error)
 	SearchProjects(ctx context.Context, arg SearchProjectsParams) ([]SearchProjectsRow, error)
 	SetDownloadAsCompleted(ctx context.Context, arg SetDownloadAsCompletedParams) (Download, error)
 	SetDownloadAsFailed(ctx context.Context, arg SetDownloadAsFailedParams) (Download, error)
 	SetDownloadToProcessing(ctx context.Context, id pgtype.UUID) (Download, error)
+	UpdateAPIKeyLastUsed(ctx context.Context, arg UpdateAPIKeyLastUsedParams) (ApiKey, error)
 	UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error)
 	UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams) (Chat, error)
 	UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error)

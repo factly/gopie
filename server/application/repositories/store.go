@@ -13,6 +13,17 @@ type StoreRepository interface {
 	GetDB() any
 }
 
+type APIKeyStoreRepository interface {
+	Create(ctx context.Context, params models.CreateAPIKeyParams) (*models.APIKeyResponse, error)
+	Delete(ctx context.Context, id, orgID string) error
+	Details(ctx context.Context, id, orgID string) (*models.APIKey, error)
+	GetByHash(ctx context.Context, keyHash string) (*models.APIKey, error)
+	ListExpiredAPIKeys(ctx context.Context, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error)
+	SearchAPIKeys(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error)
+	UpdateLastUsed(ctx context.Context, id, orgID string) (*models.APIKey, error)
+	Revoke(ctx context.Context, id, orgID string) (*models.APIKey, error)
+}
+
 type ProjectStoreRepository interface {
 	Create(ctx context.Context, params models.CreateProjectParams) (*models.Project, error)
 	Delete(ctx context.Context, id string, orgID string) error
