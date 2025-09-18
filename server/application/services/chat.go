@@ -29,7 +29,8 @@ func (service *ChatService) ListUserChats(userID, orgID string, pagination model
 	return service.store.ListUserChats(context.Background(), userID, orgID, pagination)
 }
 
-func (service *ChatService) UpdateChat(chatID string, params *models.UpdateChatParams) (*models.Chat, error) {
+func (service *ChatService) UpdateChat(chatID, userID string, params *models.UpdateChatParams) (*models.Chat, error) {
+	params.CreatedBy = userID
 	return service.store.UpdateChat(context.Background(), chatID, params)
 }
 
@@ -97,6 +98,18 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	var userMessage *models.ChatMessage
 	var filteredMessages []models.ChatMessage
 
+	// Handle empty messages case (for pre-created chats)
+	if len(params.Messages) == 0 {
+		// If no title provided, use a default
+		if params.Title == "" {
+			params.Title = "New Chat"
+		}
+		// Create chat with empty messages
+		chat, err := service.store.CreateChat(ctx, params)
+		return chat, err
+	}
+
+	// Existing logic for when messages are present
 	for _, msg := range params.Messages {
 		if msg.Object == "user.message" {
 			userMessage = &msg
@@ -105,19 +118,27 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 			filteredMessages = append(filteredMessages, msg)
 		}
 	}
-	if userMessage == nil {
+
+	// Only require user message if we have messages
+	if userMessage == nil && len(params.Messages) > 0 {
 		return nil, errors.New("no user message found in chat messages")
 	}
 
-	title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content)
-	if err != nil {
-		fmt.Printf("Error generating title from AI: %v\n", err)
-		title = &models.D_AiChatResponse{
-			Response: "Untitled Chat",
+	// Generate title only if we have a user message
+	if userMessage != nil && userMessage.Choices != nil && len(userMessage.Choices) > 0 &&
+		userMessage.Choices[0].Delta.Content != nil {
+		title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content)
+		if err != nil {
+			fmt.Printf("Error generating title from AI: %v\n", err)
+			title = &models.D_AiChatResponse{
+				Response: "Untitled Chat",
+			}
 		}
+		params.Title = title.Response
+	} else if params.Title == "" {
+		params.Title = "Untitled Chat"
 	}
 
-	params.Title = title.Response
 	params.Messages = filteredMessages
 	chat, err := service.store.CreateChat(ctx, params)
 	return chat, err

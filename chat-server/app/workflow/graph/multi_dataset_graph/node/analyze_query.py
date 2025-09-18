@@ -5,6 +5,8 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
+from app.core.config import settings
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import QueryResult, ToolUsedResult
 from app.tool_utils.tool_node import has_tool_calls
@@ -36,7 +38,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
 
     analyze_result = query_result.analyze_query_result
 
-    if tool_call_count >= 5:
+    if tool_call_count >= settings.MAX_TOOL_CALL_LIMIT:
         return _create_error_response(query_result, "Maximum tool call limit reached (5 calls)")
 
     if not user_input:
@@ -78,6 +80,12 @@ def route_from_analysis(state: State) -> str:
     """
     Route to the appropriate next node based on query analysis
 
+    Routing Logic:
+    - Tool calls: Continue to tools node for execution
+    - Conversational (high confidence >=7): Direct to basic_conversation for immediate response
+    - Conversational (low confidence <7): Route to generate_subqueries for better handling
+    - Data queries: Always route to generate_subqueries for complex processing workflow
+
     Args:
         state: Current state with analysis results
 
@@ -87,7 +95,7 @@ def route_from_analysis(state: State) -> str:
     # Check if we've reached the tool call limit
     last_message = state["messages"][-1]
     if state.get("tool_call_count", 0) >= 5 and has_tool_calls(last_message):
-        return "basic_conversation"
+        return "generate_subqueries"
 
     if has_tool_calls(last_message):
         return "tools"
@@ -111,6 +119,8 @@ def _create_error_response(
     analyze_result.query_type = "conversational"
     analyze_result.confidence_score = 3
     analyze_result.response = error_msg
+
+    logger.exception(error_msg)
 
     return {
         "query_result": query_result,
@@ -171,6 +181,8 @@ async def _handle_analysis_response(
 def collect_and_store_tool_messages(query_result: QueryResult, state: State):
     """
     Collect tool messages from state and store them in query result.
+
+    - It will always add new tool messages as ai message will be the separation between the tool calls
     """
     tool_messages = []
     messages = state.get("messages", [])

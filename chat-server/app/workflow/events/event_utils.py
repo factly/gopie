@@ -3,13 +3,10 @@ from functools import wraps
 from typing import Any
 
 from langchain_core.callbacks import adispatch_custom_event
-from langchain_core.language_models.fake_chat_models import (
-    GenericFakeChatModel,
-)
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.chat import NodeEventConfig, Role
 from app.utils.model_registry.model_provider import get_llm_for_other_task
 
@@ -26,7 +23,15 @@ def configure_node(
                 progress_message=progress_message,
             )
 
-            config.update(metadata=metadata.model_dump())
+            if progress_message and role == "intermediate":
+                await adispatch_custom_event(
+                    "gopie-agent",
+                    {
+                        "content": progress_message,
+                    },
+                )
+            else:
+                config.update(metadata=metadata.model_dump())
 
             return await func(state, config, *args, **kwargs)
 
@@ -71,29 +76,6 @@ Rules:
     return progress_message
 
 
-async def stream_dynamic_message(context: str, config: RunnableConfig):
-    """
-    Stream a dynamic message based on the context.
-    """
-    prev_metadata = config.get("metadata")
-
-    try:
-        dynamic_message = await create_dynamic_progress_message(context, config)
-        logger.debug(dynamic_message)
-
-        config.update(
-            metadata=NodeEventConfig(
-                role=Role.INTERMEDIATE,
-                progress_message="",
-            ).model_dump()
-        )
-    finally:
-        if prev_metadata is not None:
-            config.update(metadata=prev_metadata)
-        else:
-            config.pop("metadata", None)
-
-
 async def non_streaming_dynamic_message(context: str, config: RunnableConfig):
     """
     Send a non-streaming dynamic message based on the context.
@@ -108,26 +90,46 @@ async def non_streaming_dynamic_message(context: str, config: RunnableConfig):
     )
 
 
-async def fake_streaming_response(response: str, config: RunnableConfig):
+async def stream_dynamic_message(context: str, config: RunnableConfig):
     """
-    Fake a streaming response.
+    Stream a dynamic message based on the context.
     """
     prev_metadata = config.get("metadata")
-    try:
-        config.update(
-            metadata=NodeEventConfig(
-                role=Role.INTERMEDIATE,
-                progress_message=response,
-            ).model_dump()
-        )
+    config.update(
+        metadata=NodeEventConfig(
+            role=Role.INTERMEDIATE,
+            progress_message="",
+        ).model_dump()
+    )
 
-        llm = GenericFakeChatModel(
-            messages=iter([AIMessage(content=response)]),
-        )
+    dynamic_message = await create_dynamic_progress_message(context, config)
+    logger.debug(f"dynamic_message: {dynamic_message}")
 
-        await llm.ainvoke(input=response, config=config)
-    finally:
-        if prev_metadata is not None:
-            config.update(metadata=prev_metadata)
-        else:
-            config.pop("metadata", None)
+    config.update(metadata=prev_metadata or {})
+
+
+async def fake_streaming_response(response: str, config: RunnableConfig):
+    """
+    Stream a dynamic message based on the context.
+    """
+    await adispatch_custom_event(
+        "gopie-agent",
+        {
+            "content": response,
+        },
+    )
+
+    # prev_metadata = config.get("metadata")
+
+    # config.update(
+    #     metadata=NodeEventConfig(
+    #         role=Role.INTERMEDIATE,
+    #         progress_message=response,
+    #     ).model_dump()
+    # )
+
+    # llm = GenericFakeChatModel(
+    #     messages=iter([AIMessage(content=response)]),
+    # )
+    # await llm.ainvoke(input=response, config=config)
+    # config.update(metadata=prev_metadata or {})

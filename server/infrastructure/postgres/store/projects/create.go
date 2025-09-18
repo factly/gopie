@@ -2,7 +2,6 @@ package projects
 
 import (
 	"context"
-	"time"
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
@@ -20,7 +19,7 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
 	})
 	if err != nil {
-		s.logger.Error("Error creating project", zap.Error(err))
+		s.logger.Critical("Error creating project", zap.Error(err))
 		return nil, err
 	}
 
@@ -28,8 +27,8 @@ func (s *PostgresProjectStore) Create(ctx context.Context, params models.CreateP
 		ID:           p.ID,
 		Name:         p.Name,
 		Description:  p.Description.String,
-		CreatedAt:    time.Time(p.CreatedAt.Time),
-		UpdatedAt:    time.Time(p.UpdatedAt.Time),
+		CreatedAt:    p.CreatedAt.Time,
+		UpdatedAt:    p.UpdatedAt.Time,
 		CreatedBy:    p.CreatedBy.String,
 		UpdatedBy:    p.UpdatedBy.String,
 		OrgID:        p.OrgID.String,

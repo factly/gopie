@@ -95,7 +95,7 @@ export interface Project extends ProjectInput {
   id: string;
   createdAt: string;
   updatedAt: string;
-  datasetCount: number;
+  dataset_count: number;
   createdBy: string;
   updatedBy: string;
   custom_prompt?: string;

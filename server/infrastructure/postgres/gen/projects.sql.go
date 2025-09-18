@@ -57,36 +57,36 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 }
 
 const datasetWithIDsBelongsToOrg = `-- name: DatasetWithIDsBelongsToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::uuid[]) AS all_belong_to_org
 FROM datasets
-WHERE id = ANY($1) AND org_id = $2
+WHERE id = ANY($1::uuid[]) AND org_id = $2
 `
 
 type DatasetWithIDsBelongsToOrgParams struct {
-	Cardinality interface{}
-	OrgID       pgtype.Text
+	Column1 []pgtype.UUID
+	OrgID   pgtype.Text
 }
 
 func (q *Queries) DatasetWithIDsBelongsToOrg(ctx context.Context, arg DatasetWithIDsBelongsToOrgParams) (bool, error) {
-	row := q.db.QueryRow(ctx, datasetWithIDsBelongsToOrg, arg.Cardinality, arg.OrgID)
+	row := q.db.QueryRow(ctx, datasetWithIDsBelongsToOrg, arg.Column1, arg.OrgID)
 	var all_belong_to_org bool
 	err := row.Scan(&all_belong_to_org)
 	return all_belong_to_org, err
 }
 
 const datasetWithNamesBelongsToOrg = `-- name: DatasetWithNamesBelongsToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::text[]) AS all_belong_to_org
 FROM datasets
-WHERE name = ANY($1) AND org_id = $2
+WHERE name = ANY($1::text[]) AND org_id = $2
 `
 
 type DatasetWithNamesBelongsToOrgParams struct {
-	Cardinality interface{}
-	OrgID       pgtype.Text
+	Column1 []string
+	OrgID   pgtype.Text
 }
 
 func (q *Queries) DatasetWithNamesBelongsToOrg(ctx context.Context, arg DatasetWithNamesBelongsToOrgParams) (bool, error) {
-	row := q.db.QueryRow(ctx, datasetWithNamesBelongsToOrg, arg.Cardinality, arg.OrgID)
+	row := q.db.QueryRow(ctx, datasetWithNamesBelongsToOrg, arg.Column1, arg.OrgID)
 	var all_belong_to_org bool
 	err := row.Scan(&all_belong_to_org)
 	return all_belong_to_org, err
@@ -176,6 +176,47 @@ func (q *Queries) GetProjectByID(ctx context.Context, id string) (Project, error
 	return i, err
 }
 
+const getProjectsByIDs = `-- name: GetProjectsByIDs :many
+SELECT id, name, org_id, description, created_at, updated_at, created_by, updated_by, custom_prompt FROM projects 
+WHERE org_id = $1 AND id = ANY($2::text[])
+ORDER BY created_at DESC
+`
+
+type GetProjectsByIDsParams struct {
+	OrgID      pgtype.Text
+	ProjectIds []string
+}
+
+func (q *Queries) GetProjectsByIDs(ctx context.Context, arg GetProjectsByIDsParams) ([]Project, error) {
+	rows, err := q.db.Query(ctx, getProjectsByIDs, arg.OrgID, arg.ProjectIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Project
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OrgID,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CustomPrompt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProjectsCount = `-- name: GetProjectsCount :one
 select count(*) from projects where org_id = $1
 `
@@ -222,18 +263,18 @@ func (q *Queries) ListAllProjects(ctx context.Context) ([]Project, error) {
 }
 
 const projectsBelongToOrg = `-- name: ProjectsBelongToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::text[]) AS all_belong_to_org
 FROM projects
-WHERE id = ANY($1) AND org_id = $2
+WHERE id = ANY($1::text[]) AND org_id = $2
 `
 
 type ProjectsBelongToOrgParams struct {
-	Cardinality interface{}
-	OrgID       pgtype.Text
+	Column1 []string
+	OrgID   pgtype.Text
 }
 
 func (q *Queries) ProjectsBelongToOrg(ctx context.Context, arg ProjectsBelongToOrgParams) (bool, error) {
-	row := q.db.QueryRow(ctx, projectsBelongToOrg, arg.Cardinality, arg.OrgID)
+	row := q.db.QueryRow(ctx, projectsBelongToOrg, arg.Column1, arg.OrgID)
 	var all_belong_to_org bool
 	err := row.Scan(&all_belong_to_org)
 	return all_belong_to_org, err

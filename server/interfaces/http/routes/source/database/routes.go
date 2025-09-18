@@ -37,6 +37,7 @@ func Routes(
 	}
 
 	router.Post("/upload", httpHandler.create)
+	router.Post("/update", httpHandler.update)
 	router.Get("/", httpHandler.list)
 	router.Delete("/:id", httpHandler.deleteHandler)
 }

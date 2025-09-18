@@ -3,10 +3,10 @@ import asyncio
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.schema import DatasetSchema
 from app.services.qdrant.get_schema import (
-    get_project_schema,
+    get_project_schemas,
     get_schema_from_qdrant,
 )
 from app.utils.chat_history.processor import ChatHistoryProcessor
@@ -50,23 +50,34 @@ class ProcessContextOutput(BaseModel):
     )
 
 
-async def get_project_custom_prompts(
+async def get_projects_with_custom_prompts(
     dataset_ids: list[str] | None, project_ids: list[str] | None
-) -> tuple[list[str], list[DatasetSchema | None]]:
-    tasks = [get_schema_from_qdrant(dataset_id=dataset_id) for dataset_id in dataset_ids or []]
+) -> tuple[dict[str, str], list[DatasetSchema]]:
+    dataset_schemas = []
+    if dataset_ids:
+        dataset_tasks = [
+            get_schema_from_qdrant(dataset_id=dataset_id) for dataset_id in dataset_ids[:5]
+        ]
+        dataset_results = await asyncio.gather(*dataset_tasks)
+        dataset_schemas = [schema for schema in dataset_results if schema is not None]
 
-    for project_id in project_ids or []:
-        tasks.append(get_project_schema(project_id=project_id))
+    project_schemas = []
+    if project_ids:
+        project_tasks = [
+            get_project_schemas(project_id=project_id, limit=5) for project_id in project_ids
+        ]
+        project_results = await asyncio.gather(*project_tasks)
+        for result in project_results:
+            project_schemas.extend(result)
 
-    schemas = await asyncio.gather(*tasks)
+    schemas = dataset_schemas + project_schemas
 
-    project_custom_prompts = []
+    project_custom_prompts = {}
     for schema in schemas:
-        if schema:
-            if schema.project_custom_prompt:
-                project_custom_prompts.append(schema.project_custom_prompt)
+        if schema and schema.project_custom_prompt and schema.project_id:
+            project_custom_prompts[schema.project_id] = schema.project_custom_prompt
 
-    return list(set(project_custom_prompts)), schemas
+    return project_custom_prompts, schemas[:5]
 
 
 @configure_node(
@@ -84,14 +95,20 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     relevant_datasets_ids = history_context["datasets_used"]
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
-    project_custom_prompts, schemas = await get_project_custom_prompts(
+    project_custom_prompts_dict, schemas = await get_projects_with_custom_prompts(
         dataset_ids=dataset_ids, project_ids=project_ids
     )
     chain_input = {
         "current_query": user_input,
         "formatted_chat_history": formatted_chat_history,
-        "project_custom_prompts": project_custom_prompts,
-        "schemas": "\n".join([schema.format_for_prompt() for schema in schemas if schema]),
+        "project_custom_prompts": project_custom_prompts_dict,
+        "schemas": "\n".join(
+            [
+                f"Schema {i + 1}:\n{schema.format_for_prompt()}"
+                for i, schema in enumerate(schemas)
+                if schema
+            ]
+        ),
     }
 
     chain = get_prompt_llm_chain("process_context", config, schema=ProcessContextOutput)
@@ -103,7 +120,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         is_new_data_needed = parsed_response.is_new_data_needed
         generate_visualization = parsed_response.generate_visualization
         relevant_sql_queries_ids = [query.id for query in parsed_response.relevant_sql_queries]
-        relevant_sql_queries = history_processor.ids_to_sql_queries(relevant_sql_queries_ids)
+        relevant_sql_queries = history_processor.ids_to_sql_queries(ids=relevant_sql_queries_ids)
         enhanced_query = parsed_response.enhanced_query
         context_summary = parsed_response.context_summary
 
@@ -134,7 +151,7 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Error processing context: {e!s}")
+        logger.exception(f"Error processing context: {e!s}")
         return {
             "user_query": user_input,
             "new_data_needed": True,

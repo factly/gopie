@@ -5,7 +5,7 @@ from langsmith import traceable
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.schema import DatasetSchema
 from app.services.qdrant.qdrant_setup import QdrantSetup
 
@@ -53,7 +53,7 @@ async def get_schema_from_qdrant(dataset_id: str) -> Optional[DatasetSchema]:
         return dataset_schema
 
     except Exception as e:
-        logger.error(f"Error retrieving schema from Qdrant: {e!s}")
+        logger.exception(f"Error retrieving schema from Qdrant: {e!s}")
         return None
 
 
@@ -101,52 +101,54 @@ async def get_schema_by_dataset_ids(
                         dataset_schema = DatasetSchema(**metadata)
                         schemas.append(dataset_schema)
                     except json.JSONDecodeError as e:
-                        logger.warning(f"Error parsing schema JSON: {e}")
+                        logger.exception(f"Error parsing schema JSON: {e}")
                         continue
 
         return schemas
 
     except Exception as e:
-        logger.error(f"Error retrieving schemas from Qdrant: {e}")
+        logger.exception(f"Error retrieving schemas from Qdrant: {e}")
         return []
 
 
-@traceable(run_type="tool", name="get_schema_by_dataset_ids")
-async def get_project_schema(project_id: str) -> Optional[DatasetSchema]:
+@traceable(run_type="tool", name="get_project_schemas")
+async def get_project_schemas(project_id: str, limit: int = 5) -> list[DatasetSchema]:
     """
-    Get the custom prompt for a list of datasets from Qdrant database.
+    Get all dataset schemas for a project from Qdrant database.
 
     Args:
-        project_ids: List of project IDs to retrieve schemas for.
-
+        project_id: Project ID to retrieve schemas for.
+        limit: Maximum number of datasets to retrieve.
     Returns:
-        List of schema objects for the provided dataset IDs.
+        List of schema objects for all datasets in the provided project.
     """
     try:
         client = await QdrantSetup.get_async_client()
 
-        filter_conditions = [
-            FieldCondition(
-                key="metadata.project_id",
-                match=MatchValue(value=project_id),
-            )
-        ]
+        filter_condition = FieldCondition(
+            key="metadata.project_id",
+            match=MatchValue(value=project_id),
+        )
         points, _ = await client.scroll(
             collection_name=settings.QDRANT_COLLECTION,
-            scroll_filter=Filter(should=filter_conditions),
-            limit=1,
+            scroll_filter=Filter(must=[filter_condition]),
+            limit=limit,
         )
+
+        schemas = []
         for point in points:
             payload = point.payload
             if payload:
                 try:
                     metadata = payload.get("metadata", {})
                     dataset_schema = DatasetSchema(**metadata)
-                    return dataset_schema
+                    schemas.append(dataset_schema)
                 except json.JSONDecodeError as e:
                     logger.warning(f"Error parsing schema JSON: {e}")
                     continue
 
+        return schemas
+
     except Exception as e:
-        logger.error(f"Error retrieving schemas from Qdrant: {e}")
-        return None
+        logger.exception(f"Error retrieving schemas from Qdrant: {e}")
+        return []

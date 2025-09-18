@@ -30,7 +30,7 @@ class NodeConfig:
 
 
 NODE_CONFIGS = {
-    "analyze_query": NodeConfig(ModelCategory.FAST, TemperatureCategory.NONE),
+    "analyze_query": NodeConfig(ModelCategory.ADVANCED, TemperatureCategory.NONE),
     "route_query_replan": NodeConfig(ModelCategory.FAST, TemperatureCategory.DETERMINISTIC),
     "validate_input": NodeConfig(
         ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
@@ -48,7 +48,7 @@ NODE_CONFIGS = {
     "plan_sql_query_tool": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
     ),
-    "visualize_data": NodeConfig(ModelCategory.FAST, TemperatureCategory.LOW_VARIATION),
+    "visualize_data": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED),
     "process_query": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
     ),

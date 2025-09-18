@@ -19,7 +19,6 @@ import { Project } from "@/lib/api-client";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useRouter } from "next/navigation";
 
 interface InlineProjectEditorProps {
   project: Project;
@@ -32,7 +31,6 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   const [description, setDescription] = useState(project.description || "");
   const [customPrompt, setCustomPrompt] = useState(project.custom_prompt || "");
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -90,7 +88,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   };
 
   const handleChatWithProject = () => {
-    // Create context data for this project
+    // Use window.location for a hard navigation to clear all React state
     const contextData = encodeURIComponent(
       JSON.stringify([
         {
@@ -101,7 +99,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       ])
     );
 
-    router.push(`/chat?contextData=${contextData}`);
+    window.location.href = `/chat?contextData=${contextData}`;
   };
 
   if (isEditing) {

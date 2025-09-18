@@ -28,17 +28,6 @@ func (h *httpHandler) deleteHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Optional: Validate if ID is in UUID format if that's your standard
-	// _, err := uuid.Parse(id)
-	// if err != nil {
-	// 	h.logger.Error("Invalid database source ID format", zap.Error(err), zap.String("id", id))
-	// 	return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-	// 		"error":   err.Error(),
-	// 		"message": "Invalid database source ID format",
-	// 		"code":    fiber.StatusBadRequest,
-	// 	})
-	// }
-
 	err := h.dbSourceSvc.Delete(id)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

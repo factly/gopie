@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 from qdrant_client.http.models import FieldCondition, Filter, MatchAny
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.schema import DatasetSchema
 from app.services.qdrant.qdrant_setup import QdrantSetup
 
@@ -12,34 +12,25 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 @tool
 async def get_datasets_schemas(
     dataset_ids: list[str] = [],
-    project_ids: list[str] = [],
     status_message: str = "",
 ) -> str:
     """
     Get the schema of a specific tables from Qdrant database.
 
     ONLY use this tool when:
-        - If user wants want information about the dataset.
         - If user wants to summarize the dataset.
         - If user wants to know the structure/schema of this dataset.
 
-    DO NOT use this tool when:
-        - If you want information about the dataset.
-          Because further steps already have full workflow to get the
-          information and then process it.
-
-
     Args:
-        dataset_ids: The ids of the datasets to retrieve schema for.
-        project_ids: The ids of the projects to retrieve schema for.
+        dataset_ids: The ids of the datasets to retrieve schema for. It is not project_ids.
         status_message: Short, friendly message to show the user about this action
             (<= 120 chars). Mention if this is a retry and why you're retrying, when applicable.
 
         Caution:
-            - Requires atleast one of the dataset_ids or project_ids.
-
+            - Requires atleast one of the dataset_ids.
+            - dataset_ids is not project_ids.
     Returns:
-        A string with schema information for the provided dataset ids/project ids.
+        A string with schema information for the provided dataset ids.
         Note:
             - If the number of schemas returned is more than 10, then it will truncate the result to show only 10 schemas.
     """
@@ -53,14 +44,6 @@ async def get_datasets_schemas(
                 FieldCondition(
                     key="metadata.dataset_id",
                     match=MatchAny(any=dataset_ids),
-                )
-            )
-
-        if project_ids:
-            filter_conditions.append(
-                FieldCondition(
-                    key="metadata.project_id",
-                    match=MatchAny(any=project_ids),
                 )
             )
 
@@ -80,14 +63,14 @@ async def get_datasets_schemas(
                         dataset_schema = DatasetSchema(**metadata)
                         schemas.append(dataset_schema.format_for_prompt())
                     except json.JSONDecodeError as e:
-                        logger.warning(f"Error parsing schema JSON: {e}")
+                        logger.exception(f"Error parsing schema JSON: {e}")
                         continue
 
-        if len(schemas) > 10:
-            schemas = schemas[:10]
+        if len(schemas) > 4:
+            schemas = schemas[:4]
             truncation_note = (
-                "The tool returned more than 10 schemas, so it has been truncated to show only 10 schemas. "
-                "Mark the query as data_query if want to access more datasets. Information of around 10 datasets is "
+                "The tool returned more than 4 schemas, so it has been truncated to show only 4 schemas. "
+                "Mark the query as data_query if want to access more datasets. Information of around 4 datasets is "
                 "enough for queries like summarizing, describing, etc. and that are not actually a data analysis query."
             )
             schemas.append(truncation_note)

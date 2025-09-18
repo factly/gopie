@@ -7,7 +7,6 @@ import {
   TableIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Dataset } from "@/lib/api-client";
 import {
   DropdownMenu,
@@ -41,7 +40,6 @@ export function DatasetCard({
   projectId,
   onDelete,
 }: DatasetCardProps) {
-  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -88,7 +86,8 @@ export function DatasetCard({
       ])
     );
 
-    router.push(`/chat?contextData=${contextData}`);
+    // Use window.location for a hard navigation to clear all React state
+    window.location.href = `/chat?contextData=${contextData}`;
   };
 
   return (

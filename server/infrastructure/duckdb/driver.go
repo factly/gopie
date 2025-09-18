@@ -60,7 +60,7 @@ func NewOlapDBDriver(cfg *config.OlapDBConfig, logger *logger.Logger, s3Cfg *con
 
 	err := olap.Connect(cfg)
 	if err != nil {
-		logger.Error("failed to connect to duckdb",
+		logger.Critical("failed to connect to duckdb",
 			zap.String("db_type", cfg.DB),
 			zap.Error(err))
 		return nil, err

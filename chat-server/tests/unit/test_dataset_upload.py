@@ -45,11 +45,17 @@ class TestDatasetUpload:
         """
         with (
             patch("app.api.v1.routers.dataset_upload.get_dataset_info") as mock_get_info,
+            patch("app.api.v1.routers.dataset_upload.get_project_info") as mock_get_project_info,
             patch("app.api.v1.routers.dataset_upload.generate_summary") as mock_generate,
             patch("app.api.v1.routers.dataset_upload.store_schema_in_qdrant") as mock_store,
         ):
+            mock_project_details = Mock()
+            mock_project_details.id = "test_project_123"
+            mock_project_details.name = "Test Project"
+            mock_project_details.description = "Test project description"
 
             mock_get_info.return_value = mock_dataset_details
+            mock_get_project_info.return_value = mock_project_details
             mock_generate.return_value = (
                 {"schema": "test_schema"},
                 {"sample": "test_data"},
@@ -107,11 +113,17 @@ class TestDatasetUpload:
         """
         with (
             patch("app.api.v1.routers.dataset_upload.get_dataset_info") as mock_get_info,
+            patch("app.api.v1.routers.dataset_upload.get_project_info") as mock_get_project_info,
             patch("app.api.v1.routers.dataset_upload.generate_summary") as mock_generate,
             patch("app.api.v1.routers.dataset_upload.store_schema_in_qdrant") as mock_store,
         ):
+            mock_project_details = Mock()
+            mock_project_details.id = "test_project_123"
+            mock_project_details.name = "Test Project"
+            mock_project_details.description = "Test project description"
 
             mock_get_info.return_value = mock_dataset_details
+            mock_get_project_info.return_value = mock_project_details
             mock_generate.return_value = (
                 {"schema": "test"},
                 {"sample": "data"},

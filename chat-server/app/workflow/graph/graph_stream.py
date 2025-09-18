@@ -4,11 +4,11 @@ from langchain_core.language_models.fake_chat_models import (
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.chat import Role
 from app.utils.graph_utils.extract_user_input import extract_user_input
 from app.workflow.agent.graph import agent_graph
-from app.workflow.events.handle_events_stream import EventStreamHandler
+from app.workflow.events.event_handler import EventStreamHandler
 
 
 async def stream_graph_updates(

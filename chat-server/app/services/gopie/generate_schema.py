@@ -12,7 +12,7 @@ async def generate_summary(
 ) -> tuple[DatasetSummary, SQL_RESPONSE_TYPE]:
     http_session = SingletonAiohttp.get_aiohttp_client()
 
-    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/summary/{dataset_name}"
+    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/summary/{dataset_name}?source=oltp"
     headers = {"accept": "application/json"}
 
     sample_values_query = f"SELECT DISTINCT * FROM {dataset_name} LIMIT {limit}"
@@ -22,5 +22,8 @@ async def generate_summary(
 
     async with http_session.get(url, headers=headers) as response:
         data = await response.json()
+
+    if isinstance(data.get("summary"), dict) and "summary" in data["summary"]:
+        data["summary"] = data["summary"]["summary"]
 
     return DatasetSummary(**data), sample_data

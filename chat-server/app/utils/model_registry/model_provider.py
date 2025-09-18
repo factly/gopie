@@ -161,20 +161,22 @@ def get_configured_llm_for_node(
     model_id = get_node_model(node_name)
 
     model_provider = get_model_provider(config)
+
     if tool_names:
         llm = model_provider.get_llm_with_tools(model_id, tool_names)
     else:
         llm = model_provider.get_llm(model_id)
     if temperature:
         llm = llm.bind(temperature=temperature)
+
     if schema:
-        structured_llm = llm.with_structured_output(schema=schema, method="json_schema")
-        return structured_llm
+        structured_llm = llm.with_structured_output(schema=schema, method="json_schema")  # type: ignore
+        return structured_llm  # type: ignore
     elif json_mode:
         llm = llm.bind(response_format={"type": "json_object"})
     if force_tool_calls:
         llm = llm.bind(tool_choice=True)
-    return llm
+    return llm  # type: ignore
 
 
 def get_llm_for_other_task(node_name: str, config: RunnableConfig):

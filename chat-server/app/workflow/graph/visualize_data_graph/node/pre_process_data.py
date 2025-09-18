@@ -1,4 +1,4 @@
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.visualize_data_graph.types import Dataset, State
 
@@ -24,10 +24,10 @@ async def pre_process_visualization_data(state: State) -> dict:
                 )
                 datasets.append(dataset)
             else:
-                logger.error(f"SQL execution failed: {sql_result}")
+                logger.exception(f"SQL execution failed: {sql_result}")
 
     except Exception as sql_error:
-        logger.error(f"Error executing SQL queries: {sql_error!s}")
+        logger.exception(f"Error executing SQL queries: {sql_error!s}")
 
     return {
         "datasets": datasets,

@@ -58,14 +58,14 @@ func (s *ApikeyService) HashKey(apiKey string) string {
 func (s *ApikeyService) CreateAPIKey(ctx context.Context, params models.CreateAPIKeyParams) (*models.APIKeyResponse, error) {
 	key, err := s.generateKey()
 	if err != nil {
-		s.logger.Error("Failed to generate API key", zap.Error(err))
+		s.logger.Critical("Failed to generate API key", zap.Error(err))
 		return nil, err
 	}
 	hash := s.HashKey(key)
 	params.KeyHash = hash
 	resp, err := s.store.Create(ctx, params)
 	if err != nil {
-		s.logger.Error("Failed to store API key", zap.Error(err))
+		s.logger.Critical("Failed to store API key", zap.Error(err))
 		return nil, err
 	}
 	resp.Key = key // Only share key at creation
@@ -112,7 +112,7 @@ func (s *ApikeyService) ListExpiredAPIKeys(ctx context.Context, pagination model
 }
 
 // SearchAPIKeys calls the repository to search for API keys by applicationID, query, pagination, and orgID.
-func (s *ApikeyService) SearchAPIKeys(ctx context.Context, applicationID string, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error) {
+func (s *ApikeyService) SearchAPIKeys(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error) {
 	result, err := s.store.SearchAPIKeys(ctx, query, pagination, orgID)
 	if err != nil {
 		s.logger.Error("Failed to search API keys", zap.Error(err))

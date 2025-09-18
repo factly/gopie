@@ -3,6 +3,7 @@ package models
 // DatabaseSource represents a database connection source
 type DatabaseSource struct {
 	ID               string `json:"id"`
+	DatasetID        string `json:"dataset_id"`
 	ConnectionString string `json:"connection_string"`
 	OrganizationID   string `json:"organization_id"`
 	SQLQuery         string `json:"sql_query"`
@@ -17,6 +18,7 @@ type CreateDatabaseSourceParams struct {
 	Alias            string `json:"alias" validate:"required,min=3"`
 	Description      string `json:"description,omitempty" validate:"omitempty,min=10,max=1000"`
 	ProjectID        string `json:"project_id" validate:"required,uuid"`
+	DatasetID        string `json:"dataset_id,omitempty" validate:"omitempty,uuid"`
 	CreatedBy        string `json:"created_by" validate:"required"`
 	OrganizationID   string `json:"organization_id" validate:"required,string"`
 	Driver           string `json:"driver" validate:"required,oneof=postgres mysql" example:"postgres"`

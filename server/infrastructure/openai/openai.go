@@ -40,7 +40,7 @@ func NewOpenAIClient(cfg config.OpenAIConfig, logger *logger.Logger) *OpenAIClie
 	// set OpenAI config headers for request
 	header := http.Header{}
 
-	for key, value := range pkg.ParseConfigOptions(cfg.Options) {
+	for key, value := range pkg.ParseConfigOptions(cfg.Options, logger) {
 		header.Set(key, value)
 	}
 
@@ -77,7 +77,7 @@ func (c *OpenAIClient) GenerateResponse(content string) (string, error) {
 		Messages: []openai.ChatCompletionMessage{msgs},
 	})
 	if err != nil {
-		c.logger.Error("failed to generate sql from OpenAI", zap.Error(err))
+		c.logger.Critical("failed to generate sql from OpenAI", zap.Error(err))
 		return "", err
 	}
 

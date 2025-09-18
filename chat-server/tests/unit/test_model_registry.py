@@ -199,18 +199,11 @@ class TestModelProvider:
             assert model_provider.metadata == sample_metadata
             assert model_provider.llm_provider == mock_llm_provider
             assert model_provider.embedding_provider == mock_embedding_provider
-            assert model_provider.json_mode is False
-            assert model_provider.temperature is None
-            assert model_provider.schema is None
 
     def test_model_provider_initialization_with_parameters(self, sample_metadata):
         """
-        Test that ModelProvider initializes with custom parameters.
+        Test that ModelProvider initializes correctly with metadata only.
         """
-
-        class TestSchema(BaseModel):
-            test_field: str = Field(description="Test field")
-
         with (
             patch(
                 "app.utils.model_registry.model_provider.get_llm_provider"
@@ -222,19 +215,17 @@ class TestModelProvider:
             mock_get_llm_provider.return_value = Mock()
             mock_get_embedding_provider.return_value = Mock()
 
-            model_provider = ModelProvider(
-                sample_metadata, json_mode=True, temperature=0.7, schema=TestSchema
-            )
+            model_provider = ModelProvider(sample_metadata)
 
-            assert model_provider.json_mode is True
-            assert model_provider.temperature == 0.7
-            assert model_provider.schema == TestSchema
+            assert model_provider.metadata == sample_metadata
+            assert model_provider.llm_provider is not None
+            assert model_provider.embedding_provider is not None
 
     def test_create_llm_model(self, sample_metadata, mock_llm_provider):
         """
-        Test that ModelProvider._create_llm correctly retrieves an LLM model using the provided model ID.
+        Test that ModelProvider.get_llm correctly retrieves an LLM model using the provided model ID.
 
-        Verifies that the LLM provider's get_llm_model method is called with the specified model ID and configuration parameters.
+        Verifies that the LLM provider's get_llm_model method is called with the specified model ID.
         """
         with (
             patch("app.utils.model_registry.model_provider.get_llm_provider") as mock_get_provider,
@@ -246,12 +237,10 @@ class TestModelProvider:
             mock_get_provider.return_value = mock_llm_provider
             mock_get_embedding_provider.return_value = Mock()
 
-            model_provider = ModelProvider(sample_metadata, temperature=0.8, json_mode=True)
-            result = model_provider._create_llm("gpt-4")
+            model_provider = ModelProvider(sample_metadata)
+            result = model_provider.get_llm("gpt-4")
 
-            mock_llm_provider.get_llm_model.assert_called_once_with(
-                "gpt-4", temperature=0.8, json_mode=True, schema=None
-            )
+            mock_llm_provider.get_llm_model.assert_called_once_with("gpt-4")
             assert result is not None
 
     def test_create_llm_with_tools(self, sample_metadata, mock_llm_provider):
@@ -278,80 +267,16 @@ class TestModelProvider:
             mock_get_tools.return_value = mock_tools
 
             model_provider = ModelProvider(sample_metadata)
-            result = model_provider._create_llm_with_tools("gpt-4", [ToolNames.EXECUTE_SQL_QUERY])
+            result = model_provider.get_llm_with_tools("gpt-4", [ToolNames.EXECUTE_SQL_QUERY])
 
-            mock_llm_provider.get_llm_model.assert_called_once_with(
-                "gpt-4", temperature=None, json_mode=False, schema=None
-            )
+            mock_llm_provider.get_llm_model.assert_called_once_with("gpt-4")
             mock_get_tools.assert_called_once_with([ToolNames.EXECUTE_SQL_QUERY])
             mock_llm.bind_tools.assert_called_once()
             assert result is not None
 
-    def test_get_llm_for_node_without_tools(self, sample_metadata, mock_llm_provider):
+    def test_get_embeddings_model(self, sample_metadata, mock_embedding_provider):
         """
-        Test that `ModelProvider.get_llm_for_node` retrieves the correct LLM model for a node when no tools are provided.
-
-        Verifies that the node model ID is resolved, the LLM provider's `get_llm_model` is called with the correct model ID, and a non-null model is returned.
-        """
-        with (
-            patch("app.utils.model_registry.model_provider.get_llm_provider") as mock_get_provider,
-            patch(
-                "app.utils.model_registry.model_provider.get_embedding_provider"
-            ) as mock_get_embedding_provider,
-            patch("app.utils.model_registry.model_provider.get_node_model") as mock_get_node_model,
-        ):
-            mock_get_provider.return_value = mock_llm_provider
-            mock_get_embedding_provider.return_value = Mock()
-            mock_get_node_model.return_value = "gpt-4"
-
-            model_provider = ModelProvider(sample_metadata)
-            result = model_provider.get_llm_for_node("test_node")
-
-            mock_get_node_model.assert_called_once_with("test_node")
-            mock_llm_provider.get_llm_model.assert_called_once_with(
-                "gpt-4", temperature=None, json_mode=False, schema=None
-            )
-            assert result is not None
-
-    def test_get_llm_for_node_with_tools(self, sample_metadata, mock_llm_provider):
-        """
-        Test that `ModelProvider.get_llm_for_node` correctly retrieves and binds tools to the LLM model for a given node.
-
-        Verifies that the appropriate provider and utility functions are called with the correct arguments, tools are fetched and bound to the LLM model, and the resulting model is not None.
-        """
-        mock_tools = {"test_tool": (Mock(), {})}
-        mock_llm = Mock()
-        mock_llm.bind_tools.return_value = Mock()
-        mock_llm_provider.get_llm_model.return_value = mock_llm
-
-        with (
-            patch("app.utils.model_registry.model_provider.get_llm_provider") as mock_get_provider,
-            patch(
-                "app.utils.model_registry.model_provider.get_embedding_provider"
-            ) as mock_get_embedding_provider,
-            patch("app.utils.model_registry.model_provider.get_node_model") as mock_get_node_model,
-            patch("app.utils.model_registry.model_provider.get_tools") as mock_get_tools,
-        ):
-            mock_get_provider.return_value = mock_llm_provider
-            mock_get_embedding_provider.return_value = Mock()
-            mock_get_node_model.return_value = "gpt-4"
-            mock_get_tools.return_value = mock_tools
-
-            model_provider = ModelProvider(sample_metadata)
-            result = model_provider.get_llm_for_node("test_node", [ToolNames.EXECUTE_SQL_QUERY])
-
-            # get_node_model is called once for the node
-            mock_get_node_model.assert_called_with("test_node")
-            mock_llm_provider.get_llm_model.assert_called_once_with(
-                "gpt-4", temperature=None, json_mode=False, schema=None
-            )
-            mock_get_tools.assert_called_once_with([ToolNames.EXECUTE_SQL_QUERY])
-            mock_llm.bind_tools.assert_called_once()
-            assert result is not None
-
-    def test_create_embeddings_model(self, sample_metadata, mock_embedding_provider):
-        """
-        Test that ModelProvider._create_embeddings_model returns an embeddings model using the default embedding model ID.
+        Test that ModelProvider.get_embeddings_model returns an embeddings model using the default embedding model ID.
 
         Verifies that the embedding provider's get_embeddings_model method is called with the expected default model and that a non-null result is returned.
         """
@@ -369,7 +294,7 @@ class TestModelProvider:
             mock_settings.DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
 
             model_provider = ModelProvider(sample_metadata)
-            result = model_provider._create_embeddings_model()
+            result = model_provider.get_embeddings_model()
 
             mock_embedding_provider.get_embeddings_model.assert_called_once_with(
                 "text-embedding-ada-002"
@@ -403,20 +328,14 @@ class TestModelProviderUtilities:
 
             assert isinstance(result, ModelProvider)
             assert result.metadata == {"user": "test_user", "trace_id": "test_trace"}
-            assert result.json_mode is False
-            assert result.temperature is None
-            assert result.schema is None
 
-    def test_get_model_provider_with_parameters(self):
+    def test_get_model_provider_with_empty_config(self):
         """
-        Test that `get_model_provider` correctly passes additional parameters to ModelProvider.
+        Test that `get_model_provider` handles empty config gracefully.
         """
         from langchain_core.runnables import RunnableConfig
 
-        class TestSchema(BaseModel):
-            test_field: str = Field(description="Test field")
-
-        config = RunnableConfig(configurable={"metadata": {"user": "test_user"}})
+        config = RunnableConfig()
 
         with (
             patch(
@@ -429,11 +348,10 @@ class TestModelProviderUtilities:
             mock_get_llm_provider.return_value = Mock()
             mock_get_embedding_provider.return_value = Mock()
 
-            result = get_model_provider(config, json_mode=True, temperature=0.5, schema=TestSchema)
+            result = get_model_provider(config)
 
-            assert result.json_mode is True
-            assert result.temperature == 0.5
-            assert result.schema == TestSchema
+            assert isinstance(result, ModelProvider)
+            assert result.metadata == {}
 
     def test_get_configured_llm_for_node(self):
         """
@@ -465,17 +383,24 @@ class TestModelProviderUtilities:
             mock_requires_json_mode.return_value = True
             mock_get_node_temperature.return_value = 0.7
 
-            result = get_configured_llm_for_node("test_node", config, schema=TestOutput)
+            with patch(
+                "app.utils.model_registry.model_provider.get_node_model"
+            ) as mock_get_node_model:
+                mock_get_node_model.return_value = "gpt-4"
+                mock_model_provider.get_llm.return_value = mock_llm
+                mock_llm.bind.return_value = mock_llm
+                mock_llm.with_structured_output.return_value = mock_llm
 
-            mock_requires_json_mode.assert_called_once_with("test_node")
-            mock_get_node_temperature.assert_called_once_with("test_node")
-            mock_get_model_provider.assert_called_once_with(
-                config, json_mode=True, temperature=0.7, schema=TestOutput
-            )
-            mock_model_provider.get_llm_for_node.assert_called_once_with("test_node", None)
+                result = get_configured_llm_for_node("test_node", config, schema=TestOutput)
 
-            # Verify the returned type is cast to StructuredLLM
-            assert result == mock_llm
+                mock_requires_json_mode.assert_called_once_with("test_node")
+                mock_get_node_temperature.assert_called_once_with("test_node")
+                mock_get_node_model.assert_called_once_with("test_node")
+                mock_get_model_provider.assert_called_once_with(config)
+                mock_model_provider.get_llm.assert_called_once_with("gpt-4")
+
+                # Verify the returned type is cast to StructuredLLM
+                assert result == mock_llm
 
     def test_get_configured_llm_for_node_with_tools(self):
         """
@@ -496,19 +421,22 @@ class TestModelProviderUtilities:
             patch(
                 "app.utils.model_registry.model_provider.get_node_temperature"
             ) as mock_get_node_temperature,
+            patch("app.utils.model_registry.model_provider.get_node_model") as mock_get_node_model,
         ):
             mock_model_provider = Mock()
-            mock_model_provider.get_llm_for_node.return_value = mock_llm
+            mock_model_provider.get_llm_with_tools.return_value = mock_llm
             mock_get_model_provider.return_value = mock_model_provider
             mock_requires_json_mode.return_value = False
             mock_get_node_temperature.return_value = None
+            mock_get_node_model.return_value = "gpt-4"
 
             result = get_configured_llm_for_node(
                 "test_node", config, tool_names=[ToolNames.EXECUTE_SQL_QUERY]
             )
 
-            mock_model_provider.get_llm_for_node.assert_called_once_with(
-                "test_node", [ToolNames.EXECUTE_SQL_QUERY]
+            mock_get_node_model.assert_called_once_with("test_node")
+            mock_model_provider.get_llm_with_tools.assert_called_once_with(
+                "gpt-4", [ToolNames.EXECUTE_SQL_QUERY]
             )
             assert result == mock_llm
 

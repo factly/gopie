@@ -3,9 +3,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.utils.langsmith.client import pull_prompt
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
+from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
+    remove_double_curly_braces,
+)
 from app.workflow.prompts.prompt_selector import NodeName, PromptSelector
 
 
@@ -104,9 +107,11 @@ def get_prompt_llm_chain(
         formatted_input = PromptSelector().format_prompt_input(node_name=node_name, **input_vars)
 
         if formatted_input:
-            return prompt_template.invoke(formatted_input).to_messages()
+            messages = prompt_template.invoke(formatted_input).to_messages()
         else:
-            return prompt_template.invoke(input_vars).to_messages()
+            messages = prompt_template.invoke(input_vars).to_messages()
+
+        return remove_double_curly_braces(messages=messages)
 
     formatter: Runnable = RunnableLambda(format_prompt).with_config(
         {"run_name": f"{node_name}_prompt_chain", "callbacks": []}

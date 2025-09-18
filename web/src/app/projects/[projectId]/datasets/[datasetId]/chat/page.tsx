@@ -126,10 +126,13 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const allMessages = useMemo(() => {
     const messages = messagesData?.pages.flatMap((page) => page.data) ?? [];
     return messages.sort((a, b) => {
-      const timeA = new Date(a.createdAt || "").getTime();
-      const timeB = new Date(b.createdAt || "").getTime();
-      if (timeA === timeB) {
-        // If timestamps are equal, show user message first
+      // In AI SDK v5, createdAt might be in metadata or not exist
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const timeA = new Date((a as any).createdAt || "").getTime();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const timeB = new Date((b as any).createdAt || "").getTime();
+      if (timeA === timeB || (isNaN(timeA) && isNaN(timeB))) {
+        // If timestamps are equal or both invalid, show user message first
         return a.role === "user" ? -1 : 1;
       }
       return timeA - timeB;
@@ -140,7 +143,11 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const showSqlButton = useMemo(() => {
     return (
       selectedChatId &&
-      allMessages.some((msg) => msg.content.toLowerCase().includes("sql"))
+      allMessages.some((msg) => {
+        // In AI SDK v5, content is in parts
+        const textContent = msg.parts?.find((part) => part.type === 'text')?.text || '';
+        return textContent.toLowerCase().includes("sql");
+      })
     );
   }, [selectedChatId, allMessages]);
 
@@ -153,11 +160,13 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
       if (assistantMessages.length > 0) {
         const lastAssistantMessage =
           assistantMessages[assistantMessages.length - 1];
+        // In AI SDK v5, content is in parts
+        const textContent = lastAssistantMessage.parts?.find((part) => part.type === 'text')?.text || '';
         console.log(
           "Updated latest assistant message:",
-          lastAssistantMessage.content.slice(0, 50) + "..."
+          textContent.slice(0, 50) + "..."
         );
-        setLatestAssistantMessage(lastAssistantMessage.content);
+        setLatestAssistantMessage(textContent);
       }
     }
   }, [allMessages]);
@@ -500,9 +509,10 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
                               <ChatMessage
                                 key={message.id}
                                 id={message.id}
-                                content={message.content}
+                                content={message.parts?.find((part) => part.type === 'text')?.text || ''}
                                 role={message.role as "user" | "assistant"}
-                                createdAt={message.createdAt?.toString() || ""} // TODO: fix this
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                createdAt={(message as any).createdAt?.toString() || ""} // TODO: fix this
                                 chatId={selectedChatId || undefined}
                                 isLatest={
                                   index === allMessages.length - 1 &&

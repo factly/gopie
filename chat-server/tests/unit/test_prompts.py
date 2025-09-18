@@ -22,14 +22,44 @@ class TestPromptSelector:
             )
 
             mock_format.assert_called_once_with(
-                "plan_query", user_query="test query", datasets_info={}
+                node_name="plan_query", user_query="test query", datasets_info={}
             )
             mock_prompt_func.assert_called_once_with(input="formatted input")
             assert result == ["mock", "messages"]
 
     def test_get_prompt_without_formatting(self, prompt_selector):
+        # Test with a node that doesn't have formatting (using a non-existent node)
         with patch.object(prompt_selector, "format_prompt_input") as mock_format:
             mock_format.return_value = None
+            mock_prompt_func = Mock(return_value=["mock", "messages"])
+            prompt_selector.prompt_map["non_existent_node"] = mock_prompt_func
+
+            result = prompt_selector.get_prompt(
+                "non_existent_node",
+                user_query="test query",
+                tool_results="results",
+            )
+
+            mock_format.assert_called_once_with(
+                node_name="non_existent_node",
+                user_query="test query",
+                tool_results="results",
+            )
+            mock_prompt_func.assert_called_once_with(
+                user_query="test query", tool_results="results"
+            )
+            assert result == ["mock", "messages"]
+
+    def test_get_prompt_with_analyze_query_formatting(self, prompt_selector):
+        # Test analyze_query which now has formatting
+        with patch.object(prompt_selector, "format_prompt_input") as mock_format:
+            mock_format.return_value = {
+                "user_query": "test query",
+                "tool_results": "formatted results",
+                "tool_call_count": 0,
+                "dataset_ids": [],
+                "project_ids": [],
+            }
             mock_prompt_func = Mock(return_value=["mock", "messages"])
             prompt_selector.prompt_map["analyze_query"] = mock_prompt_func
 
@@ -40,12 +70,16 @@ class TestPromptSelector:
             )
 
             mock_format.assert_called_once_with(
-                "analyze_query",
+                node_name="analyze_query",
                 user_query="test query",
                 tool_results="results",
             )
             mock_prompt_func.assert_called_once_with(
-                user_query="test query", tool_results="results"
+                user_query="test query",
+                tool_results="formatted results",
+                tool_call_count=0,
+                dataset_ids=[],
+                project_ids=[],
             )
             assert result == ["mock", "messages"]
 
@@ -58,45 +92,63 @@ class TestPromptSelector:
         prompt_selector.format_prompt_input_map["plan_query"] = mock_formatter
 
         result = prompt_selector.format_prompt_input(
-            "plan_query", user_query="test", datasets_info={}
+            node_name="plan_query", user_query="test", datasets_info={}
         )
 
         mock_formatter.assert_called_once_with(user_query="test", datasets_info={})
         assert result == {"formatted": "data"}
 
     def test_format_prompt_input_without_formatter(self, prompt_selector):
-        result = prompt_selector.format_prompt_input("analyze_query")
+        # Test with a node that doesn't have a formatter (using a non-existent node)
+        result = prompt_selector.format_prompt_input(node_name="non_existent_node")
 
         assert result is None
+
+    def test_format_prompt_input_analyze_query(self, prompt_selector):
+        # Test analyze_query formatting which now has a formatter
+        result = prompt_selector.format_prompt_input(
+            node_name="analyze_query",
+            user_query="test query",
+            tool_results=["result1", "result2"],
+            tool_call_count=2,
+            dataset_ids=[1, 2],
+            project_ids=[3, 4],
+        )
+
+        expected = {
+            "user_query": "test query",
+            "tool_results": "Tool 1: result1\nTool 2: result2",
+            "tool_call_count": 2,
+            "dataset_ids": [1, 2],
+            "project_ids": [3, 4],
+        }
+        assert result == expected
 
 
 class TestPromptManager:
     @pytest.fixture
     def prompt_manager(self):
-        return PromptManager()
+        return PromptManager("plan_query")
 
     def test_is_langsmith_enabled_true(self, prompt_manager):
         with patch("app.utils.langsmith.prompt_manager.settings") as mock_settings:
             mock_settings.LANGSMITH_PROMPT = True
 
-            assert prompt_manager.is_langsmith_enabled() is True
+            assert prompt_manager._is_langsmith_enabled() is True
 
     def test_is_langsmith_enabled_false(self, prompt_manager):
         with patch("app.utils.langsmith.prompt_manager.settings") as mock_settings:
             mock_settings.LANGSMITH_PROMPT = False
 
-            assert prompt_manager.is_langsmith_enabled() is False
+            assert prompt_manager._is_langsmith_enabled() is False
 
-    def test_get_prompt_langsmith_enabled_with_formatting(self, prompt_manager):
+    def test_get_prompt_langsmith_enabled_with_formatting(self):
+        test_manager = PromptManager("plan_query", user_query="test", datasets_info={})
         with (
-            patch.object(prompt_manager, "is_langsmith_enabled", return_value=True),
-            patch("app.utils.langsmith.prompt_manager.PromptSelector") as mock_selector_class,
+            patch.object(test_manager, "_is_langsmith_enabled", return_value=True),
+            patch.object(test_manager, "_get_formatted_input", return_value={"input": "formatted"}),
             patch("app.utils.langsmith.prompt_manager.pull_prompt") as mock_pull,
         ):
-
-            mock_selector = Mock()
-            mock_selector.format_prompt_input.return_value = {"input": "formatted"}
-            mock_selector_class.return_value = mock_selector
 
             mock_langsmith_prompt = Mock()
             mock_langsmith_prompt.format_messages.return_value = [
@@ -105,22 +157,19 @@ class TestPromptManager:
             ]
             mock_pull.return_value = mock_langsmith_prompt
 
-            result = prompt_manager.get_prompt("plan_query", user_query="test", datasets_info={})
+            result = test_manager.get_prompt()
 
             mock_pull.assert_called_once_with("plan_query")
             mock_langsmith_prompt.format_messages.assert_called_once_with(input="formatted")
             assert result == ["langsmith", "messages"]
 
-    def test_get_prompt_langsmith_enabled_without_formatting(self, prompt_manager):
+    def test_get_prompt_langsmith_enabled_without_formatting(self):
+        test_manager = PromptManager("analyze_query", user_query="test")
         with (
-            patch.object(prompt_manager, "is_langsmith_enabled", return_value=True),
-            patch("app.utils.langsmith.prompt_manager.PromptSelector") as mock_selector_class,
+            patch.object(test_manager, "_is_langsmith_enabled", return_value=True),
+            patch.object(test_manager, "_get_formatted_input", return_value=None),
             patch("app.utils.langsmith.prompt_manager.pull_prompt") as mock_pull,
         ):
-
-            mock_selector = Mock()
-            mock_selector.format_prompt_input.return_value = None
-            mock_selector_class.return_value = mock_selector
 
             mock_langsmith_prompt = Mock()
             mock_langsmith_prompt.format_messages.return_value = [
@@ -129,58 +178,56 @@ class TestPromptManager:
             ]
             mock_pull.return_value = mock_langsmith_prompt
 
-            result = prompt_manager.get_prompt("analyze_query", user_query="test")
+            result = test_manager.get_prompt()
 
             mock_langsmith_prompt.format_messages.assert_called_once_with(user_query="test")
             assert result == ["langsmith", "messages"]
 
-    def test_get_prompt_langsmith_error_fallback(self, prompt_manager):
+    def test_get_prompt_langsmith_error_fallback(self):
+        test_manager = PromptManager("plan_query", user_query="test", datasets_info={})
         with (
-            patch.object(prompt_manager, "is_langsmith_enabled", return_value=True),
+            patch.object(test_manager, "_is_langsmith_enabled", return_value=True),
             patch.object(
-                prompt_manager,
-                "get_fallback_prompt",
-                return_value=["fallback"],
-            ) as mock_fallback,
-            patch("app.utils.langsmith.prompt_manager.PromptSelector") as mock_selector_class,
+                test_manager.prompt_selector, "get_prompt", return_value=["fallback"]
+            ) as mock_get_prompt,
             patch("app.utils.langsmith.prompt_manager.pull_prompt") as mock_pull,
         ):
 
-            mock_selector = Mock()
-            mock_selector.format_prompt_input.return_value = None
-            mock_selector_class.return_value = mock_selector
-
             mock_pull.side_effect = Exception("LangSmith error")
 
-            result = prompt_manager.get_prompt("plan_query", user_query="test")
+            result = test_manager.get_prompt()
 
-            mock_fallback.assert_called_once_with("plan_query", user_query="test")
+            mock_get_prompt.assert_called_once_with(
+                "plan_query", user_query="test", datasets_info={}
+            )
             assert result == ["fallback"]
 
-    def test_get_prompt_langsmith_disabled(self, prompt_manager):
+    def test_get_prompt_langsmith_disabled(self):
+        test_manager = PromptManager("plan_query", user_query="test", datasets_info={})
         with (
-            patch.object(prompt_manager, "is_langsmith_enabled", return_value=False),
+            patch.object(test_manager, "_is_langsmith_enabled", return_value=False),
             patch.object(
-                prompt_manager,
-                "get_fallback_prompt",
-                return_value=["fallback"],
-            ) as mock_fallback,
+                test_manager.prompt_selector, "get_prompt", return_value=["fallback"]
+            ) as mock_get_prompt,
         ):
 
-            result = prompt_manager.get_prompt("plan_query", user_query="test", datasets_info={})
+            result = test_manager.get_prompt()
 
-            mock_fallback.assert_called_once_with("plan_query", user_query="test", datasets_info={})
+            mock_get_prompt.assert_called_once_with(
+                "plan_query", user_query="test", datasets_info={}
+            )
             assert result == ["fallback"]
 
-    def test_get_fallback_prompt(self, prompt_manager):
-        with patch("app.utils.langsmith.prompt_manager.PromptSelector") as mock_selector_class:
-            mock_selector = Mock()
-            mock_selector.get_prompt.return_value = ["fallback", "messages"]
-            mock_selector_class.return_value = mock_selector
+    def test_get_fallback_prompt(self):
+        # Test that fallback works through the prompt_selector
+        test_manager = PromptManager("plan_query", user_query="test")
+        with patch.object(
+            test_manager.prompt_selector, "get_prompt", return_value=["fallback", "messages"]
+        ) as mock_get_prompt:
 
-            result = prompt_manager.get_fallback_prompt("plan_query", user_query="test")
+            result = test_manager.prompt_selector.get_prompt("plan_query", user_query="test")
 
-            mock_selector.get_prompt.assert_called_once_with("plan_query", user_query="test")
+            mock_get_prompt.assert_called_once_with("plan_query", user_query="test")
             assert result == ["fallback", "messages"]
 
 
@@ -193,7 +240,8 @@ class TestPromptUtilities:
 
             result = get_prompt("plan_query", user_query="test")
 
-            mock_manager.get_prompt.assert_called_once_with("plan_query", user_query="test")
+            mock_manager_class.assert_called_once_with("plan_query", user_query="test")
+            mock_manager.get_prompt.assert_called_once_with()
             assert result == ["test", "messages"]
 
 
@@ -214,6 +262,25 @@ class TestPromptDynamic:
             assert callable(
                 selector.prompt_map[node_name]
             ), f"Prompt for {node_name} should be callable"
+
+    def test_prompt_selector_error_handling(self):
+        selector = PromptSelector()
+
+        with pytest.raises((ValueError, KeyError, TypeError)):
+            selector.get_prompt(123)  # type: ignore
+
+        with pytest.raises((ValueError, KeyError)):
+            selector.get_prompt("")
+
+    def test_format_prompt_input_edge_cases(self):
+        selector = PromptSelector()
+
+        result = selector.format_prompt_input(
+            node_name="analyze_query", user_query=None, tool_results=None
+        )
+
+        if result:
+            assert "user_query" in result
 
     def test_prompt_return_types(self):
         from unittest.mock import Mock, patch

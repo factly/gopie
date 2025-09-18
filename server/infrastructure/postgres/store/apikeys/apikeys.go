@@ -18,3 +18,4 @@ func NewPostgresAPIKeyStore(db any, logger *logger.Logger) repositories.APIKeySt
 		logger: logger,
 	}
 }
+

@@ -40,7 +40,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
 	})
 	if err != nil {
-		s.logger.Error("Error creating dataset", zap.Error(err))
+		s.logger.Critical("Error creating dataset", zap.Error(err))
 		return nil, err
 	}
 

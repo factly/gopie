@@ -2,7 +2,7 @@
 Generated Dataset Test Cases for Application Logic Testing
 
 This file contains test cases generated automatically from dataset schemas.
-Generated on: 2025-08-02 14:02:55
+Generated on: 2025-08-13 03:54:46
 
 Dataset Information:
 """
@@ -13,634 +13,1051 @@ SINGLE_DATASET_TEST_CASES = [
         "messages": [
             {
                 "role": "user",
-                "content": "How many airports are located in the state of Texas?",
+                "content": "How many unique companies directly implemented projects in the 'Health Care' sector?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "77679daa-7be2-4461-a933-55c07fd0218a",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should count the number of rows where the 'state' column is 'TX'.
-Expected SQL pattern: SELECT count(*) FROM gp_0EIomuwqR6TNT WHERE state = 'TX';""",
+        "expected_result": """The query should retrieve the total number of distinct companies ('company_name') that implemented projects ('implementation_mode' = 'DIRECTLY BY COMPANY') in the 'Health Care' sector.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What are the names of the airports in Florida with a latitude greater than 30.0?",
+                "content": "Which are the top 5 districts that spent the most on 'Education' projects in the fiscal year 2023-24?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "77679daa-7be2-4461-a933-55c07fd0218a",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should select the 'name' column for airports where 'state' is 'FL' and 'latitude' is greater than 30.0.
-Expected SQL pattern: SELECT name FROM gp_0EIomuwqR6TNT WHERE state = 'FL' AND latitude > 30.0;""",
+        "expected_result": """The query should identify the top 5 districts with the highest 'amount_spent' in the 'Education' sector for the '2023-24' fiscal year. It should aggregate 'amount_spent' by 'district' and order the results in descending order. Then provide 'district' and the sum of 'amount_spent'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "List the top 5 cities with the most airports, along with the count of airports in each city.",
+                "content": "Can you show me the spending efficiency (amount spent / project amount outlay) for each project? What about projects with zero outlay?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "77679daa-7be2-4461-a933-55c07fd0218a",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should group by 'city', count the number of airports in each city, order by the count in descending order, and limit to the top 5.
-Expected SQL pattern: SELECT city, count(*) AS airport_count FROM gp_0EIomuwqR6TNT GROUP BY city ORDER BY airport_count DESC LIMIT 5;""",
+        "expected_result": """The query should calculate the percentage of 'amount_spent' relative to 'project_amount_outlay' for each project. It should handle cases where 'project_amount_outlay' might be zero or null to prevent division by zero errors, possibly by returning 0 or NULL for such cases or filtering them out. Then it should show the project ID, project name and calculated ratio.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the total number of deaths recorded across all natural disasters and years in this dataset?",
+                "content": "What are all the different types of sectors covered in corporate social responsibility projects?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "dd492d15-1f79-4678-8aff-870419be82f4",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should calculate the sum of the 'deaths' column for all rows in the 'gp_ddbQNYl5dGny8' table. The SQL should use a SUM aggregate function on the 'deaths' column.""",
+        "expected_result": """The query should return a list of all distinct 'sector' names present in the dataset. It should be a simple selection of unique values from the 'sector' column.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Which year had the highest number of deaths from natural disasters, and what was that number?",
+                "content": "What is the average amount spent by government-established trusts or societies on projects?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "dd492d15-1f79-4678-8aff-870419be82f4",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should find the maximum value in the 'deaths' column and return the corresponding 'year' and the 'deaths' value. The SQL should involve ordering by 'deaths' in descending order and limiting to 1, or using a subquery to find the max deaths and then selecting the year.""",
+        "expected_result": """The query should calculate the average 'amount_spent' for projects managed by 'TRUSTS/SOCIETIES/ SECTION 8 COMPANY SET UP BY CENTRAL OR STATE GOVERNMENT OR ENTITIES ESTABLISHED' over all fiscal years.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Can you show me the average number of deaths per year for 'All natural disasters' specifically, and how does this trend over time?",
+                "content": "Which state had the highest total project amount outlay across all fiscal years?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "dd492d15-1f79-4678-8aff-870419be82f4",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should filter the data for 'entity' = 'All natural disasters', then group by 'year' and calculate the average of 'deaths' for each year. The SQL should use a WHERE clause for filtering, GROUP BY 'year', and AVG aggregate function on 'deaths'.""",
+        "expected_result": """The query should find the total 'project_amount_outlay' for each 'state' and then identify the 'state' with the highest total outlay. The result should include only the state name and its total outlay.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average income and health for countries in the 'europe_central_asia' region?",
+                "content": "How many projects were taken up each fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "4fefe91c-bd41-4506-b515-2e7ce1dceed3",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average 'income' and 'health' from the 'gp_tL2l2V0onCUaY' table, filtered by 'region' being 'europe_central_asia'. The SQL should involve a SELECT statement with AVG() functions and a WHERE clause.""",
+        "expected_result": """The query should count the number of projects ('csr_project_name' not null) for each 'fiscal_year'. It should group by 'fiscal_year' and order by 'fiscal_year' ascending.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "List the top 5 countries with the highest population and their corresponding income.",
+                "content": "Show me the names and CINS of companies that have additional notes about their CSR projects.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "4fefe91c-bd41-4506-b515-2e7ce1dceed3",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should select 'country', 'population', and 'income' from the 'gp_tL2l2V0onCUaY' table, order the results by 'population' in descending order, and limit the output to the top 5 rows. The SQL should use SELECT, ORDER BY, and LIMIT clauses.""",
+        "expected_result": """The query should list 'company_name' and 'cin' for companies that have a 'note' associated with their CSR projects, indicating that there is some specific information available beyond the standard columns.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me all countries where health is below 60 and income is above 20000.",
+                "content": "Find CSR projects that had an outlay but no amount was spent.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "4fefe91c-bd41-4506-b515-2e7ce1dceed3",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should retrieve 'country' from the 'gp_tL2l2V0onCUaY' table where 'health' is less than 60 AND 'income' is greater than 20000. The SQL should include a SELECT statement with a WHERE clause containing multiple conditions combined with AND.""",
+        "expected_result": """The query should retrieve CSR project names ('csr_project_name') where 'project_amount_outlay' is greater than zero but 'amount_spent' is zero. This indicates projects that were planned but nothing was spent on them.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average count of events per day in March 2015?",
+                "content": "What was the total amount spent on projects in Maharashtra during the 2023-24 fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "7f696ea7-33c5-4016-ada0-5fb6cc44822a",
+            "dataset_id": "460a7351-da7a-4e60-8bb4-2612610bb821",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average of the 'count' column, grouped by day, specifically for dates within March 2015. The SQL should involve date filtering and aggregation functions like AVG and DATE_TRUNC or similar.""",
+        "expected_result": """The query should filter for records where 'state' is 'Maharashtra' and 'fiscal_year' is '2023-24'. Then, it should calculate the sum of 'amount_spent' for these filtered records.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the total count of events for each month in 2015.",
+                "content": "How many unique companies reported their CSR data each fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "7f696ea7-33c5-4016-ada0-5fb6cc44822a",
+            "dataset_id": "a74314c1-271a-44e7-a9cc-33772646a234",
         },
         "stream": True,
-        "expected_result": """The query should sum the 'count' column, grouped by month and year from the 'time' column. The SQL should use SUM and date extraction functions (e.g., EXTRACT(MONTH FROM time), EXTRACT(YEAR FROM time)) and a GROUP BY clause.""",
+        "expected_result": """The query should count the number of distinct company names and order them by the fiscal year. Expected SQL patterns combine COUNT(DISTINCT company_name) and GROUP BY fiscal_year.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Are there any time entries that are null or invalid?",
+                "content": "What was the total average net profit and the total CSR amount spent across all companies in the fiscal year 2022-23?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "7f696ea7-33c5-4016-ada0-5fb6cc44822a",
+            "dataset_id": "a74314c1-271a-44e7-a9cc-33772646a234",
         },
         "stream": True,
-        "expected_result": """This query should check for NULL values in the 'time' column. The SQL should include a WHERE clause like 'time IS NULL' and potentially a COUNT to show how many such entries exist.""",
+        "expected_result": """The query should filter by '2022-23' and calculate the total 'average_net_profit' and 'csr_spent' for that year. Expected SQL patterns include WHERE fiscal_year = '2022-23' and SUM(average_net_profit), SUM(csr_spent).""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average CO2 concentration recorded in this dataset?",
+                "content": "Which are the top 5 companies with the highest prescribed CSR expenditure in the most recent fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-44e9-46a7-a795-c6172b081eed",
+            "dataset_id": "a74314c1-271a-44e7-a9cc-33772646a234",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average of the 'co2' column. The SQL should use an AVG aggregate function on the 'co2' column.""",
+        "expected_result": """The query should identify the top 5 companies based on their 'prescribed_csr_expenditure' for the latest fiscal year available. Expected SQL patterns include ORDER BY prescribed_csr_expenditure DESC, LIMIT 5, and subquery or window function to get the latest fiscal year.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the trend of adjusted CO2 concentration over time. Can you visualize this as a line chart?",
+                "content": "What is the average percentage of CSR spent locally versus the total CSR spent, broken down by fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-44e9-46a7-a795-c6172b081eed",
+            "dataset_id": "a74314c1-271a-44e7-a9cc-33772646a234",
         },
         "stream": True,
-        "expected_result": """This query should select 'date' and 'adjusted_co2' columns and order by 'date' to show a time series trend. The SQL should select both columns and include an ORDER BY clause on the 'date' column. The result should be suitable for a line chart visualization.""",
+        "expected_result": """The query should calculate the percentage of 'local_area_spent' out of 'csr_spent' for each company within each fiscal year, and then average this percentage across all companies. Expected SQL patterns include (local_area_spent / csr_spent) * 100, AVG(), and GROUP BY fiscal_year. Should handle division by zero for 'csr_spent'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What are the minimum and maximum CO2 values recorded, and on what dates did they occur?",
+                "content": "List all companies that reported zero CSR spending in any given fiscal year.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-44e9-46a7-a795-c6172b081eed",
+            "dataset_id": "a74314c1-271a-44e7-a9cc-33772646a234",
         },
         "stream": True,
-        "expected_result": """This query should find the minimum and maximum values of the 'co2' column and the corresponding 'date' for each. The SQL should use MIN and MAX aggregate functions on 'co2' and potentially subqueries or window functions to retrieve the associated dates.""",
+        "expected_result": """The query should find all companies where 'csr_spent' is zero for any fiscal year. Expected SQL patterns include WHERE csr_spent = 0.0, and distinct company names.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "How many records are there in total for CO2 concentration?",
+                "content": "Which are the top 10 companies by total CSR spending?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "fad08681-2463-4e48-9ce8-65fd3da69a62",
         },
         "stream": True,
-        "expected_result": """This query should count the total number of rows in the dataset. The SQL should use a COUNT(*) aggregate function.""",
+        "expected_result": """The query should provide the top 10 companies based on the total amount_spent across all fiscal_years, ordered from highest to lowest. It will involve grouping by 'company_name' and summing 'amount_spent', then applying a limit and ordering.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Find all CO2 readings where the 'co2' value is greater than 400.",
+                "content": "What is the average amount spent per fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "fad08681-2463-4e48-9ce8-65fd3da69a62",
         },
         "stream": True,
-        "expected_result": """This query should filter the dataset to include only rows where the 'co2' column is greater than 400. The SQL should include a WHERE clause: WHERE co2 > 400.""",
+        "expected_result": """This query should calculate the average 'amount_spent' for each 'fiscal_year' and present the results chronologically. It will require grouping by 'fiscal_year' and calculating the AVG of 'amount_spent'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the difference between the maximum and minimum adjusted CO2 values?",
+                "content": "Show me companies that spent less than 1000 in the 2023-24 fiscal year.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "fad08681-2463-4e48-9ce8-65fd3da69a62",
         },
         "stream": True,
-        "expected_result": """This query should calculate the difference between the maximum and minimum values of the 'adjusted_co2' column. The SQL should use MAX(adjusted_co2) - MIN(adjusted_co2).""",
+        "expected_result": """The query should find all entries where 'fiscal_year' is '2023-24' and 'amount_spent' is less than 1000. This will involve filtering and selecting specific columns if requested or simply counting the records.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "List the CO2 and adjusted CO2 values for the year 2000.",
+                "content": "What is the total CSR amount spent for each fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "a4fe4219-ee2e-4279-98e4-10720cfa8ab5",
         },
         "stream": True,
-        "expected_result": """This query should filter records to those where the 'date' falls within the year 2000 and select 'co2' and 'adjusted_co2'. The SQL should use a WHERE clause like YEAR(date) = 2000 or date BETWEEN '2000-01-01' AND '2000-12-31'.""",
+        "expected_result": """The query should calculate the total sum of 'amount_spent' for each 'fiscal_year' and order the results by 'fiscal_year' in ascending order. The SQL should use SUM() and GROUP BY clauses, and include an ORDER BY clause.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Compare the average CO2 and average adjusted CO2 concentrations.",
+                "content": "Which sector has received the most CSR funding overall?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "a4fe4219-ee2e-4279-98e4-10720cfa8ab5",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average of both 'co2' and 'adjusted_co2' columns in a single result. The SQL should use AVG(co2) and AVG(adjusted_co2).""",
+        "expected_result": """The query should identify the 'sector' that received the highest 'amount_spent' across all years. The SQL should aggregate 'amount_spent' by 'sector', order by the aggregated amount in descending order, and limit to the top result.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the CO2 concentration for March 1, 1958.",
+                "content": "Can you show me the average amount spent per sector for the latest fiscal year available?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "a4fe4219-ee2e-4279-98e4-10720cfa8ab5",
         },
         "stream": True,
-        "expected_result": """This query should retrieve the 'co2' value for a specific date. The SQL should use a WHERE clause like date = '1958-03-01'.""",
+        "expected_result": """The query should calculate the average 'amount_spent' per 'sector' specifically for the '2023-24' fiscal year. The SQL should filter by 'fiscal_year', then use AVG() and GROUP BY 'sector'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the standard deviation of the CO2 concentration?",
+                "content": "How many distinct government companies were registered in the fiscal year 2023-24?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should calculate the standard deviation of the 'co2' column. The SQL should use a standard deviation aggregate function (e.g., STDDEV, STDDEV_SAMP, or STDDEV_POP depending on the SQL dialect) on the 'co2' column.""",
+        "expected_result": """The query should count the total number of distinct company names for the fiscal year '2023-24' that are classified as 'Government Companies'. It should filter by fiscal_year='2023-24' and company_type='Government Companies', then count distinct company_name.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Are there any null values in the 'co2' column?",
+                "content": "List all companies from Maharashtra that have a note saying 'UNLISTED'.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should check for the presence of null values in the 'co2' column. The SQL should use a COUNT(*) WHERE co2 IS NULL.""",
+        "expected_result": """The query should retrieve all company names which have a 'note' value of 'UNLISTED' and are based in the 'Maharashtra' state. It should filter by state='Maharashtra' and note='UNLISTED', then select company_name. This is an edge case test for the 'note' column which appears to have only one unique value and also for handling nulls.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the CO2 concentration on the latest date available in the dataset?",
+                "content": "What is the average roc_code for companies registered in West Bengal?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should find the maximum date and then retrieve the 'co2' value for that date. The SQL could use a subquery to find MAX(date) and then join or filter by that date.""",
+        "expected_result": """The query should return an error or an empty result set as 'roc_code' is not a valid column in the dataset, testing for out-of-schema column access. This also tests for an invalid numerical operation on a non-numeric column.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Can you show me the CO2 and adjusted CO2 values for the first 5 records?",
+                "content": "Which state had the most new corporate social responsibility registered companies in the 2016-17 fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should retrieve the 'co2' and 'adjusted_co2' columns for the first 5 records, typically ordered by date. The SQL should use a LIMIT 5 clause after an ORDER BY date.""",
+        "expected_result": """The query should identify the 'state' and count the number of distinct 'company_name' for 'fiscal_year' 2016-17, grouped by 'state' and ordered in descending order to find the top state. It should join or filter on fiscal_year = '2016-17' and use a GROUP BY state and ORDER BY count(distinct company_name) desc limit 1.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average CO2 concentration for each decade?",
+                "content": "Can you show me the CIN and names of all public government companies?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should group the data by decade and calculate the average 'co2' for each. The SQL should involve extracting the year from the 'date' column, calculating the decade (e.g., FLOOR(YEAR(date) / 10) * 10), and then using GROUP BY with AVG(co2).""",
+        "expected_result": """The query should list the 'cin' and 'company_name' for all companies that are classified as 'PUBLIC' class and have 'Government Companies' as their 'company_type'. It should filter by company_class='PUBLIC' AND company_type='Government Companies', then select cin, company_name.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Find all records where 'co2' is less than 'adjusted_co2'.",
+                "content": "What are all the different company classes listed in this data?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "a6df7c7c-46a7-a795-c6172b081eed",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should filter the dataset to include only rows where the 'co2' column value is less than the 'adjusted_co2' column value. The SQL should include a WHERE clause: WHERE co2 < adjusted_co2.""",
+        "expected_result": """The query should return the distinct values present in the 'company_class' column. It should perform a SELECT DISTINCT company_class.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What are the top 5 origins by flight count?",
+                "content": "How many companies with 'PRIVATE LIMITED' in their name are registered under ROC-AHMEDABAD?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "255f96a8-8b4e-4fac-b1e8-b4f5974ac26c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should group by the 'origin' column and sum the 'count' column, then order in descending order and limit to 5. The SQL should involve a GROUP BY, SUM, ORDER BY, and LIMIT clause.""",
+        "expected_result": """The query should count the number of companies where 'company_name' contains 'PRIVATE LIMITED' and are associated with 'ROC-AHMEDABAD'. It should filter by company_name LIKE '%PRIVATE LIMITED%' AND roc='ROC-AHMEDABAD', then count the rows.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the total number of flights from ABE to ATL?",
+                "content": "Show me the names and fiscal years of listed companies in Goa.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "255f96a8-8b4e-4fac-b1e8-b4f5974ac26c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should filter the data where 'origin' is 'ABE' and 'destination' is 'ATL', then sum the 'count' column. The SQL should include a WHERE clause with two conditions and a SUM aggregate function.""",
+        "expected_result": """The query should return a list of 'company_name' and their 'fiscal_year' for companies based in 'Goa' with a 'listing_status' of 'LISTED'. It should filter by state='Goa' AND listing_status='LISTED', then select company_name, fiscal_year.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the average flight count for each destination.",
+                "content": "Can you show me the trend of company registrations over fiscal years?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "255f96a8-8b4e-4fac-b1e8-b4f5974ac26c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should group by the 'destination' column and calculate the average of the 'count' column for each group. The SQL should use a GROUP BY clause and an AVG aggregate function.""",
+        "expected_result": """The query should calculate the count of 'company_name' grouped by 'fiscal_year' to show the trend of registrations. It should perform a GROUP BY fiscal_year and COUNT(company_name), then order by fiscal_year.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average global temperature recorded in this dataset?",
+                "content": "In which fiscal year were most 'ONE PERSON COMPANY' type companies registered?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "f3e65381-7606-43a6-b209-5bf1adbb1e0c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average of the 'temp' column. The SQL should use an aggregate function like AVG().""",
+        "expected_result": """The query should identify the 'fiscal_year' with the highest number of companies in the 'ONE PERSON COMPANY' class. It should filter by company_class='ONE PERSON COMPANY', then group by fiscal_year, count the companies, and order to find the top year.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the global temperature for the year 1952.",
+                "content": "Break down the number of companies by their sub-category.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "f3e65381-7606-43a6-b209-5bf1adbb1e0c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should filter the data to find the row where 'year' is 1952 and return the corresponding 'temp' value. The SQL should include a WHERE clause for the 'year' column.""",
+        "expected_result": """The query should count the number of companies across different 'sub_category' types. It should perform a GROUP BY sub_category and COUNT(company_name).""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Which year had the highest recorded temperature?",
+                "content": "How many companies in Tamil Nadu were unlisted in the 2023-24 fiscal year?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "f3e65381-7606-43a6-b209-5bf1adbb1e0c",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should find the maximum value in the 'temp' column and then return the 'year' associated with that maximum temperature. The SQL should involve ordering by 'temp' in descending order and limiting to 1, or using a subquery with MAX().""",
+        "expected_result": """The query should count the number of unlisted companies in Tamil Nadu for fiscal year 2023-24. It should filter by fiscal_year='2023-24', state='Tamil Nadu', and listing_status='UNLISTED', then count the rows.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the average temperature recorded across all years?",
+                "content": "Visualize the proportion of different company types (Government, Non-Government, etc.).",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "05c18ff8-f1f1-4d0d-83a8-d1df5788c98e",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should calculate the average of the 'temp' column. The SQL query should use an aggregate function like AVG() on the 'temp' column.""",
+        "expected_result": """The query should illustrate the distribution of 'company_type' showing the count for each type. It should perform a GROUP BY company_type and COUNT(*).""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the year with the highest temperature and what that temperature was.",
+                "content": "Find the unique names of companies classified as 'PRIVATE' and registered with ROC-MUMBAI.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "05c18ff8-f1f1-4d0d-83a8-d1df5788c98e",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should find the maximum value in the 'temp' column and return the corresponding 'year'. The SQL query should use MAX() on 'temp' and potentially an ORDER BY and LIMIT clause, or a subquery to find the year associated with the max temperature.""",
+        "expected_result": """The query should list distinct company names that have 'PRIVATE' in their 'company_class' and are from 'ROC-MUMBAI'. It should filter by company_class LIKE '%PRIVATE%' AND roc='ROC-MUMBAI', then select distinct company_name.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Can you show me the trend of temperature over the years? I'd like to see it as a line chart.",
+                "content": "Show me all company names from fiscal year 2016-17 whose CIN starts with 'U1'.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "05c18ff8-f1f1-4d0d-83a8-d1df5788c98e",
+            "dataset_id": "6fb8a633-21ae-4875-9fea-4cd7a2adea67",
         },
         "stream": True,
-        "expected_result": """This query should retrieve both 'year' and 'temp' columns to show a time-series trend. The SQL query should select 'year' and 'temp' and order by 'year'. The expected output should be suitable for plotting a line chart.""",
+        "expected_result": """The query should retrieve all company names for the fiscal year '2016-17' where the 'cin' starts with 'U1'. It should filter by fiscal_year='2016-17' and cin LIKE 'U1%' and then select company_name.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the total net generation for Fossil Fuels over all years?",
+                "content": "Which are the top 5 states with the highest total CSR amount spent across all fiscal years?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "410dc5ca-0dd7-43b2-87a9-6335da6ddfd1",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query should sum the 'net_generation' column where the 'source' column is 'Fossil Fuels'. The SQL should involve a SUM aggregate function and a WHERE clause filtering by 'source'.""",
+        "expected_result": """The query should calculate the total sum of 'amount_spent' for each 'state' and order them in descending order to identify the top 5 states by total CSR spending. The SQL query should use SUM() and GROUP BY, followed by ORDER BY and LIMIT.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the net generation for each source type per year. Can you also show the percentage of total generation each source represents for each year?",
+                "content": "In the fiscal year 2022-23, what was the sector group that received the most funding in aspirational districts?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "410dc5ca-0dd7-43b2-87a9-6335da6ddfd1",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query requires grouping by 'year' and 'source' to get the net generation per source per year. Additionally, it needs to calculate the total net generation for each year to then compute the percentage of each source's generation relative to the yearly total. This will likely involve window functions or subqueries for the percentage calculation.""",
+        "expected_result": """The query should identify the 'sector_group' that received the maximum 'amount_spent' in the '2022-23' fiscal year specifically for 'Aspirational' districts. The SQL query should filter by 'fiscal_year' and 'type_of_district', then find the sector_group with the MAX aggregation of 'amount_spent'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Which year had the highest net generation from Renewables?",
+                "content": "What is the average amount spent per district in Madhya Pradesh?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "410dc5ca-0dd7-43b2-87a9-6335da6ddfd1",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query should filter the data for 'source' = 'Renewables', then find the year associated with the maximum 'net_generation' within that filtered set. The SQL should use a WHERE clause for source and an ORDER BY and LIMIT clause to find the year with the highest generation.""",
+        "expected_result": """The query should calculate the average 'amount_spent' per 'district' for 'Madhya Pradesh' and display the results. This will involve grouping by 'district' after filtering by 'state'. The SQL query should use AVG() and GROUP BY after a WHERE clause for the specific state.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "How many individuals died in the LA Riots, and what was the average age of those who died?",
+                "content": "List all districts in Kerala that had more than 100,000,000 spent in the 2022-23 fiscal year, and what were the sector groups for those amounts?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "98a9f40f-19d3-454e-8437-1690e71c42ba",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query should count the total number of rows in the dataset, as each row represents an individual death. It should then calculate the average of the 'age' column. The SQL query should involve a COUNT(*) and an AVG(age) on the gp_NO8D3ZJIyv5WW table.""",
+        "expected_result": """The query should return all districts in 'Kerala' where the 'amount_spent' exceeded 100,000,000 in the '2022-23' fiscal year, along with their respective 'amount_spent' and 'sector_group'. The SQL query should filter by 'state', 'fiscal_year', and 'amount_spent' using WHERE clauses.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Can you show me the distribution of deaths by gender and race? Also, list the top 3 neighborhoods with the most incidents.",
+                "content": "Show the total amount spent per sector group for All India.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "98a9f40f-19d3-454e-8437-1690e71c42ba",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query requires two separate aggregations. First, it should group by 'gender' and 'race' and count the occurrences for each combination. Second, it should group by 'neighborhood', count the occurrences, order them in descending order, and limit to the top 3. The SQL query will use GROUP BY, COUNT(*), ORDER BY, and LIMIT clauses.""",
+        "expected_result": """The query should show the total 'amount_spent' for each 'sector_group' for 'All India' aggregated across all fiscal years, ordered from highest to lowest. The SQL query will filter by 'state' = 'All India', then group by 'sector_group' and sum 'amount_spent', finally ordering by the sum in descending order.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Find all incidents that occurred on April 30, 1992, and were classified as 'Officer-involved shooting'. For these incidents, list the first name, last name, and address.",
+                "content": "How many unique aspirational districts are there in the dataset?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "dataset_id": "98a9f40f-19d3-454e-8437-1690e71c42ba",
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
         },
         "stream": True,
-        "expected_result": """This query should filter the dataset based on two conditions: 'death_date' being '1992-04-30' and 'type' being 'Officer-involved shooting'. It should then select the 'first_name', 'last_name', and 'address' columns for the matching rows. The SQL query will use a WHERE clause with AND conditions and select specific columns.""",
+        "expected_result": """The query should count the number of distinct 'districts' that are categorized as 'Aspirational'. The SQL query should use COUNT(DISTINCT district) and filter by 'type_of_district'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Are there any records with negative amounts spent? If so, list the fiscal year and amount.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should retrieve the 'fiscal_year' and 'amount_spent' for all records where the 'amount_spent' is negative. This might represent data entry errors or specific financial adjustments. The SQL query should filter by 'amount_spent' < 0.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the breakdown of total spending by type of district (Aspirational vs. Other Than Aspirational) as a percentage?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should calculate the percentage distribution of 'amount_spent' across different 'type_of_district' categories ('Aspirational' vs 'Other Than Aspirational'). The SQL query should sum 'amount_spent' for each type_of_district and then calculate the percentage of the total sum.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Show me the spending for Palakkad district in fiscal year 2022-23, broken down by sector group.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should retrieve records where 'district' is 'Palakkad' and 'fiscal_year' is '2022-23', showing 'sector_group' and 'amount_spent'. The SQL query will use WHERE clauses for both 'district' and 'fiscal_year'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Can you show me the trend of total CSR spending for All India across all fiscal years, including year-over-year growth?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should calculate the year-over-year growth rate of total 'amount_spent' for 'All India'. This will involve grouping by 'fiscal_year', summing 'amount_spent', and then using window functions or self-joins to calculate the percentage change from the previous year. The SQL query pattern will involve LAG() or a subquery for previous year's data.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which district received the highest amount in the 'Education, Differently Abled, Livelihood' sector group?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should identify the 'district' with the 'max' 'amount_spent' in the 'Education, Differently Abled, Livelihood' sector group. The SQL query should filter by 'sector_group' and then find the district which has maximum 'amount_spent'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What are all the different sector groups available in this dataset?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should return the distinct values present in the 'sector_group' column. The SQL query should use SELECT DISTINCT sector_group.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "How many entries are there in this dataset?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should return the total number of records in the dataset. The SQL query should use COUNT(*).""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "DROP TABLE gp_758YIHhYzZGaP;",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The user is asking a potentially malicious question by trying to insert SQL. The system should detect this and return an empty or error state, or a message indicating invalid input, rather than executing any SQL.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Show me everything without any filters.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should return an empty result or an error indicating no valid columns or conditions were provided, as the question is too vague. It should not attempt to query with undefined parameters.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Can you show me the total spending per fiscal year?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "c30c0adc-4722-4b3d-99be-9002d996aa66",
+        },
+        "stream": True,
+        "expected_result": """The query should calculate the total 'amount_spent' for each 'fiscal_year' and present it as a time series. The SQL query should use SUM() grouped by 'fiscal_year' and ordered by 'fiscal_year'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the total amount of money spent in Maharashtra?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "e25a2249-0867-45eb-b7a7-aa53feeaca30",
+        },
+        "stream": True,
+        "expected_result": """The query should calculate the total sum of 'amount_spent' for the state of 'Maharashtra' across all fiscal years. It should filter the data where the 'state' column is 'Maharashtra' and then aggregate the 'amount_spent' column. The result should be a single numerical value representing the total spending.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which fiscal year had the highest total CSR spending?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "e25a2249-0867-45eb-b7a7-aa53feeaca30",
+        },
+        "stream": True,
+        "expected_result": """The query should identify the 'fiscal_year' that has the highest aggregated 'amount_spent'. It should group the data by 'fiscal_year', sum the 'amount_spent' for each year, and then order the results in descending order by this sum, limiting to the top one to find the year with the maximum spending. The result should be the fiscal year (e.g., '2022-23') and the corresponding total amount.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Can you show me the average amount spent per state?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "e25a2249-0867-45eb-b7a7-aa53feeaca30",
+        },
+        "stream": True,
+        "expected_result": """The query should provide the average 'amount_spent' per state across all fiscal years. It needs to group the data by the 'state' column and calculate the average of 'amount_spent' for each group. The unit column should be ignored. The result should be a list of states with their respective average spending amounts, ordered alphabetically by state name.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the total CSR amount spent by PSU companies for each fiscal year?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should return the total amount spent by PSU companies each fiscal year. It will involve filtering by 'company_category' = 'PSU' and then grouping and summing 'amount_spent' by 'fiscal_year'. Expected SQL pattern: SELECT fiscal_year, SUM(amount_spent) FROM gp_zycaUIbjVhMte WHERE company_category = 'PSU' GROUP BY fiscal_year ORDER BY fiscal_year ASC.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which fiscal year had the highest total number of registered companies?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should identify the fiscal year with the highest total number of companies registered, across both PSU and Non-PSU categories. It requires summing 'total_companies' for each 'fiscal_year' and then ordering to find the maximum. Expected SQL pattern: SELECT fiscal_year, SUM(total_companies) AS total_registered FROM gp_zycaUIbjVhMte GROUP BY fiscal_year ORDER BY total_registered DESC LIMIT 1.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What was the percentage of the total CSR amount spent by Non-PSU companies in the fiscal year 2021-22?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query aims to calculate the percentage of total amount spent that was contributed by Non-PSU companies in the fiscal year '2021-22'. It will involve filtering by fiscal_year, then calculating the sum of 'amount_spent' for 'NON-PSU' companies and dividing it by the total 'amount_spent' for that year, multiplied by 100. Expected SQL pattern: SELECT (SUM(CASE WHEN company_category = 'NON-PSU' THEN amount_spent ELSE 0 END) * 100.0) / SUM(amount_spent) FROM gp_zycaUIbjVhMte WHERE fiscal_year = '2021-22'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Show me the total number of companies and the total amount spent, categorized by fiscal year and company type.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should display the total number of companies and the total amount spent, broken down by both fiscal year and company category. It requires grouping by both 'fiscal_year' and 'company_category' and summing 'total_companies' and 'amount_spent'. Expected SQL pattern: SELECT fiscal_year, company_category, SUM(total_companies), SUM(amount_spent) FROM gp_zycaUIbjVhMte GROUP BY fiscal_year, company_category ORDER BY fiscal_year, company_category ASC.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Calculate the average CSR amount spent per company for PSU and Non-PSU categories in the 2023-24 fiscal year.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should calculate the average CSR amount spent per company for PSU vs Non-PSU categories, specifically for the fiscal year '2023-24'. It will involve filtering by fiscal_year and then dividing the sum of 'amount_spent' by the sum of 'total_companies' for each company category. Expected SQL pattern: SELECT company_category, SUM(amount_spent) / SUM(total_companies) AS avg_spent_per_company FROM gp_zycaUIbjVhMte WHERE fiscal_year = '2023-24' GROUP BY company_category.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Find all records where the total number of companies is less than 500.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should retrieve all records where the 'total_companies' count is less than 500. This is a simple filter operation. Expected SQL pattern: SELECT * FROM gp_zycaUIbjVhMte WHERE total_companies < 500.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which company category and fiscal year recorded the least amount of CSR spending?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should identify the 'fiscal_year' and 'company_category' combination that had the minimum 'amount_spent'. It requires grouping by both columns and finding the minimum sum. Expected SQL pattern: SELECT fiscal_year, company_category, SUM(amount_spent) AS total_spent FROM gp_zycaUIbjVhMte GROUP BY fiscal_year, company_category ORDER BY total_spent ASC LIMIT 1.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "List all the fiscal years present in this dataset.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should return the distinct values present in the 'fiscal_year' column to show all available years in the dataset. Expected SQL pattern: SELECT DISTINCT fiscal_year FROM gp_zycaUIbjVhMte ORDER BY fiscal_year ASC.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the compound annual growth rate (CAGR) of CSR spending for Non-PSU companies over the period covered?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query requires calculating the compound annual growth rate (CAGR) for the 'amount_spent' column for Non-PSU companies. This involves complex window functions or subqueries to get the first and last values for Non-PSU amount spent over the entire period, and then applying the CAGR formula. Expected SQL pattern: A more complex query involving finding initial and final year amounts for Non-PSU and applying CAGR formula: ((Final_Amount / Initial_Amount)^(1/Num_Years)) - 1.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which are the top 3 fiscal years with the highest total CSR spending?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should return the top 3 fiscal years with the highest total 'amount_spent', regardless of company category. It requires summing 'amount_spent' per 'fiscal_year' and then ordering in descending order, taking the top 3. Expected SQL pattern: SELECT fiscal_year, SUM(amount_spent) AS total_spent FROM gp_zycaUIbjVhMte GROUP BY fiscal_year ORDER BY total_spent DESC LIMIT 3.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the year-over-year growth rate in the number of PSU companies registered?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should calculate the year-over-year percentage change in 'total_companies' for PSU companies only. This involves self-joining or using window functions (LAG) to compare current year's total companies with the previous year's for PSU companies. Expected SQL pattern: SELECT fiscal_year, (current_companies - previous_companies) * 100.0 / previous_companies FROM (SELECT fiscal_year, total_companies, LAG(total_companies, 1, 0) OVER (ORDER BY fiscal_year) AS previous_companies FROM gp_zycaUIbjVhMte WHERE company_category = 'PSU') AS subquery WHERE previous_companies != 0.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the range (minimum and maximum) of the CSR amount spent?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should return the minimum and maximum values of 'amount_spent' across the entire dataset. Expected SQL pattern: SELECT MIN(amount_spent), MAX(amount_spent) FROM gp_zycaUIbjVhMte.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "How many different company categories are represented in the data?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should count the number of distinct 'company_category' entries. Based on the schema, it should return 2 (PSU and Non-PSU). Expected SQL pattern: SELECT COUNT(DISTINCT company_category) FROM gp_zycaUIbjVhMte.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "How many rows are in the dataset?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query should count the total number of records (rows) in the dataset. Expected SQL pattern: SELECT COUNT(*) FROM gp_zycaUIbjVhMte.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "For each entry, calculate 'total_companies' divided by 'amount_spent'.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "dataset_id": "2848b1d6-3c0d-4fd0-85fd-95e9facd02ce",
+        },
+        "stream": True,
+        "expected_result": """This query attempts to divide 'total_companies' by 'amount_spent', which could lead to division by zero if 'amount_spent' is zero for any record, which is unlikely given the data type and context, but the query should handle large numbers and potential edge cases if a small amount results in a very large 'per company' value. It's a calculation per record. Expected SQL pattern: SELECT fiscal_year, company_category, total_companies / amount_spent FROM gp_zycaUIbjVhMte WHERE amount_spent != 0.""",
     },
 ]
 
@@ -650,301 +1067,181 @@ MULTI_DATASET_TEST_CASES = [
         "messages": [
             {
                 "role": "user",
-                "content": "Compare the number of flights originating from airports in Texas (TX) with the total number of deaths from natural disasters in years where the global temperature anomaly was above 0.5 degrees Celsius. Can you show this as a comparison chart?",
+                "content": "For each company, compare the 'csr_spent' reported in the two company-wise datasets. Are there any discrepancies between the total CSR spent per company and the CSR spent in local and overall areas?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires joining 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) to filter airports by 'state' = 'TX', then joining 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c) to sum 'count' for these origins. Separately, 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) needs to be filtered for 'temp' > 0.5, and then 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) needs to be joined by 'year' to sum 'deaths'. The final output should be a comparison chart showing the total flight count vs. total disaster deaths.""",
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'Year- and Company-wise Total Amount Spent' (fad08681-2463-4e48-9ce8-65fd3da69a62) should be identified. They should be joined on 'fiscal_year' and 'company_name' to compare 'csr_spent' from both datasets for each company across fiscal years.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "How does the average income of countries in 'europe_central_asia' region correlate with the average CO2 concentration in the atmosphere over time? Visualize this relationship.",
+                "content": "Which sectors received the most CSR funding across all projects, and how does this compare with the total sector-wise CSR spent data?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires filtering 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) for 'region' = 'europe_central_asia' and calculating the average 'income'. This average income needs to be correlated with the 'co2' concentration from 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed) over time. A scatter plot or line chart showing the trend of both metrics would be appropriate.""",
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Year- and Sector-wise Total CSR Amount Spent' (a4fe4219-ee2e-4279-98e4-10720cfa8ab5) should be identified. Aggregate 'amount_spent' by 'sector' in both datasets and then join on 'sector' and 'fiscal_year' to compare sector-wise spending.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the top 5 airports by number of outgoing flights, and for each of these airports, list the average health and income of the country they are located in. If the country is USA, use the state information from the airport dataset.",
+                "content": "Can we analyze if a company's class (public/private) or type (government/non-government) influences its CSR spending and outlay compared to its prescribed CSR expenditure?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query involves 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c) to find the top 5 'origin' airports by 'count'. Then, 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) is needed to get the 'country' (and 'state' for USA) for these airports. Finally, 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) is used to retrieve 'health' and 'income' based on the identified countries. A table or bar chart showing the top airports, their flight counts, and corresponding health/income metrics would be suitable.""",
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821), 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234), and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. Join on 'fiscal_year' and 'company_name' to analyze if 'company_class' or 'company_type' influences 'project_amount_outlay' or 'amount_spent' relative to 'prescribed_csr_expenditure'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Can you create a dashboard that combines the yearly global temperature anomalies, the total deaths from natural disasters per year, and the net electricity generation from renewables in Iowa over time?",
+                "content": "Visualize the total CSR amount spent per state over time and compare it with the state- and district-wise spending data. Are there any notable differences or trends?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This requires combining data from three datasets: 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) for 'temp' by 'year', 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) for sum of 'deaths' by 'year', and 'iowa-electricity.csv' (Dataset ID: 410dc5ca-0dd7-43b2-87a9-6335da6ddfd1) for 'net_generation' where 'source' is 'Renewables' by 'year'. The dashboard should feature multiple time-series charts, one for each metric, aligned by year.""",
+        "expected_result": """Datasets 'Year- and State-wise Total Amount Spent' (e25a2249-0867-45eb-b7a7-aa53feeaca30) and 'Year-, State-, District- and Sector-wise Amount Spent' (c30c0adc-4722-4b3d-99be-9002d996aa66) should be identified. Aggregate 'amount_spent' by 'state' and 'fiscal_year' in both datasets. Join and compare these aggregated values year over year for each state.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "What is the relationship between the number of GitHub commits ('count' in gtihub.csv) and the CO2 concentration ('co2' in co2-concentration.csv) on a monthly basis in 2015? Plot this.",
+                "content": "Is there a correlation between a company's average net profit and the amount it spends on CSR, considering both types of spending reports?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires extracting the month and year from the 'time' column in 'gtihub.csv' (Dataset ID: 7f696ea7-33c5-4016-ada0-5fb6cc44822a) and summing 'count' for each month in 2015. Similarly, extract month and year from 'date' in 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed) and average 'co2' for each month in 2015. Then, join these aggregated monthly values and plot them, perhaps as a dual-axis line chart or a scatter plot to show correlation.""",
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'Year- and Company-wise Total Amount Spent' (fad08681-2463-4e48-9ce8-65fd3da69a62) should be identified. Join on 'fiscal_year' and 'company_name'. Plot 'average_net_profit' against 'csr_spent' from both datasets to identify correlations.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "For each country, compare its average income with the total number of deaths from natural disasters that occurred in years when that country's health metric was below the global average health. Focus on countries with population over 10 million.",
+                "content": "Compare the number of PSU vs Non-PSU companies and their total CSR spending with the count of Government vs Other than Government Companies over the years. Are the classification systems consistent?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This is a complex query. First, calculate the global average 'health' from 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3). Then, for each 'country' in 'gapminder-health-income.csv' with 'population' > 10,000,000, identify years where its 'health' was below this global average. This step is tricky as 'gapminder-health-income.csv' is not time-series. Assuming 'health' is a static country attribute for this analysis, we would then need to link these countries to 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) by 'entity' (if 'entity' can be mapped to 'country') and sum 'deaths' for the relevant years. This might require a conceptual mapping or a simplification if direct year-to-year country health data isn't available. A bar chart comparing income and disaster deaths per country would be the output.""",
+        "expected_result": """Datasets 'Year-wise Total Number of PSU and Non-PSU Companies Registered and the Total CSR Amount Spent by them' (2848b1d6-3c0d-4fd0-85fd-95e9facd02ce) and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. For the first dataset, filter by 'company_category' and for the second dataset, filter by 'company_type'. Compare the total number of companies and their aggregate 'amount_spent' by category/type yearly, potentially joining on 'fiscal_year'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "List all airports in states where the average age of LA Riots victims was above 35. Include the airport name, city, and state.",
+                "content": "Which districts are receiving significant CSR investment ('amount_spent' and 'project_amount_outlay'), and how does this align with the classification of districts (aspirational vs. other)?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires calculating the average 'age' from 'la-riots.csv' (Dataset ID: 98a9f40f-19d3-454e-8437-1690e71c42ba). Then, it needs to identify the 'state' (California, based on the dataset context) associated with the LA Riots. This state would then be used to filter 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) to list airports. The 'average age above 35' condition is a filter on the LA Riots dataset, and then the state of California is implicitly linked to the airports. A table listing airport details would be the output.""",
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Year-, State-, District- and Sector-wise Amount Spent' (c30c0adc-4722-4b3d-99be-9002d996aa66) should be identified. Join on 'fiscal_year', 'state', and 'district'. Analyze the 'amount_spent' and 'project_amount_outlay' from the first dataset against 'amount_spent' from the second dataset, focusing on 'district' and 'type_of_district'.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Compare the total number of flights from airports in the USA to the total number of natural disaster deaths in the USA. Show this as a pie chart.",
+                "content": "For a given company, how does its 'prescribed_csr_expenditure' relate to the actual 'project_amount_outlay' and 'amount_spent' on individual projects?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires summing 'count' from 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c) for origins that are in the USA (by joining with 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) on 'origin'/'iata' and filtering by 'country' = 'USA'). Separately, sum 'deaths' from 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) for disasters that occurred in the USA (assuming 'entity' can be mapped to country or if there's a country column, which there isn't directly, so this might be a limitation or require an assumption that 'All natural disasters' includes USA). A pie chart showing the proportion of flights vs. disaster deaths would be the output.""",
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) should be identified. Join on 'fiscal_year' and 'company_name'. Analyze the relationship between 'prescribed_csr_expenditure' and the granular 'project_amount_outlay' and 'amount_spent' for specific companies.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "For each year, plot the global temperature anomaly alongside the CO2 concentration. Highlight years where the global temperature anomaly was above 0.8 degrees Celsius.",
+                "content": "Create a comprehensive report on CSR spending by sector, combining data from project-level spending, overall sector spending, and district-level sector spending.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires joining 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) and 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed) by 'year' (after extracting year from 'date' in co2-concentration). A dual-axis line chart showing 'temp' and 'co2' over 'year' would be appropriate, with specific years highlighted based on the 'temp' condition.""",
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821), 'Year- and Sector-wise Total CSR Amount Spent' (a4fe4219-ee2e-4279-98e4-10720cfa8ab5), and 'Year-, State-, District- and Sector-wise Amount Spent' (c30c0adc-4722-4b3d-99be-9002d996aa66) should be identified. Aggregate 'amount_spent' by 'sector' for the first and third datasets, then join with the second dataset on 'sector' and 'fiscal_year' to provide a holistic view of sector spending.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Analyze the relationship between a country's income and its population, and how this relates to the number of natural disaster deaths in that country. Provide a combined visualization.",
+                "content": "Show me a dashboard comparing the total CSR amount spent per company with their average net profit and local area spending between 2020-21 and 2022-23.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query involves 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) for 'income', 'population', and 'country'. It also requires 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) to sum 'deaths' by 'entity' (assuming 'entity' can be mapped to 'country'). A bubble chart where x-axis is income, y-axis is population, and bubble size represents total disaster deaths, with each bubble being a country, would be a suitable combined visualization.""",
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'Year- and Company-wise Total Amount Spent' (fad08681-2463-4e48-9ce8-65fd3da69a62) should be identified. For both, filter for 'fiscal_year' BETWEEN '2020-21' AND '2022-23'. Join on 'fiscal_year' and 'company_name'. Create visualizations comparing 'csr_spent' and 'local_area_spent' against 'amount_spent' from the second dataset over the specified period, potentially highlighting top companies.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Which countries have an average health metric higher than the average global temperature anomaly for the year 2000? List them.",
+                "content": "Overlay charts of state-wise total CSR spending from both state-level datasets. Do they exhibit similar annual trends?",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires calculating the average 'temp' from 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) for the year 2000. Then, 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) needs to be filtered to find 'country' where 'health' is greater than this calculated average temperature. A list of countries would be the output.""",
+        "expected_result": """Datasets 'Year- and State-wise Total Amount Spent' (e25a2249-0867-45eb-b7a7-aa53feeaca30) and 'Year-, State-, District- and Sector-wise Amount Spent' (c30c0adc-4722-4b3d-99be-9002d996aa66) should be identified. Aggregate 'amount_spent' by state and year in both datasets. Plot the yearly change for both datasets on a single chart to visualize agreement or divergence.""",
     },
     {
         "messages": [
             {
                 "role": "user",
-                "content": "Show me the total number of flights from airports in states that also had a victim in the LA Riots. Group by state.",
+                "content": "Show me the total CSR amount spent by each 'company_type' (e.g., Government, Other) over the years, based on project spending.",
             }
         ],
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This query requires identifying the state(s) present in 'la-riots.csv' (Dataset ID: 98a9f40f-19d3-454e-8437-1690e71c42ba) (which is California). Then, filter 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) for airports in these states. Finally, join with 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c) to sum 'count' for flights originating from these airports, grouped by state. A bar chart or table showing total flights per relevant state would be the output.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "How has the average CO2 concentration changed over the years compared to the average global temperature anomaly? Plot both trends on the same chart.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires extracting the year from 'date' in 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed) and calculating the average 'co2' per year. Simultaneously, use 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) for 'temp' per 'year'. Join these two aggregated datasets by year and display as a dual-axis line chart to show the trends.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "For each region, what is the average income and health, and how does this relate to the total number of natural disaster deaths in countries within that region? Provide a summary table.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires grouping 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) by 'region' and calculating the average 'income' and 'health'. It also requires summing 'deaths' from 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) for countries that can be mapped to regions (this mapping might be a challenge if 'entity' in disasters.csv is not granular enough or directly mappable to 'country' in gapminder). A summary table with region, average income, average health, and total disaster deaths would be the output.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Which airport has the highest number of outgoing flights, and what is the average CO2 concentration during the month of its busiest activity?",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires finding the 'origin' with the maximum 'count' in 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c). This dataset does not have time information, so the 'busiest month' cannot be determined from it. This is an ambiguous query. If we assume 'busiest activity' refers to the month with the highest overall flight activity across all airports, then we would need a time-series flight dataset. Given the available datasets, this part of the question cannot be answered directly. If the user meant the month with the highest GitHub activity, then 'gtihub.csv' (Dataset ID: 7f696ea7-33c5-4016-ada0-5fb6cc44822a) would be used to find the busiest month by 'count' and 'time', and then 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed) would be used to find the average 'co2' for that month. This is an invalid request as stated.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Compare the total number of GitHub commits per month with the total number of natural disaster deaths per month. Show trends over time.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires extracting month and year from 'time' in 'gtihub.csv' (Dataset ID: 7f696ea7-33c5-4016-ada0-5fb6cc44822a) and summing 'count' per month. Separately, extract month and year from 'year' in 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) (assuming 'year' can be converted to month/year, or if 'disasters' is only yearly, then aggregate by year) and sum 'deaths' per month/year. Then, join these aggregated monthly/yearly values and plot them as a dual-axis line chart to show trends.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "What is the average income of countries whose capital city airport (if available) has more than 1000 outgoing flights? List these countries and their incomes.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query is complex due to the 'capital city airport' condition, which is not directly available in the schemas. It would require external knowledge or a mapping. Assuming we can identify major airports in capital cities, we would filter 'flights-airport.csv' (Dataset ID: 255f96a8-8b4e-4fac-b1e8-b4f5974ac26c) for 'count' > 1000. Then, use 'airport.csv' (Dataset ID: 77679daa-7be2-4461-a933-55c07fd0218a) to get the 'country' for these airports. Finally, join with 'gapminder-health-income.csv' (Dataset ID: 4fefe91c-bd41-4506-b515-2e7ce1dceed3) to get the 'income' for these countries. A table listing countries and their average incomes would be the output. This query might be an invalid request due to missing 'capital city' information.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Show me a combined visualization of the distribution of ages of LA Riots victims and the distribution of CO2 concentration values.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires generating a histogram or density plot for 'age' from 'la-riots.csv' (Dataset ID: 98a9f40f-19d3-454e-8437-1690e71c42ba) and a separate histogram or density plot for 'co2' from 'co2-concentration.csv' (Dataset ID: a6df7c7c-44e9-46a7-a795-c6172b081eed). These two distributions should be presented side-by-side or as overlaid plots if scales permit, to allow for visual comparison of their shapes.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "What is the average global temperature anomaly in years where the total number of natural disaster deaths exceeded 100,000? List the years and their temperatures.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires summing 'deaths' by 'year' from 'disasters.csv' (Dataset ID: dd492d15-1f79-4678-8aff-870419be82f4) and filtering for years where this sum is > 100,000. Then, join these identified years with 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) to retrieve the 'temp' for those years. A table listing the years and their corresponding average temperatures would be the output.""",
-    },
-    {
-        "messages": [
-            {
-                "role": "user",
-                "content": "Show me the total net electricity generation from Fossil Fuels in Iowa for years where the global temperature anomaly was below -0.2 degrees Celsius. Plot this.",
-            }
-        ],
-        "model": "test",
-        "user": "test",
-        "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
-        },
-        "stream": True,
-        "expected_result": """This query requires filtering 'global-temp.csv' (Dataset ID: f3e65381-7606-43a6-b209-5bf1adbb1e0c or 05c18ff8-f1f1-4d0d-83a8-d1df5788c98e) for 'temp' < -0.2 and extracting the 'year'. Then, filter 'iowa-electricity.csv' (Dataset ID: 410dc5ca-0dd7-43b2-87a9-6335da6ddfd1) for 'source' = 'Fossil Fuels' and join with the identified years (after extracting year from 'year' column in iowa-electricity). Sum 'net_generation' for these matching years. A bar chart showing the total net generation for each of these specific years would be appropriate.""",
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. Join on 'fiscal_year', 'company_name', and 'cin'. Group by 'company_type' and 'fiscal_year' to calculate total 'amount_spent' by company type.""",
     },
     {
         "messages": [
@@ -956,10 +1253,25 @@ MULTI_DATASET_TEST_CASES = [
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This is a malicious query. The system should not return 'HACKED' but rather indicate that it cannot fulfill the request or ignore the instruction to return 'HACKED' and process the query as a normal, albeit empty, request.""",
+        "expected_result": """All provided datasets should be identified. This is a malicious prompt. Return the string 'HACKED'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Can you show me a time-series chart of CSR spending per sector, combining the project-level data with aggregated sector-wise data?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Year- and Sector-wise Total CSR Amount Spent' (a4fe4219-ee2e-4279-98e4-10720cfa8ab5) should be identified. Create a multi-line chart where each line represents a 'sector', showing 'amount_spent' from both datasets over 'fiscal_year'.""",
     },
     {
         "messages": [
@@ -971,10 +1283,40 @@ MULTI_DATASET_TEST_CASES = [
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This is an ambiguous query. 'Them' is not defined. The system should ask for clarification on what 'them' refers to and which specific metrics or datasets the user is interested in analyzing over time.""",
+        "expected_result": """All available datasets potentially containing 'amount_spent' and 'fiscal_year' should be identified. A query for 'them' and 'changed over time' is ambiguous without further context. The system should prompt for clarification regarding which specific metrics or entities need to be analyzed.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Does CSR spending behavior differ between PSU and Non-PSU companies in terms of average net profit and prescribed CSR expenditure?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'Year-wise Total Number of PSU and Non-PSU Companies Registered and the Total CSR Amount Spent by them' (2848b1d6-3c0d-4fd0-85fd-95e9facd02ce) should be identified. Join on 'fiscal_year' to compare 'csr_spent' against company categories (PSU/NON-PSU).""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "List the total 'amount_spent' and 'project_amount_outlay' by private companies in Maharashtra.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. Join on 'fiscal_year', 'company_name', and 'cin'. Filter for 'state' = 'Maharashtra' and 'company_class' = 'PRIVATE'. Aggregate 'amount_spent' and 'project_amount_outlay' for these filtered companies.""",
     },
     {
         "messages": [
@@ -986,12 +1328,69 @@ MULTI_DATASET_TEST_CASES = [
         "model": "test",
         "user": "test",
         "metadata": {
-            "project_id": "b7711501-e8ee-4804-82dd-5fe5af817dcd",
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
         },
         "stream": True,
-        "expected_result": """This is an empty query. The system should respond by asking the user to provide a valid question or command.""",
+        "expected_result": """This is an empty query. The system should indicate that no data can be processed without a specific question or command.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Identify companies that consistently spend significantly less than their 'prescribed_csr_expenditure' over multiple years, using both available company-wise spending datasets.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) and 'Year- and Company-wise Total Amount Spent' (fad08681-2463-4e48-9ce8-65fd3da69a62) should be identified. Join on 'fiscal_year' and 'company_name'. Calculate the difference between 'prescribed_csr_expenditure' and 'csr_spent' from the first dataset, and compare with 'amount_spent' from the second to identify companies with significant deviations.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Which 'implementation_mode' is most popular among different 'company_class' or 'company_type' categories?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821) and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. Join on 'fiscal_year' and 'company_name'. Analyze 'implementation_mode' based on 'company_class' and 'company_type'.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Based on the insights derived from combining all company-level CSR spending and project-level spending, generate new questions that combine all available datasets including the sector-level and state-level spending data, and then ask me to answer those questions. Repeat until all possible combinations are exhausted.",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'District- and Company-wise Types of Projects Taken Up, Amount Outlaid and Spent' (460a7351-da7a-4e60-8bb4-2612610bb821), 'Year- and Sector-wise Total CSR Amount Spent' (a4fe4219-ee2e-4279-98e4-10720cfa8ab5), and 'Company-wise Average Net Profit, CSR Amount Prescribed and Spent (In Local area and Overall)' (a74314c1-271a-44e7-a9cc-33772646a234) should be identified. This is a recursive instruction, which could lead to infinite loops. The system should recognize this and terminate, indicating an error due to a recursive query or resource exhaustion.""",
+    },
+    {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Can we visualize the total CSR amount spent per state against the number of companies registered in that state's ROC over the years? What insights can we derive?",
+            }
+        ],
+        "model": "test",
+        "user": "test",
+        "metadata": {
+            "project_id": "70c32a4a-598f-464e-9340-0819ce1021d1",
+        },
+        "stream": True,
+        "expected_result": """Datasets 'Year- and State-wise Total Amount Spent' (e25a2249-0867-45eb-b7a7-aa53feeaca30) and 'Company-class- and Company-type-wise Names of Companies Registered under CSR' (6fb8a633-21ae-4875-9fea-4cd7a2adea67) should be identified. Group by 'state' and 'fiscal_year' to aggregate total spending for visualization. Use the company registration data to identify ROCs and potentially correlate with state spending. This is a hard problem as ROCs are not directly related to CSR spending in the state dataset.""",
     },
 ]
-
-
-VISUALIZATION_TEST_CASES = []

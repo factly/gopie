@@ -9,6 +9,44 @@ import (
 	"go.uber.org/zap"
 )
 
+func (s *PostgresAPIKeyStore) ListKeys(ctx context.Context, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error) {
+	apiKeys, err := s.q.ListAPIKeys(ctx, gen.ListAPIKeysParams{
+		OrgID:  orgID,
+		Limit:  int32(pagination.Limit),
+		Offset: int32(pagination.Offset),
+	})
+	if err != nil {
+		s.logger.Error("Error listing API keys", zap.Error(err))
+		return nil, err
+	}
+
+	var items []*models.APIKey
+	for _, p := range apiKeys {
+		items = append(items, &models.APIKey{
+			ID:          p.ID.String(),
+			Name:        p.Name,
+			KeyHash:     p.KeyHash,
+			CreatedBy:   p.CreatedBy,
+			Description: p.Description.String,
+			LastUsedAt:  &p.LastUsedAt.Time,
+			ExpiresAt:   &p.ExpiresAt.Time,
+			IsRevoked:   p.IsRevoked,
+			OrgID:       p.OrgID,
+			CreatedAt:   time.Time(p.CreatedAt.Time),
+			UpdatedAt:   time.Time(p.UpdatedAt.Time),
+		})
+	}
+
+	count, err := s.q.GetAPIKeysCount(ctx, orgID)
+	if err != nil {
+		s.logger.Error("Error getting API keys count", zap.Error(err))
+		return nil, err
+	}
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), items)
+	return &paginationView, nil
+}
+
 func (s *PostgresAPIKeyStore) ListExpiredAPIKeys(ctx context.Context, pagination models.Pagination, orgID string) (*models.PaginationView[*models.APIKey], error) {
 	apiKeys, err := s.q.ListExpiredAPIKeys(ctx, gen.ListExpiredAPIKeysParams{
 		OrgID:  orgID,

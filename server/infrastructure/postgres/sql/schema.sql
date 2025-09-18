@@ -49,6 +49,7 @@ create table if not exists dataset_summary (
 
 create table if not exists database_sources (
     id uuid primary key default uuid_generate_v4(),
+    dataset_id uuid references datasets(id),
     connection_string text not null,
     sql_query text not null,
     driver text not null,

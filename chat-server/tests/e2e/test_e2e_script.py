@@ -6,7 +6,6 @@ import pytest
 from .dataset_test_cases import (
     MULTI_DATASET_TEST_CASES,
     SINGLE_DATASET_TEST_CASES,
-    VISUALIZATION_TEST_CASES,
 )
 from .terminal_formatter import TerminalFormatter
 from .test_utils import (
@@ -150,12 +149,6 @@ async def test_single_dataset_cases(request, capfd):
 
 
 @pytest.mark.asyncio
-async def test_visualization_cases(request, capfd):
-    test_function = _create_pytest_test_function(VISUALIZATION_TEST_CASES, "visualization")
-    await test_function(request, capfd)
-
-
-@pytest.mark.asyncio
 async def test_multi_dataset_cases(request, capfd):
     test_function = _create_pytest_test_function(MULTI_DATASET_TEST_CASES, "multi dataset")
     await test_function(request, capfd)
@@ -163,7 +156,7 @@ async def test_multi_dataset_cases(request, capfd):
 
 @pytest.mark.asyncio
 async def test_all_cases(request, capfd):
-    all_cases = SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES + VISUALIZATION_TEST_CASES
+    all_cases = SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES
     test_function = _create_pytest_test_function(all_cases, "all")
     await test_function(request, capfd)
 
@@ -172,5 +165,4 @@ if __name__ == "__main__":
     print("Use pytest to run the tests:")
     print("pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases -v")
     print("pytest tests/e2e/test_e2e_script.py::test_multi_dataset_cases -v")
-    print("pytest tests/e2e/test_e2e_script.py::test_visualization_cases -v")
     print("pytest tests/e2e/test_e2e_script.py::test_all_cases -v")

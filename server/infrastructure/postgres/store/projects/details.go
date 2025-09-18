@@ -9,6 +9,7 @@ import (
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
@@ -31,8 +32,8 @@ func (s *PostgresProjectStore) Details(ctx context.Context, id, orgID string) (*
 		ID:           p.ID,
 		Name:         p.Name,
 		Description:  p.Description.String,
-		CreatedAt:    time.Time(p.CreatedAt.Time),
-		UpdatedAt:    time.Time(p.UpdatedAt.Time),
+		CreatedAt:    p.CreatedAt.Time,
+		UpdatedAt:    p.UpdatedAt.Time,
 		CreatedBy:    p.CreatedBy.String,
 		UpdatedBy:    p.UpdatedBy.String,
 		OrgID:        p.OrgID.String,
@@ -65,8 +66,8 @@ func (s *PostgresProjectStore) GetProjectByID(ctx context.Context, id string) (*
 
 func (s *PostgresProjectStore) ProjectsBelongToOrg(ctx context.Context, projectIDs []string, orgID string) (bool, error) {
 	belongs, err := s.q.ProjectsBelongToOrg(ctx, gen.ProjectsBelongToOrgParams{
-		Cardinality: projectIDs,
-		OrgID:       pgtype.Text{String: orgID, Valid: true},
+		Column1: projectIDs,
+		OrgID:   pgtype.Text{String: orgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error checking projects belong to org", zap.Error(err))
@@ -77,10 +78,10 @@ func (s *PostgresProjectStore) ProjectsBelongToOrg(ctx context.Context, projectI
 }
 
 func (s *PostgresProjectStore) DatasetsBelongToOrg(ctx context.Context, datasetNames []string, orgID string) (bool, error) {
-	if len(datasetNames) > 0 && datasetNames[0] != "" && strings.HasPrefix(datasetNames[0], "gs_") {
+	if len(datasetNames) > 0 && datasetNames[0] != "" && strings.HasPrefix(datasetNames[0], "gp_") {
 		belongs, err := s.q.DatasetWithNamesBelongsToOrg(ctx, gen.DatasetWithNamesBelongsToOrgParams{
-			Cardinality: datasetNames,
-			OrgID:       pgtype.Text{String: orgID, Valid: true},
+			Column1: datasetNames,
+			OrgID:   pgtype.Text{String: orgID, Valid: true},
 		})
 		if err != nil {
 			s.logger.Error("Error checking datasets belong to org", zap.Error(err))
@@ -89,9 +90,17 @@ func (s *PostgresProjectStore) DatasetsBelongToOrg(ctx context.Context, datasetN
 		return belongs, nil
 	}
 
+	// Convert datasetNames to []pgtype.UUID
+	uuids := make([]pgtype.UUID, len(datasetNames))
+	for i, name := range datasetNames {
+		// Parse the string to uuid.UUID
+		u := uuid.MustParse(name)
+		uuids[i] = pgtype.UUID{Bytes: u, Valid: true}
+	}
+
 	belongs, err := s.q.DatasetWithIDsBelongsToOrg(ctx, gen.DatasetWithIDsBelongsToOrgParams{
-		Cardinality: datasetNames,
-		OrgID:       pgtype.Text{String: orgID, Valid: true},
+		Column1: uuids,
+		OrgID:   pgtype.Text{String: orgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error checking datasets belong to org", zap.Error(err))

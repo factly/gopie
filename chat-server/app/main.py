@@ -8,9 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routers.dataset_upload import (
     dataset_router as schema_upload_router,
 )
+from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
-from app.core.log import logger, setup_logger
+from app.core.log import custom_logger as logger
+from app.core.log import setup_logger
 from app.core.session import SingletonAiohttp
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.utils.graph_utils.generate_graph import visualize_graph
@@ -25,7 +27,7 @@ async def lifespan(app: FastAPI):
         setup_logger()
         visualize_graph()
     except Exception as e:
-        logger.error(f"Failed to generate graph visualization: {e}")
+        logger.exception(f"Failed to generate graph visualization: {e}")
     yield
     await QdrantSetup.close_clients()
     await SingletonAiohttp.close_aiohttp_client()
@@ -56,6 +58,7 @@ app.add_middleware(
     allow_headers=settings.CORS_HEADERS,
 )
 
+app.include_router(health_router, prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"])
 

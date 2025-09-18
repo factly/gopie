@@ -25,7 +25,7 @@ func SetupZitadelInterceptor(cfg *config.GopieConfig, logger *logger.Logger) {
 
 	authZ, err := authorization.New(ctx, zt, oauth.DefaultAuthorization("./zitadel_key.json"))
 	if err != nil {
-		logger.Fatal("failed to create zitadel authorization", zap.Error(err))
+		logger.Critical("failed to create zitadel authorization", zap.Error(err))
 		return
 	}
 

@@ -9,11 +9,7 @@ def create_visualize_data_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
-    user_query = kwargs.get("user_query", "")
-    datasets_csv_info = kwargs.get("datasets_csv_info", "")
-    previous_python_code = kwargs.get("previous_python_code", "")
-    feedback_count = kwargs.get("feedback_count", 0)
-    tool_call_count = kwargs.get("tool_call_count", 0)
+    input_content = kwargs.get("input", "")
 
     system_content = """
 You are an expert data visualization engineer specializing in creating accessible and
@@ -56,7 +52,32 @@ IMPORTANT NOTES:
 - Do not mention about saving to json or png in the status messages
 """
 
-    human_template_str = """\
+    human_template_str = "{input}"
+
+    if prompt_template:
+        return ChatPromptTemplate.from_messages(
+            [
+                SystemMessage(content=system_content),
+                HumanMessagePromptTemplate.from_template(human_template_str),
+            ]
+        )
+
+    human_content = human_template_str.format(input=input_content)
+
+    return [
+        SystemMessage(content=system_content),
+        HumanMessage(content=human_content),
+    ]
+
+
+def format_visualization_input(
+    user_query: str,
+    datasets_csv_info: str,
+    previous_python_code: str,
+    feedback_count: int,
+    tool_call_count: int,
+) -> dict:
+    human_content_str = f"""\
 This is the user query: {user_query}
 
 The following are the datasets and their descriptions for the present query:
@@ -67,13 +88,6 @@ CURRENT TOOL USAGE STATUS:
 - Python code executions (run_python_code): {tool_call_count} times
 - Feedback requests (get_feedback_for_image): {feedback_count} times
 """
-    if prompt_template:
-        return ChatPromptTemplate.from_messages(
-            [
-                SystemMessage(content=system_content),
-                HumanMessagePromptTemplate.from_template(human_template_str),
-            ]
-        )
 
     previous_python_text = """\
 PREVIOUS PYTHON CODE:
@@ -85,7 +99,7 @@ may have changed, so use the new paths provided in your current implementation.
 ```
 """
 
-    human_content = human_template_str.format(
+    human_content = human_content_str.format(
         user_query=user_query,
         datasets_csv_info=datasets_csv_info,
         tool_call_count=tool_call_count,
@@ -95,7 +109,4 @@ may have changed, so use the new paths provided in your current implementation.
     if previous_python_code:
         human_content += previous_python_text.format(previous_python_code=previous_python_code)
 
-    return [
-        SystemMessage(content=system_content),
-        HumanMessage(content=human_content),
-    ]
+    return {"input": human_content}

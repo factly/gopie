@@ -15,8 +15,6 @@ import { ProtectedPage } from "@/components/auth/protected-page";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { MentionInput } from "@/components/chat/mention-input";
 import { ContextPicker, ContextItem } from "@/components/chat/context-picker";
-import { useCreateChat } from "@/lib/mutations/chat";
-import { useChatStore } from "@/lib/stores/chat-store";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -47,8 +45,6 @@ export default function HomePage() {
   const [selectedContexts, setSelectedContexts] = useState<ContextItem[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const createChat = useCreateChat();
-  const { selectChat } = useChatStore();
 
   const handleSelectContext = (context: ContextItem) => {
     setSelectedContexts((prev) => [...prev, context]);
@@ -97,44 +93,15 @@ export default function HomePage() {
     setIsSending(true);
 
     try {
-      // Redirect to the chat page with the message and context information
+      // Simply navigate to chat page with contexts and initial message
+      // Let the chat page handle chat creation and message sending
       const encodedMessage = encodeURIComponent(message);
-      const contextData = encodeURIComponent(JSON.stringify(selectedContexts));
-      router.push(
-        `/chat?initialMessage=${encodedMessage}&contextData=${contextData}`
-      );
+      const contextsData = encodeURIComponent(JSON.stringify(selectedContexts));
+
+      // Use 'contextData' parameter to match what the chat page expects
+      router.push(`/chat?initialMessage=${encodedMessage}&contextData=${contextsData}`);
+
       return true;
-
-      // Note: The code below is intentionally not executed due to the return statement above
-      // It's kept for reference in case we need to revert to the old behavior
-
-      // Get context information for logs and potential backend use
-      if (selectedContexts.length > 0) {
-        console.log(
-          "Using contexts:",
-          selectedContexts.map((ctx) => ({ id: ctx.id, type: ctx.type }))
-        );
-      }
-
-      // Note: In a home page context, we don't need to specify a dataset ID
-      const result = await createChat.mutateAsync({
-        messages: [{ role: "user", content: message }],
-      });
-
-      // Success notification
-      toast({
-        title: "Success",
-        description: "Your message has been sent",
-      });
-
-      // If we get a chatId back, we could navigate to the chat page
-      // or handle the response here
-      if (result?.data?.id) {
-        selectChat(result.data.id, message.substring(0, 40) + "...");
-
-        // Optionally navigate to the chat page
-        // router.push(`/${project}/dataset/chat?id=${result.data.id}`);
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -142,6 +109,7 @@ export default function HomePage() {
         variant: "destructive",
       });
       console.error(error);
+      return false;
     } finally {
       setIsSending(false);
     }

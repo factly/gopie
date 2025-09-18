@@ -61,6 +61,24 @@ func TestAST_ToCountQuery(t *testing.T) {
 			sql:         "SELECT id FROM tbl1 UNION ALL SELECT id FROM tbl2 ORDER BY id LIMIT 100",
 			expectedSql: "SELECT count(*) FROM ((SELECT id FROM tbl1) UNION ALL (SELECT id FROM tbl2) LIMIT 100)",
 		},
+		{
+			title: "Complex_Query_With_Joins_And_CTE",
+			sql: `
+                WITH regional_sales AS (
+                    SELECT region, SUM(amount) AS total_sales
+                    FROM orders
+                    GROUP BY region
+                )
+                SELECT o.order_id, c.customer_name, rs.total_sales
+                FROM orders AS o
+                JOIN customers AS c ON o.customer_id = c.id
+                JOIN regional_sales AS rs ON o.region = rs.region
+                WHERE o.order_date > '2024-01-01'
+                ORDER BY o.order_date DESC
+                LIMIT 1000 OFFSET 200
+            `,
+			expectedSql: "SELECT count(*) FROM (WITH regional_sales AS (SELECT region, sum(amount) AS total_sales FROM orders GROUP BY region)SELECT o.order_id, c.customer_name, rs.total_sales FROM orders AS o INNER JOIN customers AS c ON ((o.customer_id = c.id)) INNER JOIN regional_sales AS rs ON ((o.region = rs.region)) WHERE (o.order_date > '2024-01-01'))",
+		},
 	}
 
 	for _, tc := range testCases {

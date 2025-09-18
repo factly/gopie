@@ -19,6 +19,11 @@ type InternalServerConfig struct {
 	Port string
 }
 
+type APIServerConfig struct {
+	Host string
+	Port string
+}
+
 type MeterusConfig struct {
 	Addr   string
 	ApiKey string
@@ -49,6 +54,7 @@ type GopieConfig struct {
 	Zitadel         ZitadelConfig
 	AIAgent         AIAgentConfig
 	InternalServer  InternalServerConfig
+	APIServer       APIServerConfig
 	EnableZitadel   bool
 	DownloadsServer DownloadsConfig
 	EncryptionKey   string
@@ -125,7 +131,7 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 	}
 
 	validations := []validation{
-		{config.OpenAI.Options, "OpenAI virtual key"},
+		// Openai Options is optional
 		{config.OpenAI.Apikey, "OpenAI api key"},
 		{config.OpenAI.BaseUrl, "OpenAI base url"},
 		{config.OpenAI.AIModel, "OpenAI ai model"},
@@ -233,6 +239,8 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_SERVER_PORT", "8000")
 	viper.SetDefault("GOPIE_INTERNAL_SERVER_HOST", "localhost")
 	viper.SetDefault("GOPIE_INTERNAL_SERVER_PORT", "8001")
+	viper.SetDefault("GOPIE_API_SERVER_HOST", "localhost")
+	viper.SetDefault("GOPIE_API_SERVER_PORT", "8002")
 	viper.SetDefault("GOPIE_S3_REGION", "us-east-1")
 	viper.SetDefault("GOPIE_S3_SSL", false)
 	viper.SetDefault("GOPIE_LOGGER_LEVEL", "info")
@@ -263,6 +271,10 @@ func LoadConfig() (*GopieConfig, error) {
 		InternalServer: InternalServerConfig{
 			Host: viper.GetString("GOPIE_INTERNAL_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_INTERNAL_SERVER_PORT"),
+		},
+		APIServer: APIServerConfig{
+			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
+			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
 		},
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),

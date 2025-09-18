@@ -9,10 +9,7 @@ def create_process_context_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
-    current_query = kwargs.get("current_query", "")
-    formatted_chat_history = kwargs.get("formatted_chat_history", [])
-    project_custom_prompts = kwargs.get("project_custom_prompts", [])
-    schemas = kwargs.get("schemas", [])
+    input_content = kwargs.get("input", "")
 
     system_content = """
 You are a context analyzer responsible for analyzing conversation history and current queries
@@ -46,9 +43,11 @@ ANALYSIS CRITERIA:
 5. ENHANCED QUERY (`enhanced_query`):
    • Rewrite the user query as a NATURAL LANGUAGE QUESTION (never SQL)
    • Make it self-contained and unambiguous by injecting critical context
-   • Include: dates, filters, dataset names, and other relevant context
+   • Include: dates, filters, dataset names, and other relevant context from conversation history
    • Preserve user's intent and wording where possible
-   • Clarify if user needs: more data, new datasets, or visualization
+   • DO NOT suggest specific technical approaches, methods, or how data should be retrieved
+   • DO NOT guide whether to use fuzzy matching, SQL operations, or specific dataset selection strategies
+   • Focus purely on clarifying WHAT the user wants, not HOW it should be obtained
    • If chat history is empty: combine user query with special instructions
    • Maintain user perspective in the enhanced query
 
@@ -63,21 +62,11 @@ IMPORTANT GUIDELINES:
 - Maintain consistency with previous analysis patterns
 - Ensure all analysis fields are properly populated
 - Consider both explicit and implicit user requirements
+- DO NOT provide workflow suggestions or technical implementation guidance
+- Focus on understanding user intent, not prescribing technical solutions
+- Let downstream nodes determine the appropriate technical approach
 """
-    human_template_str = """
-CURRENT USER QUERY: {current_query}
-
-PREVIOUS CONVERSATION HISTORY:
-{formatted_chat_history}
-
-SPECIAL INSTRUCTIONS:
-{project_custom_prompts}
-
-DATASET SCHEMAS PROVIDED FOR CURRENT QUERY:
-{schemas}
-
-TASK: Analyze the above information and return ONLY a single JSON response with the specified fields.
-"""
+    human_template_str = "{input}"
 
     if prompt_template:
         return ChatPromptTemplate.from_messages(
@@ -87,17 +76,44 @@ TASK: Analyze the above information and return ONLY a single JSON response with 
             ]
         )
 
-    # TODO: Add multi project custom prompts is not implemented
-    project_custom_prompts = "\n".join(project_custom_prompts)
-
-    human_content = human_template_str.format(
-        current_query=current_query,
-        formatted_chat_history=formatted_chat_history,
-        project_custom_prompts=project_custom_prompts,
-        schemas=schemas,
-    )
+    human_content = human_template_str.format(input=input_content)
 
     return [
         SystemMessage(content=system_content),
         HumanMessage(content=human_content),
     ]
+
+
+def format_process_context_input(
+    current_query: str,
+    formatted_chat_history: list[str],
+    project_custom_prompts: dict,
+    schemas: list[str],
+) -> dict:
+    formatted_custom_prompts = (
+        "\n\n".join(
+            [
+                f"Project ID: {project_id}\n{prompt}"
+                for project_id, prompt in project_custom_prompts.items()
+            ]
+        )
+        if project_custom_prompts
+        else ""
+    )
+
+    formatted_input = f"""\
+CURRENT USER QUERY: {current_query}
+
+PREVIOUS CONVERSATION HISTORY:
+{formatted_chat_history}
+
+SPECIAL INSTRUCTIONS:
+{formatted_custom_prompts}
+
+DATASET SCHEMAS PROVIDED FOR CURRENT QUERY (Note: Only first 5 datasets are shown here in the context):
+{schemas}
+
+TASK: Analyze the above information and return ONLY a single JSON response with the specified fields.
+"""
+
+    return {"input": formatted_input}

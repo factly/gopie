@@ -2,13 +2,21 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
-from app.workflow.events.event_utils import stream_dynamic_message
+from app.workflow.events.event_utils import (
+    configure_node,
+    non_streaming_dynamic_message,
+)
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Executing the Generating Queries ...",
+)
 async def execute_query(state: State, config: RunnableConfig) -> dict:
     """
     Executes all planned SQL queries for the current subquery in the workflow state and updates the state with results or error messages.
@@ -33,7 +41,7 @@ async def execute_query(state: State, config: RunnableConfig) -> dict:
 
         sql_results: list[SqlQueryInfo] = []
 
-        await stream_dynamic_message(
+        await non_streaming_dynamic_message(
             f"create a 1 to 2 sentence message saying that here are the generated SQL queries and now let's execute them: {sql_queries}",
             config,
         )
@@ -97,6 +105,9 @@ async def execute_query(state: State, config: RunnableConfig) -> dict:
                 "content": "Error in SQL Execution",
             },
         )
+
+        logger.exception(error_msg)
+
         return {
             "query_result": query_result,
             "messages": [ErrorMessage.from_json({"error": error_msg})],

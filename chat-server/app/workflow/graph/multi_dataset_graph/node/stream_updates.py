@@ -1,5 +1,3 @@
-import json
-
 from langchain_core.language_models.fake_chat_models import (
     GenericFakeChatModel,
 )
@@ -7,7 +5,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
@@ -43,7 +41,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         """
 
         chain_input = {
-            "subquery_result": json.dumps(subquery_result.to_dict()),
+            "subquery": subquery_result,
             "original_user_query": query_result.original_user_query,
             "subquery_messages": subquery_messages,
         }
@@ -59,7 +57,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         continue_execution = response.continue_execution
     except Exception as e:
         stream_message = "Something went wrong while generating the subquery response"
-        logger.error(f"Error in stream_updates: {e}")
+        logger.exception(f"Error in stream_updates: {e}")
 
     return {
         "messages": [AIMessage(content=stream_message)],

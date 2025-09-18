@@ -2,7 +2,6 @@ package projects
 
 import (
 	"context"
-	"time"
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
@@ -28,8 +27,8 @@ func (s *PostgresProjectStore) SearchProject(ctx context.Context, query string, 
 			ID:           p.ID,
 			Name:         p.Name,
 			Description:  p.Description.String,
-			CreatedAt:    time.Time(p.CreatedAt.Time),
-			UpdatedAt:    time.Time(p.UpdatedAt.Time),
+			CreatedAt:    p.CreatedAt.Time,
+			UpdatedAt:    p.UpdatedAt.Time,
 			DatasetCount: int(p.DatasetCount),
 			CreatedBy:    p.CreatedBy.String,
 			UpdatedBy:    p.UpdatedBy.String,

@@ -12,6 +12,7 @@ import { useChatStore } from "@/lib/stores/chat-store";
 import { useChats } from "@/lib/queries/chat";
 import { useDeleteChat } from "@/lib/mutations/chat";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ChatHistoryProps {
   datasetId: string;
@@ -34,7 +35,6 @@ export function ChatHistory({
     fetchNextPage: fetchNextChats,
     hasNextPage: hasNextChatsPage,
     isFetchingNextPage: isFetchingNextChats,
-    refetch: refetchChats,
   } = useChats({
     variables: {
       userID: "1",
@@ -42,6 +42,7 @@ export function ChatHistory({
   });
 
   const deleteChat = useDeleteChat();
+  const queryClient = useQueryClient();
 
   const allChats = chatsData?.pages.flatMap((page) => page.data.results) ?? [];
 
@@ -52,10 +53,14 @@ export function ChatHistory({
   const handleDeleteChat = async (chatId: string) => {
     try {
       await deleteChat.mutateAsync({ chatId, userId: "1" });
+
+      // Invalidate the chats query to refetch the updated list
+      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+
       if (chatId === selectedChatId) {
         selectChatForDataset(datasetId, null, null);
       }
-      await refetchChats();
+
       toast.success("Chat deleted successfully");
     } catch {
       toast.error("Failed to delete chat");

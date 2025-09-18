@@ -5,7 +5,13 @@ from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.core.constants import VISUALIZATION_RESULT, VISUALIZATION_RESULT_ARG
+from app.core.constants import (
+    DESCRIPTION_ARG,
+    JSON_PATH_ARG,
+    VISUALIZATION_RESULT,
+    VISUALIZATION_RESULT_ARG,
+)
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.visualize_data_graph.utils import (
@@ -15,7 +21,7 @@ from app.workflow.graph.visualize_data_graph.utils import (
     upload_visualization_result_data,
 )
 
-from ..types import State
+from ..types import S3Path, State
 
 
 @configure_node(
@@ -35,6 +41,7 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
     last_message = state["messages"][-1]
     visualization_results = state["result"]
     datasets = state["datasets"]
+    s3_paths_with_description = []
 
     try:
         if isinstance(last_message, ErrorMessage):
@@ -46,11 +53,21 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         tool_call = last_message.tool_calls[0]
         response = tool_call["args"]
         sandbox = state.get("sandbox")
-        result_path = response.get("visualization_json_paths", [])
+        result_paths = response.get("visualization_json_paths", [])
         png_paths = response.get("visualization_png_paths", [])
         executed_python_code = state["executed_python_code"]
 
-        result_data = await get_visualization_result_data(sandbox=sandbox, file_names=result_path)
+        if not isinstance(result_paths, list) or not all(isinstance(r, dict) for r in result_paths):
+            raise ValueError("Invalid visualization json paths")
+
+        result_data = await get_visualization_result_data(
+            sandbox=sandbox, file_names=[r.get("json_path", "No path found") for r in result_paths]
+        )
+
+        python_code_with_context = await add_context_to_python_code(
+            python_code=executed_python_code, datasets=datasets
+        )
+
         final_result_data = []
         for result in result_data:
             result = orjson.loads(result)
@@ -63,15 +80,20 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             result = orjson.dumps(result)
             final_result_data.append(result)
 
-        python_code_with_context = await add_context_to_python_code(
-            python_code=executed_python_code, datasets=datasets
-        )
         s3_paths = await upload_visualization_result_data(
             data=final_result_data, python_code=python_code_with_context
         )
 
+        s3_paths_with_description = [
+            S3Path(
+                s3_path=s3_path, description=result_path.get("description", "No description found")
+            )
+            for result_path, s3_path in zip(result_paths, s3_paths)
+        ]
+
         visualization_results.data = final_result_data
 
+        # Generate the png images for final response generation
         png_images_b64: list[str] = []
         if png_paths and sandbox:
             try:
@@ -89,7 +111,15 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
             {
                 "content": "Visualization Created",
                 "name": VISUALIZATION_RESULT,
-                "values": {VISUALIZATION_RESULT_ARG: s3_paths},
+                "values": {
+                    VISUALIZATION_RESULT_ARG: [
+                        {
+                            JSON_PATH_ARG: r.s3_path,
+                            DESCRIPTION_ARG: r.description,
+                        }
+                        for r in s3_paths_with_description
+                    ],
+                },
             },
         )
 
@@ -101,17 +131,17 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
                 )
             ],
             "result": visualization_results,
-            "s3_paths": s3_paths,
+            "s3_paths": s3_paths_with_description,
             "result_images_b64": png_images_b64,
         }
 
     except Exception as e:
         error_msg = f"Error processing visualization result: {str(e)}"
         visualization_results.errors.append(f"[ERROR] {error_msg}")
-
+        logger.exception(error_msg)
         return {
             "messages": [ErrorMessage(content=error_msg)],
             "result": visualization_results,
-            "s3_paths": [],
+            "s3_paths": s3_paths_with_description,
             "result_images_b64": [],
         }

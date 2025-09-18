@@ -34,7 +34,7 @@ func (s *PostgresChatStore) CreateChat(ctx context.Context, params *models.Creat
 		OrganizationID: pgtype.Text{String: params.OrganizationID, Valid: true},
 	})
 	if err != nil {
-		s.logger.Error("Error creating chat", zap.Error(err))
+		s.logger.Critical("Error creating chat", zap.Error(err))
 		return nil, err
 	}
 

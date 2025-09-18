@@ -58,9 +58,12 @@ export function UploadConfirmationDialog({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: { [key: string]: string } = {};
-        error.errors.forEach((err) => {
-          if (err.path) {
-            newErrors[err.path[0]] = err.message;
+        error.issues.forEach((err) => {
+          if (err.path && err.path.length > 0) {
+            const firstPath = err.path[0];
+            if (typeof firstPath === 'string' || typeof firstPath === 'number') {
+              newErrors[String(firstPath)] = err.message;
+            }
           }
         });
         setErrors(newErrors);

@@ -23,17 +23,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ReactMarkdown from "react-markdown";
-import { SqlPreview } from "@/components/dataset/sql/sql-preview";
 import { SqlEditor } from "@/components/dataset/sql/sql-editor";
 import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { useSqlStore } from "@/lib/stores/sql-store";
 import { useVisualizationStore } from "@/lib/stores/visualization-store";
 import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useEffect, useState, useCallback, memo, useMemo } from "react";
 // import { TTSButton } from "./tts-button";
 import {
@@ -48,11 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { UIMessage } from "ai";
 import { apiClient } from "@/lib/api-client";
 import { parseSqlError } from "@/lib/sql-error-utils";
-
-interface MessageContent {
-  type: "text" | "sql";
-  content: string;
-}
+import { processMessageParts } from "@/lib/utils/message-processing";
 
 // Define StreamEvent interface
 interface StreamEvent {
@@ -104,31 +94,9 @@ const MessageTextPart = memo(
 );
 MessageTextPart.displayName = "MessageTextPart";
 
-function parseMessageContent(content: string): MessageContent {
-  if (content.startsWith("---SQL---") && content.endsWith("---SQL---")) {
-    return {
-      type: "sql",
-      content: content
-        .replace(/^---SQL---/, "")
-        .replace(/---SQL---$/, "")
-        .trim(),
-    };
-  }
-  if (content.startsWith("---TEXT---") && content.endsWith("---TEXT---")) {
-    return {
-      type: "text",
-      content: content
-        .replace(/^---TEXT---/, "")
-        .replace(/---SQL---$/, "")
-        .trim(),
-    };
-  }
-  return { type: "text", content };
-}
-
 interface ChatMessageProps {
   id: string;
-  content: string | MessageContent[] | StreamEvent[];
+  content: string | StreamEvent[];
   message?: UIMessage;
   role: "user" | "assistant" | "intermediate" | "ai";
   createdAt: string;
@@ -231,9 +199,24 @@ function DatasetItem({ datasetId }: DatasetItemProps) {
   const [isLoadingProject, setIsLoadingProject] = useState(true);
 
   useEffect(() => {
+    let abortController: AbortController | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     // Fetch the project ID for this dataset
     if (dataset) {
-      apiClient.get(`v1/api/datasets/${encodeURIComponent(datasetId)}/project`)
+      abortController = new AbortController();
+      
+      // Set a 5 second timeout
+      timeoutId = setTimeout(() => {
+        if (abortController) {
+          abortController.abort();
+        }
+      }, 5000);
+      
+      apiClient
+        .get(`v1/api/datasets/${encodeURIComponent(datasetId)}/project`, {
+          signal: abortController.signal
+        })
         .json<{ project_id: string }>()
         .then((result) => {
           if (result?.project_id) {
@@ -241,12 +224,33 @@ function DatasetItem({ datasetId }: DatasetItemProps) {
           }
         })
         .catch((error) => {
-          console.warn(`Could not fetch project for dataset ${datasetId}:`, error);
+          // Ignore abort errors
+          if (error.name !== 'AbortError') {
+            console.warn(
+              `Could not fetch project for dataset ${datasetId}:`,
+              error
+            );
+          }
         })
         .finally(() => {
           setIsLoadingProject(false);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         });
+    } else {
+      setIsLoadingProject(false);
     }
+    
+    // Cleanup function
+    return () => {
+      if (abortController) {
+        abortController.abort();
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [dataset, datasetId]);
 
   if (datasetLoading || isLoadingProject) {
@@ -306,7 +310,7 @@ export function ChatMessage({
   streamAborted,
   onDelete,
   chatId,
-  isLatest,
+  // isLatest prop removed - no longer needed after SQL execution moved to use-chat-session.ts
   finalizedDatasets,
   finalizedSqlQuery,
 }: ChatMessageProps) {
@@ -314,7 +318,7 @@ export function ChatMessage({
   const {
     setResults,
     setIsOpen: setSqlPanelOpen,
-    markQueryAsExecuted,
+    // markQueryAsExecuted removed - no longer needed as SQL execution moved to use-chat-session.ts
     setOnPageChange,
     setIsLoading,
     resetPagination,
@@ -332,9 +336,7 @@ export function ChatMessage({
   const [displaySqlQueries, setDisplaySqlQueries] = useState<string[]>([]);
   const [displayIntermediateMessages, setDisplayIntermediateMessages] =
     useState<string[]>([]);
-  const [displayVisualizationPaths, setDisplayVisualizationPaths] = useState<
-    string[]
-  >([]);
+  // Visualization paths removed - no longer displayed in UI
   const [displayVisualizationResults, setDisplayVisualizationResults] =
     useState<string[]>([]);
   const [expandedQueries, setExpandedQueries] = useState<number[]>([]);
@@ -381,119 +383,38 @@ export function ChatMessage({
     if (message?.parts) {
       // Use requestAnimationFrame to defer state updates and batch them
       requestAnimationFrame(() => {
-        // Extract datasets from datasets_used tool calls
-        const newDatasets: string[] = [];
-        // Extract SQL from sql_queries tool calls
-        const newSqlQueries: string[] = [];
-        // Extract thought process messages from tool_messages tool calls
-        const newIntermediateMessages: string[] = [];
-        // Extract visualization paths from visualization_paths tool calls
-        const newVisualizationPaths: string[] = [];
-        // Extract visualization results from visualization_result tool calls
-        const newVisualizationResults: string[] = [];
-        // Extract context from set_context tool calls (for user messages)
-        const newProjectIds: string[] = [];
-        const newDatasetIds: string[] = [];
-
-        message.parts.forEach((part) => {
-          if (part.type === "tool-invocation") {
-            const { toolName, args } = part.toolInvocation;
-
-            // Handle set_context tool call (from user messages)
-            if (toolName === "set_context") {
-              if (args.project_ids && Array.isArray(args.project_ids)) {
-                newProjectIds.push(...args.project_ids);
-              }
-              if (args.dataset_ids && Array.isArray(args.dataset_ids)) {
-                newDatasetIds.push(...args.dataset_ids);
-              }
-            }
-
-            if (toolName === "datasets_used" && args.datasets) {
-              // Handle datasets_used tool
-              args.datasets.forEach((dataset: string) => {
-                if (!newDatasets.includes(dataset)) {
-                  newDatasets.push(dataset);
-                }
-              });
-            }
-
-            if (toolName === "sql_queries" && args.queries) {
-              // Handle sql_queries tool (now expects an array of queries)
-              if (Array.isArray(args.queries)) {
-                newSqlQueries.push(...args.queries);
-              } else if (typeof args.queries === "string") {
-                newSqlQueries.push(args.queries);
-              }
-            }
-
-            if (toolName === "tool_messages" && args.role && args.content) {
-              // Handle tool_messages tool (thought process) - now expects role and content directly
-              if (
-                args.role === "intermediate" &&
-                typeof args.content === "string"
-              ) {
-                newIntermediateMessages.push(args.content);
-              }
-            }
-
-            if (toolName === "visualization_paths" && args.paths) {
-              // Handle visualization_paths tool
-              if (Array.isArray(args.paths)) {
-                args.paths.forEach((path: string) => {
-                  if (!newVisualizationPaths.includes(path)) {
-                    newVisualizationPaths.push(path);
-                  }
-                });
-              }
-            }
-
-            if (toolName === "visualization_result" && args.s3_paths) {
-              // Handle visualization_result tool
-              if (Array.isArray(args.s3_paths)) {
-                args.s3_paths.forEach((path: string) => {
-                  if (!newVisualizationResults.includes(path)) {
-                    newVisualizationResults.push(path);
-                  }
-                });
-              }
-            }
-          }
-        });
+        const processed = processMessageParts(message.parts);
 
         // Batch state updates to reduce re-renders
-        if (newProjectIds.length > 0) {
-          setContextProjectIds(newProjectIds);
+        if (processed.projectIds.length > 0) {
+          setContextProjectIds(processed.projectIds);
         }
 
-        if (newDatasetIds.length > 0) {
-          setContextDatasetIds(newDatasetIds);
+        if (processed.datasetIds.length > 0) {
+          setContextDatasetIds(processed.datasetIds);
         }
 
-        if (newDatasets.length > 0) {
-          setDisplayDatasets(newDatasets);
+        if (processed.datasets.length > 0) {
+          setDisplayDatasets(processed.datasets);
         } else if (finalizedDatasets && finalizedDatasets.length > 0) {
           setDisplayDatasets(finalizedDatasets);
         }
 
-        if (newSqlQueries.length > 0) {
-          setDisplaySqlQueries(newSqlQueries);
+        if (processed.sqlQueries.length > 0) {
+          setDisplaySqlQueries(processed.sqlQueries);
         } else if (finalizedSqlQuery) {
           setDisplaySqlQueries([finalizedSqlQuery]);
         }
 
-        if (newIntermediateMessages.length > 0) {
-          setDisplayIntermediateMessages(newIntermediateMessages);
-          // Keep thought process collapsed by default - user can manually expand if needed
+        if (processed.intermediateMessages.length > 0) {
+          setDisplayIntermediateMessages(processed.intermediateMessages);
         }
 
-        if (newVisualizationPaths.length > 0) {
-          setDisplayVisualizationPaths(newVisualizationPaths);
-        }
+        // Visualization paths no longer displayed in UI
 
-        if (newVisualizationResults.length > 0) {
-          setDisplayVisualizationResults(newVisualizationResults);
-          setVisualizationPaths(newVisualizationResults, chatId);
+        if (processed.visualizationResults.length > 0) {
+          setDisplayVisualizationResults(processed.visualizationResults);
+          setVisualizationPaths(processed.visualizationResults, chatId);
           setActiveTab("visualizations"); // Auto-switch to visualizations tab when new visualizations are received
         }
       });
@@ -503,31 +424,22 @@ export function ChatMessage({
       const streamSqlQueries: string[] = [];
       const intermediateMessages: string[] = [];
 
-      // Type guard to check if it's StreamEvent[]
-      const isStreamEventArray = (
-        arr: MessageContent[] | StreamEvent[]
-      ): arr is StreamEvent[] => {
-        return arr.length > 0 && "role" in arr[0];
-      };
-
-      if (isStreamEventArray(content)) {
-        const streamContent = content as StreamEvent[];
-        streamContent.forEach((event) => {
-          if (event.datasets_used) {
-            event.datasets_used.forEach((dataset) => {
-              if (!allStreamDatasets.includes(dataset)) {
-                allStreamDatasets.push(dataset);
-              }
-            });
-          }
-          if (event.generated_sql_query) {
-            streamSqlQueries.push(event.generated_sql_query);
-          }
-          if (event.role === "intermediate") {
-            intermediateMessages.push(event.content);
-          }
-        });
-      }
+      const streamContent = content as StreamEvent[];
+      streamContent.forEach((event) => {
+        if (event.datasets_used) {
+          event.datasets_used.forEach((dataset) => {
+            if (!allStreamDatasets.includes(dataset)) {
+              allStreamDatasets.push(dataset);
+            }
+          });
+        }
+        if (event.generated_sql_query) {
+          streamSqlQueries.push(event.generated_sql_query);
+        }
+        if (event.role === "intermediate") {
+          intermediateMessages.push(event.content);
+        }
+      });
 
       setDisplayDatasets(allStreamDatasets);
       setDisplaySqlQueries(streamSqlQueries);
@@ -544,12 +456,12 @@ export function ChatMessage({
     chatId,
     setVisualizationPaths,
     setActiveTab,
-    // Remove isLoading dependency to prevent re-renders during loading
   ]);
 
   // Extract text content from message or fallback to content (needed early for useEffect)
   const textContent =
-    message?.content || (typeof content === "string" ? content : "");
+    message?.parts?.find((part) => part.type === 'text')?.text || 
+    (typeof content === "string" ? content : "");
 
   const handleRunQuery = useCallback(
     async (query: string, page: number = 1, limit: number = 20) => {
@@ -558,7 +470,7 @@ export function ChatMessage({
       setIsExecuting(true);
       setIsLoading(true);
       const offset = (page - 1) * limit;
-      
+
       try {
         const result = await executeSql.mutateAsync({
           query,
@@ -594,109 +506,22 @@ export function ChatMessage({
         setIsLoading(false);
       }
     },
-    [executeSql, setResults, setSqlPanelOpen, chatId, setActiveTab, setIsLoading]
+    [
+      executeSql,
+      setResults,
+      setSqlPanelOpen,
+      chatId,
+      setActiveTab,
+      setIsLoading,
+    ]
   );
 
-  // Execute SQL queries as soon as they appear (even while streaming)
-  useEffect(() => {
-    if (
-      (role === "assistant" || role === "ai") &&
-      isLatest &&
-      displaySqlQueries.length > 0
-    ) {
-      // Execute the last query by default
-      const sqlToExecute = displaySqlQueries[displaySqlQueries.length - 1];
+  // SQL execution is now handled in use-chat-session.ts via the onData callback
+  // to prevent duplicate SQL execution
 
-      if (sqlToExecute) {
-        const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
-        if (shouldExecute) {
-          // Reset pagination for new query
-          resetPagination();
-          
-          // Set up the page change callback for this query
-          setOnPageChange((page: number, limit: number) => {
-            handleRunQuery(sqlToExecute, page, limit);
-          });
-          
-          // Use queueMicrotask to ensure non-blocking execution
-          // This allows the SQL to run in parallel with streaming without blocking the UI
-          queueMicrotask(() => {
-            handleRunQuery(sqlToExecute, 1, rowsPerPage);
-          });
-        }
-      }
-    }
-  }, [
-    role,
-    isLatest,
-    handleRunQuery,
-    id,
-    markQueryAsExecuted,
-    displaySqlQueries,
-    resetPagination,
-    setOnPageChange,
-    rowsPerPage,
-  ]);
-
-  // Fallback for legacy SQL content (when not using displaySqlQueries)
-  useEffect(() => {
-    if (
-      !isLoading &&
-      (role === "assistant" || role === "ai") &&
-      isLatest &&
-      displaySqlQueries.length === 0
-    ) {
-      let sqlToExecute: string | null = null;
-
-      if (typeof content === "string") {
-        const parsed = parseMessageContent(content);
-        if (parsed.type === "sql") {
-          sqlToExecute = parsed.content;
-        }
-      } else if (message?.content) {
-        const parsed = parseMessageContent(message.content);
-        if (parsed.type === "sql") {
-          sqlToExecute = parsed.content;
-        }
-      }
-
-      if (sqlToExecute) {
-        const shouldExecute = markQueryAsExecuted(id, sqlToExecute);
-        if (shouldExecute) {
-          // Use queueMicrotask for non-blocking execution
-          // Reset pagination for new query
-          resetPagination();
-          
-          // Set up the page change callback for this query
-          setOnPageChange((page: number, limit: number) => {
-            handleRunQuery(sqlToExecute, page, limit);
-          });
-          
-          queueMicrotask(() => {
-            handleRunQuery(sqlToExecute, 1, rowsPerPage);
-          });
-        }
-      }
-    }
-  }, [
-    content,
-    message,
-    isLoading,
-    role,
-    isLatest,
-    handleRunQuery,
-    id,
-    markQueryAsExecuted,
-    displaySqlQueries,
-    resetPagination,
-    setOnPageChange,
-    rowsPerPage,
-  ]);
 
   const styleRole =
     role === "ai" || role === "intermediate" ? "assistant" : role;
-
-  const parsedTextContent = parseMessageContent(textContent);
 
   // Don't show the initial "Processing your request" message
   // Instead, immediately show the agent thought process when streaming starts
@@ -797,7 +622,7 @@ export function ChatMessage({
                 <Lightbulb
                   className={cn(
                     "h-4 w-4",
-                    (isStreaming || isLoading)
+                    isStreaming || isLoading
                       ? "animate-pulse text-yellow-500 dark:text-yellow-400"
                       : "text-muted-foreground"
                   )}
@@ -890,7 +715,9 @@ export function ChatMessage({
                       <div className="p-3 pt-2 overflow-hidden">
                         <div className="w-full min-w-0">
                           <SqlEditor
-                            value={editedQueries[index] ?? formatSqlQuery(query)}
+                            value={
+                              editedQueries[index] ?? formatSqlQuery(query)
+                            }
                             onChange={(newValue) => {
                               setEditedQueries((prev) => ({
                                 ...prev,
@@ -907,54 +734,12 @@ export function ChatMessage({
               </div>
             )}
 
-            {/* SQL content fallback when no specific SQL query is identified */}
-            {displaySqlQueries.length === 0 &&
-              parsedTextContent.type === "sql" && (
-                <div className="w-full max-w-full lg:max-w-[800px] text-base">
-                  <div className="relative">
-                    <SqlPreview
-                      value={formatSqlQuery(parsedTextContent.content)}
-                    />
-                    {!isLoading && (
-                      <div className="absolute top-2 right-2 flex items-center gap-2">
-                        {isExecuting && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 px-2.5 py-1 backdrop-blur-sm shadow-sm">
-                            <span className="h-2 w-2 bg-primary/50 animate-pulse" />
-                            Running...
-                          </div>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => {
-                                const queryToRun = formatSqlQuery(parsedTextContent.content);
-                                resetPagination();
-                                setOnPageChange((page: number, limit: number) => {
-                                  handleRunQuery(queryToRun, page, limit);
-                                });
-                                handleRunQuery(queryToRun, 1, rowsPerPage);
-                              }}
-                              disabled={isExecuting}
-                            >
-                              <Play className="h-3 w-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Run query</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
             {/* AI SDK parts-based rendering for text content with memoization - moved after SQL for better flow */}
             {message?.parts ? (
               <>
                 {message.parts.map((part, index) => {
-                  if (part.type === "text") {
+                  if (part.type === "text" && part.text) {
                     return (
                       <MessageTextPart
                         key={`${id}-part-${index}`}
@@ -967,9 +752,8 @@ export function ChatMessage({
                 })}
               </>
             ) : (
-              // Legacy text content rendering
-              parsedTextContent.type === "text" &&
-              parsedTextContent.content && (
+              // Text content rendering
+              textContent && (
                 <div
                   className={cn(
                     "prose prose-sm max-w-none break-words [&>:first-child]:mt-0 [&>:last-child]:mb-0 leading-relaxed",
@@ -980,7 +764,7 @@ export function ChatMessage({
                       : "dark:prose-invert [&_*]:!my-0.5 prose-p:leading-relaxed prose-li:leading-relaxed prose-ul:!pl-4 prose-ol:!pl-4 [&_blockquote]:!pl-4 [&_pre]:!p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border"
                   )}
                 >
-                  <ReactMarkdown>{parsedTextContent.content}</ReactMarkdown>
+                  <ReactMarkdown>{textContent}</ReactMarkdown>
                 </div>
               )
             )}
@@ -1075,25 +859,6 @@ export function ChatMessage({
                     datasetId={datasetId}
                     // Don't pass projectId - let DatasetItem fetch it
                   />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Visualization paths section */}
-          {displayVisualizationPaths.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <p className="text-xs text-muted-foreground font-medium mb-1.5">
-                Visualization paths:
-              </p>
-              <div className="space-y-1">
-                {displayVisualizationPaths.map((path, index) => (
-                  <div
-                    key={index}
-                    className="text-xs bg-secondary/50 text-secondary-foreground px-2 py-1 font-mono"
-                  >
-                    {path}
-                  </div>
                 ))}
               </div>
             </div>

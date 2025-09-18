@@ -1,0 +1,466 @@
+/* Uppy Dashboard Theme Overrides */
+/* This CSS customizes Uppy Dashboard to match the application's theme */
+
+/* Theme wrapper classes for dynamic switching */
+.uppy-theme-wrapper {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.uppy-theme-dark .uppy-Dashboard,
+.uppy-theme-light .uppy-Dashboard {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Main Dashboard Container */
+.uppy-Dashboard {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  border-radius: calc(var(--radius) + 4px);
+  color: hsl(var(--foreground));
+}
+
+/* Dashboard Header */
+.uppy-Dashboard-inner {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.uppy-Dashboard-title {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.uppy-Dashboard-note {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Drag and Drop Area */
+.uppy-Dashboard-AddFiles {
+  background-color: hsl(var(--muted) / 0.3);
+  border-color: hsl(var(--border));
+  border-style: dashed;
+  border-radius: var(--radius);
+}
+
+.uppy-Dashboard-AddFiles:hover {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.uppy-Dashboard-AddFiles-title {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.uppy-Dashboard-AddFiles-info {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Browse Files Button */
+.uppy-Dashboard-browse {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  height: 32px; /* Reduced from 36px */
+  padding: 0 12px; /* Reduced from 0 16px */
+  font-weight: 500;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: colors 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+}
+
+.uppy-Dashboard-browse:hover {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+.uppy-Dashboard-browse:focus,
+.uppy-Dashboard-browse:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.uppy-Dashboard-browse:disabled {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-color: hsl(var(--border));
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Tabs for Source Selection */
+.uppy-Dashboard-tabs {
+  background-color: hsl(var(--card));
+  border-bottom-color: hsl(var(--border));
+}
+
+.uppy-Dashboard-tab {
+  background-color: transparent;
+  color: hsl(var(--muted-foreground));
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 2px solid transparent;
+}
+
+.uppy-Dashboard-tab:hover {
+  background-color: hsl(var(--muted) / 0.3);
+  color: hsl(var(--foreground));
+}
+
+.uppy-Dashboard-tab[aria-selected="true"] {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-bottom-color: hsl(var(--primary));
+}
+
+/* File List */
+.uppy-Dashboard-files {
+  background-color: hsl(var(--card));
+}
+
+.uppy-Dashboard-Item {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
+.uppy-Dashboard-Item:hover {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.uppy-Dashboard-Item-name {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.uppy-Dashboard-Item-status {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Progress Bar */
+.uppy-Dashboard-Item-progress {
+  background-color: hsl(var(--muted));
+  border-radius: var(--radius);
+}
+
+.uppy-Dashboard-Item-progressIndicator {
+  background-color: hsl(var(--primary));
+  border-radius: var(--radius);
+}
+
+/* Action Buttons */
+.uppy-Dashboard-Item-action {
+  background-color: transparent;
+  color: hsl(var(--muted-foreground));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+}
+
+.uppy-Dashboard-Item-action:hover {
+  background-color: hsl(var(--muted) / 0.5);
+  color: hsl(var(--foreground));
+}
+
+/* Upload Button */
+.uppy-StatusBar-actionBtn--upload {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: calc(var(--radius) + 4px);
+  border: none;
+  font-weight: 500;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+  height: 36px; /* h-9 equivalent */
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: colors 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.uppy-StatusBar-actionBtn--upload:hover {
+  background-color: hsl(var(--primary)/90);
+}
+
+.uppy-StatusBar-actionBtn--upload:focus,
+.uppy-StatusBar-actionBtn--upload:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
+.uppy-StatusBar-actionBtn--upload:disabled {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Cancel/Pause Buttons */
+.uppy-StatusBar-actionBtn--cancel,
+.uppy-StatusBar-actionBtn--retry {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 4px);
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+  height: 36px; /* h-9 equivalent */
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: colors 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.uppy-StatusBar-actionBtn--cancel:hover,
+.uppy-StatusBar-actionBtn--retry:hover {
+  background-color: hsl(var(--secondary)/80);
+}
+
+.uppy-StatusBar-actionBtn--cancel:focus,
+.uppy-StatusBar-actionBtn--cancel:focus-visible,
+.uppy-StatusBar-actionBtn--retry:focus,
+.uppy-StatusBar-actionBtn--retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
+/* Status Bar */
+.uppy-StatusBar {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.uppy-StatusBar-content {
+  color: hsl(var(--muted-foreground));
+}
+
+.uppy-StatusBar-status {
+  color: hsl(var(--foreground));
+}
+
+/* Provider Views (Google Drive, URL, etc.) */
+.uppy-ProviderBrowser {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+.uppy-ProviderBrowser-header {
+  background-color: hsl(var(--card));
+  border-bottom-color: hsl(var(--border));
+}
+
+.uppy-ProviderBrowser-headerBar {
+  background-color: hsl(var(--muted) / 0.3);
+  border-radius: var(--radius);
+}
+
+.uppy-ProviderBrowser-userLogout {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.uppy-ProviderBrowser-userLogout:hover {
+  background-color: hsl(var(--secondary) / 0.8);
+}
+
+/* Provider Items */
+.uppy-ProviderBrowserItem {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.uppy-ProviderBrowserItem:hover {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.uppy-ProviderBrowserItem-checkbox:checked + .uppy-ProviderBrowserItem-inner {
+  background-color: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+}
+
+/* URL Input */
+.uppy-Url-input {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+.uppy-Url-input:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-color: hsl(var(--ring));
+}
+
+.uppy-Url-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* URL Import Button */
+.uppy-Url-importButton {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: calc(var(--radius) + 4px);
+  border: none;
+  font-weight: 500;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+  height: 36px; /* h-9 equivalent */
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: colors 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.uppy-Url-importButton:hover {
+  background-color: hsl(var(--primary)/90);
+}
+
+.uppy-Url-importButton:focus,
+.uppy-Url-importButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
+.uppy-Url-importButton:disabled {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Error Messages */
+.uppy-Dashboard-error {
+  background-color: hsl(var(--destructive) / 0.1);
+  border-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  border-radius: var(--radius);
+}
+
+/* Success Messages */
+.uppy-Dashboard-success {
+  background-color: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+  color: hsl(var(--foreground));
+  border-radius: var(--radius);
+}
+
+/* Modal Overlay (for non-inline mode) */
+.uppy-Dashboard--modal {
+  background-color: hsl(var(--background) / 0.8);
+}
+
+.uppy-Dashboard--modal .uppy-Dashboard-inner {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: calc(var(--radius) + 4px);
+}
+
+/* Dark mode specific adjustments */
+.dark .uppy-Dashboard,
+.uppy-theme-dark .uppy-Dashboard {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.dark .uppy-Dashboard-Item,
+.uppy-theme-dark .uppy-Dashboard-Item {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode button adjustments */
+.dark .uppy-Dashboard-browse,
+.uppy-theme-dark .uppy-Dashboard-browse {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dark .uppy-StatusBar-actionBtn--upload,
+.uppy-theme-dark .uppy-StatusBar-actionBtn--upload,
+.dark .uppy-Url-importButton,
+.uppy-theme-dark .uppy-Url-importButton {
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .uppy-StatusBar-actionBtn--cancel,
+.uppy-theme-dark .uppy-StatusBar-actionBtn--cancel,
+.dark .uppy-StatusBar-actionBtn--retry,
+.uppy-theme-dark .uppy-StatusBar-actionBtn--retry {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Light mode specific adjustments */
+.uppy-theme-light .uppy-Dashboard {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.uppy-theme-light .uppy-Dashboard-Item {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure theme classes override default styles */
+.uppy-theme-dark .uppy-Dashboard-AddFiles:hover {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--primary) / 0.7);
+}
+
+.uppy-theme-light .uppy-Dashboard-AddFiles:hover {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .uppy-Dashboard {
+    border-radius: var(--radius);
+  }
+  
+  .uppy-Dashboard-inner {
+    border-radius: var(--radius);
+  }
+}
+
+/* Hide Uppy branding to match application design */
+.uppy-Dashboard-poweredBy {
+  display: none;
+}
+
+/* Accessibility improvements */
+.uppy-Dashboard-browse:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+
+.uppy-Dashboard-tab:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+.uppy-StatusBar-actionBtn--upload:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}

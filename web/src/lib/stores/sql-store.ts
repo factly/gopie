@@ -45,7 +45,7 @@ export const useSqlStore = create<SqlStore>((set, get) => ({
   rowsPerPage: 20,
   isLoading: false,
   onPageChange: null,
-  setResults: (results) => set({ results, isOpen: !!results }),
+  setResults: (results) => set({ results }),
   setIsOpen: (isOpen) => set({ isOpen }),
   setCurrentPage: (page) => set({ currentPage: page }),
   setRowsPerPage: (rows) => set({ rowsPerPage: rows }),

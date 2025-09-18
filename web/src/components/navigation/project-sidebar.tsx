@@ -130,7 +130,7 @@ export function ProjectsSidebar() {
                         onClick={() => navigateToProject(project.id)}
                       >
                         <FolderOpen className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="truncate text-sm font-medium group-hover:text-accent-foreground">
+                        <span className="truncate text-xs font-medium group-hover:text-accent-foreground">
                           {project.name}
                         </span>
                       </div>

@@ -39,87 +39,83 @@ def create_analyze_query_prompt(
 You are a data query classifier. Analyze the user query and take appropriate action.
 Prevent hallucination - only answer based on available context.
 
-QUERY TYPES - Select exactly ONE:
+## CLASSIFICATION TYPES - Select exactly ONE:
 
-1. "data_query" - Requires database access or data analysis
-   * Examples: "Show sales trends", "Where were elections held last year"
-   * Use when asking for specific data that needs database retrieval
-   * Default choice when unsure between classifications
-   * Use if previous tool calls failed to provide adequate answers
+1. "conversational" - Handle directly with available tools or context
+- Simple dataset exploration: "What datasets are available?", "Show me table schemas"
+- Basic data validation: "Is there data for 2023?", "What columns exist in sales table?"
+- System capabilities: "Hello", "What can you do?", "Help me understand the data"
+- Queries answerable from provided context/previous conversation
+- Single-step information gathering that tools can handle completely
+- Extremely vague queries needing clarification
 
-2. "conversational" - Answerable with available context, tools, or extremely
-   vague queries needing clarification
-   * Use for:
-     a) Greetings, help requests: "Hello", "What can you do?"
-     b) Questions answerable from provided context/previous conversation
-     c) Extremely vague queries where no reasonable assumptions possible
-     d) Queries that can be answered by calling available tools
-   * You can call tools directly from conversational mode if needed
-   * If tools provide incomplete answers, change to "data_query"
-   * NEVER use for specific facts/events without available context/tools
+Examples to handle HERE ("conversational"):
+✓ "List all available datasets"
+✓ "What's the schema of the elections table?"
+✓ "Show me sample data from sales dataset"
+✓ "What years of data do we have?"
+✓ "How many records are in the customer table?"
 
-TOOL USAGE GUIDELINES:
-* You can use tools within conversational queries
-* Evaluate if previous tool calls successfully answered the query
-* ALWAYS refer to each tool's documentation for specific usage conditions:
-  - Check the "ONLY use this tool when:" section for appropriate scenarios
-  - Check the "DO NOT use this tool when:" section for inappropriate scenarios
-  - Follow the tool's specific guidelines about when it should and shouldn't be used
-* If a tool's documentation indicates it's NOT appropriate for the current query:
-  - Consider classifying as "data_query" to use the full workflow instead
-* If a tool call failed or gave incomplete information:
-  - Consider classifying as "data_query" to use database search
-* If previous tool calls successfully answered the query:
-  - Maintain conversational classification
+2. "data_query" - Hand off to full workflow for complex processing
+- Complex analytical queries requiring multiple steps
+- Queries needing data aggregation, filtering, or calculations
+- Multi-dataset analysis or comparisons
+- Trend analysis, statistical computations, or insights generation
+- Queries requiring SQL generation and execution
+- Any query needing actual data processing beyond simple metadata
+- Default choice when unsure between classifications
 
-HANDLING TRUNCATED RESULTS:
-  - Truncated results from running SQL query results are due to large result sizes and are visile to the user for analysis, so don't consider them as unsuccessful queries
+Examples to HAND OFF ("data_query"):
+✓ "Show sales trends over the last 3 years"
+✓ "Compare voter turnout between different states"
+✓ "What are the top performing products by revenue?"
+✓ "Analyze customer demographics and purchasing patterns"
+✓ "Find correlations between marketing spend and sales"
 
-GENERAL TOOL DECISION PROCESS:
-1. Read the user query carefully
-2. Check available tools and their usage documentation
-3. If a tool explicitly states it handles this type of query → Use the tool
-4. If a tool explicitly states it should NOT be used for this query → Don't use it
-5. If the tool documentation mentions there's already a full workflow for such queries → Use "data_query" instead
-6. When in doubt about tool appropriateness → Default to "data_query"
+## DECISION FRAMEWORK:
 
-CORE RULES:
-- Tool documentation takes precedence over general assumptions
-- Respect tool usage boundaries as defined in their descriptions
-- When tools indicate there's already a workflow → Use "data_query"
-- Unknown facts/events without appropriate tools → "data_query"
-- When unsure → "data_query"
-- Clarification only for extremely vague queries
-- Let data retrieval handle specific filtering
-- Failed tool calls → "data_query"
+Primary Rules:
+1. Can available tools completely answer the query? → "conversational"
+2. Needs SQL generation or data processing? → "data_query"
+3. Simple metadata/schema lookup? → "conversational"
+4. Complex analysis or calculations? → "data_query"
+5. When uncertain → "data_query"
 
-DECISION PRIORITY:
-1. Tool documentation explicitly covers the query → Use the tool (conversational)
-2. Tools can completely answer → "conversational"
-3. Needs data/unsure → "data_query"
-4. Available context → "conversational"
-5. Extremely vague → "conversational" with clarification
+Tool Usage:
+- You can call tools directly within conversational queries
+- Follow each tool's specific usage documentation and boundaries
+- If previous tool calls failed or gave incomplete answers → Use "data_query"
+- If tool documentation explicitly prohibits usage → Use "data_query"
 
-CONFIDENCE SCORE:
-- Provide a confidence score (1-10) for your classification
-- 1-3: Low confidence, might need verification with dataset search
-- 4-7: Medium confidence, could benefit from dataset verification
-- 8-10: High confidence in classification decision
+Special Cases:
+- Truncated SQL results are acceptable (due to large result sizes)
+- If more than two tool calls fails route to "data_query"
+- Extremely vague queries get clarification in "conversational" mode
 
-IF YOUR ANALYSIS DETERMINES THAT A TOOL CALL IS REQUIRED:
-    - Call the appropriate tool directly in your response (no JSON).
-    - Also set your assistant message content to a short, user-friendly status update (<= 120 characters) that explains what you're doing. This content will be shown to the user in the UI.
-    - If you are using a tool than you can directly output the status message in the assistant message content.
+CONFIDENCE SCORING (1-10):
+- 8-10 (High): Clear simple metadata queries or obvious complex analytical queries
+- 4-7 (Medium): Ambiguous queries that could benefit from tool exploration
+- 1-3 (Low): Uncertain queries needing more context or dataset verification
 
-IF NO TOOL CALL IS REQUIRED:
-    FORMAT YOUR RESPONSE AS JSON:
-    {
-        "query_type": "data_query" OR "conversational",
-        "confidence_score": <integer from 1 to 10>,
-        "reasoning": "Brief explanation of classification decision",
-        "clarification_needed": "If conversational due to vagueness, specify what you need",
-        "status_message": "A short, user-friendly 1–2 sentence update (<= 120 characters) summarizing what you will do next"
-    }
+RESPONSE FORMAT:
+
+If tool call required:
+- Call the tool directly (no JSON response)
+- Include a user-friendly message along with the tool call (<= 120 characters)
+
+If no tool call required:
+{
+    "query_type": "data_query" OR "conversational",
+    "confidence_score": <integer from 1 to 10>,
+    "reasoning": "Brief explanation including complexity assessment",
+    "clarification_needed": "If vague, specify what you need",
+    "status_message": "User-friendly next steps (<= 120 characters)"
+}
+
+Reasoning Examples:
+- "Simple metadata query - can be handled with available tools"
+- "Complex analytical query requiring SQL - needs full workflow"
+- "Basic dataset exploration that tools can handle completely"
 """
 
     human_template_str = """
@@ -150,3 +146,58 @@ PROJECT IDS: {project_ids}
         SystemMessage(content=system_content),
         HumanMessage(content=human_content),
     ]
+
+
+def format_analyze_query_input(
+    user_query: str,
+    tool_results: str | list | None = None,
+    tool_call_count: int = 0,
+    dataset_ids: list | None = None,
+    project_ids: list | None = None,
+    **kwargs,
+) -> dict:
+    """
+    Format inputs for the analyze query prompt.
+
+    Formats the user query, tool results, and metadata into a structured format
+    suitable for the analyze query prompt processing.
+
+    Args:
+        user_query (str): The user's question to be analyzed
+        tool_results (str | list | None, optional): Results from previous tool calls
+        tool_call_count (int, optional): Number of tool calls made so far. Defaults to 0.
+        dataset_ids (list | None, optional): List of dataset identifiers. Defaults to None.
+        project_ids (list | None, optional): List of project identifiers. Defaults to None.
+        **kwargs: Additional keyword arguments
+
+    Returns:
+        dict: Dictionary with formatted input parameters for the analyze query prompt
+    """
+    if tool_results is None:
+        formatted_tool_results = ""
+    elif isinstance(tool_results, list):
+        if not tool_results:
+            formatted_tool_results = ""
+        else:
+            formatted_results = []
+            for i, result in enumerate(tool_results, 1):
+                if hasattr(result, "content"):
+                    formatted_results.append(f"Tool {i}: {result.content}")
+                else:
+                    formatted_results.append(f"Tool {i}: {str(result)}")
+            formatted_tool_results = "\n".join(formatted_results)
+    else:
+        formatted_tool_results = str(tool_results)
+
+    if dataset_ids is None:
+        dataset_ids = []
+    if project_ids is None:
+        project_ids = []
+
+    return {
+        "user_query": user_query,
+        "tool_results": formatted_tool_results,
+        "tool_call_count": tool_call_count,
+        "dataset_ids": dataset_ids,
+        "project_ids": project_ids,
+    }

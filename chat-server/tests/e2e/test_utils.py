@@ -4,9 +4,6 @@ from uuid import uuid4
 
 import requests
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -23,6 +20,8 @@ from app.core.constants import (
 from app.utils.model_registry.model_provider import get_llm_provider
 
 from .terminal_formatter import TerminalFormatter
+
+load_dotenv()
 
 REQUEST_TIMEOUT = 120
 trace_id = str(uuid4())

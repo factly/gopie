@@ -88,6 +88,46 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 		}
 	}
 
+	if projectIDs != "" {
+		belongs, errProj := h.projectSvc.ProjectsBelongToOrg(strings.Split(projectIDs, ","), orgID)
+		if errProj != nil {
+			h.logger.Error("Error checking if projects belong to org", zap.Error(errProj))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Internal Server Error",
+				"message": "Could not verify project access",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+
+		if !belongs {
+			return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":   "Forbidden",
+				"message": "Access to one or more projects is forbidden",
+				"code":    fiber.StatusForbidden,
+			})
+		}
+	}
+
+	if datasetIDs != "" {
+		belongs, errDs := h.projectSvc.DatasetsBelongToOrg(strings.Split(datasetIDs, ","), orgID)
+		if errDs != nil {
+			h.logger.Error("Error checking if datasets belong to org", zap.Error(errDs))
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Internal Server Error",
+				"message": "Could not verify dataset access",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+
+		if !belongs {
+			return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":   "Forbidden",
+				"message": "Access to one or more datasets is forbidden",
+				"code":    fiber.StatusForbidden,
+			})
+		}
+	}
+
 	if projectIDs == "" && datasetIDs == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Missing identifiers",
@@ -309,7 +349,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 							OrganizationID: orgID,
 						})
 						if err != nil {
-							h.logger.Error("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
+							h.logger.Critical("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)
 							errorEvent.ID = sessionID // Ensure session ID is set for error event
 							errorData, marshalErr := json.Marshal(errorEvent)
@@ -324,7 +364,7 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					} else {
 						_, err := h.chatSvc.AddNewMessage(context.Background(), chatIdHeader, messages)
 						if err != nil {
-							h.logger.Error("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
+							h.logger.Critical("SSE: Error adding new message to existing chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)
 							errorEvent.ID = sessionID // Ensure session ID is set for error event
 							errorData, marshalErr := json.Marshal(errorEvent)

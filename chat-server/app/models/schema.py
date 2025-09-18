@@ -37,6 +37,7 @@ class ColumnSummary(BaseModel):
     q75: PossibleNumberType = get_possible_number_field()
     count: int
     null_percentage: dict[str, int]
+    description: Optional[str] = None
 
     @field_validator("min", "max", "avg", "std", "q25", "q50", "q75", mode="before")
     def replace_str_with_none(cls, value):
@@ -46,7 +47,6 @@ class ColumnSummary(BaseModel):
 
 
 class ColumnSchema(ColumnSummary):
-    column_description: Optional[str] = None
     sample_values: list[PossibleNumberType] = Field(default_factory=list)
 
     def format_for_prompt(self, fields_to_exclude: list[ColumnFieldsToExclude] = []):
@@ -85,7 +85,7 @@ class ColumnSchema(ColumnSummary):
             if unique_count is not None:
                 unique_count = f" | ~{unique_count} unique values"
         formatted_str = f"{self.column_name} ({self.column_type})\n"
-        formatted_str += f"  Description: {self.column_description}"
+        formatted_str += f"  Description: {self.description}"
         formatted_str += f"{sample_str}{stats_info}{unique_count}"
         return formatted_str
 

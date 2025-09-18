@@ -56,7 +56,7 @@ func (s *S3ObjectStore) Connect(ctx context.Context) error {
 		config.WithEndpointResolverWithOptions(resolver),
 	)
 	if err != nil {
-		s.logger.Error("Failed to load S3 configuration", zap.Error(err))
+		s.logger.Critical("Failed to load S3 configuration", zap.Error(err))
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (s *S3ObjectStore) UploadFile(ctx context.Context, key string, body io.Read
 		Body:   body,
 	})
 	if err != nil {
-		s.logger.Error("Failed to upload file to S3", zap.String("bucket", s.bucket), zap.String("key", key), zap.Error(err))
+		s.logger.Critical("Failed to upload file to S3", zap.String("bucket", s.bucket), zap.String("key", key), zap.Error(err))
 		return nil, err
 	}
 

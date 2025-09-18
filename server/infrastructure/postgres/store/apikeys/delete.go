@@ -31,3 +31,4 @@ func (s *PostgresAPIKeyStore) Delete(ctx context.Context, id, orgID string) erro
 	}
 	return nil
 }
+
