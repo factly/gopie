@@ -72,7 +72,7 @@ func ChatMessageFromError(err error) models.ChatMessage {
 	}
 }
 
-func ParseConfigOptions(options string) map[string]string {
+func ParseConfigOptions(options string, logger *logger.Logger) map[string]string {
 	if strings.TrimSpace(options) == "" {
 		return make(map[string]string)
 	}
@@ -84,6 +84,7 @@ func ParseConfigOptions(options string) map[string]string {
 		key = strings.TrimSpace(key)
 
 		if !found || key == "" {
+			logger.Warn("malformed key value pair passsed", zap.String("option", pair))
 			continue
 		}
 

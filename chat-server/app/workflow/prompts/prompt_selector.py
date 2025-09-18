@@ -6,6 +6,7 @@ from langsmith import traceable
 
 from .multi_dataset_prompts.analyze_query_prompt import (
     create_analyze_query_prompt,
+    format_analyze_query_input,
 )
 from .multi_dataset_prompts.generate_subqueries_prompt import (
     create_assess_query_complexity_prompt,
@@ -21,12 +22,16 @@ from .multi_dataset_prompts.plan_query_prompt import (
 )
 from .multi_dataset_prompts.stream_updates_prompt import (
     create_stream_update_prompt,
+    format_stream_update_input,
 )
 from .plan_sql_query_tool import (
     create_sql_planning_prompt,
     format_sql_planning_input,
 )
-from .process_context_prompt import create_process_context_prompt
+from .process_context_prompt import (
+    create_process_context_prompt,
+    format_process_context_input,
+)
 from .result_generation_prompt import (
     create_result_generation_prompt,
     format_result_generation_input,
@@ -42,6 +47,7 @@ from .single_dataset_prompts.validate_result_prompt import (
 from .validate_input_prompt import create_validate_input_prompt
 from .visualiser_agent_prompts.visualize_data_prompt import (
     create_visualize_data_prompt,
+    format_visualization_input,
 )
 
 NodeName = Literal[
@@ -52,7 +58,6 @@ NodeName = Literal[
     "assess_query_complexity",
     "generate_result",
     "stream_updates",
-    "execution_analysis",
     "process_query",
     "process_context",
     "plan_sql_query_tool",
@@ -85,12 +90,16 @@ class PromptSelector:
         }
 
         self.format_prompt_input_map = {
+            "analyze_query": format_analyze_query_input,
             "generate_result": format_result_generation_input,
             "identify_datasets": format_identify_datasets_input,
             "plan_query": format_plan_query_input,
             "process_query": format_process_query_input,
             "plan_sql_query_tool": format_sql_planning_input,
+            "stream_updates": format_stream_update_input,
             "validate_result": format_validate_result_input,
+            "visualize_data": format_visualization_input,
+            "process_context": format_process_context_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

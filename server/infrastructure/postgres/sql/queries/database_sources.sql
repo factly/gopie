@@ -3,14 +3,15 @@ INSERT INTO database_sources (
     connection_string,
     sql_query,
     driver,
-    org_id
+    org_id,
+    dataset_id
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 ) RETURNING *;
 
 -- name: GetDatabaseSource :one
 SELECT * FROM database_sources
-WHERE id = $1 and org_id = $2;
+WHERE dataset_id = $1 and org_id = $2;
 
 -- name: DeleteDatabaseSource :exec
 DELETE FROM database_sources

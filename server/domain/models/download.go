@@ -43,11 +43,10 @@ type Download struct {
 // @Description Request body for creating a new download
 type CreateDownloadRequest struct {
 	// ID of the dataset to download from
+	ID        string `json:"id"`
 	DatasetID string `json:"dataset_id" validate:"required" example:"dataset_123"`
-	// ID of the user initiating the download (set automatically from auth context)
-	UserID string `json:"user_id" swaggerignore:"true"`
-	// ID of the organization (set automatically from auth context)
-	OrgID string `json:"org_id" swaggerignore:"true"`
+	UserID    string
+	OrgID     string
 	// SQL query to execute for the download
 	SQL string `json:"sql" validate:"required" example:"SELECT * FROM users WHERE created_at > '2024-01-01'"`
 	// Format of the download file (csv, json, parquet)
@@ -70,7 +69,9 @@ type SetDownloadFailedRequest struct {
 }
 
 func (req *CreateDownloadRequest) ToGenCreateDownloadParams() gen.CreateDownloadParams {
+	id := uuid.MustParse(req.ID)
 	return gen.CreateDownloadParams{
+		ID:        pgtype.UUID{Bytes: id, Valid: true},
 		DatasetID: req.DatasetID,
 		UserID:    req.UserID,
 		OrgID:     req.OrgID,

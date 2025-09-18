@@ -16,10 +16,11 @@ INSERT INTO database_sources (
     connection_string,
     sql_query,
     driver,
-    org_id
+    org_id,
+    dataset_id
 ) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, connection_string, sql_query, driver, org_id, created_at, updated_at
+    $1, $2, $3, $4, $5
+) RETURNING id, dataset_id, connection_string, sql_query, driver, org_id, created_at, updated_at
 `
 
 type CreateDatabaseSourceParams struct {
@@ -27,6 +28,7 @@ type CreateDatabaseSourceParams struct {
 	SqlQuery         string
 	Driver           string
 	OrgID            pgtype.Text
+	DatasetID        pgtype.UUID
 }
 
 func (q *Queries) CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSourceParams) (DatabaseSource, error) {
@@ -35,10 +37,12 @@ func (q *Queries) CreateDatabaseSource(ctx context.Context, arg CreateDatabaseSo
 		arg.SqlQuery,
 		arg.Driver,
 		arg.OrgID,
+		arg.DatasetID,
 	)
 	var i DatabaseSource
 	err := row.Scan(
 		&i.ID,
+		&i.DatasetID,
 		&i.ConnectionString,
 		&i.SqlQuery,
 		&i.Driver,
@@ -60,20 +64,21 @@ func (q *Queries) DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) erro
 }
 
 const getDatabaseSource = `-- name: GetDatabaseSource :one
-SELECT id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
-WHERE id = $1 and org_id = $2
+SELECT id, dataset_id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
+WHERE dataset_id = $1 and org_id = $2
 `
 
 type GetDatabaseSourceParams struct {
-	ID    pgtype.UUID
-	OrgID pgtype.Text
+	DatasetID pgtype.UUID
+	OrgID     pgtype.Text
 }
 
 func (q *Queries) GetDatabaseSource(ctx context.Context, arg GetDatabaseSourceParams) (DatabaseSource, error) {
-	row := q.db.QueryRow(ctx, getDatabaseSource, arg.ID, arg.OrgID)
+	row := q.db.QueryRow(ctx, getDatabaseSource, arg.DatasetID, arg.OrgID)
 	var i DatabaseSource
 	err := row.Scan(
 		&i.ID,
+		&i.DatasetID,
 		&i.ConnectionString,
 		&i.SqlQuery,
 		&i.Driver,
@@ -85,7 +90,7 @@ func (q *Queries) GetDatabaseSource(ctx context.Context, arg GetDatabaseSourcePa
 }
 
 const listDatabaseSources = `-- name: ListDatabaseSources :many
-SELECT id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
+SELECT id, dataset_id, connection_string, sql_query, driver, org_id, created_at, updated_at FROM database_sources
 WHERE org_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -108,6 +113,7 @@ func (q *Queries) ListDatabaseSources(ctx context.Context, arg ListDatabaseSourc
 		var i DatabaseSource
 		if err := rows.Scan(
 			&i.ID,
+			&i.DatasetID,
 			&i.ConnectionString,
 			&i.SqlQuery,
 			&i.Driver,

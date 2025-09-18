@@ -100,17 +100,18 @@ func (ns NullDownloadStatus) Value() (driver.Value, error) {
 }
 
 type ApiKey struct {
-	ID          pgtype.UUID
-	Name        string
-	KeyHash     string
-	CreatedBy   string
-	Description pgtype.Text
-	LastUsedAt  pgtype.Timestamptz
-	ExpiresAt   pgtype.Timestamptz
-	IsRevoked   bool
-	OrgID       string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID            pgtype.UUID
+	ApplicationID pgtype.UUID
+	Name          string
+	KeyHash       string
+	CreatedBy     string
+	Description   pgtype.Text
+	LastUsedAt    pgtype.Timestamptz
+	ExpiresAt     pgtype.Timestamptz
+	IsRevoked     bool
+	OrgID         string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
 }
 
 type Chat struct {
@@ -134,6 +135,7 @@ type ChatMessage struct {
 
 type DatabaseSource struct {
 	ID               pgtype.UUID
+	DatasetID        pgtype.UUID
 	ConnectionString string
 	SqlQuery         string
 	Driver           string

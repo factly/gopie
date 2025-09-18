@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores.base import VectorStore
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.utils.model_registry.model_provider import get_model_provider
 
@@ -35,7 +35,7 @@ async def perform_similarity_search(
     try:
         return await vector_store.asimilarity_search(query, k=top_k, filter=query_filter)
     except Exception as e:
-        logger.error(
+        logger.exception(
             f"Error performing similarity search: {e!s} | " f"Filter criteria: {query_filter}"
         )
         if query_filter:

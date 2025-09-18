@@ -26,6 +26,12 @@ type Logger struct {
 	*zap.Logger
 }
 
+// Critical logs catastrophic events using the error level and adds a 'critical' marker.
+func (l *Logger) Critical(msg string, fields ...zap.Field) {
+	fields = append(fields, zap.String("severity", "CRITICAL"))
+	l.Error(msg, fields...)
+}
+
 func parseLoggerConfig(properties map[string]any) (*loggerConfig, error) {
 	config := &loggerConfig{
 		LogLevel: INFO,

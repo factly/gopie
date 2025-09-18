@@ -19,4 +19,5 @@ type ServerParams struct {
 	AIAgentService   *services.AIService
 	DbSourceService  *services.DatabaseSourceService
 	DownloadsService *services.DownloadsService
+	ApikeyService    *services.ApikeyService
 }

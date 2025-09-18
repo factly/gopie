@@ -17,7 +17,7 @@ where id = $1 and org_id = $2;
 
 -- name: GetAPIKeyByHash :one
 select * from api_keys
-where key_hash = $1
+where key_hash = $1 
 and (expires_at is null or expires_at > now())
 and is_revoked = false;
 

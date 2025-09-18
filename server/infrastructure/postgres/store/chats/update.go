@@ -20,6 +20,10 @@ func (s *PostgresChatStore) UpdateChat(ctx context.Context, chatID string, param
 			String: params.Title,
 			Valid:  params.Title != "",
 		},
+		CreatedBy: pgtype.Text{
+			String: params.CreatedBy,
+			Valid:  params.CreatedBy != "",
+		},
 	})
 	if err != nil {
 		return nil, err

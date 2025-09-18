@@ -62,16 +62,21 @@ select count(*) from projects where org_id = $1;
 select * from projects where id = $1;
 
 -- name: ProjectsBelongToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::text[]) AS all_belong_to_org
 FROM projects
-WHERE id = ANY($1) AND org_id = $2;
+WHERE id = ANY($1::text[]) AND org_id = $2;
 
 -- name: DatasetWithNamesBelongsToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::text[]) AS all_belong_to_org
 FROM datasets
-WHERE name = ANY($1) AND org_id = $2;
+WHERE name = ANY($1::text[]) AND org_id = $2;
 
 -- name: DatasetWithIDsBelongsToOrg :one
-SELECT count(*) = cardinality($1) AS all_belong_to_org
+SELECT count(*) = cardinality($1::uuid[]) AS all_belong_to_org
 FROM datasets
-WHERE id = ANY($1) AND org_id = $2;
+WHERE id = ANY($1::uuid[]) AND org_id = $2;
+
+-- name: GetProjectsByIDs :many
+SELECT * FROM projects 
+WHERE org_id = sqlc.arg(org_id) AND id = ANY(sqlc.arg(project_ids)::text[])
+ORDER BY created_at DESC;

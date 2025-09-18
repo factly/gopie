@@ -13,6 +13,7 @@ import (
 	"github.com/factly/gopie/infrastructure/duckdb"
 	"github.com/factly/gopie/infrastructure/openai"
 	"github.com/factly/gopie/infrastructure/postgres/store"
+	"github.com/factly/gopie/infrastructure/postgres/store/apikeys"
 	"github.com/factly/gopie/infrastructure/postgres/store/chats"
 	"github.com/factly/gopie/infrastructure/postgres/store/database_source"
 	"github.com/factly/gopie/infrastructure/postgres/store/datasets"
@@ -74,6 +75,7 @@ func ServeHttp() error {
 	downloadsStore := downloads.NewPostgresDownloadsStore(storeRepo.GetDB(), appLogger)
 	s3Repo := s3.NewS3ObjectStore(cfg.S3, cfg.DownloadsServer.Bucket, appLogger)
 	aiAgentRepo := aiagent.NewAIAgent(cfg.AIAgent.Url, appLogger)
+	apikeyStore := apikeys.NewPostgresAPIKeyStore(storeRepo.GetDB(), appLogger)
 
 	olapService := services.NewOlapService(olap, appLogger)
 	// Initialize services
@@ -81,6 +83,7 @@ func ServeHttp() error {
 	projectService := services.NewProjectService(projectStore)
 	datasetService := services.NewDatasetService(datasetStore)
 	chatService := services.NewChatService(chatStore, openaiClient, aiAgentRepo)
+	apikeyService := services.NewApikeyService(apikeyStore, appLogger)
 	aiAgentService := services.NewAIService(aiAgentRepo)
 	dbSourceService := services.NewDatabaseSourceService(dbSourceStore, appLogger)
 	downloadService, err := services.NewDownloadsService(services.DownloadsServiceParams{
@@ -100,6 +103,7 @@ func ServeHttp() error {
 		Logger:           appLogger,
 		OlapService:      olapService,
 		AIService:        aiService,
+		ApikeyService:    apikeyService,
 		ProjectService:   projectService,
 		DatasetService:   datasetService,
 		ChatService:      chatService,
@@ -113,7 +117,7 @@ func ServeHttp() error {
 	// Create a wait group to wait for both servers to shut down
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	wg.Add(2)
+	wg.Add(3)
 
 	go func() {
 		defer wg.Done()
@@ -129,6 +133,15 @@ func ServeHttp() error {
 		appLogger.Info("Internal server is enabled via config. Starting in a goroutine...")
 		if err := serveInternal(cfg, params, ctx); err != nil {
 			appLogger.Error("Web Application server failed to start", zap.Error(err))
+			cancel()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		appLogger.Info("API server is enabled via config. Starting in a goroutine...")
+		if err := serveAPI(cfg, params, ctx); err != nil {
+			appLogger.Error("API server failed to start", zap.Error(err))
 			cancel()
 		}
 	}()

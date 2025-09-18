@@ -13,17 +13,19 @@ import (
 
 const createDownload = `-- name: CreateDownload :one
 INSERT INTO downloads (
+    id,
     dataset_id,
     user_id,
     org_id,
     sql,
     "format"
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 ) RETURNING id, sql, dataset_id, status, format, pre_signed_url, error_message, created_at, updated_at, expires_at, completed_at, user_id, org_id
 `
 
 type CreateDownloadParams struct {
+	ID        pgtype.UUID
 	DatasetID string
 	UserID    string
 	OrgID     string
@@ -33,6 +35,7 @@ type CreateDownloadParams struct {
 
 func (q *Queries) CreateDownload(ctx context.Context, arg CreateDownloadParams) (Download, error) {
 	row := q.db.QueryRow(ctx, createDownload,
+		arg.ID,
 		arg.DatasetID,
 		arg.UserID,
 		arg.OrgID,
@@ -71,6 +74,55 @@ type DeleteDownloadParams struct {
 func (q *Queries) DeleteDownload(ctx context.Context, arg DeleteDownloadParams) error {
 	_, err := q.db.Exec(ctx, deleteDownload, arg.ID, arg.OrgID)
 	return err
+}
+
+const findExistingValidDownload = `-- name: FindExistingValidDownload :one
+SELECT id, sql, dataset_id, status, format, pre_signed_url, error_message, created_at, updated_at, expires_at, completed_at, user_id, org_id FROM downloads
+WHERE
+    dataset_id = $1 AND
+    org_id = $2 AND
+    sql = $3 AND
+    "format" = $4 AND
+    user_id = $5 AND
+    status IN ('processing', 'completed') AND
+    (expires_at IS NULL OR expires_at > now())
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type FindExistingValidDownloadParams struct {
+	DatasetID string
+	OrgID     string
+	Sql       string
+	Format    string
+	UserID    string
+}
+
+func (q *Queries) FindExistingValidDownload(ctx context.Context, arg FindExistingValidDownloadParams) (Download, error) {
+	row := q.db.QueryRow(ctx, findExistingValidDownload,
+		arg.DatasetID,
+		arg.OrgID,
+		arg.Sql,
+		arg.Format,
+		arg.UserID,
+	)
+	var i Download
+	err := row.Scan(
+		&i.ID,
+		&i.Sql,
+		&i.DatasetID,
+		&i.Status,
+		&i.Format,
+		&i.PreSignedUrl,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ExpiresAt,
+		&i.CompletedAt,
+		&i.UserID,
+		&i.OrgID,
+	)
+	return i, err
 }
 
 const getDownload = `-- name: GetDownload :one

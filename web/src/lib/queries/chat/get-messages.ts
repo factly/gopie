@@ -66,7 +66,24 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       delta.role === "user" &&
       delta.content
     ) {
-      const parts: Array<Record<string, unknown>> = [
+      type MessagePart = {
+        type: string;
+        text?: string;
+        toolInvocation?: {
+          state: string;
+          toolCallId: string;
+          toolName: string;
+          args: Record<string, unknown>;
+          result: {
+            type: string;
+            toolCallId: string;
+            toolName: string;
+            args: Record<string, unknown>;
+          };
+        };
+      };
+
+      const parts: MessagePart[] = [
         {
           type: "text",
           text: delta.content,
@@ -104,7 +121,6 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       messages.push({
         id: chunk.id,
         role: "user",
-        content: delta.content,
         createdAt: new Date(chunk.created_at),
         parts: parts,
       } as UIMessage);
@@ -131,7 +147,25 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
         };
       }> = [];
 
-      const parts: Array<Record<string, unknown>> = [{ type: "step-start" }];
+      type AssistantMessagePart = {
+        type: string;
+        text?: string;
+        toolInvocation?: {
+          state: string;
+          step?: number;
+          toolCallId: string;
+          toolName: string;
+          args: Record<string, unknown>;
+          result: {
+            type: string;
+            toolCallId: string;
+            toolName: string;
+            args: Record<string, unknown>;
+          };
+        };
+      };
+
+      const parts: AssistantMessagePart[] = [{ type: "step-start" }];
 
       // Process tool calls if they exist
       if (delta.tool_calls && delta.tool_calls.length > 0) {
@@ -178,10 +212,9 @@ function transformChunksToMessages(chunks: MessageChunk[]): UIMessage[] {
       messages.push({
         id: chunk.id,
         role: "assistant",
-        content: delta.content,
         createdAt: new Date(chunk.created_at),
         parts: parts,
-        toolInvocations: toolInvocations,
+        toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
       } as UIMessage);
       continue;
     }
@@ -210,7 +243,6 @@ async function fetchMessages(
     const transformedMessages = transformChunksToMessages(
       messagesResponse.data
     );
-    console.log("transformedMessages", transformedMessages);
 
     return { data: transformedMessages };
   } catch (error) {

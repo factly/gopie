@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.core.session import SingletonAiohttp
 
 BASE_URL = settings.GOPIE_API_ENDPOINT

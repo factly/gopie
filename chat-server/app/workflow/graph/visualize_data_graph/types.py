@@ -12,6 +12,14 @@ class Dataset(BaseModel):
     csv_path: str | None = None
 
 
+class S3Path(BaseModel):
+    s3_path: str
+    description: str
+
+
+PreviousVisualizationJsonType = dict[str, str]
+
+
 class VisualizationResult(BaseModel):
     data: list[bytes]
     errors: list[str] = []
@@ -20,25 +28,25 @@ class VisualizationResult(BaseModel):
 class InputState(TypedDict):
     user_query: str
     datasets: list[Dataset] | None
-    previous_visualization_json_paths: list[str] | None
+    previous_visualization_json_paths: list[PreviousVisualizationJsonType] | None
     relevant_sql_queries: list[str] | None
 
 
 class OutputState(TypedDict):
-    s3_paths: list[str]
+    s3_paths: list[S3Path]
 
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    previous_visualization_json_paths: list[str] | None
+    previous_visualization_json_paths: list[PreviousVisualizationJsonType] | None
     datasets: list[Dataset] | None
     user_query: str
     result: VisualizationResult
     sandbox: AsyncSandbox | None
     is_input_prepared: bool
-    s3_paths: list[str]
-    feedback_count: int
+    s3_paths: list[S3Path]
     executed_python_code: str | None
     relevant_sql_queries: list[str] | None
     result_images_b64: list[str]
     tool_call_count: int
+    feedback_count: int

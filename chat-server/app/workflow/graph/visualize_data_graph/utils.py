@@ -1,5 +1,6 @@
 import asyncio
 import csv
+import re
 import uuid
 from datetime import datetime
 from io import StringIO
@@ -14,7 +15,7 @@ from langsmith import traceable
 from app.core.config import settings
 from app.core.session import SingletonAiohttp
 
-from .types import Dataset
+from .types import Dataset, PreviousVisualizationJsonType
 
 
 def list_to_csv(list_dict: list[list]) -> str:
@@ -36,18 +37,9 @@ def datasets_to_csv(datasets: list[Dataset]):
 
 
 @traceable(run_type="chain", name="get_python_code_files")
-async def get_python_code_files(viz_paths: list[str]):
-    python_code_paths = []
-    for viz_path in viz_paths:
-        viz_path = viz_path.rsplit("-", 1)[0].strip()
-        python_code_path = viz_path.replace(".json", ".py")
-        if python_code_path not in python_code_paths:
-            python_code_paths.append(python_code_path)
+async def get_python_code_files(viz_paths: list[PreviousVisualizationJsonType]):
     python_code_files = await asyncio.gather(
-        *[
-            get_python_code_from_viz(viz_path=python_code_path)
-            for python_code_path in python_code_paths
-        ]
+        *[get_python_code_from_viz(viz_path=viz_path["json_path"]) for viz_path in viz_paths]
     )
     return python_code_files
 
@@ -55,7 +47,7 @@ async def get_python_code_files(viz_paths: list[str]):
 @traceable(run_type="chain", name="get_python_code_for_viz")
 async def get_python_code_from_viz(viz_path: str):
     viz_path = viz_path.rsplit("-", 1)[0].strip()
-    python_code_path = viz_path.replace(".json", ".py")
+    python_code_path = viz_path + ".py"
     client = SingletonAiohttp.get_aiohttp_client()
     async with client.get(python_code_path) as response:
         if response.status == 200:
@@ -175,7 +167,7 @@ async def get_visualization_result_bytes(
 async def add_context_to_python_code(python_code: str, datasets: list[Dataset]) -> str:
     formatted_dataset_info = format_dataset_info(datasets=datasets)
     # Convert dataset info str to comment
-    formatted_dataset_info = formatted_dataset_info.replace("\n", "\n# ")
+    formatted_dataset_info = re.sub("^", "# ", formatted_dataset_info, flags=re.MULTILINE)
     # Add dataset info as a comment at the top of the python code
     python_code_with_context = f"# Information about the datasets present when this code was run\n{formatted_dataset_info}\n\n{python_code}"
     return python_code_with_context

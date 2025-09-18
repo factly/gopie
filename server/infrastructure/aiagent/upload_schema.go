@@ -36,7 +36,7 @@ func (a *aiAgent) UploadSchema(params *models.SchemaParams) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		a.logger.Error("Error in response from AI agent", zap.Int("status_code", resp.StatusCode))
+		a.logger.Critical("Unexpected response from AI agent", zap.Int("status_code", resp.StatusCode))
 		return fmt.Errorf("error in response from AI agent: %s", resp.Status)
 	}
 

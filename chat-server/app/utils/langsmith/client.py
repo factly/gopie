@@ -2,7 +2,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langsmith import Client
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.workflow.prompts.prompt_selector import PromptSelector
 
 

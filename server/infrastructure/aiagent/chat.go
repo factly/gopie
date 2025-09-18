@@ -81,7 +81,7 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 	// Create the stream
 	stream, err := a.client.CreateChatCompletionStream(context.Background(), req)
 	if err != nil {
-		a.logger.Error("Error creating chat completion stream", zap.Error(err))
+		a.logger.Critical("Error creating chat completion stream", zap.Error(err))
 		params.ErrChan <- fmt.Errorf("error creating chat completion stream: %w", err)
 		close(params.ErrChan)
 		close(params.DataChan)
@@ -98,7 +98,7 @@ func (a *aiAgent) Chat(ctx context.Context, params *models.AIAgentChatParams) {
 			return
 		}
 		if err != nil {
-			a.logger.Error("Error receiving stream response", zap.Error(err))
+			a.logger.Critical("Error receiving stream response", zap.Error(err))
 			params.ErrChan <- fmt.Errorf("error receiving stream response: %w", err)
 			return
 		}

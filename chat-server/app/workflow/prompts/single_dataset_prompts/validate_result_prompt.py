@@ -61,6 +61,7 @@ MARK AS VALID when:
 - Data is relevant and provides meaningful insights
 - Any failures don't prevent a useful response
 - User can derive value from available information
+- Truncated SQL results are acceptable (due to large result sizes)
 
 MARK AS INVALID when:
 - Critical queries failed, preventing any useful answer

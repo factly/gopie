@@ -12,6 +12,7 @@ import (
 	"github.com/factly/gopie/interfaces/http/routes/api/download"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
+
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
 	"github.com/gofiber/fiber/v2"
@@ -62,9 +63,6 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	// Swagger route
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
-	// auth route
-	api.AuthRoutes(app.Group("/v1/oauth"), appLogger, cfg)
-
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status": "ok",
@@ -101,7 +99,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	ai.Routes(apiGroup.Group("/ai"), params.AIService, appLogger)
 
 	// Main API routes
-	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, appLogger)
+	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, appLogger)
 
 	// Project routes
 	projectApi.Routes(apiGroup.Group("/projects"), projectApi.RouterParams{
@@ -118,6 +116,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		ChatService:    params.ChatService,
 		DatasetService: params.DatasetService,
 		OlapService:    params.OlapService,
+		ProjectService: params.ProjectService,
 	})
 	download.Routes(apiGroup.Group("/downloads"),
 		params.DownloadsService,
@@ -191,7 +190,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 
 	apiGroup := app.Group("/v1/api")
 
-	api.InternalRoutes(apiGroup, params.OlapService, params.AIService, params.DatasetService, appLogger)
+	api.InternalRoutes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, appLogger)
 
 	projectApi.InternalRoutes(apiGroup.Group("/projects"), projectApi.RouterParams{
 		Logger:         appLogger,
@@ -213,6 +212,93 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 
 		if err := app.Listen(addr); err != nil {
 			appLogger.Error("Internal server error", zap.Error(err))
+		}
+		close(serverShutdown)
+	}()
+
+	// Wait for context cancellation or server shutdown
+	select {
+	case <-ctx.Done():
+		appLogger.Info("Shutdown signal received, gracefully shutting down...")
+		if err := app.Shutdown(); err != nil {
+			appLogger.Error("Error during server shutdown", zap.Error(err))
+			return err
+		}
+	case <-serverShutdown:
+		appLogger.Info("Server stopped")
+	}
+
+	return nil
+}
+
+func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+	appLogger := params.Logger
+
+	appLogger.Info("Initializing api server",
+		zap.String("host", cfg.APIServer.Host),
+		zap.String("port", cfg.APIServer.Port))
+
+	app := fiber.New(fiber.Config{
+		CaseSensitive: true,
+		AppName:       "gopie-api",
+	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000,https://csr.dataful.in",
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
+		AllowCredentials: true,
+		MaxAge:           86400,
+	}))
+
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: appLogger.Logger,
+	}))
+
+	// Impose limits on web facing apis
+	app.Use(middleware.ImposeLimit(true))
+
+	// Swagger route
+	app.Get("/swagger/*", swagger.HandlerDefault)
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
+	appLogger.Info("Running in read-only mode, write endpoints are disabled")
+
+	// Setup API routes
+	appLogger.Info("Setting up API routes...")
+
+	apiGroup := app.Group("/v1/api", middleware.WithApiKeyAuth(params.ApikeyService, appLogger))
+
+	// Main API routes
+	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, appLogger)
+	download.Routes(apiGroup.Group("/downloads"), params.DownloadsService, appLogger)
+
+	// Chat routes
+	chatApi.Routes(apiGroup.Group("/chat"), chatApi.RouterParams{
+		Logger:         appLogger,
+		ChatService:    params.ChatService,
+		DatasetService: params.DatasetService,
+		OlapService:    params.OlapService,
+		ProjectService: params.ProjectService,
+	})
+
+	// Create a channel to listen for server shutdown
+	serverShutdown := make(chan struct{})
+
+	// Start the api server in a goroutine
+	go func() {
+		addr := ":" + cfg.APIServer.Port
+		appLogger.Info("API server is starting...",
+			zap.String("host", cfg.APIServer.Host),
+			zap.String("port", cfg.APIServer.Port))
+
+		if err := app.Listen(addr); err != nil {
+			appLogger.Error("API server error", zap.Error(err))
 		}
 		close(serverShutdown)
 	}()

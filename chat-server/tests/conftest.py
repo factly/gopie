@@ -1,12 +1,22 @@
 import sys
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+mock_aiohttp_session = Mock()
+mock_response = Mock()
+mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+mock_response.__aexit__ = AsyncMock(return_value=None)
+mock_response.json = AsyncMock(return_value={})
+mock_response.text = AsyncMock(return_value="")
+mock_response.status = 200
+
+mock_aiohttp_session.get.return_value = mock_response
+
 mock_session = Mock()
-mock_session.get_aiohttp_client.return_value = Mock()
+mock_session.get_aiohttp_client.return_value = mock_aiohttp_session
 mock_session.SingletonAiohttp = Mock()
-mock_session.SingletonAiohttp.get_aiohttp_client.return_value = Mock()
+mock_session.SingletonAiohttp.get_aiohttp_client.return_value = mock_aiohttp_session
 
 sys.modules["app.core.session"] = mock_session
 

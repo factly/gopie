@@ -31,6 +31,7 @@ type ProjectStoreRepository interface {
 	Update(ctx context.Context, projectID string, params *models.UpdateProjectParams) (*models.Project, error)
 	SearchProject(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error)
 	GetProjectByID(ctx context.Context, datasetID string) (*models.Project, error)
+	GetProjectsByIDs(ctx context.Context, projectIDs []string, orgID string) ([]*models.Project, error)
 	ListAllProjects(ctx context.Context) ([]*models.Project, error)
 	DatasetsBelongToOrg(ctx context.Context, datasetNames []string, orgID string) (bool, error)
 	ProjectsBelongToOrg(ctx context.Context, projectIDs []string, orgID string) (bool, error)
@@ -44,6 +45,7 @@ type DatasetStoreRepository interface {
 	Update(ctx context.Context, datasetID string, params *models.UpdateDatasetParams) (*models.Dataset, error)
 	GetByTableName(ctx context.Context, tableName string, orgID string) (*models.Dataset, error)
 	GetDatasetByID(ctx context.Context, datasetID string) (*models.Dataset, error)
+	GetDatasetsByIDs(ctx context.Context, datasetIDs []string, orgID string) ([]*models.Dataset, error)
 
 	CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error)
 	DeleteFailedUploadsByDatasetID(ctx context.Context, datasetID string) error
@@ -77,4 +79,6 @@ type DownloadsRepository interface {
 	SetDownloadToProcessing(ctx context.Context, id string) (*models.Download, error)
 	SetDownloadAsCompleted(ctx context.Context, id string, req *models.SetDownloadCompletedRequest) (*models.Download, error)
 	SetDownloadAsFailed(ctx context.Context, id string, req *models.SetDownloadFailedRequest) (*models.Download, error)
+	FindExistingValidDownload(ctx context.Context, datasetID, userID, orgID, sql, format string) (*models.Download, bool, error)
+	GetDataset(ctx context.Context, datasetID string, orgID string) (*models.Dataset, error)
 }

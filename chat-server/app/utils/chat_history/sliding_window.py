@@ -1,6 +1,6 @@
 from langchain_core.messages import AIMessage, BaseMessage
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 
 
 def estimate_tokens(message: BaseMessage) -> int:

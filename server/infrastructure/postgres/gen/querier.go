@@ -35,6 +35,7 @@ type Querier interface {
 	DeleteDownload(ctx context.Context, arg DeleteDownloadParams) error
 	DeleteFailedDatasetUpload(ctx context.Context, datasetID string) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
+	FindExistingValidDownload(ctx context.Context, arg FindExistingValidDownloadParams) (Download, error)
 	GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, error)
 	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
 	GetAPIKeysCount(ctx context.Context, orgID string) (int64, error)
@@ -47,12 +48,14 @@ type Querier interface {
 	GetDatasetByName(ctx context.Context, arg GetDatasetByNameParams) (Dataset, error)
 	GetDatasetProjectsCount(ctx context.Context, datasetID string) (int64, error)
 	GetDatasetSummary(ctx context.Context, datasetName string) (DatasetSummary, error)
+	GetDatasetsByIDs(ctx context.Context, arg GetDatasetsByIDsParams) ([]Dataset, error)
 	GetDownload(ctx context.Context, arg GetDownloadParams) (Download, error)
 	GetFailedDatasetUploadsCount(ctx context.Context) (int64, error)
 	GetProject(ctx context.Context, arg GetProjectParams) (GetProjectRow, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectDatasetsCount(ctx context.Context, projectID string) (int64, error)
 	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
+	GetProjectsByIDs(ctx context.Context, arg GetProjectsByIDsParams) ([]Project, error)
 	GetProjectsCount(ctx context.Context, orgID pgtype.Text) (int64, error)
 	ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]ApiKey, error)
 	ListAllDatasets(ctx context.Context) ([]Dataset, error)

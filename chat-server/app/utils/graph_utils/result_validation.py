@@ -2,7 +2,7 @@ import json
 
 from langsmith import traceable
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 
 
 @traceable(run_type="tool", name="is_result_too_large")
@@ -33,7 +33,7 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
 
         return False, ""
     except Exception as e:
-        logger.exception(e, exc_info=True, stack_info=True)
+        logger.exception(e)
         return False, ""
 
 

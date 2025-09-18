@@ -5,6 +5,7 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.core.log import custom_logger as logger
 from app.models.message import AIMessage, ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
@@ -44,6 +45,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
     query_result = state.get("query_result", None)
     retry_count = state.get("retry_count", 0)
 
+    if (
+        query_result.single_dataset_query_result
+        and query_result.single_dataset_query_result.response_for_non_sql
+    ):
+        pass
+
     # Validate the result with the LLM
     try:
         chain = get_prompt_llm_chain(
@@ -78,11 +85,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
         }
 
     except Exception as e:
+        error_msg = f"Validation error: {str(e)}. Proceeding with response."
+        logger.exception(error_msg)
+
         return {
             "retry_count": retry_count,
-            "messages": [
-                ErrorMessage(content=f"Validation error: {str(e)}. Proceeding with response.")
-            ],
+            "messages": [ErrorMessage(content=error_msg)],
         }
 
 

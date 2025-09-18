@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const authRequestId = cookieStore.get(AUTH_REQUEST_COOKIE)?.value;
     if (!validationResult.success || !authRequestId) {
       return NextResponse.json(
-        { error: "Invalid input", details: validationResult.error?.errors },
+        { error: "Invalid input", details: validationResult.error?.issues },
         { status: 400 }
       );
     }

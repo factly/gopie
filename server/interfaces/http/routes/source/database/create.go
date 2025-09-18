@@ -133,31 +133,6 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	// Create the database source
-	dbSourceParams := &models.CreateDatabaseSourceParams{
-		ConnectionString: body.ConnectionString,
-		SQLQuery:         body.SQLQuery,
-		Alias:            body.Alias,
-		Description:      body.Description,
-		OrganizationID:   orgID,
-		ProjectID:        project.ID,
-		CreatedBy:        body.CreatedBy,
-		Driver:           body.Driver,
-	}
-
-	source, err := h.dbSourceSvc.Create(dbSourceParams)
-	if err != nil {
-		// Clean up the created OLAP table since source creation failed
-		h.logger.Error("Error creating database source", zap.Error(err))
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating database source",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
 
 	time.Sleep(2 * time.Second) // Wait for the table to be created in OLAP
 
@@ -199,14 +174,41 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
 		}
 
-		deleteErr := h.dbSourceSvc.Delete(source.ID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete database source during cleanup", zap.Error(deleteErr), zap.String("source_id", source.ID))
-		}
-
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error creating dataset record",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	dbSourceParams := &models.CreateDatabaseSourceParams{
+		ConnectionString: body.ConnectionString,
+		SQLQuery:         body.SQLQuery,
+		Alias:            body.Alias,
+		Description:      body.Description,
+		OrganizationID:   orgID,
+		ProjectID:        project.ID,
+		DatasetID:        dataset.ID,
+		CreatedBy:        body.CreatedBy,
+		Driver:           body.Driver,
+	}
+
+	source, err := h.dbSourceSvc.Create(dbSourceParams)
+	if err != nil {
+		// Clean up the created OLAP table since source creation failed
+		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
+		if deleteErr != nil {
+			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
+		}
+
+		h.logger.Error("Error creating database source", zap.Error(err))
+		dropErr := h.olapSvc.DropTable(tableName)
+		if dropErr != nil {
+			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating database source",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}

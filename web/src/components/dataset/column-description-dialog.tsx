@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +37,11 @@ export function ColumnDescriptionDialog({
   const [description, setDescription] = useState<string>(
     columnDescriptions[columnName] || ""
   );
+
+  // Update description when columnName changes or dialog opens with a different column
+  useEffect(() => {
+    setDescription(columnDescriptions[columnName] || "");
+  }, [columnName, columnDescriptions]);
 
   const handleSave = () => {
     setColumnDescription(columnName, description);

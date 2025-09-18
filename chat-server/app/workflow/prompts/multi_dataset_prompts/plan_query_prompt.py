@@ -45,14 +45,17 @@ Unrelated Datasets: Create MULTIPLE independent queries
 - No ILIKE or LIKE operators
 - Exclude 'Total' categories and state='All India' when filtering
 - Include units/unit columns when displaying values
+- NEVER use project_id, dataset_id, or internal system identifiers in WHERE clauses or filters
+- Focus on actual business data columns and values, not technical metadata
 
 Note: Take into account the validation result to improve the response according to the issues mentioned in the validation result.
 
 Response Guidelines:
 - If SQL can be generated: populate `sql_queries` array, leave `response_for_no_sql` empty
 - If SQL cannot be generated: populate `response_for_no_sql`, leave `sql_queries` array empty
-- Always include `limitations` field
+- If User asked for summarised insights/statistics from data, you can use `summarize` command in SQL
 - Ignore visualization requirements in user queries
+- Always include `limitations` field
 """
 
     human_template_str = """

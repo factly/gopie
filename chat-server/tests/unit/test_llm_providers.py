@@ -56,7 +56,7 @@ class TestPortkeyLLMProvider:
 
     def test_get_llm_model(self, sample_metadata):
         """
-        Tests that `PortkeyLLMProvider.get_llm_model` initializes and returns a ChatOpenAI model with the correct parameters, including API key, base URL, headers, model name, and streaming enabled.
+        Tests that `PortkeyLLMProvider.get_llm_model` initializes and returns a ChatOpenAI model with the correct parameters, including API key, base URL, headers, and model name.
         """
         with (
             patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings,
@@ -85,13 +85,12 @@ class TestPortkeyLLMProvider:
                 base_url=PORTKEY_GATEWAY_URL,
                 default_headers={"test": "headers"},
                 model="gpt-4",
-                streaming=True,
             )
             assert result == mock_model
 
-    def test_get_llm_model_with_parameters(self, sample_metadata):
+    def test_get_llm_model_basic_functionality(self, sample_metadata):
         """
-        Tests that `PortkeyLLMProvider.get_llm_model` correctly handles temperature, json_mode, and schema parameters.
+        Tests that `PortkeyLLMProvider.get_llm_model` works with basic model initialization.
         """
         from pydantic import BaseModel, Field
 
@@ -115,56 +114,18 @@ class TestPortkeyLLMProvider:
             mock_settings.PORTKEY_URL = None
             mock_create_headers.return_value = {"test": "headers"}
             mock_model = Mock()
-            mock_structured_model = Mock()
-            mock_model.with_structured_output.return_value = mock_structured_model
             mock_chat_openai.return_value = mock_model
 
             provider = PortkeyLLMProvider(sample_metadata.copy())
-            result = provider.get_llm_model(
-                "gpt-4", streaming=False, temperature=0.7, json_mode=True, schema=TestSchema
-            )
+            result = provider.get_llm_model("gpt-4")
 
             mock_chat_openai.assert_called_once_with(
                 api_key="X",
                 base_url=PORTKEY_GATEWAY_URL,
                 default_headers={"test": "headers"},
                 model="gpt-4",
-                streaming=False,
-                temperature=0.7,
             )
-            mock_model.with_structured_output.assert_called_once_with(TestSchema)
-            assert result == mock_structured_model
-
-    def test_get_llm_model_with_json_mode_only(self, sample_metadata):
-        """
-        Tests that `PortkeyLLMProvider.get_llm_model` correctly handles json_mode without schema.
-        """
-        with (
-            patch("app.utils.providers.llm_providers.portkey.settings") as mock_settings,
-            patch("app.utils.providers.llm_providers.portkey.ChatOpenAI") as mock_chat_openai,
-            patch("app.utils.providers.llm_providers.portkey.createHeaders") as mock_create_headers,
-            patch(
-                "app.utils.providers.llm_providers.portkey.PORTKEY_GATEWAY_URL",
-                PORTKEY_GATEWAY_URL,
-            ),
-        ):
-
-            mock_settings.PORTKEY_API_KEY = "test_key"
-            mock_settings.PORTKEY_PROVIDER_API_KEY = None
-            mock_settings.PORTKEY_PROVIDER_NAME = None
-            mock_settings.PORTKEY_CONFIG_ID = None
-            mock_settings.PORTKEY_URL = None
-            mock_create_headers.return_value = {"test": "headers"}
-            mock_model = Mock()
-            mock_json_model = Mock()
-            mock_model.with_structured_output.return_value = mock_json_model
-            mock_chat_openai.return_value = mock_model
-
-            provider = PortkeyLLMProvider(sample_metadata.copy())
-            result = provider.get_llm_model("gpt-4", json_mode=True)
-
-            mock_model.with_structured_output.assert_called_once_with(method="json_mode")
-            assert result == mock_json_model
+            assert result == mock_model
 
     def test_self_hosted_provider_initialization(self, sample_metadata):
         """
@@ -227,50 +188,9 @@ class TestLiteLLMProvider:
                 base_url="http://localhost:4000",
                 model="gpt-4",
                 default_headers={"Authorization": "Bearer master_key"},
-                streaming=True,
                 extra_body={"metadata": sample_metadata},
             )
             assert result == mock_model
-
-    def test_get_llm_model_with_parameters(self, sample_metadata):
-        """
-        Tests that LiteLLMProvider.get_llm_model correctly handles temperature, json_mode, and schema parameters.
-        """
-        from pydantic import BaseModel, Field
-
-        class TestSchema(BaseModel):
-            result: str = Field(description="Test result")
-
-        with (
-            patch("app.utils.providers.llm_providers.litellm.settings") as mock_settings,
-            patch("app.utils.providers.llm_providers.litellm.ChatOpenAI") as mock_chat_openai,
-        ):
-
-            mock_settings.LITELLM_MASTER_KEY = "master_key"
-            mock_settings.LITELLM_KEY_HEADER_NAME = None
-            mock_settings.LITELLM_VIRTUAL_KEY = None
-            mock_settings.LITELLM_BASE_URL = "http://localhost:4000"
-            mock_model = Mock()
-            mock_structured_model = Mock()
-            mock_model.with_structured_output.return_value = mock_structured_model
-            mock_chat_openai.return_value = mock_model
-
-            provider = LiteLLMProvider(sample_metadata)
-            result = provider.get_llm_model(
-                "gpt-4", streaming=False, temperature=0.8, json_mode=True, schema=TestSchema
-            )
-
-            mock_chat_openai.assert_called_once_with(
-                api_key="X",
-                base_url="http://localhost:4000",
-                model="gpt-4",
-                default_headers={"Authorization": "Bearer master_key"},
-                streaming=False,
-                extra_body={"metadata": sample_metadata},
-                temperature=0.8,
-            )
-            mock_model.with_structured_output.assert_called_once_with(TestSchema)
-            assert result == mock_structured_model
 
 
 class TestOpenRouterLLMProvider:
@@ -304,46 +224,8 @@ class TestOpenRouterLLMProvider:
                 base_url="https://openrouter.ai/api/v1",
                 model="gpt-4",
                 metadata=sample_metadata,
-                streaming=True,
             )
             assert result == mock_model
-
-    def test_get_llm_model_with_parameters(self, sample_metadata):
-        """
-        Tests that OpenRouterLLMProvider correctly handles all parameter types including json_mode.
-        """
-        from pydantic import BaseModel, Field
-
-        class TestSchema(BaseModel):
-            result: str = Field(description="Test result")
-
-        with (
-            patch("app.utils.providers.llm_providers.openrouter.settings") as mock_settings,
-            patch("app.utils.providers.llm_providers.openrouter.ChatOpenAI") as mock_chat_openai,
-        ):
-
-            mock_settings.OPENROUTER_API_KEY = "openrouter_key"
-            mock_settings.OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-            mock_model = Mock()
-            mock_structured_model = Mock()
-            mock_model.with_structured_output.return_value = mock_structured_model
-            mock_chat_openai.return_value = mock_model
-
-            provider = OpenRouterLLMProvider(sample_metadata)
-            result = provider.get_llm_model(
-                "gpt-4", streaming=False, temperature=0.3, json_mode=True, schema=TestSchema
-            )
-
-            mock_chat_openai.assert_called_once_with(
-                api_key="openrouter_key",
-                base_url="https://openrouter.ai/api/v1",
-                model="gpt-4",
-                metadata=sample_metadata,
-                streaming=False,
-                temperature=0.3,
-            )
-            mock_model.with_structured_output.assert_called_once_with(TestSchema)
-            assert result == mock_structured_model
 
 
 class TestCloudflareProvider:
@@ -388,9 +270,8 @@ class TestCloudflareProvider:
             mock_chat_openai.assert_called_once_with(
                 api_key="X",  # This is hardcoded in the actual implementation
                 base_url=expected_base_url,
-                model="@cf/meta/llama-3.1-8b-instruct",
                 default_headers=expected_headers,
-                streaming=True,
+                model="@cf/meta/llama-3.1-8b-instruct",
             )
             assert result == mock_model
 
@@ -430,47 +311,5 @@ class TestCustomLLMProvider:
                     "trace_id": "test_trace_123",
                     "chat_id": "test_chat_456",
                 },
-                streaming=True,
             )
             assert result == mock_model
-
-    def test_get_llm_model_with_parameters(self, sample_metadata):
-        """
-        Test that CustomLLMProvider correctly handles all parameter types including json_mode and schema.
-        """
-        from pydantic import BaseModel, Field
-
-        class TestSchema(BaseModel):
-            result: str = Field(description="Test result")
-
-        with (
-            patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
-            patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
-        ):
-
-            mock_settings.CUSTOM_LLM_API_KEY = "custom_key"
-            mock_settings.CUSTOM_LLM_BASE_URL = "https://custom.api"
-            mock_model = Mock()
-            mock_json_model = Mock()
-            mock_model.with_structured_output.return_value = mock_json_model
-            mock_chat_openai.return_value = mock_model
-
-            provider = CustomLLMProvider(sample_metadata)
-            result = provider.get_llm_model(
-                "gpt-4", streaming=False, temperature=0.9, json_mode=True
-            )
-
-            mock_chat_openai.assert_called_once_with(
-                api_key="custom_key",
-                base_url="https://custom.api",
-                model="gpt-4",
-                metadata={
-                    "user": "test_user",
-                    "trace_id": "test_trace_123",
-                    "chat_id": "test_chat_456",
-                },
-                streaming=False,
-                temperature=0.9,
-            )
-            mock_model.with_structured_output.assert_called_once_with(method="json_mode")
-            assert result == mock_json_model

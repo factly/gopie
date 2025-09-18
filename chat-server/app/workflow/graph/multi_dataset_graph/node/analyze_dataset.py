@@ -1,9 +1,17 @@
+from langchain_core.runnables import RunnableConfig
+
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.graph_utils.column_value_matching import match_column_values
+from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
-async def analyze_dataset(state: State) -> dict:
+@configure_node(
+    role="intermediate",
+    progress_message="Analyzing dataset structure and validating column values...",
+)
+async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
     """
     Analyze the dataset structure and prepare for query planning.
     This function uses SQL queries to verify column values against actual
@@ -45,6 +53,8 @@ Here are results from the analysis of the datasets:
     except Exception as e:
         error_msg = f"Error analyzing dataset: {e!s}"
         query_result.add_error_message(error_msg, "Error analyzing dataset")
+
+        logger.exception(error_msg)
 
         return {
             "query_result": query_result,

@@ -1,10 +1,13 @@
-from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
-from app.workflow.events.event_utils import stream_dynamic_message
+from app.workflow.events.event_utils import (
+    configure_node,
+    fake_streaming_response,
+)
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
@@ -13,14 +16,24 @@ class AssessQueryComplexityOutput(BaseModel):
         description="Whether the query needs to be broken down into subqueries"
     )
     explanation: str = Field(description="Brief explanation of the decision about query complexity")
+    status_message: str = Field(
+        description="Status message about the progress of the generate_subqueries node"
+    )
 
 
 class GenerateSubqueriesOutput(BaseModel):
     subqueries: list[str] = Field(
         description="List of generated subqueries in natural language", min_length=2, max_length=2
     )
+    status_message: str = Field(
+        description="Status message about the progress of the generate_subqueries node. Please include the subqueries that are generated in the status message."
+    )
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Checking query complexity...",
+)
 async def generate_subqueries(state: State, config: RunnableConfig):
     user_input = state.get("user_query", "")
     query_result = state.get("query_result")
@@ -43,19 +56,10 @@ async def generate_subqueries(state: State, config: RunnableConfig):
             subqueries_response = await subqueries_llm.ainvoke({"user_input": user_input})
 
             subqueries = subqueries_response.subqueries
+            status_message = subqueries_response.status_message
 
-            await stream_dynamic_message(
-                f"""
-Create a short message that tells the user displaying the subqueries nicely.
-Don't care about characters over here, but ensure that you display the whole subqueries properly.
-
-I'll break down your query into steps to give you a more complete answer:
-{subqueries}
-
-Please wait while I process these steps.
-                """,
-                config,
-            )
+            if status_message:
+                await fake_streaming_response(status_message, config)
 
             if len(subqueries) > 2:
                 subqueries = subqueries[:2]
@@ -63,14 +67,11 @@ Please wait while I process these steps.
             if not subqueries:
                 subqueries = [user_input]
         else:
-            subqueries = [user_input]
+            status_message = assessment_response.status_message
+            if status_message:
+                await fake_streaming_response(status_message, config)
 
-            await adispatch_custom_event(
-                "gopie-agent",
-                {
-                    "content": "Checking query complexity...",
-                },
-            )
+            subqueries = [user_input]
 
         for subquery_text in subqueries:
             query_result.add_subquery(
@@ -104,6 +105,8 @@ Please wait while I process these steps.
             sql_queries=[],
             tables_used=None,
         )
+
+        logger.exception(error_msg)
 
         return {
             "user_query": user_input,

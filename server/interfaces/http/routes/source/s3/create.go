@@ -20,8 +20,6 @@ type uploadRequestBody struct {
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=1000" example:"Sales data for Q1 2024"`
 	// ID of the project to add the dataset to
 	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
-	// User ID of the creator
-	CreatedBy string `json:"created_by" validate:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
 	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
 	// Column names to be altered
@@ -45,6 +43,7 @@ type uploadRequestBody struct {
 // @Router /source/s3/upload [post]
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	orgID := ctx.Get(middleware.OrganizationIDHeader)
+	userID := ctx.Get(middleware.UserCtxKey)
 	if orgID == "" {
 		h.logger.Error("Organization ID header is missing")
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -133,8 +132,8 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 		RowCount:     count,
 		Size:         res.Size,
 		Alias:        body.Alias,
-		CreatedBy:    body.CreatedBy,
-		UpdatedBy:    body.CreatedBy,
+		CreatedBy:    userID,
+		UpdatedBy:    userID,
 		OrgID:        orgID,
 		CustomPrompt: body.CustomPrompt,
 	})

@@ -59,3 +59,8 @@ select * from datasets where id = $1;
 
 -- name: ListAllDatasets :many
 select * from datasets;
+
+-- name: GetDatasetsByIDs :many
+SELECT * FROM datasets 
+WHERE org_id = $1 AND id = ANY($2::text[])
+ORDER BY created_at DESC;

@@ -13,19 +13,15 @@ async def plan_sql_query(
     status_message: str = "",
 ) -> dict:
     """
-    Plan a SQL query given a user natural language query and dataset schemas.
+    Plan a (only single) SQL query given a user natural language query and dataset schemas.
+
+    Prerequisite:
+        - You should already have the schemas of the datasets
+        - Or required dataset schema is present when you called the `get_datasets_schemas` tool
 
     ONLY use this tool when:
-        - You already have the schemas of the datasets or related sufficient
-          information from previous messages or the user already provided that
-          for which the user is asking the query. Than you can directly plan
-          the query by using this tool.
-
-    DO NOT use this tool when:
-        - If the above condition is not true.
-        - If you want information about the dataset.
-          Because further steps already have full workflow to get the
-          information and then process it.
+        - If the user wants summary or statistics or summary of the data.
+        - If the user query can be answered with a simple single SQL query.
 
     Args:
         user_query: The natural language query from the user.

@@ -3,7 +3,7 @@ from langsmith import traceable
 from qdrant_client import models
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.schema import DatasetSchema
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.services.qdrant.vector_store import perform_similarity_search
@@ -63,5 +63,5 @@ async def search_schemas(
         return schemas
 
     except Exception as e:
-        logger.error(f"Error searching schemas: {e!s}")
+        logger.exception(f"Error searching schemas: {e!s}")
         return []

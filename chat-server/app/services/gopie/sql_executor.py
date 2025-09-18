@@ -4,7 +4,7 @@ from typing import Union
 from langsmith import traceable
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.core.session import SingletonAiohttp
 from app.utils.graph_utils.result_validation import (
     is_result_too_large,
@@ -34,7 +34,6 @@ async def execute_sql(query: str) -> SQL_RESPONSE_TYPE:
     async with http_session.post(SQL_API_ENDPOINT, json=payload) as response:
         if response.status != HTTPStatus.OK:
             error_data = await response.json()
-            logger.error(error_data.get("error", "Unknown error"))
             raise Exception(error_data.get("error", "Unknown error"))
 
         result_data = await response.json()
@@ -44,11 +43,16 @@ async def execute_sql(query: str) -> SQL_RESPONSE_TYPE:
 
 
 async def execute_sql_with_limit(query: str) -> SQL_RESPONSE_TYPE:
-    """
-    Execute a SQL query with a limit against the SQL API
-    """
     result = await execute_sql(query=query)
     return truncate_if_too_large(result)
+
+
+async def execute_sql_with_full_and_truncated(
+    query: str,
+) -> tuple[SQL_RESPONSE_TYPE, SQL_RESPONSE_TYPE]:
+    full_result = await execute_sql(query=query)
+    truncated_result = truncate_if_too_large(full_result)
+    return full_result, truncated_result
 
 
 def truncate_if_too_large(result: SQL_RESPONSE_TYPE) -> SQL_RESPONSE_TYPE:

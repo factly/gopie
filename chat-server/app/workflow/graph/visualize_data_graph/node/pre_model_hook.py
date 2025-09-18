@@ -1,7 +1,7 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage
 from app.utils.langsmith.prompt_manager import get_prompt
 from app.workflow.events.event_utils import configure_node
@@ -73,7 +73,7 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     except Exception as e:
         err_msg = f"Error while preparing visualizations: {str(e)}"
         result.errors.append(f"[ERROR] {err_msg}")
-        logger.error(err_msg)
+        logger.exception(err_msg)
 
         return {
             "messages": [ErrorMessage(content=err_msg)],

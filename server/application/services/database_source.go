@@ -28,8 +28,8 @@ func (s *DatabaseSourceService) Create(params *models.CreateDatabaseSourceParams
 }
 
 // Get retrieves a database source by ID
-func (s *DatabaseSourceService) Get(id, orgID string) (*models.DatabaseSource, error) {
-	return s.dbSourceRepo.Get(context.Background(), id, orgID)
+func (s *DatabaseSourceService) Get(datasetID, orgID string) (*models.DatabaseSource, error) {
+	return s.dbSourceRepo.Get(context.Background(), datasetID, orgID)
 }
 
 // Delete deletes a database source

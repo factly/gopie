@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/factly/gopie/domain/models"
+	"go.uber.org/zap"
 )
 
 func (s *PgDownloadsStore) CreateDownload(ctx context.Context, req *models.CreateDownloadRequest) (*models.Download, error) {
@@ -11,6 +12,7 @@ func (s *PgDownloadsStore) CreateDownload(ctx context.Context, req *models.Creat
 
 	genDownload, err := s.q.CreateDownload(ctx, genParams)
 	if err != nil {
+		s.logger.Critical("Error creating download", zap.Error(err))
 		return nil, err
 	}
 

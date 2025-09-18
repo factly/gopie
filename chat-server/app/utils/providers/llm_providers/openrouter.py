@@ -20,6 +20,9 @@ class OpenRouterLLMProvider(BaseLLMProvider):
             "metadata": {
                 **self.metadata,
             },
+            "extra_body": {
+                "models": [settings.FALLBACK_MODEL],
+            },
         }
 
         llm = ChatOpenAI(**kwargs)

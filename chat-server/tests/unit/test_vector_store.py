@@ -120,20 +120,24 @@ class TestVectorStore:
 
         Verifies that when the initial similarity search with a filter fails, the function retries without the filter and returns the successful results.
         """
-        mock_vector_store = AsyncMock()
-        # First call with filter raises exception, second without filter succeeds
-        mock_vector_store.asimilarity_search.side_effect = [
-            Exception("Filter error"),
-            [Document(page_content="fallback result")],
-        ]
+        with patch("app.services.qdrant.vector_store.logger") as mock_logger:
+            mock_vector_store = AsyncMock()
+            # First call with filter raises exception, second without filter succeeds
+            mock_vector_store.asimilarity_search.side_effect = [
+                Exception("Filter error"),
+                [Document(page_content="fallback result")],
+            ]
 
-        query_filter = Mock()
-        results = await perform_similarity_search(
-            mock_vector_store, "test query", query_filter=query_filter, top_k=3
-        )
+            query_filter = Mock()
+            results = await perform_similarity_search(
+                mock_vector_store, "test query", query_filter=query_filter, top_k=3
+            )
 
-        assert len(results) == 1
-        assert mock_vector_store.asimilarity_search.call_count == 2
+            assert len(results) == 1
+            assert mock_vector_store.asimilarity_search.call_count == 2
+            # Verify that the logger was called to log the exception
+            mock_logger.exception.assert_called_once()
+            mock_logger.info.assert_called_once_with("Attempting unfiltered search as fallback...")
 
     @pytest.mark.asyncio
     async def test_perform_similarity_search_raises_on_unfiltered_error(self):
@@ -257,6 +261,7 @@ class TestSchemaSearch:
             patch(
                 "app.services.qdrant.schema_search.perform_similarity_search"
             ) as mock_perform_search,
+            patch("app.services.qdrant.schema_search.logger") as mock_logger,
         ):
             mock_vector_store = AsyncMock()
             mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
@@ -264,6 +269,8 @@ class TestSchemaSearch:
 
             schemas = await search_schemas(user_query="test query", embeddings=mock_embeddings)
             assert schemas == []
+            # Verify that the exception was logged
+            mock_logger.exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_schemas_empty_results(self, mock_embeddings):
@@ -298,14 +305,13 @@ class TestSchemaVectorization:
             {"col1": "value1", "col2": 42, "col3": 3.14, "col4": None}
         ]
         dataset_details = Mock()
+        project_details = Mock()
+        project_details.id = "proj1"
 
         with (
             patch(
                 "app.services.qdrant.schema_vectorization.create_dataset_schema"
             ) as mock_create_schema,
-            patch(
-                "app.services.qdrant.schema_vectorization.generate_column_descriptions"
-            ) as mock_generate_desc,
             patch(
                 "app.services.qdrant.schema_vectorization.add_document_to_vector_store"
             ) as mock_add_document,
@@ -328,12 +334,11 @@ class TestSchemaVectorization:
                 "dataset_id": "ds1",
             }
             mock_create_schema.return_value = mock_schema
-            mock_generate_desc.return_value = {"col1": "Column 1 description"}
             mock_format_schema.return_value = "formatted schema content"
             mock_add_document.return_value = None
 
             result = await store_schema_in_qdrant(
-                dataset_summary, sample_data, dataset_details, "ds1", "proj1"
+                dataset_summary, sample_data, dataset_details, project_details
             )
 
             assert result is True
@@ -350,18 +355,23 @@ class TestSchemaVectorization:
             {"col1": "value1", "col2": 42}
         ]
         dataset_details = Mock()
+        project_details = Mock()
+        project_details.id = "proj1"
 
         with (
             patch(
                 "app.services.qdrant.schema_vectorization.create_dataset_schema"
             ) as mock_create_schema,
+            patch("app.services.qdrant.schema_vectorization.logger") as mock_logger,
         ):
             mock_create_schema.side_effect = Exception("Storage error")
 
             result = await store_schema_in_qdrant(
-                dataset_summary, sample_data, dataset_details, "ds1", "proj1"
+                dataset_summary, sample_data, dataset_details, project_details
             )
             assert result is False
+            # Verify that the exception was logged
+            mock_logger.exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_delete_schema_from_qdrant_success(self):
@@ -395,6 +405,7 @@ class TestSchemaVectorization:
             patch(
                 "app.services.qdrant.schema_vectorization.QdrantSetup"
             ) as mock_qdrant_setup_class,
+            patch("app.services.qdrant.schema_vectorization.logger") as mock_logger,
         ):
             mock_async_client = Mock()
             mock_async_client.delete = AsyncMock(side_effect=Exception("Delete error"))
@@ -402,3 +413,5 @@ class TestSchemaVectorization:
 
             result = await delete_schema_from_qdrant("ds1", "proj1")
             assert result is False
+            # Verify that the exception was logged
+            mock_logger.exception.assert_called_once()

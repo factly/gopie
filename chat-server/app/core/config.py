@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     MODE: str = "development"
 
-    MAX_TOOL_CALL_LIMIT: int = 3
+    MAX_TOOL_CALL_LIMIT: int = 10
     MAX_VALIDATION_RETRY_COUNT: int = 2
     MAX_VIZ_TOOL_CALLS: int = 5
 
@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     ADVANCED_MODEL: str = ""
     BALANCED_MODEL: str = ""
     FAST_MODEL: str = ""
+    FALLBACK_MODEL: str = ""
 
     DETERMINISTIC_TEMPERATURE: float = 0.0
     LOW_VARIATION_TEMPERATURE: float = 0.3
@@ -81,7 +82,7 @@ class Settings(BaseSettings):
     CUSTOM_LLM_API_KEY: str = ""
 
     CHAT_HISTORY_MAX_MESSAGES: int = 20
-    CHAT_HISTORY_MAX_TOKENS: int = 8000
+    CHAT_HISTORY_MAX_TOKENS: int = 10000
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
 

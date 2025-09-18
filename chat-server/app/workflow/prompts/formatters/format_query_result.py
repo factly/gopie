@@ -214,7 +214,13 @@ def format_query_result(query_result: QueryResult) -> str:
                     "Status: Will be processed further so don't validate this subquery"
                 )
     else:
-        input_parts.append("No SQL queries were processed")
+        has_single_dataset_sql = (
+            query_result.single_dataset_query_result
+            and query_result.single_dataset_query_result.sql_results
+            and len(query_result.single_dataset_query_result.sql_results) > 0
+        )
+        if not has_single_dataset_sql:
+            input_parts.append("No SQL queries were processed")
 
     input_str = "\n".join(input_parts)
 

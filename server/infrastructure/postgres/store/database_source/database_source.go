@@ -46,15 +46,17 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 		ConnectionString: encryptedConnectionString,
 		SqlQuery:         params.SQLQuery,
 		Driver:           params.Driver,
+		DatasetID:        pgtype.UUID{Bytes: uuid.Must(uuid.Parse(params.DatasetID)), Valid: true},
 		OrgID:            pgtype.Text{String: params.OrganizationID, Valid: true},
 	})
 	if err != nil {
-		s.logger.Error("Error creating database source", zap.Error(err))
+		s.logger.Critical("Error creating database source", zap.Error(err))
 		return nil, err
 	}
 
 	return &models.DatabaseSource{
 		ID:               row.ID.String(),
+		DatasetID:        row.DatasetID.String(),
 		ConnectionString: params.ConnectionString, // Return the original connection string, not the encrypted one
 		SQLQuery:         row.SqlQuery,
 		CreatedAt:        row.CreatedAt.Time.Format(time.RFC3339),
@@ -63,11 +65,11 @@ func (s *DatabaseSourceStore) Create(ctx context.Context, params models.CreateDa
 }
 
 // Get retrieves a database source by ID
-func (s *DatabaseSourceStore) Get(ctx context.Context, id, orgID string) (*models.DatabaseSource, error) {
-	parseUUID, _ := uuid.Parse(id)
+func (s *DatabaseSourceStore) Get(ctx context.Context, datasetID, orgID string) (*models.DatabaseSource, error) {
+	parseUUID, _ := uuid.Parse(datasetID)
 	row, err := s.q.GetDatabaseSource(ctx, gen.GetDatabaseSourceParams{
-		ID:    pgtype.UUID{Bytes: parseUUID, Valid: true},
-		OrgID: pgtype.Text{String: orgID, Valid: true},
+		DatasetID: pgtype.UUID{Bytes: parseUUID, Valid: true},
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error getting database source", zap.Error(err))
@@ -82,6 +84,7 @@ func (s *DatabaseSourceStore) Get(ctx context.Context, id, orgID string) (*model
 
 	return &models.DatabaseSource{
 		ID:               row.ID.String(),
+		DatasetID:        row.DatasetID.String(),
 		ConnectionString: decryptedConnectionString,
 		OrganizationID:   row.OrgID.String,
 		SQLQuery:         row.SqlQuery,

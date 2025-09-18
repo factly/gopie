@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface UseAuthRequestReturn {
   isInitializing: boolean;
@@ -10,7 +10,7 @@ export function useAuthRequest(setError: (error: string | null) => void): UseAut
   const [error, setLocalError] = useState<string | null>(null);
 
   //TODO maintain return_to url
-  const initializeAuthRequest = async () => {
+  const initializeAuthRequest = useCallback(async () => {
     try {
       setIsInitializing(true);
 
@@ -31,10 +31,10 @@ export function useAuthRequest(setError: (error: string | null) => void): UseAut
     } finally {
       setIsInitializing(false);
     }
-  };
+  }, [setError]);
   useEffect(() => {
     initializeAuthRequest();
-  }, []);
+  }, [initializeAuthRequest]);
 
   return {
     isInitializing,

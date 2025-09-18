@@ -178,6 +178,52 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 	return i, err
 }
 
+const getDatasetsByIDs = `-- name: GetDatasetsByIDs :many
+SELECT id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt FROM datasets 
+WHERE org_id = $1 AND id = ANY($2::text[])
+ORDER BY created_at DESC
+`
+
+type GetDatasetsByIDsParams struct {
+	OrgID   pgtype.Text
+	Column2 []string
+}
+
+func (q *Queries) GetDatasetsByIDs(ctx context.Context, arg GetDatasetsByIDsParams) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, getDatasetsByIDs, arg.OrgID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+			&i.CustomPrompt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllDatasets = `-- name: ListAllDatasets :many
 select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, size, file_path, columns, org_id, custom_prompt from datasets
 `

@@ -1,6 +1,6 @@
 from langsmith import traceable
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.data import ColumnValueMatching
 from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
@@ -56,18 +56,18 @@ async def match_column_values(
 
             if exact_values:
                 await verify_exact_values(
-                    column_entry,
-                    column_name,
-                    exact_values,
-                    dataset_name,
+                    column_entry=column_entry,
+                    column_name=column_name,
+                    exact_values=exact_values,
+                    table_name=dataset_name,
                 )
 
             if fuzzy_values:
                 await verify_fuzzy_values(
-                    column_entry,
-                    column_name,
-                    fuzzy_values,
-                    dataset_name,
+                    column_entry=column_entry,
+                    column_name=column_name,
+                    fuzzy_values=fuzzy_values,
+                    table_name=dataset_name,
                 )
 
     result.datasets = {k: v for k, v in result.datasets.items() if v.columns_analyzed}
@@ -87,7 +87,9 @@ async def verify_exact_values(
     Verify exact values against the column and collect matches.
     """
     for value in exact_values:
-        exact_match = await check_exact_match(value, column_name, table_name)
+        exact_match = await check_exact_match(
+            value=value, column_name=column_name, table_name=table_name
+        )
         if exact_match:
             column_entry.verified_values.append(
                 ColumnValueMatching.VerifiedValue(
@@ -117,7 +119,9 @@ async def verify_fuzzy_values(
     Verify fuzzy values against the column and collect suggestions.
     """
     for value in fuzzy_values:
-        similar_values = await find_similar_values(value, column_name, table_name)
+        similar_values = await find_similar_values(
+            value=value, column_name=column_name, table_name=table_name
+        )
 
         suggestion = ColumnValueMatching.SuggestedAlternative(
             requested_value=value,
@@ -147,7 +151,7 @@ async def check_exact_match(value: str, column_name: str, table_name: str) -> bo
             logger.debug(f"Exact match found for '{value}' in '{column_name}'")
             return True
     except Exception as e:
-        logger.error(
+        logger.exception(
             f"Error checking exact match for '{value}' in "
             f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
@@ -190,34 +194,34 @@ async def find_similar_values(value: str, column_name: str, table_name: str) -> 
             )
 
     except Exception as e:
-        logger.error(
+        logger.exception(
             f"Error in ILIKE search for '{value}' in " f"'{table_name}.{column_name}': {str(e)}",
             exc_info=True,
         )
 
-    # Fallback: (Levenshtein due to duckdb incompatibility) Trigram similarity matching if no LIKE results found
+    # Fallback: Levenshtein string matching if no LIKE results found
     if not similar_values:
         try:
-            trigram_query = f"""
+            levenshtein_query = f"""
             SELECT DISTINCT {column_name},
                 levenshtein(lower({column_name}), lower('{value}')) AS distance
             FROM {table_name}
             ORDER BY distance ASC
             LIMIT 5;
             """
-            trigram_result = await execute_sql(query=trigram_query)
+            levenshtein_result = await execute_sql(query=levenshtein_query)
 
-            if isinstance(trigram_result, list) and trigram_result:
-                similar_values = [str(row.get(column_name)) for row in trigram_result if row]
+            if isinstance(levenshtein_result, list) and levenshtein_result:
+                similar_values = [str(row.get(column_name)) for row in levenshtein_result if row]
                 logger.debug(
-                    f"Found {len(similar_values)} trigram matches for '{value}' in '{column_name}'"
+                    f"Found {len(similar_values)} levenshtein matches for '{value}' in '{column_name}'"
                 )
 
         except Exception as e:
-            logger.warning(
-                f"Trigram similarity search failed for '{value}' in "
+            logger.exception(
+                f"Levenshtein similarity search failed for '{value}' in "
                 f"'{table_name}.{column_name}': {str(e)}. "
-                "This may indicate pg_trgm extension is not enabled.",
+                "This may indicate incompatibility with DuckDB.",
                 exc_info=True,
             )
 

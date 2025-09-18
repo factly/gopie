@@ -118,7 +118,9 @@ export function getSupportedFileExtensions(): string[] {
  * Gets all supported MIME types for Uppy restrictions
  */
 export function getSupportedMimeTypes(): string[] {
-  const mimeTypes = Object.values(SUPPORTED_FORMATS).flatMap((format) => format.mimeTypes);
+  const mimeTypes = Object.values(SUPPORTED_FORMATS).flatMap(
+    (format) => format.mimeTypes
+  );
   // Remove duplicates using filter instead of Set
   return mimeTypes.filter((type, index) => mimeTypes.indexOf(type) === index);
 }
@@ -170,14 +172,15 @@ export async function validateFileWithDuckDb(
     );
   }
 
-  // Handle large files
-  if (fileSize > 1024 * 1024 * 1024) {
-    return {
-      isValid: true,
-      format,
-      error: `File is larger than 1GB. Only basic validation performed, full validation will be done on the server.`,
-    };
-  }
+  // Remove the 1GB file size restriction since we now handle large files
+  // by limiting the data processed during validation
+  // if (fileSize > 1024 * 1024 * 1024) {
+  //   return {
+  //     isValid: true,
+  //     format,
+  //     error: `File is larger than 1GB. Only basic validation performed, full validation will be done on the server.`,
+  //   };
+  // }
 
   // Route to specific validation function
   switch (format) {
@@ -219,6 +222,7 @@ async function validateCsvFile(
     const tempTableName = `temp_validate_${Date.now()}`;
 
     // Use IGNORE_ERRORS and STORE_REJECTS to handle data type mismatches
+    // Add LIMIT to process only first 1GB worth of data to avoid memory issues
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
       SELECT * FROM read_csv_auto(
@@ -227,6 +231,7 @@ async function validateCsvFile(
         IGNORE_ERRORS=true,
         STORE_REJECTS=true
       )
+      LIMIT 1000000
     `);
 
     const result = await validateTableStructure(conn, tempTableName);
@@ -272,11 +277,12 @@ async function validateParquetFile(
     const tempTableName = `temp_validate_${Date.now()}`;
 
     // Try with IGNORE_ERRORS first, fallback to regular read if not supported
+    // Add LIMIT to process only first 1GB worth of data to avoid memory issues
     try {
       await conn.query(`
         CREATE TABLE ${tempTableName} AS 
         SELECT * FROM read_parquet('${virtualFileName}')
-        WHERE 1=1 -- Parquet doesn't support IGNORE_ERRORS directly, so we'll handle errors differently
+        LIMIT 1000000
       `);
     } catch (initialError) {
       // If there's an error, the file might have data type issues
@@ -333,29 +339,30 @@ async function validateJsonFile(
     const tempTableName = `temp_validate_${Date.now()}`;
 
     // Try different JSON formats with IGNORE_ERRORS
+    // Add LIMIT to process only first 1GB worth of data to avoid memory issues
     let createQuery = "";
     let lastError: Error | null = null;
 
     try {
       // Try auto-detection first with IGNORE_ERRORS
-      createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true, store_rejects=true)`;
+      createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
       await conn.query(createQuery);
     } catch (autoError) {
       lastError = autoError as Error;
       try {
         // Try newline-delimited JSON
-        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited', ignore_errors=true, store_rejects=true)`;
+        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
         await conn.query(createQuery);
         lastError = null;
       } catch (ndJsonError) {
         lastError = ndJsonError as Error;
         try {
           // Try array format
-          createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='array', ignore_errors=true, store_rejects=true)`;
+          createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='array', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
           await conn.query(createQuery);
           lastError = null;
-        } catch (arrayError) {
-          lastError = arrayError as Error;
+        } catch (ndJsonError) {
+          lastError = ndJsonError as Error;
         }
       }
     }
@@ -570,7 +577,7 @@ async function validateTableStructure(
     columnTypes.push(col.type);
   });
 
-  // Get preview data (first 10 rows)
+  // Get preview data (first 10 rows) - this is already limited
   const previewRowCount = 10;
   const previewQuery = await conn.query(`
     SELECT * FROM ${tableName} 
@@ -746,9 +753,11 @@ async function convertCsvWithTypes(
 
     const tempTableName = `temp_convert_${Date.now()}`;
 
+    // Add LIMIT to process only first 1GB worth of data during conversion
     await conn.query(`
       CREATE TABLE ${tempTableName} AS 
       SELECT * FROM read_csv_auto('${sourceFileName}', header=true, IGNORE_ERRORS=true, STORE_REJECTS=true)
+      LIMIT 1000000
     `);
 
     let createCastTableSQL = `CREATE TABLE ${tempTableName}_cast AS SELECT `;

@@ -3,13 +3,16 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.core.constants import DATASETS_USED, DATASETS_USED_ARG
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.get_schema import get_schema_by_dataset_ids
 from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.utils.model_registry.model_provider import get_model_provider
-from app.workflow.events.event_utils import configure_node
+from app.workflow.events.event_utils import (
+    configure_node,
+    fake_streaming_response,
+)
 from app.workflow.graph.multi_dataset_graph.types import (
     ColumnAssumptions,
     DatasetsInfo,
@@ -26,6 +29,9 @@ class IdentifyDatasetsOutput(BaseModel):
         description="Column assumptions for selected datasets", default=[]
     )
     node_message: str = Field(description="Brief message about selected datasets and their sources")
+    status_message: str = Field(
+        description="Status message about the progress of the identify_datasets node"
+    )
 
 
 @configure_node(
@@ -74,7 +80,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
                 project_ids=project_ids,
             )
         except Exception as e:
-            logger.warning(f"Vector search error: {e!s}. Unable to retrieve dataset information.")
+            logger.exception(f"Vector search error: {e!s}. Unable to retrieve dataset information.")
 
         if not semantic_searched_datasets:
             query_result.set_node_message(
@@ -93,7 +99,16 @@ async def identify_datasets(state: State, config: RunnableConfig):
             return {
                 "query_result": query_result,
                 "identified_datasets": None,
-                "messages": [IntermediateStep(content="No relevant datasets found")],
+                "datasets_info": DatasetsInfo(
+                    schemas=[],
+                    column_assumptions=None,
+                    correct_column_requirements=None,
+                ),
+                "messages": [
+                    ErrorMessage(
+                        content="No relevant datasets found for the query, ask user to rephrase or ask more relevant query"
+                    )
+                ],
             }
 
         chain_input = {
@@ -113,9 +128,15 @@ async def identify_datasets(state: State, config: RunnableConfig):
         selected_datasets = response.selected_dataset
         if query_result.subqueries and len(query_result.subqueries) > query_index:
             query_result.subqueries[query_index].tables_used = selected_datasets
+            if not selected_datasets:
+                query_result.subqueries[query_index].add_error_message(
+                    "No relevant datasets found for the query, ask user to rephrase or ask more relevant query",
+                    "identify_datasets",
+                )
 
         column_assumptions = response.column_assumptions
         node_message = response.node_message
+        status_message = response.status_message
 
         if node_message:
             query_result.set_node_message("identify_datasets", node_message)
@@ -133,6 +154,9 @@ async def identify_datasets(state: State, config: RunnableConfig):
             column_assumptions=column_assumptions,
             correct_column_requirements=None,
         )
+
+        if status_message:
+            await fake_streaming_response(status_message, config)
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -157,6 +181,8 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "gopie-agent",
             {"content": "Error identifying datasets"},
         )
+
+        logger.exception(error_msg)
 
         return {
             "query_result": query_result,

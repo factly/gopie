@@ -50,9 +50,9 @@ There are TWO types of datasets provided:
 
 DATASET SELECTION:
 * Evaluate ALL datasets from BOTH sources (relevant + semantic searched)
-* Select the TOP MOST RELEVANT datasets that will help answer the user's query
+* Select ALL RELEVANT datasets that will help answer the user's query (Need not to be most relevant datasets)
 * You can choose datasets from either or both categories
-* Consider combining datasets if they provide complementary information
+* ALWAYS consider combining datasets if they provide complementary information
 * Always prioritize relevance and usefulness over the source of the dataset
 
 COLUMN ASSUMPTIONS:
@@ -72,6 +72,8 @@ VALUE GUIDELINES:
 * DO NOT include numerical or nonsensical values in fuzzy_values that cannot be used to effectively match data
 * Only use exact_values when completely confident the value exists in sample_data
 * For non-string columns, simply include the column name without any value assumptions to avoid type errors in SQL operations
+* NEVER include project_id, dataset_id, or any internal system identifiers in exact_values or fuzzy_values - these are not user data
+* Focus on actual business data values that users would search for, not technical metadata
 
 NODE MESSAGE:
 * Include a brief informative message to pass to subsequent nodes

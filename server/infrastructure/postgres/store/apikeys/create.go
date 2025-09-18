@@ -10,8 +10,6 @@ import (
 )
 
 func (s *PostgresAPIKeyStore) Create(ctx context.Context, params models.CreateAPIKeyParams) (*models.APIKeyResponse, error) {
-	// Parse application ID
-
 	var expiresAt pgtype.Timestamptz
 	if params.ExpiresAt != nil {
 		expiresAt = pgtype.Timestamptz{
@@ -29,7 +27,7 @@ func (s *PostgresAPIKeyStore) Create(ctx context.Context, params models.CreateAP
 		OrgID:       params.OrgID,
 	})
 	if err != nil {
-		s.logger.Error("Error creating API key", zap.Error(err))
+		s.logger.Critical("Error creating API key", zap.Error(err))
 		return nil, err
 	}
 

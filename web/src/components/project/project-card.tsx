@@ -41,7 +41,6 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
   project: Project;
@@ -54,7 +53,6 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
   const { toast } = useToast();
-  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -148,7 +146,7 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Create context data for this dataset
+    // Create context data for this project
     const contextData = encodeURIComponent(
       JSON.stringify([
         {
@@ -159,7 +157,8 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
       ])
     );
 
-    router.push(`/chat?contextData=${contextData}`);
+    // Use window.location for a hard navigation to clear all React state
+    window.location.href = `/chat?contextData=${contextData}`;
   };
 
   // Function to create a simple initial avatar from project name
@@ -226,9 +225,9 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Layers className="h-3.5 w-3.5" />
-                    <span className="font-medium">{project.datasetCount}</span>
+                    <span className="font-medium">{project.dataset_count}</span>
                     <span>
-                      {project.datasetCount === 1 ? "Dataset" : "Datasets"}
+                      {project.dataset_count === 1 ? "Dataset" : "Datasets"}
                     </span>
                   </div>
 

@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.data import DatasetDetails, ProjectDetails
 from app.models.schema import DatasetSummary
 from app.services.gopie.dataset_info import (
@@ -11,9 +11,6 @@ from app.services.gopie.dataset_info import (
 from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.services.qdrant.vector_store import add_document_to_vector_store
-from app.utils.graph_utils.col_description_generator import (
-    generate_column_descriptions,
-)
 
 
 async def store_schema_in_qdrant(
@@ -30,11 +27,6 @@ async def store_schema_in_qdrant(
             project_details=project_details,
         )
 
-        column_descriptions = await generate_column_descriptions(dataset_schema)
-
-        for column in dataset_schema.columns:
-            column.column_description = column_descriptions[column.column_name]
-
         document = Document(
             page_content=format_schema_for_embedding(dataset_schema),
             metadata={
@@ -48,11 +40,7 @@ async def store_schema_in_qdrant(
         return True
 
     except Exception as e:
-        logger.exception(
-            f"Error storing schema in Qdrant: {e!s}",
-            exc_info=True,
-            stack_info=True,
-        )
+        logger.exception(f"Error storing schema in Qdrant: {e!s}")
         return False
 
 
@@ -84,5 +72,5 @@ async def delete_schema_from_qdrant(
         return True
 
     except Exception as e:
-        logger.error(f"Error deleting schema from Qdrant: {e!s}")
+        logger.exception(f"Error deleting schema from Qdrant: {e!s}")
         return False

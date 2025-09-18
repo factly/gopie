@@ -11,6 +11,7 @@ type httpHandler struct {
 	chatSvc    *services.ChatService
 	olapSvc    *services.OlapService
 	datasetSvc *services.DatasetService
+	projectSvc *services.ProjectService
 }
 
 type RouterParams struct {
@@ -18,6 +19,7 @@ type RouterParams struct {
 	ChatService    *services.ChatService
 	OlapService    *services.OlapService
 	DatasetService *services.DatasetService
+	ProjectService *services.ProjectService
 }
 
 func Routes(router fiber.Router, params RouterParams) {
@@ -26,11 +28,17 @@ func Routes(router fiber.Router, params RouterParams) {
 		chatSvc:    params.ChatService,
 		olapSvc:    params.OlapService,
 		datasetSvc: params.DatasetService,
+		projectSvc: params.ProjectService,
 	}
+	// Static routes first
 	router.Get("/", httpHandler.listUserChats)
+	router.Post("/create", httpHandler.createChat)
 	router.Post("/completions", httpHandler.chatWithAgent)
+
+	// Parameterized routes after static routes
 	router.Get("/:chatID/messages", httpHandler.getChatMessages)
-	router.Delete("/:chatID", httpHandler.deleteChat)
-	router.Get("/:chatID", httpHandler.details)
 	router.Put("/:chatID/visibility", httpHandler.updateVisibility)
+	router.Put("/:chatID/title", httpHandler.updateTitle)
+	router.Get("/:chatID", httpHandler.details)
+	router.Delete("/:chatID", httpHandler.deleteChat)
 }

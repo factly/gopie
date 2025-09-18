@@ -54,9 +54,17 @@ export function CreateProjectDialog() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      description: "",
       custom_prompt: "",
     },
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
+
+  const watchedFields = form.watch(["name", "description"]);
+  const isFormValid =
+    watchedFields[0]?.length >= 3 &&
+    watchedFields[1]?.length >= 10;
 
   const createProject = useCreateProject();
   const queryClient = useQueryClient();
@@ -114,7 +122,9 @@ export function CreateProjectDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium">Name</FormLabel>
+                  <FormLabel className="text-base font-medium">
+                    Name <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       className="text-base"
@@ -131,7 +141,9 @@ export function CreateProjectDialog() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className="text-base font-medium">
+                    Description <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Description of your project"
@@ -139,7 +151,7 @@ export function CreateProjectDialog() {
                       maxLength={1000}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-sm" />
                   <p className="text-xs text-muted-foreground">
                     {field.value?.length || 0}/1000 characters
                   </p>
@@ -173,7 +185,7 @@ export function CreateProjectDialog() {
               </Button>
               <Button
                 type="submit"
-                disabled={createProject.isPending}
+                disabled={createProject.isPending || !isFormValid}
                 className="min-w-24"
               >
                 {createProject.isPending ? (

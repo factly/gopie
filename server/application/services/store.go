@@ -41,21 +41,22 @@ func (service *ProjectService) Delete(id, orgID string) error {
 	return service.projectRepo.Delete(context.Background(), id, orgID)
 }
 
-// List - Search projects
-func (service *ProjectService) List(query string, limit, offset int, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
-	pagination := models.NewPagination()
-	if limit != 0 {
-		pagination.Limit = limit
-	}
-	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
-}
-
 func (service *ProjectService) ProjectsBelongToOrg(projectIDs []string, orgID string) (bool, error) {
 	return service.projectRepo.ProjectsBelongToOrg(context.Background(), projectIDs, orgID)
 }
 
 func (service *ProjectService) DatasetsBelongToOrg(datasetNames []string, orgID string) (bool, error) {
 	return service.projectRepo.DatasetsBelongToOrg(context.Background(), datasetNames, orgID)
+}
+
+// List - Search projects
+func (service *ProjectService) List(query string, limit, page int, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
+	pagination := models.NewPagination()
+	if limit != 0 {
+		pagination.Limit = limit
+	}
+	pagination.Offset = (page - 1) * limit
+	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
 }
 
 func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {
@@ -139,4 +140,14 @@ func (service *DatasetService) ListALlDatasetsFromProject(projectID string) ([]*
 
 func (service *DatasetService) GetProjectForDataset(datasetID string) (string, error) {
 	return service.datasetRepo.GetProjectForDataset(context.Background(), datasetID)
+}
+
+// GetDatasetsByIDs fetches multiple datasets by their IDs for a given organization
+func (s *DatasetService) GetDatasetsByIDs(ctx context.Context, datasetIDs []string, orgID string) ([]*models.Dataset, error) {
+	return s.datasetRepo.GetDatasetsByIDs(ctx, datasetIDs, orgID)
+}
+
+// GetProjectsByIDs - Get projects by IDs
+func (service *ProjectService) GetProjectsByIDs(ctx context.Context, projectIDs []string, orgID string) ([]*models.Project, error) {
+	return service.projectRepo.GetProjectsByIDs(ctx, projectIDs, orgID)
 }

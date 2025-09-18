@@ -180,13 +180,13 @@ export function MentionInput({
       } else if (e.ctrlKey || e.metaKey) {
         // Allow Ctrl+Enter or Cmd+Enter to also submit
         e.preventDefault();
-        if (value.trim() && !disabled && hasContext) {
+        if (value?.trim() && !disabled && hasContext) {
           onSubmit(e);
         }
       } else {
         // Regular Enter submits the form
         e.preventDefault();
-        if (value.trim() && !disabled && hasContext) {
+        if (value?.trim() && !disabled && hasContext) {
           onSubmit(e);
         }
       }
@@ -366,8 +366,8 @@ export function MentionInput({
 
     // Replace the @mention with prefixed item name in the input text
     if (cursorPosition !== null) {
-      const beforeMention = value.substring(0, cursorPosition).replace(/@[^@\s]*$/, "");
-      const afterMention = value.substring(cursorPosition);
+      const beforeMention = (value || '').substring(0, cursorPosition).replace(/@[^@\s]*$/, "");
+      const afterMention = (value || '').substring(cursorPosition);
       const prefix = item.type === "dataset" ? "Dataset: " : "Project: ";
       const replacementText = prefix + item.name;
       const newValue = beforeMention + replacementText + afterMention;
@@ -401,7 +401,7 @@ export function MentionInput({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (hasContext && value.trim() && !disabled) {
+        if (hasContext && value?.trim() && !disabled) {
           onSubmit(e);
         }
       }}
@@ -477,11 +477,11 @@ export function MentionInput({
                 "min-h-[1.5rem] max-h-[160px] leading-6",
                 "placeholder:text-muted-foreground",
                 "transition-all duration-200",
-                className.includes("dark-input") &&
+                className?.includes("dark-input") &&
                   "text-foreground placeholder:text-muted-foreground"
               )}
               placeholder={placeholder}
-              value={value}
+              value={value || ''}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={() => {
@@ -521,7 +521,7 @@ export function MentionInput({
                         isStreaming
                           ? false
                           : disabled ||
-                            !value.trim() ||
+                            !value?.trim() ||
                             isSending ||
                             !hasContext
                       }

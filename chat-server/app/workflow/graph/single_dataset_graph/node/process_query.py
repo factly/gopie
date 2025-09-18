@@ -23,7 +23,7 @@ from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import (
     configure_node,
-    stream_dynamic_message,
+    non_streaming_dynamic_message,
 )
 from app.workflow.graph.single_dataset_graph.types import State
 
@@ -174,7 +174,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         if sql_queries:
-            await stream_dynamic_message(
+            await non_streaming_dynamic_message(
                 f"create a 1 to 2 sentence message saying that here are the generated SQL queries and now let's execute them: {sql_queries}",
                 config,
             )

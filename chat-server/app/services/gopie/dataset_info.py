@@ -1,5 +1,5 @@
 from app.core.config import settings
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.core.session import SingletonAiohttp
 from app.models.data import DatasetDetails, ProjectDetails
 from app.models.schema import ColumnSchema, DatasetSchema, DatasetSummary
@@ -17,7 +17,7 @@ async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
             data = await response.json()
             return DatasetDetails(**data)
     except Exception as e:
-        logger.error(f"Error getting dataset info: {e!s}")
+        logger.exception(f"Error getting dataset info: {e!s}")
         raise e
 
 
@@ -32,7 +32,7 @@ async def get_project_info(project_id) -> ProjectDetails:
             data = await response.json()
             return ProjectDetails(**data)
     except Exception as e:
-        logger.error(f"Error getting project info: {e!s}")
+        logger.exception(f"Error getting project info: {e!s}")
         raise e
 
 
@@ -99,11 +99,11 @@ def format_schema_for_embedding(
     page_content = f"Dataset Name: {schema.name}\n"
     page_content += f"Dataset Description: {schema.dataset_description}\n"
     for column in schema.columns:
-        if not column.column_description:
-            raise ValueError(f"Column description not found for column:{column.column_name}")
+        # if not column.description:
+        #     raise ValueError(f"Column description not found for column:{column.column_name!s}")
         page_content += f"Column Name: {column.column_name}\n"
         page_content += f"Column Type: {column.column_type}\n"
-        page_content += f"Column Description: {column.column_description}\n"
+        page_content += f"Column Description: {column.description}\n"
         page_content += f"Sample Values: {column.sample_values}\n"
 
     return page_content

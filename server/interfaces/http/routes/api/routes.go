@@ -4,6 +4,7 @@ import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain/pkg/config"
 	"github.com/factly/gopie/domain/pkg/logger"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api/datasets"
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,14 +12,19 @@ import (
 type httpHandler struct {
 	olapSvc     *services.OlapService
 	datasetsSvc *services.DatasetService
+	projectSvc  *services.ProjectService
 	aiSvc       *services.AiDriver
 	logger      *logger.Logger
 	config      *config.GopieConfig
 }
 
-func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, logger *logger.Logger) {
-	httpHandler := httpHandler{driverSvc, datasetsSvc, aiSvc, logger, nil}
-	router.Post("/sql", httpHandler.sql)
+func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
+	// Use middleware to authorize datasets from params
+	router.Use(middleware.AuthorizeDatasetsFromParams(projectSvc, logger))
+
+	httpHandler := httpHandler{driverSvc, datasetsSvc, projectSvc, aiSvc, logger, nil}
+	// /sql endpoint with middleware to authorize datasets from sql query
+	router.Post("/sql", middleware.AuthorizeDatasetsAccessFromSql(driverSvc, projectSvc, logger), httpHandler.sql)
 	router.Get("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
 	router.Get("/schemas/:tableName", httpHandler.schemas)
@@ -30,13 +36,8 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	datasets.NewHTTPHandler(router, datasetsSvc, driverSvc, logger)
 }
 
-func AuthRoutes(router fiber.Router, logger *logger.Logger, config *config.GopieConfig) {
-	// httpHandler := httpHandler{logger: logger, config: config}
-	// router.Post("/authorize", httpHandler.authorize)
-}
-
-func InternalRoutes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, logger *logger.Logger) {
-	httpHandler := httpHandler{driverSvc, datasetsSvc, aiSvc, logger, nil}
+func InternalRoutes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
+	httpHandler := httpHandler{driverSvc, datasetsSvc, projectSvc, aiSvc, logger, nil}
 	router.Post("/sql", httpHandler.sql)
 	router.Get("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)

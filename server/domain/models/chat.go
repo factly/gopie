@@ -46,7 +46,8 @@ type D_UpdateChatParams struct {
 }
 
 type UpdateChatParams struct {
-	Title string `json:"name"`
+	Title     string `json:"name"`
+	CreatedBy string `json:"created_by"`
 }
 
 type D_AiChatResponse struct {
