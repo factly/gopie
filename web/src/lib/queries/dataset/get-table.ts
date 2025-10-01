@@ -34,14 +34,10 @@ export const useGetTable = createQuery({
           .map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`)
           .join(","),
         ...Object.fromEntries(
-          filter.map((f) => {
-            const needsQuotes = typeof f.value === "string";
-            const value = needsQuotes ? `'${f.value.replace(/'/g, "''")}'` : f.value;
-            return [
-              `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
-              value,
-            ];
-          }),
+          filter.map((f) => [
+            `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
+            f.value,
+          ]),
         ),
       },
     });
