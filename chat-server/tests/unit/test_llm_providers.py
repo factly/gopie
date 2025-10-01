@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+import pytest
 from portkey_ai import PORTKEY_GATEWAY_URL
 
 from app.utils.providers.llm_providers.cloudflare import CloudflareLLMProvider
@@ -224,6 +225,7 @@ class TestOpenRouterLLMProvider:
                 base_url="https://openrouter.ai/api/v1",
                 model="gpt-4",
                 metadata=sample_metadata,
+                extra_body={"models": [mock_settings.DEFAULT_LLM_MODEL]},
             )
             assert result == mock_model
 
@@ -285,22 +287,32 @@ class TestCustomLLMProvider:
 
         assert provider.metadata == sample_metadata
 
-    def test_get_llm_model(self, sample_metadata):
+    def test_get_llm_model_with_custom_provider(self, sample_metadata):
         """
-        Test that CustomLLMProvider.get_llm_model initializes and returns a ChatOpenAI model with the correct parameters using provided metadata.
+        Test that CustomLLMProvider.get_llm_model works with custom/other provider configuration.
         """
         with (
             patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
             patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
         ):
 
+            # Set up settings to mock the PROVIDER_CONFIG for "other"
+            mock_settings.CUSTOM_PROVIDER_NAME = "other"
             mock_settings.CUSTOM_LLM_API_KEY = "custom_key"
             mock_settings.CUSTOM_LLM_BASE_URL = "https://custom.api"
+
+            # Mock the provider config dict access
+            provider_config = {
+                "other": {"base_url": "https://custom.api", "api_key_env": "CUSTOM_LLM_API_KEY"}
+            }
+
             mock_model = Mock()
             mock_chat_openai.return_value = mock_model
 
             provider = CustomLLMProvider(sample_metadata)
-            result = provider.get_llm_model("gpt-4")
+            # Patch the PROVIDER_CONFIG to use our mocked values
+            with patch.object(provider, "PROVIDER_CONFIG", provider_config):
+                result = provider.get_llm_model("gpt-4")
 
             mock_chat_openai.assert_called_once_with(
                 api_key="custom_key",
@@ -313,3 +325,189 @@ class TestCustomLLMProvider:
                 },
             )
             assert result == mock_model
+
+    def test_get_llm_model_with_openai_provider(self, sample_metadata):
+        """
+        Test that CustomLLMProvider correctly configures OpenAI provider.
+        """
+        with (
+            patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
+            patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
+        ):
+
+            mock_settings.CUSTOM_PROVIDER_NAME = "openai"
+            mock_settings.OPENAI_API_KEY = "openai_key_123"
+            mock_model = Mock()
+            mock_chat_openai.return_value = mock_model
+
+            provider = CustomLLMProvider(sample_metadata)
+            result = provider.get_llm_model("gpt-4")
+
+            mock_chat_openai.assert_called_once_with(
+                api_key="openai_key_123",
+                base_url="https://api.openai.com/v1",
+                model="gpt-4",
+                metadata={
+                    "user": "test_user",
+                    "trace_id": "test_trace_123",
+                    "chat_id": "test_chat_456",
+                },
+            )
+            assert result == mock_model
+
+    def test_get_llm_model_with_groq_provider(self, sample_metadata):
+        """
+        Test that CustomLLMProvider correctly configures Groq provider.
+        """
+        with (
+            patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
+            patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
+        ):
+
+            mock_settings.CUSTOM_PROVIDER_NAME = "groq"
+            mock_settings.GROQ_API_KEY = "groq_key_123"
+            mock_model = Mock()
+            mock_chat_openai.return_value = mock_model
+
+            provider = CustomLLMProvider(sample_metadata)
+            result = provider.get_llm_model("llama-70b")
+
+            mock_chat_openai.assert_called_once_with(
+                api_key="groq_key_123",
+                base_url="https://api.groq.com/openai/v1",
+                model="llama-70b",
+                metadata={
+                    "user": "test_user",
+                    "trace_id": "test_trace_123",
+                    "chat_id": "test_chat_456",
+                },
+            )
+            assert result == mock_model
+
+    def test_get_llm_model_with_anthropic_provider(self, sample_metadata):
+        """
+        Test that CustomLLMProvider correctly configures Anthropic provider.
+        """
+        with (
+            patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
+            patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
+        ):
+
+            mock_settings.CUSTOM_PROVIDER_NAME = "anthropic"
+            mock_settings.ANTHROPIC_API_KEY = "anthropic_key_123"
+            mock_model = Mock()
+            mock_chat_openai.return_value = mock_model
+
+            provider = CustomLLMProvider(sample_metadata)
+            result = provider.get_llm_model("claude-3-sonnet")
+
+            mock_chat_openai.assert_called_once_with(
+                api_key="anthropic_key_123",
+                base_url="https://api.anthropic.com/v1/",
+                model="claude-3-sonnet",
+                metadata={
+                    "user": "test_user",
+                    "trace_id": "test_trace_123",
+                    "chat_id": "test_chat_456",
+                },
+            )
+            assert result == mock_model
+
+    def test_get_provider_config_missing_api_key_raises_error(self, sample_metadata):
+        """
+        Test that CustomLLMProvider raises ValueError when API key is missing for a provider.
+        """
+        with (patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,):
+            mock_settings.CUSTOM_PROVIDER_NAME = "openai"
+            mock_settings.OPENAI_API_KEY = ""  # Empty API key
+
+            provider = CustomLLMProvider(sample_metadata)
+
+            with pytest.raises(
+                ValueError,
+                match="Provider 'openai' is configured but the required API key 'OPENAI_API_KEY' is not set",
+            ):
+                provider.get_llm_model("gpt-4")
+
+    def test_get_provider_config_fallback_to_custom_provider(self, sample_metadata):
+        """
+        Test that CustomLLMProvider falls back to custom provider config for unknown providers.
+        """
+        with (
+            patch("app.utils.providers.llm_providers.custom.settings") as mock_settings,
+            patch("app.utils.providers.llm_providers.custom.ChatOpenAI") as mock_chat_openai,
+        ):
+
+            mock_settings.CUSTOM_PROVIDER_NAME = "unknown_provider"
+            mock_settings.CUSTOM_LLM_API_KEY = "fallback_key"
+            mock_settings.CUSTOM_LLM_BASE_URL = "https://fallback.api"
+
+            # Mock the provider config dict to include our fallback
+            provider_config = {
+                "other": {"base_url": "https://fallback.api", "api_key_env": "CUSTOM_LLM_API_KEY"}
+            }
+
+            mock_model = Mock()
+            mock_chat_openai.return_value = mock_model
+
+            provider = CustomLLMProvider(sample_metadata)
+            # Patch the PROVIDER_CONFIG to use our mocked values
+            with patch.object(provider, "PROVIDER_CONFIG", provider_config):
+                result = provider.get_llm_model("some-model")
+
+            mock_chat_openai.assert_called_once_with(
+                api_key="fallback_key",
+                base_url="https://fallback.api",
+                model="some-model",
+                metadata={
+                    "user": "test_user",
+                    "trace_id": "test_trace_123",
+                    "chat_id": "test_chat_456",
+                },
+            )
+            assert result == mock_model
+
+    def test_provider_config_with_all_supported_providers(self, sample_metadata):
+        """
+        Test that all supported providers in PROVIDER_CONFIG have correct configurations.
+        """
+        expected_configs = {
+            "openai": {"base_url": "https://api.openai.com/v1", "api_key_env": "OPENAI_API_KEY"},
+            "groq": {"base_url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY"},
+            "togetherai": {
+                "base_url": "https://api.together.xyz/v1",
+                "api_key_env": "TOGETHER_API_KEY",
+            },
+            "perplexity": {
+                "base_url": "https://api.perplexity.ai",
+                "api_key_env": "PERPLEXITY_API_KEY",
+            },
+            "fireworks": {
+                "base_url": "https://api.fireworks.ai/inference/v1",
+                "api_key_env": "FIREWORKS_API_KEY",
+            },
+            "anthropic": {
+                "base_url": "https://api.anthropic.com/v1/",
+                "api_key_env": "ANTHROPIC_API_KEY",
+            },
+            "deepinfra": {
+                "base_url": "https://api.deepinfra.com/v1/openai",
+                "api_key_env": "DEEPINFRA_API_TOKEN",
+            },
+            "huggingface": {
+                "base_url": "https://router.huggingface.co/v1",
+                "api_key_env": "HF_TOKEN",
+            },
+        }
+
+        provider = CustomLLMProvider(sample_metadata)
+
+        for provider_name, expected_config in expected_configs.items():
+            config = provider.PROVIDER_CONFIG.get(provider_name)
+            assert config is not None, f"Provider {provider_name} not found in PROVIDER_CONFIG"
+            assert (
+                config["base_url"] == expected_config["base_url"]
+            ), f"Base URL mismatch for {provider_name}"
+            assert (
+                config["api_key_env"] == expected_config["api_key_env"]
+            ), f"API key env mismatch for {provider_name}"
