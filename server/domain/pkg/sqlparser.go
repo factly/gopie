@@ -384,6 +384,11 @@ func BuildCountQuery(query string) (string, error) {
 	return strings.Join(queryParts, " "), nil
 }
 
+// The sanitize function from above
+func sanitizeSQLString(val string) string {
+	return strings.ReplaceAll(val, "'", "''")
+}
+
 func buildWhereClause(filters map[string]string) (string, error) {
 	var conditions []string
 
@@ -410,40 +415,48 @@ func parseFilter(key, val string) (string, error) {
 		return "", nil
 	}
 
+	operator := ""
 	colName := matches[1]
-	operator := strings.ReplaceAll(key, matches[0], "")
-
-	if operator == "" {
+	if len(matches) == 2 {
 		operator = "="
 	} else {
-		switch operator {
-		case "lt":
-			operator = "<"
-		case "gt":
-			operator = ">"
-		case "lte":
-			operator = "<="
-		case "gte":
-			operator = ">="
-		default:
-			return "", domain.ErrInvalidFilterOperator
+		operatorStr := matches[2]
+
+		if operatorStr == "" {
+			operator = "="
+		} else {
+			switch operatorStr {
+			case "lt":
+				operator = "<"
+			case "gt":
+				operator = ">"
+			case "lte":
+				operator = "<="
+			case "gte":
+				operator = ">="
+			case "neq":
+				operator = "!="
+			default:
+				return "", domain.ErrInvalidFilterOperator
+			}
 		}
 	}
 
-	// Handle value
-	var processedVal string
-	if strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'") {
-		// String value
-		processedVal = val
+	var condition string
+	if _, err := strconv.ParseFloat(val, 64); err == nil {
+		// Numeric values do not need escaping.
+		condition = fmt.Sprintf("%s %s %s", colName, operator, val)
 	} else {
-		// Try to parse as number
-		if _, err := strconv.ParseFloat(val, 64); err != nil {
-			return "", domain.ErrInvalidFilterKey
+		// This is the string case.
+		if operator != "=" {
+			return "", domain.ErrInvalidFilterValue
 		}
-		processedVal = val
+		sanitizedVal := sanitizeSQLString(val)
+		// Now use the sanitized value in the final string.
+		condition = fmt.Sprintf("%s %s '%s'", colName, operator, sanitizedVal)
 	}
 
-	return fmt.Sprintf("%s %s %s", colName, operator, processedVal), nil
+	return condition, nil
 }
 
 func buildOrderByClause(sort string) (string, error) {
