@@ -21,11 +21,9 @@ type uploadRequestBody struct {
 	// ID of the project to add the dataset to
 	ProjectID string `json:"project_id" validate:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Alias of the dataset
-	Alias string `json:"alias" validate:"required,min=3" example:"sales_data"`
-	// Column names to be altered
-	AlterColumnNames map[string]string `json:"alter_column_names,omitempty" validate:"omitempty,dive,required"`
-	// Column descriptions
-	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty,dive,required"`
+	Alias              string            `json:"alias" validate:"required,min=3" example:"sales_data"`
+	AlterColumnNames   map[string]string `json:"alter_column_names,omitempty" validate:"omitempty"`
+	ColumnDescriptions map[string]string `json:"column_descriptions,omitempty" validate:"omitempty"`
 	IgnoreErrors       bool              `json:"ignore_errors"`
 	CustomPrompt       string            `json:"custom_prompt"`
 }
