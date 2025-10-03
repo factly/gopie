@@ -175,7 +175,7 @@ def get_configured_llm_for_node(
     elif json_mode:
         llm = llm.bind(response_format={"type": "json_object"})
     if force_tool_calls:
-        llm = llm.bind(tool_choice=True)
+        llm = llm.bind(tool_choice="required")
     return llm  # type: ignore
 
 

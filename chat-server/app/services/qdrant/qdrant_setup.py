@@ -2,8 +2,7 @@ from uuid import UUID, uuid5
 
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
-from qdrant_client import AsyncQdrantClient, QdrantClient
-from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from app.core.config import settings
 
@@ -29,7 +28,34 @@ class QdrantSetup:
             if not await cls._async_collection_exists(cls.async_client):
                 await cls.async_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
-                    vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
+                    vectors_config=models.VectorParams(
+                        size=settings.DEFAULT_EMBEDDING_SIZE,
+                        distance=models.Distance.COSINE,
+                        on_disk=True,
+                    ),
+                    hnsw_config=models.HnswConfigDiff(
+                        m=16,
+                        ef_construct=100,
+                        full_scan_threshold=20,
+                        max_indexing_threads=0,
+                        on_disk=False,
+                    ),
+                    optimizers_config=models.OptimizersConfigDiff(
+                        deleted_threshold=0.2,
+                        vacuum_min_vector_number=1000,
+                        default_segment_number=0,
+                        max_segment_size=None,
+                        memmap_threshold=None,
+                        indexing_threshold=40,
+                        flush_interval_sec=5,
+                        max_optimization_threads=None,
+                    ),
+                    wal_config=models.WalConfigDiff(wal_capacity_mb=32, wal_segments_ahead=0),
+                    quantization_config=models.ScalarQuantization(
+                        scalar=models.ScalarQuantizationConfig(
+                            type=models.ScalarType.INT8, always_ram=True
+                        )
+                    ),
                 )
         return cls.async_client
 
@@ -43,7 +69,34 @@ class QdrantSetup:
             if not cls._collection_exists(cls.sync_client):
                 cls.sync_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION,
-                    vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
+                    vectors_config=models.VectorParams(
+                        size=settings.DEFAULT_EMBEDDING_SIZE,
+                        distance=models.Distance.COSINE,
+                        on_disk=True,
+                    ),
+                    hnsw_config=models.HnswConfig(
+                        m=16,
+                        ef_construct=100,
+                        full_scan_threshold=20,
+                        max_indexing_threads=0,
+                        on_disk=False,
+                    ),
+                    optimizers_config=models.OptimizersConfigDiff(
+                        deleted_threshold=0.2,
+                        vacuum_min_vector_number=1000,
+                        default_segment_number=0,
+                        max_segment_size=None,
+                        memmap_threshold=None,
+                        indexing_threshold=40,
+                        flush_interval_sec=5,
+                        max_optimization_threads=None,
+                    ),
+                    wal_config=models.WalConfigDiff(wal_capacity_mb=32, wal_segments_ahead=0),
+                    quantization_config=models.ScalarQuantization(
+                        scalar=models.ScalarQuantizationConfig(
+                            type=models.ScalarType.INT8, always_ram=True
+                        )
+                    ),
                 )
         return cls.sync_client
 

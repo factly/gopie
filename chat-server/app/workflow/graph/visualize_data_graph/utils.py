@@ -17,6 +17,13 @@ from app.core.session import SingletonAiohttp
 
 from .types import Dataset, PreviousVisualizationJsonType
 
+access_key_id = settings.S3_ACCESS_KEY
+secret_access_key = settings.S3_SECRET_KEY
+region = settings.S3_REGION
+bucket_name = settings.S3_BUCKET
+internal_s3_host = settings.INTERNAL_S3_HOST
+external_s3_host = settings.EXTERNAL_S3_HOST
+
 
 def list_to_csv(list_dict: list[list]) -> str:
     output = StringIO()
@@ -46,6 +53,7 @@ async def get_python_code_files(viz_paths: list[PreviousVisualizationJsonType]):
 
 @traceable(run_type="chain", name="get_python_code_for_viz")
 async def get_python_code_from_viz(viz_path: str):
+    viz_path = viz_path.replace(external_s3_host, internal_s3_host)
     viz_path = viz_path.rsplit("-", 1)[0].strip()
     python_code_path = viz_path + ".py"
     client = SingletonAiohttp.get_aiohttp_client()
@@ -191,12 +199,6 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
         list[str]: URLs of the uploaded files in S3 storage.
     """
 
-    access_key_id = settings.S3_ACCESS_KEY
-    secret_access_key = settings.S3_SECRET_KEY
-    region = settings.S3_REGION
-    bucket_name = settings.S3_BUCKET
-    s3_host = settings.S3_HOST
-
     if not all([access_key_id, secret_access_key, bucket_name]):
         raise ValueError("S3 credentials or bucket name not set in environment variables")
 
@@ -204,7 +206,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
     s3_paths = []
     async with session.client(  # type: ignore
         "s3",
-        endpoint_url=s3_host,
+        endpoint_url=internal_s3_host,
         region_name=region,
         aws_access_key_id=access_key_id,
         aws_secret_access_key=secret_access_key,
@@ -222,7 +224,7 @@ async def upload_visualization_result_data(data: list[str], python_code: str) ->
             )
 
             upload_tasks.append(json_task)
-            s3_path = f"{s3_host}/{bucket_name}/{json_file_key}"
+            s3_path = f"{external_s3_host}/{bucket_name}/{json_file_key}"
             s3_paths.append(s3_path)
         py_file_key = f"visualizations/{timestamp}-{unique_id}.py"
         py_task = s3_client.put_object(

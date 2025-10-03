@@ -2,6 +2,7 @@ import json
 
 from langsmith import traceable
 
+from app.core.config import settings
 from app.core.log import custom_logger as logger
 
 
@@ -16,16 +17,20 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
         If the result is acceptable or an error occurs, returns (False, "").
     """
     try:
-        if len(result) > 200:
+        if len(result) > settings.ROW_TRUNCATION_LIMIT:
             return True, f"Query returned too many records: {len(result)}"
 
         result_json = json.dumps(result)
         # ~25k tokens approximation
-        if len(result_json) > 100000:
+        if len(result_json) > settings.DATASET_TOKEN_TRUNCATION_LIMIT:
             return True, f"Query result is too large: {len(result_json)}"
 
         # Check number of columns in first record
-        if result and isinstance(result[0], dict) and len(result[0]) > 50:
+        if (
+            result
+            and isinstance(result[0], dict)
+            and len(result[0]) > settings.COLUMN_TRUNCATION_LIMIT
+        ):
             return (
                 True,
                 f"Query returned too many columns: {len(result[0])}",
@@ -50,10 +55,10 @@ def truncate_result_for_llm(result: list[dict] | None) -> list[dict] | None:
         The truncated result list with an appended note if truncation occurred,
         or the original result if no truncation was needed.
     """
-    if not result or len(result) <= 10:
+    if not result or len(result) <= settings.DISPLAY_ROWS_AFTER_TRUNCATION_LIMIT:
         return result
 
-    truncated = result[:10]
+    truncated = result[: settings.DISPLAY_ROWS_AFTER_TRUNCATION_LIMIT]
 
     if isinstance(truncated[0], dict):
         truncated.append(

@@ -38,18 +38,31 @@ class TestHealthEndpoints:
         """
         Test that the health check endpoint returns a successful response with correct structure.
         """
-        response = client.get("/api/v1/health")
+        # Mock all health check functions to return healthy status
+        with (
+            patch("app.api.v1.routers.health.check_qdrant_health") as mock_qdrant,
+            patch("app.api.v1.routers.health.check_llm_provider_health") as mock_llm,
+            patch("app.api.v1.routers.health.check_gopie_server_health") as mock_gopie,
+            patch("app.api.v1.routers.health.check_embedding_provider_health") as mock_embedding,
+        ):
+            # Configure all health checks to return healthy status
+            mock_qdrant.return_value = {"status": "healthy", "collections_count": 1}
+            mock_llm.return_value = {"status": "healthy", "provider_type": "test"}
+            mock_gopie.return_value = {"status": "healthy", "server_reachable": True}
+            mock_embedding.return_value = {"status": "healthy", "provider_type": "test"}
 
-        assert response.status_code == 200
+            response = client.get("/api/v1/health")
 
-        data = response.json()
-        assert "status" in data
-        assert "timestamp" in data
-        assert "service" in data
+            assert response.status_code == 200
 
-        assert data["status"] == "healthy"
-        assert data["service"] == "gopie-chat-server"
+            data = response.json()
+            assert "status" in data
+            assert "timestamp" in data
+            assert "service" in data
 
-        # Verify timestamp is a valid ISO format
-        timestamp = data["timestamp"]
-        datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            assert data["status"] == "healthy"
+            assert data["service"] == "gopie-chat-server"
+
+            # Verify timestamp is a valid ISO format
+            timestamp = data["timestamp"]
+            datetime.fromisoformat(timestamp.replace("Z", "+00:00"))

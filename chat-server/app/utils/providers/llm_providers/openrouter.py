@@ -21,7 +21,7 @@ class OpenRouterLLMProvider(BaseLLMProvider):
                 **self.metadata,
             },
             "extra_body": {
-                "models": [settings.FALLBACK_MODEL],
+                "models": [settings.DEFAULT_LLM_MODEL],
             },
         }
 
