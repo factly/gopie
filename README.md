@@ -17,6 +17,8 @@ helm repo update
 ```console
 helm install gopie gopie/gopie
 ```
+For more information on installing the chart, see the [configuration](https://github.com/factly/gopie/blob/main/helm/gopie/README.md).
+
 ## License
 
 [MIT License](https://github.com/factly/gopie/blob/main/LICENSE).
