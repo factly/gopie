@@ -28,6 +28,7 @@ jobs:
         run: |
           helm repo add stable https://factly.github.io/helm-charts
           helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add qdrant https://qdrant.github.io/qdrant-helm
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
