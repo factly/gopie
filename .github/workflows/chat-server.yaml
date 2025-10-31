@@ -1,0 +1,35 @@
+name: gopie-chat-server - Docker Build and Push CI
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: 'read'    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set env
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        else
+          echo "RELEASE_VERSION=latest" >> $GITHUB_ENV
+        fi
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build and push Personas Chat Server Docker image to Docker Hub
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: factly/gopie-chat-server:${{ env.RELEASE_VERSION }}
+        context: chat-server
+        file: chat-server/Dockerfile

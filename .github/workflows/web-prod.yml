@@ -1,0 +1,49 @@
+name: Web Release CI
+on:
+  release:
+    types: [released]
+
+jobs:
+  release:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: 'read'
+      id-token: 'write'    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set env
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - id: auth
+      name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        token_format: access_token
+        workload_identity_provider: projects/735814365928/locations/global/workloadIdentityPools/ga-google-artifact-registry/providers/github
+        service_account: ga-google-artifact-registry@factly-prod.iam.gserviceaccount.com
+        access_token_lifetime: 1800s          
+    - name: Login to Artifact Registry
+      uses: docker/login-action@v2
+      with:
+        registry: asia-south1-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}      
+    - name: Build and push Gopie Web
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:${{ env.RELEASE_VERSION }},asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:latest
+        context: web
+        file: web/Dockerfile.prod
+        # build-args: |
+        #   - NEXT_PUBLIC_COMPANION_URL=${{ secrets.NEXT_PUBLIC_COMPANION_URL }}
+        #   - NEXT_PUBLIC_GOPIE_API_URL=${{ secrets.NEXT_PUBLIC_GOPIE_API_URL }}
+        #   - GOPIE_API_URL=${{ secrets.GOPIE_API_URL }}
+        #   - NEXT_PUBLIC_ENABLE_AUTH=${{ secrets.NEXT_PUBLIC_ENABLE_AUTH }}
+        #   - ZITADEL_AUTHORITY=${{ secrets.ZITADEL_AUTHORITY }}
+        #   - ZITADEL_CLIENT_ID=${{ secrets.ZITADEL_CLIENT_ID }}
+        #   - ZITADEL_PROJECT_ID=${{ secrets.ZITADEL_PROJECT_ID }}
+        #   - ZITADEL_IDP_ID=${{ secrets.ZITADEL_IDP_ID }}
+
+        # secrets: |
+        #   id=zitadel_client_secret,env=${{ env.ZITADEL_CLIENT_SECRET }}
+        #   id=zitadel_pat,env=${{ env.ZITADEL_PAT }}
