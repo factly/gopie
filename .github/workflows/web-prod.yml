@@ -7,26 +7,18 @@ jobs:
   release:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
-      contents: 'read'
-      id-token: 'write'    
+      contents: 'read'    
     steps:
     - uses: actions/checkout@v3
     - name: Set env
-      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-    - id: auth
-      name: Authenticate with Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        token_format: access_token
-        workload_identity_provider: projects/735814365928/locations/global/workloadIdentityPools/ga-google-artifact-registry/providers/github
-        service_account: ga-google-artifact-registry@factly-prod.iam.gserviceaccount.com
-        access_token_lifetime: 1800s          
-    - name: Login to Artifact Registry
-      uses: docker/login-action@v2
-      with:
-        registry: asia-south1-docker.pkg.dev
-        username: oauth2accesstoken
-        password: ${{ steps.auth.outputs.access_token }}
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        elif [[ $GITHUB_EVENT_NAME == "release" ]]; then
+          echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        else
+          echo "RELEASE_VERSION=latest" >> $GITHUB_ENV
+        fi
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
@@ -36,11 +28,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         push: true
-        tags: |
-          asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:${{ env.RELEASE_VERSION }}
-          asia-south1-docker.pkg.dev/factly-prod/gopie/gopie-web:latest
-          gangaprasad2166/gopie-web:${{ env.RELEASE_VERSION }}
-          gangaprasad2166/gopie-web:latest
+        tags: factly/gopie-web:${{ env.RELEASE_VERSION }}
         context: web
         file: web/Dockerfile.prod
         # build-args: |
