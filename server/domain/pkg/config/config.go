@@ -267,21 +267,21 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DOWNLOADS_USE_SERVER", false)
 
 	// Default CORS settings for main server
-	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_ORIGINS", "*")
 	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
 	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
 	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_CREDENTIALS", true)
 	viper.SetDefault("GOPIE_MAIN_CORS_MAX_AGE", 86400)
 
 	// Default CORS settings for internal server
-	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_ORIGINS", "*")
 	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
 	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
 	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_CREDENTIALS", true)
 	viper.SetDefault("GOPIE_INTERNAL_CORS_MAX_AGE", 86400)
 
 	// Default CORS settings for API server
-	viper.SetDefault("GOPIE_API_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_API_CORS_ALLOW_ORIGINS", "*")
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_CREDENTIALS", true)
