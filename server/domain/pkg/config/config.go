@@ -43,6 +43,14 @@ type LoggerConfig struct {
 	Mode    string
 }
 
+type CORSConfig struct {
+	AllowOrigins     string
+	AllowMethods     string
+	AllowHeaders     string
+	AllowCredentials bool
+	MaxAge           int
+}
+
 type GopieConfig struct {
 	Server          ServerConfig
 	S3              S3Config
@@ -58,6 +66,9 @@ type GopieConfig struct {
 	EnableZitadel   bool
 	DownloadsServer DownloadsConfig
 	EncryptionKey   string
+	MainCORS        CORSConfig
+	InternalCORS    CORSConfig
+	APICORS         CORSConfig
 }
 
 type OlapDBConfig struct {
@@ -254,6 +265,27 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
 	viper.SetDefault("GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH", "./motherduck")
 	viper.SetDefault("GOPIE_DOWNLOADS_USE_SERVER", false)
+
+	// Default CORS settings for main server
+	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
+	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
+	viper.SetDefault("GOPIE_MAIN_CORS_ALLOW_CREDENTIALS", true)
+	viper.SetDefault("GOPIE_MAIN_CORS_MAX_AGE", 86400)
+
+	// Default CORS settings for internal server
+	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
+	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
+	viper.SetDefault("GOPIE_INTERNAL_CORS_ALLOW_CREDENTIALS", true)
+	viper.SetDefault("GOPIE_INTERNAL_CORS_MAX_AGE", 86400)
+
+	// Default CORS settings for API server
+	viper.SetDefault("GOPIE_API_CORS_ALLOW_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("GOPIE_API_CORS_ALLOW_METHODS", "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS")
+	viper.SetDefault("GOPIE_API_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
+	viper.SetDefault("GOPIE_API_CORS_ALLOW_CREDENTIALS", true)
+	viper.SetDefault("GOPIE_API_CORS_MAX_AGE", 86400)
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -322,7 +354,27 @@ func LoadConfig() (*GopieConfig, error) {
 		DownloadsServer: DownloadsConfig{
 			Bucket: viper.GetString("GOPIE_DOWNLOADS_S3_BUCKET"),
 		},
-
+		MainCORS: CORSConfig{
+			AllowOrigins:     viper.GetString("GOPIE_MAIN_CORS_ALLOW_ORIGINS"),
+			AllowMethods:     viper.GetString("GOPIE_MAIN_CORS_ALLOW_METHODS"),
+			AllowHeaders:     viper.GetString("GOPIE_MAIN_CORS_ALLOW_HEADERS"),
+			AllowCredentials: viper.GetBool("GOPIE_MAIN_CORS_ALLOW_CREDENTIALS"),
+			MaxAge:           viper.GetInt("GOPIE_MAIN_CORS_MAX_AGE"),
+		},
+		InternalCORS: CORSConfig{
+			AllowOrigins:     viper.GetString("GOPIE_INTERNAL_CORS_ALLOW_ORIGINS"),
+			AllowMethods:     viper.GetString("GOPIE_INTERNAL_CORS_ALLOW_METHODS"),
+			AllowHeaders:     viper.GetString("GOPIE_INTERNAL_CORS_ALLOW_HEADERS"),
+			AllowCredentials: viper.GetBool("GOPIE_INTERNAL_CORS_ALLOW_CREDENTIALS"),
+			MaxAge:           viper.GetInt("GOPIE_INTERNAL_CORS_MAX_AGE"),
+		},
+		APICORS: CORSConfig{
+			AllowOrigins:     viper.GetString("GOPIE_API_CORS_ALLOW_ORIGINS"),
+			AllowMethods:     viper.GetString("GOPIE_API_CORS_ALLOW_METHODS"),
+			AllowHeaders:     viper.GetString("GOPIE_API_CORS_ALLOW_HEADERS"),
+			AllowCredentials: viper.GetBool("GOPIE_API_CORS_ALLOW_CREDENTIALS"),
+			MaxAge:           viper.GetInt("GOPIE_API_CORS_MAX_AGE"),
+		},
 		EncryptionKey: viper.GetString("GOPIE_ENCRYPTION_KEY"),
 	}
 
