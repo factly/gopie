@@ -52,24 +52,24 @@ type CORSConfig struct {
 }
 
 type GopieConfig struct {
-	Server          ServerConfig
-	S3              S3Config
-	Logger          LoggerConfig
-	OlapDB          OlapDBConfig
-	OpenAI          OpenAIConfig
-	Meterus         MeterusConfig
-	Postgres        PostgresConfig
-	Zitadel         ZitadelConfig
-	AIAgent         AIAgentConfig
-	InternalServer  InternalServerConfig
-	APIServer       APIServerConfig
-	EnableZitadel   bool
-	DownloadsServer DownloadsConfig
-	EncryptionKey   string
-	MainCORS        CORSConfig
-	InternalCORS    CORSConfig
-	APICORS         CORSConfig
-	CORSEnabled     bool
+	Server               ServerConfig
+	S3                   S3Config
+	Logger               LoggerConfig
+	OlapDB               OlapDBConfig
+	OpenAI               OpenAIConfig
+	Meterus              MeterusConfig
+	Postgres             PostgresConfig
+	Zitadel              ZitadelConfig
+	AIAgent              AIAgentConfig
+	InternalServer       InternalServerConfig
+	APIServer            APIServerConfig
+	EnableZitadel        bool
+	DownloadsServer      DownloadsConfig
+	EncryptionKey        string
+	MainCORS             CORSConfig
+	InternalCORS         CORSConfig
+	APICORS              CORSConfig
+	CORSHandledByIngress bool
 }
 
 type OlapDBConfig struct {
@@ -289,7 +289,7 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_API_CORS_MAX_AGE", 86400)
 
 	// Flag to determine if CORS is enabled
-	viper.SetDefault("GOPIE_CORS_ENABLED", true)
+	viper.SetDefault("GOPIE_CORS_HANDLED_BY_INGRESS", true)
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -312,7 +312,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
 		},
-		CORSEnabled: viper.GetBool("GOPIE_CORS_ENABLED"),
+		CORSHandledByIngress: viper.GetBool("GOPIE_CORS_HANDLED_BY_INGRESS"),
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
 			SecretKey: viper.GetString("GOPIE_S3_SECRET_KEY"),

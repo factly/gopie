@@ -46,7 +46,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	})
 
 	// Apply CORS middleware only if not handled by ingress
-	if !cfg.CORSEnabled {
+	if !cfg.CORSHandledByIngress {
 		app.Use(cors.New(cors.Config{
 			AllowOrigins:     cfg.MainCORS.AllowOrigins,
 			AllowMethods:     cfg.MainCORS.AllowMethods,
@@ -171,7 +171,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 	})
 
 	// Apply CORS middleware only if not handled by ingress
-	if !cfg.CORSEnabled {
+	if !cfg.CORSHandledByIngress {
 		app.Use(cors.New(cors.Config{
 			AllowOrigins:     cfg.InternalCORS.AllowOrigins,
 			AllowMethods:     cfg.InternalCORS.AllowMethods,
@@ -250,7 +250,7 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 	})
 
 	// Apply CORS middleware only if not handled by ingress
-	if !cfg.CORSEnabled {
+	if !cfg.CORSHandledByIngress {
 		app.Use(cors.New(cors.Config{
 			AllowOrigins:     cfg.APICORS.AllowOrigins,
 			AllowMethods:     cfg.APICORS.AllowMethods,
