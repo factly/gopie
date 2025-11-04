@@ -46,11 +46,11 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev,https://gopie-web.vercel.app",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
-		AllowCredentials: true,
-		MaxAge:           86400,
+		AllowOrigins:     cfg.MainCORS.AllowOrigins,
+		AllowMethods:     cfg.MainCORS.AllowMethods,
+		AllowHeaders:     cfg.MainCORS.AllowHeaders,
+		AllowCredentials: cfg.MainCORS.AllowCredentials,
+		MaxAge:           cfg.MainCORS.MaxAge,
 	}))
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -168,11 +168,11 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://gopie.factly.dev,https://*.factly.dev,https://gopie-web.vercel.app",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
-		AllowCredentials: true,
-		MaxAge:           86400,
+		AllowOrigins:     cfg.InternalCORS.AllowOrigins,
+		AllowMethods:     cfg.InternalCORS.AllowMethods,
+		AllowHeaders:     cfg.InternalCORS.AllowHeaders,
+		AllowCredentials: cfg.InternalCORS.AllowCredentials,
+		MaxAge:           cfg.InternalCORS.MaxAge,
 	}))
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -244,11 +244,11 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://csr.dataful.in",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id",
-		AllowCredentials: true,
-		MaxAge:           86400,
+		AllowOrigins:     cfg.APICORS.AllowOrigins,
+		AllowMethods:     cfg.APICORS.AllowMethods,
+		AllowHeaders:     cfg.APICORS.AllowHeaders,
+		AllowCredentials: cfg.APICORS.AllowCredentials,
+		MaxAge:           cfg.APICORS.MaxAge,
 	}))
 
 	app.Use(fiberzap.New(fiberzap.Config{
