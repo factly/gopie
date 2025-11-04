@@ -47,13 +47,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{
-			AllowOrigins:     cfg.MainCORS.AllowOrigins,
-			AllowMethods:     cfg.MainCORS.AllowMethods,
-			AllowHeaders:     cfg.MainCORS.AllowHeaders,
-			AllowCredentials: cfg.MainCORS.AllowCredentials,
-			MaxAge:           cfg.MainCORS.MaxAge,
-		}))
+		app.Use(cors.New(cors.Config{}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -172,13 +166,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{
-			AllowOrigins:     cfg.InternalCORS.AllowOrigins,
-			AllowMethods:     cfg.InternalCORS.AllowMethods,
-			AllowHeaders:     cfg.InternalCORS.AllowHeaders,
-			AllowCredentials: cfg.InternalCORS.AllowCredentials,
-			MaxAge:           cfg.InternalCORS.MaxAge,
-		}))
+		app.Use(cors.New(cors.Config{}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -251,13 +239,7 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{
-			AllowOrigins:     cfg.APICORS.AllowOrigins,
-			AllowMethods:     cfg.APICORS.AllowMethods,
-			AllowHeaders:     cfg.APICORS.AllowHeaders,
-			AllowCredentials: cfg.APICORS.AllowCredentials,
-			MaxAge:           cfg.APICORS.MaxAge,
-		}))
+		app.Use(cors.New(cors.Config{}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
