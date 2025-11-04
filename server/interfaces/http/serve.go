@@ -45,13 +45,16 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		AppName:       "gopie",
 	})
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.MainCORS.AllowOrigins,
-		AllowMethods:     cfg.MainCORS.AllowMethods,
-		AllowHeaders:     cfg.MainCORS.AllowHeaders,
-		AllowCredentials: cfg.MainCORS.AllowCredentials,
-		MaxAge:           cfg.MainCORS.MaxAge,
-	}))
+	// Apply CORS middleware only if not handled by ingress
+	if !cfg.CORSEnabled {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.MainCORS.AllowOrigins,
+			AllowMethods:     cfg.MainCORS.AllowMethods,
+			AllowHeaders:     cfg.MainCORS.AllowHeaders,
+			AllowCredentials: cfg.MainCORS.AllowCredentials,
+			MaxAge:           cfg.MainCORS.MaxAge,
+		}))
+	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: appLogger.Logger,
@@ -167,13 +170,16 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 		AppName:       "gopie-internal",
 	})
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.InternalCORS.AllowOrigins,
-		AllowMethods:     cfg.InternalCORS.AllowMethods,
-		AllowHeaders:     cfg.InternalCORS.AllowHeaders,
-		AllowCredentials: cfg.InternalCORS.AllowCredentials,
-		MaxAge:           cfg.InternalCORS.MaxAge,
-	}))
+	// Apply CORS middleware only if not handled by ingress
+	if !cfg.CORSEnabled {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.InternalCORS.AllowOrigins,
+			AllowMethods:     cfg.InternalCORS.AllowMethods,
+			AllowHeaders:     cfg.InternalCORS.AllowHeaders,
+			AllowCredentials: cfg.InternalCORS.AllowCredentials,
+			MaxAge:           cfg.InternalCORS.MaxAge,
+		}))
+	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: appLogger.Logger,
@@ -243,13 +249,16 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 		AppName:       "gopie-api",
 	})
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.APICORS.AllowOrigins,
-		AllowMethods:     cfg.APICORS.AllowMethods,
-		AllowHeaders:     cfg.APICORS.AllowHeaders,
-		AllowCredentials: cfg.APICORS.AllowCredentials,
-		MaxAge:           cfg.APICORS.MaxAge,
-	}))
+	// Apply CORS middleware only if not handled by ingress
+	if !cfg.CORSEnabled {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.APICORS.AllowOrigins,
+			AllowMethods:     cfg.APICORS.AllowMethods,
+			AllowHeaders:     cfg.APICORS.AllowHeaders,
+			AllowCredentials: cfg.APICORS.AllowCredentials,
+			MaxAge:           cfg.APICORS.MaxAge,
+		}))
+	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: appLogger.Logger,

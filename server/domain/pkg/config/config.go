@@ -69,6 +69,7 @@ type GopieConfig struct {
 	MainCORS        CORSConfig
 	InternalCORS    CORSConfig
 	APICORS         CORSConfig
+	CORSEnabled     bool
 }
 
 type OlapDBConfig struct {
@@ -286,6 +287,9 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_HEADERS", "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token, userID, x-user-id, x-project-ids, x-dataset-ids, x-chat-id, x-organization-id")
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_CREDENTIALS", false)
 	viper.SetDefault("GOPIE_API_CORS_MAX_AGE", 86400)
+
+	// Flag to determine if CORS is enabled
+	viper.SetDefault("GOPIE_CORS_ENABLED", true)
 }
 
 func LoadConfig() (*GopieConfig, error) {
@@ -308,6 +312,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
 		},
+		CORSEnabled: viper.GetBool("GOPIE_CORS_ENABLED"),
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
 			SecretKey: viper.GetString("GOPIE_S3_SECRET_KEY"),
