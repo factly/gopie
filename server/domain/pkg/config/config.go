@@ -288,8 +288,8 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_API_CORS_ALLOW_CREDENTIALS", false)
 	viper.SetDefault("GOPIE_API_CORS_MAX_AGE", 86400)
 
-	// Flag to determine if CORS is enabled
-	viper.SetDefault("GOPIE_CORS_HANDLED_BY_INGRESS", true)
+	// Flag to determine if CORS is handled by ingress (true) or by the application (false)
+	viper.SetDefault("GOPIE_CORS_HANDLED_BY_INGRESS", false)
 }
 
 func LoadConfig() (*GopieConfig, error) {
