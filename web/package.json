@@ -91,6 +91,7 @@
     "sql-formatter": "^15.6.6",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^13.0.0",
     "vaul": "^1.1.2",
     "vega-embed": "^7.0.2",
     "vega-lite": "^6.2.0",
