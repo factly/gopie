@@ -13,6 +13,7 @@ import { useDatasetSql } from "@/lib/mutations/dataset/sql";
 import { parseSqlError } from "@/lib/sql-error-utils";
 import { useResultsPanelStore } from "@/lib/stores/results-panel-store";
 import type { GoPieUIMessage } from "@/types/chat-message";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 // Constants
 const QUERY_INVALIDATION_DELAY_MS = 100; // Delay before invalidating queries to ensure smooth transition
@@ -31,6 +32,8 @@ export function useChatSession({
   isNewChat = false,
 }: UseChatSessionProps) {
   const queryClient = useQueryClient();
+  const { organizationId } = useAuthStore();
+  const isAuthDisabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() !== "true";
   const { selectChatForDataset } = useChatStore();
   const { setIsOpen: setSqlPanelOpen, setResults: setSqlResults, setIsLoading: setSqlLoading, resetExecutedQueries } = useSqlStore();
   const { clearPaths, setPaths: setVisualizationPaths } = useVisualizationStore();
@@ -64,7 +67,14 @@ export function useChatSession({
 
   // Create a new chat when needed (for new chats)
   useEffect(() => {
-    if (isNewChat && !selectedChatId && !chatId && !isPreparingChat && selectedContexts.length > 0) {
+    if (
+      isNewChat &&
+      (isAuthDisabled || organizationId) && 
+      !selectedChatId &&
+      !chatId &&
+      !isPreparingChat &&
+      selectedContexts.length > 0
+    ) {
       setIsPreparingChat(true);
 
       // Clear any previous SQL results and visualizations when starting a new chat
@@ -115,7 +125,23 @@ export function useChatSession({
         }
       );
     }
-  }, [isNewChat, selectedChatId, chatId, isPreparingChat, selectedContexts, createInitialChatMutation, selectChatForDataset, updateUrlWithChatId, resetExecutedQueries, clearPaths, setSqlResults, setSqlPanelOpen, setActiveTab]);
+  }, [
+    isNewChat,
+    organizationId,
+    selectedChatId,
+    chatId,
+    isPreparingChat,
+    selectedContexts,
+    createInitialChatMutation,
+    selectChatForDataset,
+    updateUrlWithChatId,
+    resetExecutedQueries,
+    clearPaths,
+    setSqlResults,
+    setSqlPanelOpen,
+    setActiveTab,
+    isAuthDisabled
+  ]);
 
   // Update chat ID when selectedChatId changes
   useEffect(() => {
