@@ -15,6 +15,7 @@ import Dashboard from "@uppy/dashboard";
 import GoogleDrive from "@uppy/google-drive";
 import Url from "@uppy/url";
 import AwsS3Multipart from "@uppy/aws-s3";
+import { sanitizeAndUniquifyFilename } from "@/lib/utils/sanitize-filename";
 
 // Import Uppy styles and our custom theme
 import "@uppy/core/dist/style.min.css";
@@ -210,6 +211,22 @@ export const UnifiedUploader = forwardRef<
         ],
       },
       debug: process.env.NODE_ENV === "development",
+            onBeforeFileAdded: (currentFile) => {
+                setOriginalFileNameRef.current(currentFile.name || "");
+                const originalName = currentFile?.name || '';
+                const modifiedName = sanitizeAndUniquifyFilename(originalName);
+      
+                const modifiedFile = {
+                    ...currentFile,
+                    name: modifiedName, // Update the primary name
+                    meta: {
+                        ...currentFile.meta,
+                        name: modifiedName, // Also update meta name if needed by plugins
+                        originalName: originalName, // Store original name in meta if needed later
+                    },
+                };
+                return modifiedFile;
+            }
     });
 
     // Add Dashboard plugin with proper theme
@@ -260,7 +277,6 @@ export const UnifiedUploader = forwardRef<
       try {
         setSelectedFile(file);
         setUploadError(null);
-        setOriginalFileNameRef.current(file.name || "");
 
         // Detect file format
         const format = detectFileFormat(
