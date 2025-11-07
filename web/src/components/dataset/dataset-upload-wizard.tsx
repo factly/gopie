@@ -624,7 +624,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
   // Pre-populate dataset name from filename when reaching step 4
   React.useEffect(() => {
-    if (currentStep === 4 && originalFileName && !datasetName) {
+    if (currentStep === 4 && originalFileName && !datasetName && !datasetNameTouched) {
       // Remove file extension and clean up the filename
       const nameWithoutExtension = originalFileName.replace(/\.[^/.]+$/, "");
       // Replace underscores and hyphens with spaces, then capitalize words
@@ -633,7 +633,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
         .replace(/\b\w/g, (char) => char.toUpperCase());
       setDatasetName(cleanedName);
     }
-  }, [currentStep, originalFileName, datasetName, setDatasetName]);
+  }, [currentStep, originalFileName, datasetName, setDatasetName, datasetNameTouched]);
 
   // Auto-generate dataset description when reaching step 4
   React.useEffect(() => {
@@ -1262,7 +1262,10 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                     id="dataset-name"
                     placeholder="Enter dataset name"
                     value={datasetName}
-                    onChange={(e) => setDatasetName(e.target.value)}
+                    onChange={(e) => {
+                      setDatasetName(e.target.value);
+                      setDatasetNameTouched(true);
+                    }}
                     onBlur={() => setDatasetNameTouched(true)}
                     className={
                       datasetNameTouched && !datasetName.trim()
