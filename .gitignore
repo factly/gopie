@@ -242,3 +242,7 @@ Temporary Items
 
 # End of https://www.toptal.com/developers/gitignore/api/macos
 
+# Pulumi
+.pulumi/
+Pulumi.*.yaml
+!Pulumi.yaml
