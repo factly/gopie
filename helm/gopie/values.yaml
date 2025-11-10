@@ -475,6 +475,12 @@ postgresql:
 
 minio:
   enabled: true  # Enable or disable the bundled MinIO chart
+  clientImage:
+    registry: docker.io
+    repository: bitnamilegacy/minio-client
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/minio
   defaultBuckets: "gopie"  # Comma-separated list of default buckets to create in MinIO
 
 companion:
