@@ -12,9 +12,9 @@ fullnameOverride: "gopie"  # Override the full name of the chart resources
 deployment:
   name: server  # Name of the server deployment
   image:
-    repository: ""  # Docker image repository for the main application (e.g., your-registry/gopie)
-    pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
-    tag: ""  # Image tag to use; defaults to chart appVersion if empty
+    repository: "factly/gopie-server"  # Docker image repository for the main application (e.g., your-registry/gopie)
+    pullPolicy: Always  # Image pull policy: Always, IfNotPresent, or Never
+    tag: "latest"  # Image tag to use; defaults to chart appVersion if empty
 
   replicaCount: 1  # Number of server replicas to run
   extraLabels: {}  # Extra labels to add to deployment resources
@@ -114,9 +114,9 @@ deployment:
 stateful:
   name: server  # Name of the server deployment
   image:
-    repository: ""  # Docker image repository for the main application
-    pullPolicy: IfNotPresent  # Image pull policy: Always, IfNotPresent, or Never
-    tag: ""  # Image tag to use; defaults to chart appVersion if empty
+    repository: "factly/gopie-server"  # Docker image repository for the main application
+    pullPolicy: Always  # Image pull policy: Always, IfNotPresent, or Never
+    tag: "latest"  # Image tag to use; defaults to chart appVersion if empty
 
   replicaCount: 1  # Number of server replicas to run
   extraLabels: {}  # Extra labels to add to deployment resources
@@ -131,7 +131,7 @@ stateful:
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
-    image: ""  # Image for the init container
+    image: "factly/gopie-migrate:latest"  # Image for the init container
     env: []  # Environment variables for the init container
 
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
@@ -213,7 +213,7 @@ service:
   type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
 
 ingress:
-  enabled: true  # Enable ingress for external access
+  enabled: false  # Enable ingress for external access
   className: ""  # Ingress class name (e.g., nginx, traefik)
   annotations: {}  # Ingress annotations
     # kubernetes.io/ingress.class: nginx
@@ -230,10 +230,10 @@ ingress:
     #     - gopie.example.com
 
 reIndexingJob:  # Re-indexing job configuration
-  enabled: true  # Enable the re-indexing job
+  enabled: false  # Enable the re-indexing job
   image:
-    repository: ""  # Docker image repository for re-indexing job
-    tag: ""  # Image tag for the re-indexing job
+    repository: "factly/gopie-reindexer"  # Docker image repository for re-indexing job
+    tag: "latest"  # Image tag for the re-indexing job
   command: []  # Command to run for the re-indexing job
   args: []  # Arguments to pass to the re-indexing job
   env: []  # Environment variables for the re-indexing job
@@ -244,9 +244,9 @@ reIndexingJob:  # Re-indexing job configuration
 web:
   # Container image configuration for the web component
   image:
-    repository: ""  # The Docker image repository to use for the web container (e.g., your-registry/gopie-web)
-    pullPolicy: IfNotPresent  # Image pull policy (Always, IfNotPresent, Never)
-    tag: "0.0.1"  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
+    repository: "factly/gopie-web"  # The Docker image repository to use for the web container (e.g., your-registry/gopie-web)
+    pullPolicy: Always  # Image pull policy (Always, IfNotPresent, Never)
+    tag: "latest"  # Image tag (e.g., latest, v1.2.3). Leave blank to use chart appVersion
 
   replicaCount: 1  # Number of desired web pod replicas
   name: web  # Name identifier for the web deployment
@@ -374,9 +374,9 @@ chatserver:
   replicaCount: 1  # Number of chatserver pod replicas
 
   image:
-    repository: ""  # Docker image repository for the chatserver
-    pullPolicy: IfNotPresent  # Image pull policy
-    tag: ""  # Image tag to use
+    repository: "factly/gopie-chat-server"  # Docker image repository for the chatserver
+    pullPolicy: Always  # Image pull policy
+    tag: "latest"  # Image tag to use
 
   imagePullSecrets: []  # Image pull secrets for private registries
   extraLabels: {}  # Additional labels for the Deployment
@@ -466,6 +466,9 @@ chatserver:
 
 postgresql:
   enabled: true  # Enable or disable the bundled PostgreSQL chart
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
   auth:
     username: default  # Database username for the PostgreSQL instance
     database: gopie     # Name of the default database to create
