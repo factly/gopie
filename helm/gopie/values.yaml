@@ -54,7 +54,7 @@ deployment:
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
-    image: "gopie/gopie-migrate:latest"  # Image for the init container (e.g., your-registry/gopie-migrate:tag)
+    image: "factly/gopie-migrate:latest"  # Image for the init container (e.g., your-registry/gopie-migrate:tag)
     env: []  # Environment variables for the init container
 
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
