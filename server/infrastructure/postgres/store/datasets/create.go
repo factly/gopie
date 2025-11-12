@@ -6,6 +6,7 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/infrastructure/postgres/gen"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
@@ -38,6 +39,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		UpdatedBy:    pgtype.Text{String: params.CreatedBy, Valid: true},
 		OrgID:        pgtype.Text{String: params.OrgID, Valid: true},
 		CustomPrompt: pgtype.Text{String: params.CustomPrompt, Valid: params.CustomPrompt != ""},
+		Source:       params.Source,
 	})
 	if err != nil {
 		s.logger.Critical("Error creating dataset", zap.Error(err))
@@ -68,6 +70,7 @@ func (s *PgDatasetStore) Create(ctx context.Context, params *models.CreateDatase
 		UpdatedBy:    d.UpdatedBy.String,
 		OrgID:        d.OrgID.String,
 		CustomPrompt: d.CustomPrompt.String,
+		Source:       d.Source,
 	}, nil
 }
 
@@ -101,6 +104,26 @@ func (s *PgDatasetStore) CreateDatasetSummary(ctx context.Context, datasetName s
 	})
 	if err != nil {
 		s.logger.Error("Error creating dataset summary", zap.Error(err))
+		return nil, err
+	}
+	return &models.DatasetSummaryWithName{
+		DatasetName: datasetName,
+		Summary:     datasetSummary,
+	}, nil
+}
+
+func (s *PgDatasetStore) CreateSummaryWithTx(ctx context.Context, tx pgx.Tx, datasetName string, datasetSummary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error) {
+	summary, err := json.Marshal(datasetSummary)
+	if err != nil {
+		s.logger.Error("Error marshaling dataset summary", zap.Error(err))
+		return nil, err
+	}
+	err = gen.New(tx).CreateDatasetSummary(ctx, gen.CreateDatasetSummaryParams{
+		DatasetName: datasetName,
+		Summary:     summary,
+	})
+	if err != nil {
+		s.logger.Error("Error creating dataset summary with tx", zap.Error(err))
 		return nil, err
 	}
 	return &models.DatasetSummaryWithName{

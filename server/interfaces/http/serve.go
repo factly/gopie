@@ -80,6 +80,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 			params.DatasetService,
 			params.ProjectService,
 			params.AIAgentService,
+			params.AIService,
 			params.DbSourceService,
 			appLogger,
 		)

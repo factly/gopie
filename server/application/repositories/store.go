@@ -5,6 +5,7 @@ import (
 
 	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/config"
+	"github.com/jackc/pgx/v5"
 )
 
 type StoreRepository interface {
@@ -43,16 +44,20 @@ type DatasetStoreRepository interface {
 	Details(ctx context.Context, id string, orgID string) (*models.Dataset, error)
 	List(ctx context.Context, projectID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
 	Update(ctx context.Context, datasetID string, params *models.UpdateDatasetParams) (*models.Dataset, error)
+	UpdateWithTx(ctx context.Context, tx pgx.Tx, datasetID string, params *models.UpdateDatasetParams) (*models.Dataset, error)
 	GetByTableName(ctx context.Context, tableName string, orgID string) (*models.Dataset, error)
 	GetDatasetByID(ctx context.Context, datasetID string) (*models.Dataset, error)
 	GetDatasetsByIDs(ctx context.Context, datasetIDs []string, orgID string) ([]*models.Dataset, error)
+	GetDB() any
 
 	CreateFailedUpload(ctx context.Context, datasetID string, errorMsg string) (*models.FailedDatasetUpload, error)
 	DeleteFailedUploadsByDatasetID(ctx context.Context, datasetID string) error
 	ListFailedUploads(ctx context.Context) ([]*models.FailedDatasetUpload, error)
 
 	CreateDatasetSummary(ctx context.Context, datasetName string, summary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error)
+	CreateSummaryWithTx(ctx context.Context, tx pgx.Tx, datasetName string, datasetSummary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error)
 	DeleteDatasetSummary(ctx context.Context, datasetName string) error
+	DeleteSummaryWithTx(ctx context.Context, tx pgx.Tx, datasetName string) error
 	GetDatasetSummary(ctx context.Context, datasetName string) (*models.DatasetSummaryWithName, error)
 	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
 	ListALlDatasetsFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error)

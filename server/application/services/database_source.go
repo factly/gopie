@@ -41,3 +41,11 @@ func (s *DatabaseSourceService) Delete(id string) error {
 func (s *DatabaseSourceService) List(limit, offset int, orgID string) ([]*models.DatabaseSource, error) {
 	return s.dbSourceRepo.List(context.Background(), limit, offset, orgID)
 }
+
+func (s *DatabaseSourceService) Update(ctx context.Context, params models.UpdateDatabaseSourceLastUpdatedAtParams) error {
+	return s.dbSourceRepo.UpdateLastUpdatedAt(ctx, params)
+}
+
+func (s *DatabaseSourceService) HasTimestampColumn(datasetID, orgID string) (bool, error) {
+	return s.dbSourceRepo.HasTimestampColumn(context.Background(), datasetID, orgID)
+}
