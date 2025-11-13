@@ -232,21 +232,21 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
             <CalendarIcon className="size-4" />
             <span>Created:</span>
             <span className="font-medium text-foreground">
-              {formatDate(project.createdAt)}
+              {formatDate(project.created_at)}
             </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarIcon className="size-4" />
             <span>Updated:</span>
             <span className="font-medium text-foreground">
-              {formatDate(project.updatedAt)}
+              {formatDate(project.updated_at)}
             </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <UserIcon className="size-4" />
             <span>Created by:</span>
             <span className="font-medium text-foreground">
-              {project.createdBy}
+              {project.created_by}
             </span>
           </div>
         </div>
