@@ -1,13 +1,11 @@
 name: Server Release CI
 on:
-  release:
-    types: [released]
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 jobs:
   release:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -52,12 +50,3 @@ jobs:
           tags: factly/gopie-migrate:${{ env.RELEASE_VERSION }}
           file: server/Dockerfile.migrate
           context: server
-
-      # - name: Run GoReleaser
-      #   uses: goreleaser/goreleaser-action@v6
-      #   with:
-      #     distribution: goreleaser
-      #     version: '~> v2'
-      #     args: release --clean --skip=validate
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GH_PAT }}
