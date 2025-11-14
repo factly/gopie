@@ -184,20 +184,31 @@ export async function POST(req: Request) {
           }
 
           // Text stream placeholder - removed as unused
+          let buffer = ""; 
 
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
 
             for (const line of lines) {
-              const parsed = parseSSEData(line.trim());
-              if (!parsed) continue;
+            const trimmed = line.trim();
+              if (!trimmed) continue;
+
+              const parsed = parseSSEData(trimmed);
+              if (!parsed) {
+                if (trimmed.startsWith("data: ")) {
+                  console.warn("Incomplete JSON, waiting for next chunk:", trimmed);
+                  buffer = trimmed;
+                }
+                continue;
+              }
 
               if (parsed.done) {
-                // Stream is done
+                console.log("Stream complete");
                 break;
               }
 
