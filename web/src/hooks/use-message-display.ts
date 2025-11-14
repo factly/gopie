@@ -26,7 +26,9 @@ export function useMessageDisplay({
     // Determine which messages to display based on current state
     if (allChatMessages.length > 0) {
       // If we have backend messages, prefer those as the source of truth
-      if (useStreamingMessages && streamingMessages.length > allChatMessages.length) {
+      if (useStreamingMessages 
+        //&& streamingMessages.length > allChatMessages.length
+      ) {
         // Only show streaming messages if there are MORE than backend (new messages being streamed)
         // Create a set of backend message IDs for efficient lookup
         const backendMessageIds = new Set(allChatMessages.map(msg => msg.id));

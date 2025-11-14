@@ -428,7 +428,26 @@ export function useChatSession({
         // Send message using the new API
         // Note: AI SDK v5 will add the user message to streamingMessages when server responds
         // Don't pass chat_id separately in body - it's already in prepareSendMessagesRequest
-        sendMessage({ text: input });
+        const currentContexts = selectedContextsRef.current;
+        const projectIds = currentContexts
+          .filter((ctx) => ctx.type === "project")
+          .map((ctx) => ctx.id);
+        const datasetIds = currentContexts
+          .filter((ctx) => ctx.type === "dataset")
+          .map((ctx) => ctx.id);
+        sendMessage({
+          role: "user",
+          parts: [
+            { type: "text", text: input },
+            {
+              type: "data-context-info",
+              data: {
+                projectIds: projectIds,
+                datasetIds: datasetIds,
+              },
+            },
+          ],
+        });
         setInput(""); // Clear input after sending
       }
     },

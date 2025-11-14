@@ -112,6 +112,7 @@ function ChatPageClient() {
       limit: 50,
     },
     enabled: !!selectedChatId,
+    refetchOnWindowFocus: false,
   });
 
   const allChatMessages = useMemo(() => {
