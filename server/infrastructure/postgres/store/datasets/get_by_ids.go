@@ -43,6 +43,7 @@ func (s *PgDatasetStore) GetDatasetsByIDs(ctx context.Context, datasetIDs []stri
 			RowCount:     int(row.RowCount.Int32),
 			Size:         int(row.Size.Int64),
 			FilePath:     row.FilePath,
+			Source:       row.Source,
 			Columns:      columns,
 			Alias:        row.Alias.String,
 			CreatedBy:    row.CreatedBy.String,
