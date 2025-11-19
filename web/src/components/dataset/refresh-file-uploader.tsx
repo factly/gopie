@@ -22,11 +22,10 @@ import "@uppy/dashboard/dist/style.min.css";
 import "@/app/uppy-theme.css";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import {  AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   validateFileWithDuckDb,
-  ValidationResult,
   detectFileFormat,
   SUPPORTED_FORMATS,
 } from "@/lib/validation/validate-file";
@@ -74,9 +73,7 @@ export const RefreshFileUploader = forwardRef<
 
   const [uppy, setUppy] = useState<Uppy | null>(null);
   const [selectedFile, setSelectedFile] = useState<UppyFile<Meta, Record<string, never>> | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [schemaComparisonResult, setSchemaComparisonResult] = useState<{ areMatching: boolean; error?: string } | null>(null);
-  const [localValidationResult, setLocalValidationResult] = useState<ValidationResult | null>(null);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -106,7 +103,7 @@ export const RefreshFileUploader = forwardRef<
          ],
       },
       debug: process.env.NODE_ENV === "development",
-      onBeforeFileAdded: (currentFile, files) => {
+      onBeforeFileAdded: (currentFile) => {
           const originalName = currentFile?.name || '';
           const modifiedName = sanitizeAndUniquifyFilename(originalName);
 
@@ -138,8 +135,9 @@ export const RefreshFileUploader = forwardRef<
       theme: resolvedTheme === "dark" ? "dark" : "light",
       doneButtonHandler: null,
     });
-
+     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     uppyInstance.use(GoogleDrive, { target: Dashboard as any, companionUrl });
+     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     uppyInstance.use(Url, { target: Dashboard as any, companionUrl });
 
     if (companionUrl) {
@@ -153,9 +151,7 @@ export const RefreshFileUploader = forwardRef<
     // --- Core Logic: Handle file selection and validation ---
     uppyInstance.on("file-added", async (file) => {
       setSelectedFile(null);
-      setValidationError(null);
       setSchemaComparisonResult(null);
-      setLocalValidationResult(null);
       setUploadError(null);
       onValidationStateChange("validating");
 
@@ -180,7 +176,6 @@ export const RefreshFileUploader = forwardRef<
 
         if (!isInitialized || !db) {
             onValidationStateChange("validation_unavailable");
-            setValidationError("In-browser validator is not available.");
             return;
         }
 
@@ -210,7 +205,6 @@ export const RefreshFileUploader = forwardRef<
             file.type || "application/octet-stream"
         );
 
-        setLocalValidationResult(validation);
 
         if (!validation.isValid) {
             throw new Error(
@@ -220,7 +214,6 @@ export const RefreshFileUploader = forwardRef<
 
         if (!existingSchema || existingSchema.length === 0) {
              onValidationStateChange("no_schema_to_compare");
-             setValidationError("Could not retrieve the existing dataset schema for comparison.");
              return;
         }
 
@@ -229,7 +222,6 @@ export const RefreshFileUploader = forwardRef<
 
         if (!comparison.areMatching) {
             onValidationStateChange("schema_mismatch", comparison.error);
-            setValidationError(comparison.error || "Schema mismatch.");
         } else {
             toast.success("Schema validation successful!");
             onValidationStateChange("schema_match");
@@ -238,7 +230,6 @@ export const RefreshFileUploader = forwardRef<
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "File processing error";
-        setValidationError(errorMessage);
         toast.error(errorMessage);
         onValidationStateChange("validation_error", errorMessage);
         if (file && uppyInstance.getFile(file.id)) {
@@ -251,9 +242,7 @@ export const RefreshFileUploader = forwardRef<
     uppyInstance.on("file-removed", (file) => {
       if (selectedFile?.id === file?.id) {
         setSelectedFile(null);
-        setValidationError(null);
         setSchemaComparisonResult(null);
-        setLocalValidationResult(null);
         setIsUploading(false);
         setUploadProgress(0);
         setUploadError(null);
@@ -290,6 +279,7 @@ export const RefreshFileUploader = forwardRef<
 
     uppyInstance.on("upload-error", (file, error, response) => {
       setIsUploading(false);
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responseBody = (response as any)?.body;
       const serverMessage = typeof responseBody === 'object' && responseBody?.message ? responseBody.message : (typeof responseBody === 'string' ? responseBody : null);
       const errorMsg = `Storage Upload failed: ${serverMessage || error.message}`;
@@ -360,9 +350,7 @@ export const RefreshFileUploader = forwardRef<
         uppy.getFiles().forEach((file) => uppy.removeFile(file.id));
       }
       setSelectedFile(null);
-      setValidationError(null);
       setSchemaComparisonResult(null);
-      setLocalValidationResult(null);
       setIsUploading(false);
       setUploadProgress(0);
       setUploadError(null);

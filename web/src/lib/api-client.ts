@@ -93,11 +93,11 @@ export interface ProjectInput {
 
 export interface Project extends ProjectInput {
   id: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
   dataset_count: number;
-  createdBy: string;
-  updatedBy: string;
+  created_by: string;
+  updated_by: string;
   custom_prompt?: string;
 }
 

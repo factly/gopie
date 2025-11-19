@@ -231,11 +231,11 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                     </span>
                   </div>
 
-                  {project.createdAt && (
+                  {project.created_at && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <Calendar className="h-3.5 w-3.5" />
                       <span>
-                        {format(new Date(project.createdAt), "MMM d, yyyy")}
+                        {format(new Date(project.created_at), "MMM d, yyyy")}
                       </span>
                     </div>
                   )}

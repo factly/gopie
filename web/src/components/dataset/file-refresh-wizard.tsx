@@ -68,7 +68,7 @@ export function FileRefreshWizard({
     datasetId: string;
   };
 
-  const { data: datasetData , isLoading } = useDatasetById({
+  const { data: datasetData } = useDatasetById({
         variables: { datasetId:datasetId },
         enabled: !!datasetId,
       });
@@ -221,18 +221,16 @@ export function FileRefreshWizard({
   refreshDataset,
   resetUploadState,
   onRefreshComplete,
+  datasetData?.name,
+  datasetData?.id
   ]);
 
   // 3. Callback for the RefreshFileUploader (after S3 upload)
-  const handleUploadComplete = useCallback(
-    (_file: UppyFile<Meta, Record<string, never>>, response: unknown) => {
+  const handleUploadComplete = (_file: UppyFile<Meta, Record<string, never>>, response: unknown) => {
       setUploadResponse(response);
       // S3 upload is complete, now we can call the final API endpoint
       callRefreshApiEndpoint();
-    },
-    [setUploadResponse,callRefreshApiEndpoint,datasetData?.name] // Add callRefreshApiEndpoint to dependencies if needed, or define it inside useCallback
-  );
-
+    }
   // 4. Function to call the final API endpoint
 
 
