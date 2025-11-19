@@ -20,7 +20,6 @@ const (
 )
 
 // refreshConfig holds configuration for incremental refresh operations
-// For incremental refresh, only new rows (based on timestampColumn) are inserted
 type refreshConfig struct {
 	db                   *sql.DB
 	dbType               DatabaseType
@@ -152,36 +151,9 @@ func (m *OlapDBDriver) performIncrementalRefresh(cfg refreshConfig) (err error) 
 			zap.String("connection_format", logConnectionFormat),
 		)
 	}
-
-	// Attach source database
-	if err := m.attachDatabase(cfg.db, cfg.connectionString, dbAlias, cfg.dbType, targetDesc); err != nil {
-		return err
-	}
-
-	// Ensure detach on exit
-	var detachError error
-	defer func() {
-		detachError = m.detachDatabase(cfg.db, dbAlias, targetDesc)
-	}()
-
-	// Perform the refresh within a transaction
-	if err := m.executeRefreshTransaction(cfg, dbAlias, targetDesc); err != nil {
-		return err
-	}
-
-	m.logger.Info(
-		fmt.Sprintf("successfully completed incremental refresh%s", targetDesc),
-		zap.String("table", cfg.tableName),
-	)
-
-	return detachError
-}
-
-// executeRefreshTransaction performs the insert operation for new rows within a transaction
-func (m *OlapDBDriver) executeRefreshTransaction(cfg refreshConfig, dbAlias, targetDesc string) (err error) {
 	tx, err := cfg.db.BeginTx(context.Background(), nil)
 	if err != nil {
-		m.logger.Error(fmt.Sprintf("failed to begin transaction for incremental refresh%s", targetDesc), zap.Error(err))
+		m.logger.Error(fmt.Sprintf("failed to begin transaction%s", targetDesc), zap.Error(err))
 		return err
 	}
 
@@ -190,22 +162,35 @@ func (m *OlapDBDriver) executeRefreshTransaction(cfg refreshConfig, dbAlias, tar
 			tx.Rollback()
 			panic(p)
 		} else if err != nil {
-			m.logger.Warn(fmt.Sprintf("rolling back transaction due to error%s", targetDesc), zap.Error(err))
+			m.logger.Warn(fmt.Sprintf("rolling back transaction%s", targetDesc), zap.Error(err))
 			tx.Rollback()
 		}
 	}()
 
-	// Insert only new rows
-	if err = m.executeInsertNewRows(tx, cfg, dbAlias, targetDesc); err != nil {
+	// Attach source database
+	if err := m.attachDatabase(tx, cfg.connectionString, dbAlias, cfg.dbType, targetDesc); err != nil {
+		return err
+	}
+	defer func() {
+		if derr := m.detachDatabase(cfg.db, dbAlias, targetDesc); derr != nil {
+			m.logger.Warn("failed to detach after full refresh", zap.Error(derr))
+		}
+	}()
+
+	if err := m.executeInsertNewRows(tx, cfg, dbAlias, targetDesc); err != nil {
 		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err := tx.Commit(); err != nil {
 		m.logger.Error(fmt.Sprintf("failed to commit incremental refresh transaction%s", targetDesc), zap.Error(err))
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 
+	m.logger.Info(fmt.Sprintf("successfully completed incremental refresh%s", targetDesc),
+		zap.String("table", cfg.tableName),
+	)
 	return nil
+
 }
 
 // executeInsertNewRows inserts only new rows based on timestamp filter
@@ -343,38 +328,47 @@ func (m *OlapDBDriver) performFullRefresh(cfg fullRefreshConfig) (err error) {
 		cfg.connectionString = parsedConn
 	}
 
-	// Attach source database
-	if err := m.attachDatabase(cfg.db, cfg.connectionString, dbAlias, cfg.dbType, targetDesc); err != nil {
-		return err
+	tx, err := cfg.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("starting transaction for full refresh: %w", err)
 	}
 
-	// Ensure detach on exit
-	var detachError error
 	defer func() {
-		detachError = m.detachDatabase(cfg.db, dbAlias, targetDesc)
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			m.logger.Warn(fmt.Sprintf("rolling back transaction%s", targetDesc), zap.Error(err))
+			tx.Rollback()
+		}
 	}()
 
-	// Perform the full refresh within a transaction
-	if err := m.executeFullRefreshTransaction(cfg, targetDesc, dbAlias); err != nil {
+	// Attach inside transaction
+	if err := m.attachDatabase(tx, cfg.connectionString, dbAlias, cfg.dbType, targetDesc); err != nil {
+		return err
+	}
+	defer func() {
+		if derr := m.detachDatabase(cfg.db, dbAlias, targetDesc); derr != nil {
+			m.logger.Warn("failed to detach after full refresh", zap.Error(derr))
+		}
+	}()
+
+	if err := m.executeFullRefreshTransaction(tx, cfg, targetDesc, dbAlias); err != nil {
 		return err
 	}
 
-	m.logger.Info("Successfully created table",
-		zap.String("target", fmt.Sprintf("%s.%s", m.dbName, cfg.tableName)),
-	)
-
-	if detachError != nil {
-		m.logger.Warn(fmt.Sprintf("Table created successfully, but a non-critical error occurred during %s detach", cfg.dbType),
-			zap.String("alias", dbAlias),
-			zap.Error(detachError),
-		)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing full refresh transaction: %w", err)
 	}
 
+	m.logger.Info(fmt.Sprintf("successfully completed full refresh%s", targetDesc),
+		zap.String("table", cfg.tableName),
+	)
 	return nil
 }
 
 // executeFullRefreshTransaction performs the drop and create operations within a transaction
-func (m *OlapDBDriver) executeFullRefreshTransaction(cfg fullRefreshConfig, targetDesc, dbAlias string) (err error) {
+func (m *OlapDBDriver) executeFullRefreshTransaction(tx *sql.Tx, cfg fullRefreshConfig, targetDesc, dbAlias string) (err error) {
 	// qualify the select query
 	qualifiedSelectAst, err := duckdbsql.Parse(cfg.db, cfg.sqlQuery)
 	if err != nil {
@@ -393,22 +387,6 @@ func (m *OlapDBDriver) executeFullRefreshTransaction(cfg fullRefreshConfig, targ
 	}
 	m.logger.Debug(fmt.Sprintf("qualified SQL query for full refresh%s", targetDesc), zap.String("query", cfg.sqlQuery))
 
-	tx, err := cfg.db.BeginTx(context.Background(), nil)
-	if err != nil {
-		m.logger.Error(fmt.Sprintf("failed to begin transaction for full table refresh%s", targetDesc), zap.Error(err))
-		return err
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			panic(p)
-		} else if err != nil {
-			m.logger.Warn(fmt.Sprintf("rolling back transaction due to error%s", targetDesc), zap.Error(err))
-			tx.Rollback()
-		}
-	}()
-
 	// Drop existing table
 	if err = m.dropTableIfExists(tx, cfg.tableName, targetDesc); err != nil {
 		return err
@@ -419,16 +397,11 @@ func (m *OlapDBDriver) executeFullRefreshTransaction(cfg fullRefreshConfig, targ
 		return err
 	}
 
-	if err = tx.Commit(); err != nil {
-		m.logger.Error(fmt.Sprintf("failed to commit full table refresh transaction%s", targetDesc), zap.Error(err))
-		return fmt.Errorf("committing transaction: %w", err)
-	}
-
 	return nil
 }
 
 // attachDatabase attaches the source database
-func (m *OlapDBDriver) attachDatabase(db *sql.DB, connectionString, alias string, dbType DatabaseType, targetDesc string) error {
+func (m *OlapDBDriver) attachDatabase(db *sql.Tx, connectionString, alias string, dbType DatabaseType, targetDesc string) error {
 	attachSQL := fmt.Sprintf(`ATTACH '%s' AS "%s" (TYPE %s)`, connectionString, alias, dbType)
 
 	if _, err := db.Exec(attachSQL); err != nil {

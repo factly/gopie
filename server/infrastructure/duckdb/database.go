@@ -572,12 +572,24 @@ func (m *OlapDBDriver) parseAndQualifySQL(db *sql.DB, rawSQL, alias string) (str
 
 // dropTableIfExists drops the specified table within a transaction, logging the operation.
 func (m *OlapDBDriver) dropTableIfExists(tx *sql.Tx, tableName, targetDesc string) error {
-	dropSQL := fmt.Sprintf(`DROP TABLE IF EXISTS "%s"`, tableName)
-	m.logger.Debug(fmt.Sprintf("dropping existing table if exists%s", targetDesc), zap.String("query", dropSQL))
-	if _, err := tx.Exec(dropSQL); err != nil {
-		m.logger.Error("error dropping table within transaction", zap.String("tableName", tableName), zap.Error(err))
-		return fmt.Errorf("dropping existing table: %w", err)
+	var dropSQL string
+
+	if m.olapType == "motherduck" {
+		// For MotherDuck, qualify with schema
+		dropSQL = fmt.Sprintf(`DROP TABLE IF EXISTS "%s"."%s"`, m.dbName, tableName)
+	} else {
+		// For local DuckDB
+		dropSQL = fmt.Sprintf(`DROP TABLE IF EXISTS "%s"`, tableName)
 	}
+
+	m.logger.Debug(fmt.Sprintf("dropping existing table if exists%s", targetDesc), zap.String("query", dropSQL))
+
+	_, err := tx.Exec(dropSQL)
+	if err != nil {
+		m.logger.Error(fmt.Sprintf("failed to drop table%s", targetDesc), zap.Error(err))
+		return fmt.Errorf("dropping table: %w", err)
+	}
+
 	m.logger.Info("successfully dropped table within transaction", zap.String("tableName", tableName))
 	return nil
 }
