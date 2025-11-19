@@ -14,6 +14,7 @@ type httpHandler struct {
 	olapSvc     *services.OlapService
 	datasetSvc  *services.DatasetService
 	aiAgentSvc  *services.AIService
+	aiSvc       *services.AiDriver
 	projectSvc  *services.ProjectService
 	dbSourceSvc *services.DatabaseSourceService
 }
@@ -24,12 +25,14 @@ func Routes(
 	datasetSvc *services.DatasetService,
 	projectSvc *services.ProjectService,
 	aiAgent *services.AIService,
+	aiSvc *services.AiDriver,
 	dbSourceSvc *services.DatabaseSourceService,
 	logger *logger.Logger,
 ) {
 	httpHandler := httpHandler{
 		logger:      logger,
 		olapSvc:     olapSvc,
+		aiSvc:       aiSvc,
 		datasetSvc:  datasetSvc,
 		aiAgentSvc:  aiAgent,
 		projectSvc:  projectSvc,
@@ -37,7 +40,8 @@ func Routes(
 	}
 
 	router.Post("/upload", httpHandler.create)
-	router.Post("/update", httpHandler.update)
+	router.Post("/refresh", httpHandler.refresh)
+	router.Get("/refresh/:datasetID", httpHandler.hasTimestampColumn)
 	router.Get("/", httpHandler.list)
 	router.Delete("/:id", httpHandler.deleteHandler)
 }

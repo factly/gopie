@@ -20,9 +20,16 @@ from .multi_dataset_prompts.plan_query_prompt import (
     create_plan_query_prompt,
     format_plan_query_input,
 )
+from .multi_dataset_prompts.regenerate_fuzzy_values_prompt import (
+    create_regenerate_fuzzy_values_prompt,
+    format_regenerate_fuzzy_values_input,
+)
 from .multi_dataset_prompts.stream_updates_prompt import (
     create_stream_update_prompt,
     format_stream_update_input,
+)
+from .multi_dataset_prompts.validate_match_relevance_prompt import (
+    create_validate_match_relevance_prompt,
 )
 from .plan_sql_query_tool import (
     create_sql_planning_prompt,
@@ -45,6 +52,10 @@ from .single_dataset_prompts.validate_result_prompt import (
     format_validate_result_input,
 )
 from .validate_input_prompt import create_validate_input_prompt
+from .visualiser_agent_prompts.feedback_prompt import (
+    create_feedback_prompt,
+    format_feedback_input,
+)
 from .visualiser_agent_prompts.visualize_data_prompt import (
     create_visualize_data_prompt,
     format_visualization_input,
@@ -64,6 +75,9 @@ NodeName = Literal[
     "validate_input",
     "validate_result",
     "visualize_data",
+    "regenerate_fuzzy_values",
+    "validate_match_relevance",
+    "feedback",
 ]
 
 
@@ -87,6 +101,9 @@ class PromptSelector:
             "validate_input": create_validate_input_prompt,
             "validate_result": create_validate_result_prompt,
             "visualize_data": create_visualize_data_prompt,
+            "regenerate_fuzzy_values": create_regenerate_fuzzy_values_prompt,
+            "validate_match_relevance": create_validate_match_relevance_prompt,
+            "feedback": create_feedback_prompt,
         }
 
         self.format_prompt_input_map = {
@@ -100,6 +117,8 @@ class PromptSelector:
             "validate_result": format_validate_result_input,
             "visualize_data": format_visualization_input,
             "process_context": format_process_context_input,
+            "regenerate_fuzzy_values": format_regenerate_fuzzy_values_input,
+            "feedback": format_feedback_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

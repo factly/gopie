@@ -90,6 +90,19 @@ IMPORTANT:
 * Make your node_message informative providing context on dataset sources and selection rationale
 * For numeric, date, boolean, or other non-string columns: include them in column_assumptions but omit exact_values and fuzzy_values to prevent SQL type errors
 * Take into account the validation result to improve according to the issues mentioned in the validation result.
+
+MISSING REQUIREMENTS ASSESSMENT:
+After selecting datasets, check if they fully answer the user's query. Consider:
+- Are all columns/relationships needed for JOINs available?
+- If query implies relationships (e.g., "customers and their orders"), are both sides present?
+
+* Fill missing_requirements ONLY if additional datasets are needed. Be specific about the DATA CONCEPT:
+  - "need order/purchase data linked to customers for purchase history"
+  - "missing transaction/payment records connected to user accounts"
+  - "require product details to complete order information"
+
+* Leave missing_requirements EMPTY if selected datasets can fully answer the query
+* Leave other fields EMPTY except missing_requirements if provided datasets are not sufficient.
 """
 
     human_template_str = """

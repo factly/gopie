@@ -1,24 +1,13 @@
 package duckdbsql
 
 import (
-	"database/sql"
-	"testing"
-
 	_ "github.com/marcboeker/go-duckdb/v2"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 // setupTestDB now only installs the required 'json' extension.
 // No table creation is needed.
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("duckdb", "")
-	require.NoError(t, err)
-
-	_, err = db.Exec("INSTALL json; LOAD json;")
-	require.NoError(t, err)
-
-	return db
-}
 
 func TestAST_ToCountQuery(t *testing.T) {
 	testCases := []struct {
@@ -83,7 +72,7 @@ func TestAST_ToCountQuery(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-			db := setupTestDB(t)
+			db := SetupTestDB(t)
 			defer db.Close()
 
 			ast, err := Parse(db, tc.sql)

@@ -57,7 +57,7 @@ func TestAST_TableNames(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-			db := setupDB(t)
+			db := SetupTestDB(t)
 			defer db.Close()
 
 			ast, err := Parse(db, tc.sql)

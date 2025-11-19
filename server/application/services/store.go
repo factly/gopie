@@ -5,6 +5,8 @@ import (
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ProjectService struct {
@@ -73,6 +75,10 @@ func NewDatasetService(datasetRepo repositories.DatasetStoreRepository) *Dataset
 	}
 }
 
+func (service *DatasetService) GetDB() *pgxpool.Pool {
+	return service.datasetRepo.GetDB().(*pgxpool.Pool)
+}
+
 func (service *DatasetService) Create(params *models.CreateDatasetParams) (*models.Dataset, error) {
 	return service.datasetRepo.Create(context.Background(), params)
 }
@@ -102,6 +108,10 @@ func (service *DatasetService) Update(id string, params *models.UpdateDatasetPar
 	return service.datasetRepo.Update(context.Background(), id, params)
 }
 
+func (service *DatasetService) UpdateWithTx(tx pgx.Tx, id string, params *models.UpdateDatasetParams) (*models.Dataset, error) {
+	return service.datasetRepo.UpdateWithTx(context.Background(), tx, id, params)
+}
+
 func (services *DatasetService) CreateFailedUpload(datasetID, errorMsg string) (*models.FailedDatasetUpload, error) {
 	return services.datasetRepo.CreateFailedUpload(context.Background(), datasetID, errorMsg)
 }
@@ -118,8 +128,16 @@ func (services *DatasetService) CreateDatasetSummary(datasetName string, summary
 	return services.datasetRepo.CreateDatasetSummary(context.Background(), datasetName, summary)
 }
 
+func (services *DatasetService) CreateSummaryWithTx(tx pgx.Tx, datasetName string, datasetSummary *[]models.DatasetSummary) (*models.DatasetSummaryWithName, error) {
+	return services.datasetRepo.CreateSummaryWithTx(context.Background(), tx, datasetName, datasetSummary)
+}
+
 func (services *DatasetService) DeleteDatasetSummary(datasetName string) error {
 	return services.datasetRepo.DeleteDatasetSummary(context.Background(), datasetName)
+}
+
+func (services *DatasetService) DeleteSummaryWithTx(tx pgx.Tx, datasetName string) error {
+	return services.datasetRepo.DeleteSummaryWithTx(context.Background(), tx, datasetName)
 }
 
 func (services *DatasetService) GetDatasetSummary(datasetName string) (*models.DatasetSummaryWithName, error) {

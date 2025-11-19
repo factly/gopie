@@ -35,17 +35,45 @@ VISUALIZATION QUALITY STANDARDS:
 - Make sure the labels do not overlap each other
 - Create tooltips in human-readable format with appropriate units  (Eg : '₹54.00 Billion', 30 %, 29 Tonnes)
 
-Follow the steps below to create the visualizations:
+WORKFLOW - FOLLOW THESE STEPS IN ORDER:
 
-REMEMBER TO FOLLOW ALL THESE STEPS
-1. Decide if you have enough information to create the visualizations, otherwise explore the datasets to get more information.
-2. Find the best way to visualize the data if the user has not specified any visualization type.
-3. Use altair to create visualizations, and save them to json and png. Use the run_python_code tool to run python code. Always include a short 'status_message' that describes the next step in 1 sentence (<=120 chars). If retrying, mention you are updating the visualisation.
-4. Get feedback for the generated image using the get_feedback_for_image tool. Always include a short 'status_message' (<=120 chars) describing the action.
-5. Incorporate the feedback and edit the visualizations.
-6. Use the ResultPaths tool to return the paths to the json files that contain the visualizations. Include a short 'status_message' (<=120 chars) that describes finalizing/saving results.
+STEP 1: PLANNING PHASE
+- Analyze the user query to understand what visualizations are needed
+- Decide if you have enough information to create the visualizations
+- If not, explore the datasets to get more information
+- Determine the best visualization types if user hasn't specified any
+- Plan all visualizations that need to be created
 
-IMPORTANT NOTES:
+STEP 2: GENERATION PHASE
+- Generate ALL necessary visualizations in this phase
+- Create each visualization by calling the run_python_code tool
+- Save each visualization to both JSON and PNG formats
+- If multiple visualizations are needed, create them one at a time but DO NOT call get_feedback between them
+- Continue creating all visualizations until all necessary charts are completed
+- If retrying, mention in status message that you are updating the visualisation
+
+STEP 3: FEEDBACK PHASE (ONLY AFTER ALL VISUALIZATIONS ARE CREATED)
+- Once ALL visualizations are generated, call get_feedback_for_images tool ONCE with all PNG paths
+- This single call will analyze all visualizations together and provide comprehensive feedback
+- DO NOT call get_feedback_for_images after each individual visualization
+- DO NOT proceed to this step until all visualizations are created
+
+STEP 4: IMPROVEMENT PHASE
+- Review the feedback received for all visualizations
+- If the feedback indicates improvements are needed (rating < 7 or specific issues mentioned):
+  * Regenerate ONLY the visualizations that need improvement
+  * The feedback will specify which visualizations need to be fixed
+- If the feedback is positive, proceed to the next step
+
+STEP 5: FINALIZATION PHASE
+- Use the ResultPaths tool to return the paths to the JSON files that contain the visualizations
+- Include a short 'status_message' (<=120 chars) that describes finalizing/saving results
+
+CRITICAL RULES:
+- DO NOT use parallel tool calling - call tools one at a time sequentially
+- DO NOT call get_feedback_for_images after each individual visualization
+- ONLY call get_feedback_for_images ONCE after ALL visualizations are created
+- Generate all necessary visualizations BEFORE requesting feedback
 - Always use the ResultPaths tool to return JSON file paths
 - Begin by clearly considering visualization types and details based on user query and datasets
 - Prioritize accessibility and professional appearance in all visualizations
@@ -86,7 +114,7 @@ The following are the datasets and their descriptions for the present query:
 
 CURRENT TOOL USAGE STATUS:
 - Python code executions (run_python_code): {tool_call_count} times
-- Feedback requests (get_feedback_for_image): {feedback_count} times
+- Feedback requests (get_feedback_for_images): {feedback_count} times
 """
 
     previous_python_text = """\

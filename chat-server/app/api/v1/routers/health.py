@@ -14,7 +14,10 @@ router = APIRouter()
 
 
 async def check_qdrant_health() -> Dict[str, Any]:
-    """Check Qdrant vector database connectivity and required collection exists."""
+    """
+    Check Qdrant vector database connectivity and required collection exists.
+    """
+
     try:
         client = AsyncQdrantClient(
             url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
@@ -52,7 +55,10 @@ async def check_qdrant_health() -> Dict[str, Any]:
 
 
 async def check_llm_provider_health() -> Dict[str, Any]:
-    """Check if LLM provider can be properly instantiated."""
+    """
+    Check if LLM provider can be properly instantiated.
+    """
+
     if not settings.LLM_GATEWAY_PROVIDER:
         return {"status": "not_configured", "error": "LLM_GATEWAY_PROVIDER not configured"}
 
@@ -89,7 +95,10 @@ async def check_llm_provider_health() -> Dict[str, Any]:
 
 
 async def check_gopie_server_health() -> Dict[str, Any]:
-    """Check Gopie server connectivity."""
+    """
+    Check Gopie server connectivity.
+    """
+
     if not settings.GOPIE_API_ENDPOINT:
         return {"status": "not_configured", "error": "GOPIE_API_ENDPOINT not configured"}
 
@@ -110,7 +119,10 @@ async def check_gopie_server_health() -> Dict[str, Any]:
 
 
 async def check_embedding_provider_health() -> Dict[str, Any]:
-    """Check if embedding provider can be properly instantiated."""
+    """
+    Check if embedding provider can be properly instantiated.
+    """
+
     if not settings.EMBEDDING_GATEWAY_PROVIDER:
         return {"status": "not_configured", "error": "EMBEDDING_GATEWAY_PROVIDER not configured"}
 
@@ -161,21 +173,21 @@ async def health_check():
     """
     start_time = datetime.now()
 
-    # Run all health checks concurrently
     qdrant_task = asyncio.create_task(check_qdrant_health())
     llm_task = asyncio.create_task(check_llm_provider_health())
     gopie_task = asyncio.create_task(check_gopie_server_health())
     embedding_task = asyncio.create_task(check_embedding_provider_health())
 
-    # Wait for all checks to complete
     qdrant_health, llm_health, gopie_health, embedding_health = await asyncio.gather(
         qdrant_task, llm_task, gopie_task, embedding_task, return_exceptions=True
     )
 
-    # Handle any exceptions from the health checks
     def safe_result(result, service_name):
-        if isinstance(result, Exception):
-            return {"status": "error", "error": f"Health check failed: {str(result)}"}
+        if isinstance(result, BaseException):
+            return {
+                "status": "error",
+                "error": f"Health check failed: {service_name} - {str(result)}",
+            }
         return result
 
     qdrant_health = safe_result(qdrant_health, "qdrant")
@@ -183,7 +195,6 @@ async def health_check():
     gopie_health = safe_result(gopie_health, "gopie")
     embedding_health = safe_result(embedding_health, "embedding")
 
-    # Determine overall health status
     all_services = [qdrant_health, llm_health, gopie_health, embedding_health]
     unhealthy_services = [
         service
@@ -191,7 +202,6 @@ async def health_check():
         if service.get("status") not in ["healthy", "not_configured"]
     ]
 
-    # If any critical dependency is down, the whole app won't work
     overall_status = "healthy" if not unhealthy_services else "unhealthy"
 
     end_time = datetime.now()
@@ -210,7 +220,6 @@ async def health_check():
         },
     }
 
-    # Return appropriate HTTP status code based on overall health
     status_code = (
         200 if overall_status == "healthy" else 503 if overall_status == "unhealthy" else 200
     )

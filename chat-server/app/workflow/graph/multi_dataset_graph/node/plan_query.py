@@ -101,6 +101,7 @@ async def plan_query(state: State, config: RunnableConfig) -> dict:
         limitations = response.limitations
 
         if response_for_no_sql:
+            query_result.subqueries[query_index].sql_queries = []
             query_result.subqueries[query_index].no_sql_response = response_for_no_sql
 
             await adispatch_custom_event(

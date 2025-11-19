@@ -10,7 +10,7 @@ from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
 from ...visualize_data_graph.types import State
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_FEEDBACK_FOR_IMAGE]
+tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_FEEDBACK_FOR_IMAGES]
 
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
@@ -35,8 +35,7 @@ def should_continue(state: State):
         return Command(
             goto="process_result",
             update={
-                "messages": list(state["messages"])
-                + [ErrorMessage(content="Tool call limit exceeded!")],
+                "messages": [ErrorMessage(content="Tool call limit exceeded!")],
             },
         )
 
@@ -47,18 +46,15 @@ def should_continue(state: State):
                 and last_message.tool_calls[0]["name"] == "result_paths"
             )
             if is_final_result:
-                return Command(
-                    goto="process_result",
-                )
-            return Command(
-                goto="tools",
-            )
+                return Command(goto="process_result")
+            return Command(goto="tools", update={"tool_call_count": tool_call_count + 1})
         else:
-            state_update = {
-                "messages": list(state["messages"]) + [HumanMessage(content="Continue")]
-            }
-            return Command(goto="agent", update=state_update)
+            return Command(
+                goto="agent",
+                update={
+                    "messages": [HumanMessage(content="Continue")],
+                    "tool_call_count": tool_call_count + 1,
+                },
+            )
 
-    return Command(
-        goto="tools",
-    )
+    return Command(goto="tools")

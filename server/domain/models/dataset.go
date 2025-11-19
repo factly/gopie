@@ -17,6 +17,9 @@ type Dataset struct {
 	RowCount int `json:"row_count" example:"1000"`
 	// Column definitions of the dataset
 	Columns []map[string]any `json:"columns"`
+	// Source of the dataset
+	// can be 'file', 'database', 'api', etc.
+	Source string `json:"source" example:"file"`
 	// Size of the dataset in bytes
 	Size int `json:"size" example:"1048576"`
 	// File path of the dataset
@@ -56,6 +59,7 @@ type ListProjectDatasetsResults struct {
 	RowCount int `json:"rowCount" example:"1000"`
 	// Column definitions
 	Columns map[string]any `json:"columns"`
+	Source  string         `json:"source" example:"file"`
 	// When the dataset was added to the project
 	AddedAt time.Time `json:"addedAt" example:"2024-02-05T12:00:00Z"`
 	// File path of the dataset
@@ -96,6 +100,7 @@ type CreateDatasetParams struct {
 	RowCount int `json:"rows" example:"1000"`
 	// Column definitions
 	Columns []map[string]any `json:"columns"`
+	Source  string           `json:"source" example:"file"`
 	// Size of the dataset in bytes
 	Size         int    `json:"size" example:"1048576"`
 	OrgID        string `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440000"` // Organization ID to which the dataset belongs

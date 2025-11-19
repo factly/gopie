@@ -7,6 +7,8 @@ requires-python = ">=3.11"
 
 dependencies = [
   "aioboto3>=14.3.0",
+  "altair>=5.5.0",
+  "dspy-ai>=2.5.0",
   "e2b-code-interpreter>=1.5.1",
   "fastapi[standard]>=0.115.12",
   "langchain>=0.3.21",
@@ -17,10 +19,13 @@ dependencies = [
   "langgraph-cli[inmem]>=0.3.3",
   "langsmith>=0.3.42",
   "logging>=0.4.9.6",
+  "pillow>=12.0.0",
   "portkey-ai>=1.11.1",
   "pre-commit>=4.2.0",
   "pydantic>=2.10.6",
   "qdrant-client>=1.13.3",
+  "vega-datasets>=0.9.0",
+  "vl-convert-python>=1.8.0",
 ]
 
 [tool.black]
@@ -49,6 +54,7 @@ line_length = 100
 [tool.pytest.ini_options]
 testpaths = ["tests/e2e", "tests/unit"]
 addopts = """
+    --capture=no
     --tb=short
     --strict-markers
     --durations=5

@@ -1,8 +1,8 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/factly/gopie/domain"
@@ -10,10 +10,56 @@ import (
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
-	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"go.uber.org/zap"
-	"vitess.io/vitess/go/vt/sqlparser"
 )
+
+// resourceCleanup defines what resources need to be cleaned up in case of an error
+// This is similar to the implementation in s3/create.go
+// (tableName, datasetID, orgID, sourceID, booleans for dataset, summary, source)
+type resourceCleanup struct {
+	tableName  string
+	datasetID  string
+	orgID      string
+	sourceID   string
+	hasDataset bool
+	hasSummary bool
+	hasSource  bool
+}
+
+// cleanupResources handles cleanup of created resources in case of errors
+func (h *httpHandler) cleanupResources(rc resourceCleanup) {
+	// Delete dataset summary if it was created
+	if rc.hasSummary {
+		summaryErr := h.datasetSvc.DeleteDatasetSummary(rc.tableName)
+		if summaryErr != nil {
+			h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", rc.tableName))
+		}
+	}
+
+	// Delete dataset record if it was created
+	if rc.hasDataset {
+		deleteErr := h.datasetSvc.Delete(rc.datasetID, rc.orgID)
+		if deleteErr != nil {
+			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", rc.datasetID))
+		}
+	}
+
+	// Delete database source record if it was created
+	if rc.hasSource {
+		deleteSErr := h.dbSourceSvc.Delete(rc.sourceID)
+		if deleteSErr != nil {
+			h.logger.Error("Failed to delete database source during cleanup", zap.Error(deleteSErr), zap.String("source_id", rc.sourceID))
+		}
+	}
+
+	// Always try to drop the OLAP table if tableName is provided
+	if rc.tableName != "" {
+		dropErr := h.olapSvc.DropTable(rc.tableName)
+		if dropErr != nil {
+			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", rc.tableName))
+		}
+	}
+}
 
 // createRequestBody represents the request body for creating a database source
 // @Description Request body for creating a database source dataset
@@ -24,6 +70,8 @@ type createRequestBody struct {
 	ConnectionString string `json:"connection_string" validate:"required" example:"postgres://username:password@localhost:5432/database"`
 	// SQL query to execute
 	SQLQuery string `json:"sql_query" validate:"required" example:"SELECT * FROM users"`
+	// Timestamp column for incremental updates
+	TimestampColumn string `json:"timestamp_column" validate:"omitempty,min=1" example:"updated_at"`
 	// Description of the dataset
 	Description string `json:"description,omitempty" validate:"omitempty,min=10,max=1000" example:"User data from our production database"`
 	// ID of the project to add the dataset to
@@ -41,21 +89,14 @@ type createRequestBody struct {
 // @Accept json
 // @Produce json
 // @Param body body createRequestBody true "Create request parameters"
-// @Success 201 {object} responses.SuccessResponse{data=models.Dataset}
+// @Success 201 {object} responses.SuccessResponse{data=map[string]interface{}{"dataset":models.Dataset,"summary":any}}
 // @Failure 400 {object} responses.ErrorResponse "Invalid request body or database connection error"
 // @Failure 404 {object} responses.ErrorResponse "Project not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /source/database/upload [post]
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
-	orgID := ctx.Get(middleware.OrganizationIDHeader)
-	if orgID == "" {
-		h.logger.Error("Organization ID header is missing")
-		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error":   "Organization ID header is required",
-			"message": "Please provide the organization ID in the request header",
-			"code":    fiber.StatusForbidden,
-		})
-	}
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
 
 	// Get request body from context
 	var body createRequestBody
@@ -73,16 +114,6 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Invalid request body",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
-
-	err = h.parseSQLQuery(body.SQLQuery, body.Driver)
-	if err != nil {
-		h.logger.Error("Error parsing SQL query", zap.Error(err))
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Invalid SQL query",
 			"code":    fiber.StatusBadRequest,
 		})
 	}
@@ -136,16 +167,14 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 
 	time.Sleep(2 * time.Second) // Wait for the table to be created in OLAP
 
+	cleanup := resourceCleanup{
+		tableName: tableName,
+	}
+
 	count, columns, err := h.getMetrics(tableName)
 	if err != nil {
 		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", tableName))
-
-		// Clean up the created OLAP table since metrics fetch failed
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-
+		h.cleanupResources(cleanup)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error fetching dataset metrics",
@@ -153,86 +182,10 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
-	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
-		Name:         tableName,
-		Description:  body.Description,
-		ProjectID:    project.ID,
-		Columns:      columns,
-		RowCount:     count,
-		Alias:        body.Alias,
-		CreatedBy:    body.CreatedBy,
-		UpdatedBy:    body.CreatedBy,
-		OrgID:        orgID,
-		CustomPrompt: body.CustomPrompt,
-	})
-	if err != nil {
-		h.logger.Error("Error creating dataset record", zap.Error(err))
-
-		// Clean up the created OLAP table since dataset record creation failed
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating dataset record",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	dbSourceParams := &models.CreateDatabaseSourceParams{
-		ConnectionString: body.ConnectionString,
-		SQLQuery:         body.SQLQuery,
-		Alias:            body.Alias,
-		Description:      body.Description,
-		OrganizationID:   orgID,
-		ProjectID:        project.ID,
-		DatasetID:        dataset.ID,
-		CreatedBy:        body.CreatedBy,
-		Driver:           body.Driver,
-	}
-
-	source, err := h.dbSourceSvc.Create(dbSourceParams)
-	if err != nil {
-		// Clean up the created OLAP table since source creation failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-		}
-
-		h.logger.Error("Error creating database source", zap.Error(err))
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating database source",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
 	datasetSummary, err := h.olapSvc.GetDatasetSummary(tableName)
 	if err != nil {
 		h.logger.Error("Error fetching dataset summary", zap.Error(err))
-
-		// Clean up the dataset record and OLAP table since dataset summary fetch failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-		}
-
-		deleteSErr := h.dbSourceSvc.Delete(source.ID)
-		if deleteSErr != nil {
-			h.logger.Error("Failed to delete database source during cleanup", zap.Error(deleteSErr), zap.String("source_id", source.ID))
-		}
-
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-
+		h.cleanupResources(cleanup)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error fetching dataset summary",
@@ -240,32 +193,139 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		})
 	}
 
+	summaryBytes, _ := json.Marshal(datasetSummary)
+	summaryString := string(summaryBytes)
+	cleanup.hasSummary = true
+	rows, err := h.olapSvc.ExecuteQuery(fmt.Sprintf("select * from %s order by random() limit 50", tableName))
+	if err != nil {
+		h.logger.Error("Error fetching sample rows", zap.Error(err))
+		h.cleanupResources(cleanup)
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching sample rows",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	rowsBytes, _ := json.Marshal(rows)
+	rowsString := string(rowsBytes)
+
+	descriptions, err := h.aiSvc.GenerateColumnDescriptions(rowsString, summaryString)
+	if err != nil {
+		h.logger.Error("Error generating column descriptions", zap.Error(err))
+		h.cleanupResources(cleanup)
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error fetching dataset metrics",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	columnNames := make([]string, 0, len(*datasetSummary))
+
+	if descriptions != nil {
+		for i := range *datasetSummary {
+			columnNames = append(columnNames, (*datasetSummary)[i].ColumnName)
+			(*datasetSummary)[i].Description = descriptions[(*datasetSummary)[i].ColumnName]
+		}
+	}
+
+	datasetDesciption, err := h.aiSvc.GenerateDatasetDescription(
+		body.Alias,
+		columnNames,
+		descriptions,
+		rowsString,
+		summaryString,
+	)
+	if err != nil {
+		h.logger.Error("Error generating dataset description", zap.Error(err))
+		h.cleanupResources(cleanup)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate dataset description")
+	}
+	// override the description provided by user for now
+	body.Description = datasetDesciption
+
+	dataset, err := h.datasetSvc.Create(&models.CreateDatasetParams{
+		Name:         tableName,
+		Description:  body.Description,
+		ProjectID:    project.ID,
+		Columns:      columns,
+		RowCount:     count,
+		Source:       "database",
+		Alias:        body.Alias,
+		CreatedBy:    userID,
+		UpdatedBy:    userID,
+		OrgID:        orgID,
+		CustomPrompt: body.CustomPrompt,
+	})
+	if err != nil {
+		h.logger.Error("Error creating dataset record", zap.Error(err))
+		h.cleanupResources(cleanup)
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating dataset record",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+	cleanup.hasDataset = true
+	cleanup.datasetID = dataset.ID
+	cleanup.orgID = dataset.OrgID
+
+	var lastUpdateAt string
+
+	if body.TimestampColumn == "" {
+		lastUpdateAt = ""
+	} else {
+		t, err := h.olapSvc.GetLatestTimestamp(tableName, body.TimestampColumn)
+		if err != nil {
+			h.logger.Error("Error fetching latest timestamp", zap.Error(err))
+			h.cleanupResources(cleanup)
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Error fetching latest timestamp",
+				"code":    fiber.StatusInternalServerError,
+			})
+		}
+		if t != nil {
+			lastUpdateAt = *t
+		}
+	}
+
+	dbSourceParams := &models.CreateDatabaseSourceParams{
+		ConnectionString: body.ConnectionString,
+		SQLQuery:         body.SQLQuery,
+		OrganizationID:   orgID,
+		TimestampColumn:  body.TimestampColumn,
+		DatasetID:        dataset.ID,
+		LastUpdatedAt:    lastUpdateAt,
+		Driver:           body.Driver,
+	}
+
+	source, err := h.dbSourceSvc.Create(dbSourceParams)
+	if err != nil {
+		h.logger.Error("Error creating database source", zap.Error(err))
+		h.cleanupResources(cleanup)
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error creating database source",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+	cleanup.hasSource = true
+	cleanup.sourceID = source.ID
+
 	summary, err := h.datasetSvc.CreateDatasetSummary(tableName, datasetSummary)
 	if err != nil {
 		h.logger.Error("Error creating dataset summary", zap.Error(err))
-
-		// Clean up the dataset record and OLAP table since dataset summary creation failed
-		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-		}
-
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-
-		deleteSErr := h.dbSourceSvc.Delete(source.ID)
-		if deleteSErr != nil {
-			h.logger.Error("Failed to delete database source during cleanup", zap.Error(deleteSErr), zap.String("source_id", source.ID))
-		}
-
+		cleanup.hasSummary = true
+		h.cleanupResources(cleanup)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error creating dataset summary",
 			"code":    fiber.StatusInternalServerError,
 		})
 	}
+	cleanup.hasSummary = true
 
 	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
 		DatasetID: dataset.ID,
@@ -273,28 +333,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
-
-		// Clean up all created resources since schema upload failed
-		summaryErr := h.datasetSvc.DeleteDatasetSummary(tableName)
-		if summaryErr != nil {
-			h.logger.Error("Failed to delete dataset summary during cleanup", zap.Error(summaryErr), zap.String("dataset_name", tableName))
-		}
-
-		deleteSErr := h.dbSourceSvc.Delete(source.ID)
-		if deleteSErr != nil {
-			h.logger.Error("Failed to delete database source during cleanup", zap.Error(deleteSErr), zap.String("source_id", source.ID))
-		}
-
-		deleteErr := h.datasetSvc.Delete(dataset.ID, dataset.OrgID)
-		if deleteErr != nil {
-			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", dataset.ID))
-		}
-
-		dropErr := h.olapSvc.DropTable(tableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", tableName))
-		}
-
+		h.cleanupResources(cleanup)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),
 			"message": "Error uploading schema to AI agent",
@@ -313,65 +352,4 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 			"summary": summary,
 		},
 	})
-}
-
-// parse and validate sql query
-func (h *httpHandler) parseSQLQuery(sqlQuery, driver string) error {
-	// First check if the query starts with SELECT (case insensitive)
-	trimmedQuery := strings.TrimSpace(sqlQuery)
-	if !strings.HasPrefix(strings.ToUpper(trimmedQuery), "SELECT") {
-		h.logger.Error("SQL query must be a SELECT statement")
-		return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
-	}
-
-	switch driver {
-	case "postgres":
-		parseResult, err := pg_query.Parse(sqlQuery)
-		if err != nil {
-			h.logger.Error("Error parsing PostgreSQL query", zap.Error(err))
-			return fmt.Errorf("invalid SQL query: %w", err)
-		}
-
-		if len(parseResult.GetStmts()) == 0 {
-			h.logger.Error("No statements found in SQL query")
-			return fmt.Errorf("invalid SQL query: no statements found")
-		}
-
-		// Check if the query is a SELECT statement for PostgreSQL
-		stmt := parseResult.GetStmts()[0]
-		if stmt.GetStmt().GetSelectStmt() == nil {
-			h.logger.Error("SQL query must be a SELECT statement")
-			return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
-		}
-
-		return nil
-	case "mysql":
-		// For MySQL, use the vitess parser
-		parser, err := sqlparser.New(sqlparser.Options{})
-		if err != nil {
-			h.logger.Error("Error creating SQL parser", zap.Error(err))
-			return fmt.Errorf("invalid SQL query: %w", err)
-		}
-
-		parseResult, err := parser.Parse(sqlQuery)
-		if err != nil {
-			h.logger.Error("Error parsing SQL query", zap.Error(err))
-			return fmt.Errorf("invalid SQL query: %w", err)
-		}
-
-		if parseResult == nil {
-			h.logger.Error("No result from SQL parser")
-			return fmt.Errorf("invalid SQL query: parsing returned no result")
-		}
-
-		// Check if the query is a SELECT statement
-		if _, ok := parseResult.(*sqlparser.Select); !ok {
-			h.logger.Error("SQL query must be a SELECT statement")
-			return fmt.Errorf("invalid SQL query: only SELECT statements are allowed")
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("unsupported database driver: %s", driver)
 }

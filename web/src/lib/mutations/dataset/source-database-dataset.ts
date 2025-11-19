@@ -10,6 +10,7 @@ interface SourceDatabaseDatasetParams {
   sql_query: string;
   description?: string;
   custom_prompt?: string;
+  timestamp_column?: string;
 }
 
 interface SourceDatabaseDatasetResponse {
@@ -49,6 +50,7 @@ export const useSourceDatabaseDataset = createMutation({
         project_id: params.project_id,
         sql_query: params.sql_query,
         custom_prompt: params.custom_prompt,
+        timestamp_column: params.timestamp_column,
       },
     });
 

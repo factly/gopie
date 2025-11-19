@@ -6,17 +6,10 @@ from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.services.gopie.sql_executor import execute_sql, truncate_if_too_large
-from app.workflow.events.event_utils import (
-    configure_node,
-    non_streaming_dynamic_message,
-)
+from app.workflow.events.event_utils import non_streaming_dynamic_message
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
-@configure_node(
-    role="intermediate",
-    progress_message="Executing the Generating Queries ...",
-)
 async def execute_query(state: State, config: RunnableConfig) -> dict:
     """
     Executes all planned SQL queries for the current subquery in the workflow state and updates the state with results or error messages.
@@ -37,7 +30,11 @@ async def execute_query(state: State, config: RunnableConfig) -> dict:
         sql_queries = query_result.subqueries[query_index].sql_queries
 
         if not sql_queries:
-            pass
+            return {
+                "messages": [
+                    IntermediateStep(content="No SQL queries to execute, skipping execution.")
+                ],
+            }
 
         sql_results: list[SqlQueryInfo] = []
 

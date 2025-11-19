@@ -10,8 +10,9 @@ insert into datasets (
     created_by,
     updated_by,
     org_id,
-    custom_prompt
-) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    custom_prompt,
+    source
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 returning *;
 
 -- name: GetDataset :one
@@ -28,7 +29,7 @@ set
     alias = coalesce($6, alias),
     updated_by = coalesce($7, updated_by),
     custom_prompt = coalesce($8, custom_prompt)
-where id = $9 and org_id = $10
+where id = $9::uuid and org_id = $10
 returning *;
 
 -- name: DeleteDataset :exec

@@ -55,7 +55,15 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
         sandbox = state.get("sandbox")
         result_paths = response.get("visualization_json_paths", [])
         png_paths = response.get("visualization_png_paths", [])
-        executed_python_code = state["executed_python_code"]
+        executed_python_code_dict = state.get("executed_python_code", {})
+
+        if executed_python_code_dict:
+            code_parts = []
+            for name, code in executed_python_code_dict.items():
+                code_parts.append(f"# {'=' * 60}\n# Visualization: {name}\n# {'=' * 60}\n\n{code}")
+            executed_python_code = "\n\n".join(code_parts)
+        else:
+            executed_python_code = ""
 
         if not isinstance(result_paths, list) or not all(isinstance(r, dict) for r in result_paths):
             raise ValueError("Invalid visualization json paths")

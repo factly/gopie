@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/factly/gopie/application/repositories"
 	"github.com/factly/gopie/domain"
@@ -21,6 +22,10 @@ type OlapService struct {
 	logger *logger.Logger
 }
 
+func (d *OlapService) GetDB() *sql.DB {
+	return d.olap.GetDB().(*sql.DB)
+}
+
 func NewOlapService(olap repositories.OlapRepository, logger *logger.Logger) *OlapService {
 	return &OlapService{
 		olap:   olap,
@@ -28,7 +33,7 @@ func NewOlapService(olap repositories.OlapRepository, logger *logger.Logger) *Ol
 	}
 }
 
-func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name string, alterColumnNames map[string]string, ignoreError bool) (*models.UploadDatasetResult, error) {
+func (d *OlapService) IngestS3File(tx *sql.Tx, ctx context.Context, s3Path string, name string, alterColumnNames map[string]string, ignoreError bool) (*models.UploadDatasetResult, error) {
 	tableName := name
 	if tableName == "" {
 		tableName = fmt.Sprintf("gp_%s", pkg.RandomString(13))
@@ -37,7 +42,13 @@ func (d *OlapService) IngestS3File(ctx context.Context, s3Path string, name stri
 	parts := strings.Split(s3Path, "/")
 	formatParts := strings.Split(parts[len(parts)-1], ".")
 	format := formatParts[len(formatParts)-1]
-	err := d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames, ignoreError)
+	var err error
+	if tx == nil {
+		err = d.olap.CreateTableFromS3(s3Path, tableName, format, alterColumnNames, ignoreError)
+	} else {
+		err = d.olap.CreateTableFromS3WithTx(tx, s3Path, tableName, format, alterColumnNames, ignoreError)
+	}
+
 	return &models.UploadDatasetResult{
 		FilePath:  s3Path,
 		Size:      0,
@@ -415,6 +426,10 @@ func (d *OlapService) DropTable(tableName string) error {
 	return d.olap.DropTable(tableName)
 }
 
+func (d *OlapService) DropTableWithTx(tx *sql.Tx, tableName string) error {
+	return d.olap.DropTableWithTx(tx, tableName)
+}
+
 func (d *OlapService) CreateTableFromPostgres(connectionString, sqlQuery, tableName string) error {
 	return d.olap.CreateTableFromPostgres(connectionString, sqlQuery, tableName)
 }
@@ -425,4 +440,28 @@ func (d *OlapService) CreateTableFromMySql(connectionString, sqlQuery, tableName
 
 func (d *OlapService) TableNames(sql string) ([]string, error) {
 	return d.olap.TableNames(sql)
+}
+
+func (d *OlapService) Close() error {
+	return d.olap.Close()
+}
+
+func (d *OlapService) FullTableRefreshPostgres(connectionString, sqlQuery, tableName string) error {
+	return d.olap.FullTableRefreshPostgres(connectionString, sqlQuery, tableName)
+}
+
+func (d *OlapService) FullTableRefreshMySQL(connectionString, sqlQuery, tableName string) error {
+	return d.olap.FullTableRefreshMySQL(connectionString, sqlQuery, tableName)
+}
+
+func (d *OlapService) IncrementalRefreshPostgres(connectionString, sqlQuery, tableName, timestampColumn string, lastRefreshTimestamp *time.Time) error {
+	return d.olap.IncrementalRefreshPostgres(connectionString, sqlQuery, tableName, timestampColumn, lastRefreshTimestamp)
+}
+
+func (d *OlapService) IncrementalRefreshMySQL(connectionString, sqlQuery, tableName, timestampColumn string, lastRefreshTimestamp *time.Time) error {
+	return d.olap.IncrementalRefreshMySQL(connectionString, sqlQuery, tableName, timestampColumn, lastRefreshTimestamp)
+}
+
+func (d *OlapService) GetLatestTimestamp(tableName, timestampColumn string) (*string, error) {
+	return d.olap.GetLatestTimestamp(tableName, timestampColumn)
 }
