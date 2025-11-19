@@ -49,6 +49,10 @@ class ColumnValueMatching(BaseModel):
         match_type: str = "fuzzy"
         found_similar_values: bool
         similar_values: list[str] = []
+        match_source: str | None = None
+        relevance_score: float | None = None
+        is_relevant: bool | None = None
+        error_message: str | None = None
 
     class ColumnAnalysis(BaseModel):
         column_name: str

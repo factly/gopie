@@ -9,7 +9,8 @@ class Settings(BaseSettings):
 
     MAX_TOOL_CALL_LIMIT: int = 10
     MAX_VALIDATION_RETRY_COUNT: int = 2
-    MAX_VIZ_TOOL_CALLS: int = 5
+    MAX_SEMANTIC_SEARCH_RETRY: int = 1
+    MAX_VIZ_TOOL_CALLS: int = 12
 
     CORS_ORIGINS: list[str] = ["*"]
     CORS_METHODS: list[str] = ["*"]

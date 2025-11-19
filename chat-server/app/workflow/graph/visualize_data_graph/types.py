@@ -6,6 +6,12 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel
 
 
+def add_python_code(existing: dict | None, new: dict) -> dict:
+    if existing is None:
+        return new
+    return {**existing, **new}
+
+
 class Dataset(BaseModel):
     data: list[list[Any]]
     description: str
@@ -45,7 +51,7 @@ class State(TypedDict):
     sandbox: AsyncSandbox | None
     is_input_prepared: bool
     s3_paths: list[S3Path]
-    executed_python_code: str | None
+    executed_python_code: Annotated[dict[str, str], add_python_code]
     relevant_sql_queries: list[str] | None
     result_images_b64: list[str]
     tool_call_count: int

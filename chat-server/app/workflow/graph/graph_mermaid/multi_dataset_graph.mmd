@@ -6,6 +6,7 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	generate_subqueries(generate_subqueries)
+	semantic_search(semantic_search)
 	identify_datasets(identify_datasets)
 	analyze_query(analyze_query)
 	plan_query(plan_query)
@@ -18,24 +19,27 @@ graph TD;
 	pass_on_results(pass_on_results)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> analyze_query;
-	analyze_dataset --> plan_query;
+	analyze_dataset -.-> plan_query;
 	analyze_query -.-> generate_subqueries;
 	analyze_query -. &nbsp;basic_conversation&nbsp; .-> route_response;
 	analyze_query -.-> tools;
 	execute_query --> validate_result;
-	generate_subqueries --> identify_datasets;
+	generate_subqueries --> semantic_search;
 	identify_datasets -.-> analyze_dataset;
 	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
+	identify_datasets -. &nbsp;retry_semantic_search&nbsp; .-> semantic_search;
 	plan_query --> execute_query;
 	route_response -.-> pass_on_results;
 	route_response -.-> stream_updates;
+	semantic_search --> identify_datasets;
 	stream_updates -. &nbsp;end_execution&nbsp; .-> __end__;
-	stream_updates -. &nbsp;next_sub_query&nbsp; .-> identify_datasets;
+	stream_updates -. &nbsp;next_sub_query&nbsp; .-> semantic_search;
 	tools --> analyze_query;
-	validate_result -. &nbsp;reidentify_datasets&nbsp; .-> identify_datasets;
 	validate_result -. &nbsp;replan&nbsp; .-> plan_query;
 	validate_result -.-> route_response;
+	validate_result -. &nbsp;reidentify_datasets&nbsp; .-> semantic_search;
 	pass_on_results --> __end__;
+	analyze_dataset -.-> analyze_dataset;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

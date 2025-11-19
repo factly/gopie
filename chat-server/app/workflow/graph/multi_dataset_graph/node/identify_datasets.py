@@ -6,9 +6,7 @@ from app.core.constants import DATASETS_USED, DATASETS_USED_ARG
 from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.services.qdrant.get_schema import get_schema_by_dataset_ids
-from app.services.qdrant.schema_search import search_schemas
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
-from app.utils.model_registry.model_provider import get_model_provider
 from app.workflow.events.event_utils import (
     configure_node,
     fake_streaming_response,
@@ -31,6 +29,16 @@ class IdentifyDatasetsOutput(BaseModel):
     node_message: str = Field(description="Brief message about selected datasets and their sources")
     status_message: str = Field(
         description="Status message about the progress of the identify_datasets node"
+    )
+    missing_requirements: str | None = Field(
+        description="""
+        If selected datasets DO NOT contain all necessary data to fully answer the user query,
+        describe what TYPE of data or relationships are missing. Be specific about the DATA CONCEPT
+        needed, not necessarily exact table names. Examples: 'need order/purchase data linked to
+        customers', 'missing product information to complete order details', 'require transaction
+        history connected via user reference'. Focus on describing the relationship and data domain.
+        Leave EMPTY if the selected datasets can fully answer the query.""",
+        default=None,
     )
 
 
@@ -58,29 +66,15 @@ async def identify_datasets(state: State, config: RunnableConfig):
     query_index = state.get("subquery_index", 0)
     user_query = state.get("subqueries")[query_index] if state.get("subqueries") else "No input"
     query_result = state.get("query_result", {})
-    dataset_ids = state.get("dataset_ids", [])
-    project_ids = state.get("project_ids", [])
     validation_result = state.get("validation_result", None)
-
     relevant_datasets_ids = state.get("relevant_datasets_ids", [])
 
     try:
-        embeddings_model = get_model_provider(config).get_embeddings_model()
-
         relevant_dataset_schemas = await get_schema_by_dataset_ids(
             dataset_ids=relevant_datasets_ids
         )
 
-        semantic_searched_datasets = []
-        try:
-            semantic_searched_datasets = await search_schemas(
-                user_query=user_query,
-                embeddings=embeddings_model,
-                dataset_ids=dataset_ids,
-                project_ids=project_ids,
-            )
-        except Exception as e:
-            logger.exception(f"Vector search error: {e!s}. Unable to retrieve dataset information.")
+        semantic_searched_datasets = state.get("semantic_search_results", [])
 
         if not semantic_searched_datasets:
             query_result.set_node_message(
@@ -171,6 +165,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             "query_result": query_result,
             "datasets_info": datasets_info,
             "identified_datasets": selected_datasets,
+            "missing_dataset_context": response.missing_requirements,
             "messages": [IntermediateStep(content=node_message)],
         }
 
@@ -199,18 +194,19 @@ async def identify_datasets(state: State, config: RunnableConfig):
 def route_from_datasets(state: State) -> str:
     """
     Route to the appropriate next node based on dataset identification results.
-
-    This function determines whether to proceed with data analysis or
-    route directly to response generation for conversational queries.
     """
-
     last_message = state.get("messages", [])[-1] if state.get("messages") else None
     identified_datasets = state.get("identified_datasets")
+    semantic_search_retry_count = state.get("semantic_search_retry_count", 0)
+    missing_dataset_context = state.get("missing_dataset_context")
 
     if isinstance(last_message, ErrorMessage):
-        return "analyze_dataset"
+        return "no_datasets_found"
+
+    if missing_dataset_context and semantic_search_retry_count < 1:
+        return "retry_semantic_search"
 
     if not identified_datasets:
         return "no_datasets_found"
-    else:
-        return "analyze_dataset"
+
+    return "analyze_dataset"
