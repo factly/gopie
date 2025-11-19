@@ -116,6 +116,7 @@ export interface Dataset {
   created_by: string;
   updated_by: string;
   custom_prompt?: string;
+  source: "file" | "database" | "other";
 }
 
 // Chat Types
