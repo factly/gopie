@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { nextApiClient } from "@/lib/api-client";
 import { UIMessage } from "ai";
 import { createInfiniteQuery } from "react-query-kit";
 
@@ -233,8 +233,8 @@ async function fetchMessages(
       page: context.pageParam.toString(),
     });
 
-    const response = await apiClient.get(
-      `v1/api/chat/${chatId}/messages?${searchParams}`
+    const response = await nextApiClient.get(
+      `api/chat/${chatId}/messages?${searchParams}`
     );
 
     const messagesResponse: MessagesResponse = await response.json();

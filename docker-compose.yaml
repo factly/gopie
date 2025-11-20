@@ -189,10 +189,12 @@ services:
       - gopie
     entrypoint: >
       /bin/sh -c "
-        echo 'Minio is up. Creating the bucket!!' &&
+        echo 'Minio is up. Creating required buckets...' &&
         /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
-        /usr/bin/mc anonymous set public myminio/gopie
+        /usr/bin/mc mb -p myminio/downloads &&
+        /usr/bin/mc anonymous set private myminio/gopie &&
+        /usr/bin/mc anonymous set private myminio/gopie/visualizations
       "
 
   gopie-reindex:
