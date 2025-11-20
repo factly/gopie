@@ -32,7 +32,7 @@ export function useChatSession({
 }: UseChatSessionProps) {
   const queryClient = useQueryClient();
   const { selectChatForDataset } = useChatStore();
-  const { setIsOpen: setSqlPanelOpen, setResults: setSqlResults, setIsLoading: setSqlLoading, resetExecutedQueries } = useSqlStore();
+const { setIsOpen: setSqlPanelOpen, setResults: setSqlResults, setIsLoading: setSqlLoading, resetExecutedQueries, setOnPageChange, resetPagination } = useSqlStore();
   const { clearPaths, setPaths: setVisualizationPaths } = useVisualizationStore();
   const { setActiveTab } = useResultsPanelStore();
   const executeSql = useDatasetSql();
@@ -183,16 +183,20 @@ export function useChatSession({
           if (!executedQueriesRef.current.has(queryKey) && !sqlExecutionMutexRef.current.has(queryKey)) {
             // Mark as executed immediately to prevent other calls
             executedQueriesRef.current.add(queryKey);
-
-            // Create a promise for this execution to act as a mutex
-            const executionPromise = (async () => {
+            resetPagination();
+      
+            // Define a single query executor (with pagination support)
+            const executeQuery = async (page: number = 1, limit: number = 20) => {
+              const offset = (page - 1) * limit;
+              setSqlLoading(true);
+      
               try {
-                setSqlLoading(true);
                 const result = await executeSql.mutateAsync({
                   query: sqlData.query,
-                  limit: 20,
-                  offset: 0,
+                  limit,
+                  offset,
                 });
+      
                 setSqlResults({
                   data: result.data ?? [],
                   total: result.count ?? result.data?.length ?? 0,
@@ -201,6 +205,7 @@ export function useChatSession({
                   query: sqlData.query,
                   chatId: chatId ?? undefined,
                 });
+      
                 setSqlPanelOpen(true);
                 setActiveTab("sql");
               } catch (error) {
@@ -220,12 +225,22 @@ export function useChatSession({
                 // Clean up the mutex after execution completes
                 sqlExecutionMutexRef.current.delete(queryKey);
               }
+            };
+      
+            // Hook pagination into the query executor
+            setOnPageChange((page: number, limit: number) => {
+              executeQuery(page, limit);
+            });
+      
+            // Create a promise for this first execution (page 1)
+            const executionPromise = (async () => {
+              await executeQuery(1, 20);
             })();
 
             // Store the promise in the mutex map
             sqlExecutionMutexRef.current.set(queryKey, executionPromise);
-
-            // Execute the promise
+      
+            // Execute asynchronously
             queueMicrotask(() => executionPromise);
           }
         }
