@@ -68,7 +68,9 @@ export const ChatView = React.memo(
           ) : !selectedChatId && messages.length === 0 ? null : (
             <div className="space-y-6">
               {messages
-              .filter((m, idx, arr) => arr.findIndex((x) => x.id === m.id) === idx)
+              .filter(
+                (m, idx, arr) => arr.findIndex((x) => x.id === m.id) === idx
+              )
               .map((message) => (
                 <ChatMessage
                   key={message.id}

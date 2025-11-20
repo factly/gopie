@@ -223,6 +223,7 @@ async def process_query(state: State, config: RunnableConfig) -> dict:
             }
 
         else:
+            query_result.single_dataset_query_result.sql_results = []
             query_result.single_dataset_query_result.response_for_non_sql = response_for_non_sql
 
             await adispatch_custom_event(

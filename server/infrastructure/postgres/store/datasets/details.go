@@ -48,13 +48,14 @@ func (s *PgDatasetStore) Details(ctx context.Context, datasetID string, orgID st
 		Columns:      columns,
 		OrgID:        d.OrgID.String,
 		CustomPrompt: d.CustomPrompt.String,
+		Source:       d.Source,
 	}, nil
 }
 
 func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string, orgID string) (*models.Dataset, error) {
 	d, err := s.q.GetDatasetByName(ctx, gen.GetDatasetByNameParams{
 		Name:  tableName,
-		OrgID: pgtype.Text{String: orgID, Valid: false},
+		OrgID: pgtype.Text{String: orgID, Valid: true},
 	})
 	if err != nil {
 		s.logger.Error("Error fetching dataset", zap.Error(err))
@@ -83,6 +84,7 @@ func (s *PgDatasetStore) GetByTableName(ctx context.Context, tableName string, o
 		Columns:      columns,
 		OrgID:        d.OrgID.String,
 		CustomPrompt: d.CustomPrompt.String,
+		Source:       d.Source,
 	}, nil
 }
 

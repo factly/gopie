@@ -3,13 +3,14 @@ from langgraph.graph import END, START, StateGraph
 from app.tool_utils.tool_node import ModifiedToolNode as ToolNode
 from app.tool_utils.tools import ToolNames
 
-from .node.analyze_dataset import analyze_dataset
+from .node.analyze_dataset import analyze_dataset, route_from_analyze_dataset
 from .node.analyze_query import analyze_query, route_from_analysis
 from .node.execute_query import execute_query
 from .node.generate_subqueries import generate_subqueries
 from .node.identify_datasets import identify_datasets, route_from_datasets
 from .node.plan_query import plan_query
 from .node.response_handler import route_response_handler
+from .node.semantic_search import semantic_search
 from .node.stream_updates import (
     check_further_execution_requirement,
     stream_updates,
@@ -25,6 +26,7 @@ graph_builder = StateGraph(
 )
 
 graph_builder.add_node("generate_subqueries", generate_subqueries)
+graph_builder.add_node("semantic_search", semantic_search)
 graph_builder.add_node("identify_datasets", identify_datasets)
 graph_builder.add_node("analyze_query", analyze_query)
 graph_builder.add_node("plan_query", plan_query)
@@ -52,6 +54,16 @@ graph_builder.add_conditional_edges(
     {
         "analyze_dataset": "analyze_dataset",
         "no_datasets_found": "route_response",
+        "retry_semantic_search": "semantic_search",
+    },
+)
+
+graph_builder.add_conditional_edges(
+    "analyze_dataset",
+    route_from_analyze_dataset,
+    {
+        "analyze_dataset": "analyze_dataset",
+        "plan_query": "plan_query",
     },
 )
 
@@ -61,7 +73,7 @@ graph_builder.add_conditional_edges(
     {
         "route_response": "route_response",
         "replan": "plan_query",
-        "reidentify_datasets": "identify_datasets",
+        "reidentify_datasets": "semantic_search",
     },
 )
 
@@ -79,13 +91,13 @@ graph_builder.add_conditional_edges(
     check_further_execution_requirement,
     {
         "end_execution": END,
-        "next_sub_query": "identify_datasets",
+        "next_sub_query": "semantic_search",
     },
 )
 
 graph_builder.add_edge(START, "analyze_query")
-graph_builder.add_edge("generate_subqueries", "identify_datasets")
-graph_builder.add_edge("analyze_dataset", "plan_query")
+graph_builder.add_edge("generate_subqueries", "semantic_search")
+graph_builder.add_edge("semantic_search", "identify_datasets")
 graph_builder.add_edge("tools", "analyze_query")
 graph_builder.add_edge("plan_query", "execute_query")
 graph_builder.add_edge("execute_query", "validate_result")

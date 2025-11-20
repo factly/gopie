@@ -21,8 +21,8 @@ access_key_id = settings.S3_ACCESS_KEY
 secret_access_key = settings.S3_SECRET_KEY
 region = settings.S3_REGION
 bucket_name = settings.S3_BUCKET
-internal_s3_host = settings.INTERNAL_S3_HOST
-external_s3_host = settings.EXTERNAL_S3_HOST
+internal_s3_host = settings.INTERNAL_S3_HOST or "http://host.docker.internal:9000"
+external_s3_host = settings.EXTERNAL_S3_HOST or "http://host.docker.internal:9000"
 
 
 def list_to_csv(list_dict: list[list]) -> str:
@@ -70,7 +70,7 @@ def format_dataset_info(datasets: list[Dataset] | None) -> str:
     if not datasets:
         return ""
     for idx, dataset in enumerate(datasets):
-        datasets_csv_info += f"Dataset {idx + 1}: \n\n"
+        datasets_csv_info += f"Dataset {idx}: \n\n"
         datasets_csv_info += f"Description: {dataset.description}\n\n"
         datasets_csv_info += f"CSV Path: {dataset.csv_path}\n\n"
     return datasets_csv_info

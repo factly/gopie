@@ -37,6 +37,7 @@ export function DatabaseSourceForm({
   const [customPrompt, setCustomPrompt] = useState("");
   const [connectionString, setConnectionString] = useState("");
   const [sqlQuery, setSqlQuery] = useState("");
+  const [timestampColumn, setTimestampColumn] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   const sourceDatabaseDataset = useSourceDatabaseDataset();
@@ -68,6 +69,7 @@ export function DatabaseSourceForm({
         driver,
         project_id: projectId,
         created_by: "system",
+        timestamp_column: timestampColumn,
       });
 
       // Handle both response structures
@@ -157,6 +159,15 @@ export function DatabaseSourceForm({
             placeholder="SELECT id, name, order_date FROM orders WHERE order_date > '2024-01-01';"
             rows={5}
             required
+          />
+        </div>
+         <div>
+          <Label htmlFor="timestampColumn">Timestamp column</Label>
+          <Input
+            id="timestampColumn"
+            value={timestampColumn}
+            onChange={(e) => setTimestampColumn(e.target.value)}
+            placeholder="e.g., updated_at"
           />
         </div>
         <div>

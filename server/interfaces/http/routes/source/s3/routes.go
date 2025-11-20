@@ -76,5 +76,5 @@ func (h *httpHandler) getMetrics(tableName string) (int, []map[string]any, error
 func Routes(router fiber.Router, olapSvc *services.OlapService, datasetSvc *services.DatasetService, projectSvc *services.ProjectService, aiAgent *services.AIService, logger *logger.Logger) {
 	httpHandler := httpHandler{logger, olapSvc, datasetSvc, aiAgent, projectSvc}
 	router.Post("/upload", httpHandler.upload)
-	router.Post("/update", httpHandler.update)
+	router.Post("/refresh", httpHandler.refresh)
 }

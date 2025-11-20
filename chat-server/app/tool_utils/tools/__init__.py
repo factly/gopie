@@ -20,7 +20,7 @@ class ToolNames(Enum):
     PLAN_SQL_QUERY = "plan_sql_query"
     RUN_PYTHON_CODE = "run_python_code"
     RESULT_PATHS = "result_paths"
-    GET_FEEDBACK_FOR_IMAGE = "get_feedback_for_image"
+    GET_FEEDBACK_FOR_IMAGES = "get_feedback_for_images"
 
 
 def get_tool(

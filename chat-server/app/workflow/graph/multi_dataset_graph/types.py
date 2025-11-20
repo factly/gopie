@@ -56,6 +56,10 @@ class State(TypedDict):
     recommendation: str
     continue_execution: bool | None
     validation_result: str | None
+    semantic_search_results: list[DatasetSchema]
+    semantic_search_retry_count: int
+    missing_dataset_context: str | None
+    analyze_dataset_retry_count: int
 
 
 class ConfigSchema(TypedDict):

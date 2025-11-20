@@ -1,3 +1,4 @@
+import re
 from typing import Annotated
 
 from e2b_code_interpreter import AsyncSandbox
@@ -8,29 +9,47 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
 
+def extract_viz_name_from_code(code: str) -> str:
+    viz_name = set()
+    save_patterns = re.findall(r"\.save\(['\"]([^'\"]+)\.(?:json|png)['\"]\)", code)
+    for pattern in save_patterns:
+        viz_name.add(pattern)
+    return list(viz_name)[0] if viz_name else "visualization"
+
+
 @tool
 async def run_python_code(
     code: str,
     sandbox: Annotated[AsyncSandbox, InjectedState("sandbox")],
-    tool_call_count: Annotated[int, InjectedState("tool_call_count")],
     tool_call_id: Annotated[str, InjectedToolCallId],
     config: RunnableConfig,
     status_message: str = "",
 ):
-    """Run python code in a sandbox.
-    Pandas and Altair are already installed.
-    The dataset csv are saved in the `csv_path` locations.
-    Always use altair to create visualizations and save to both json and png
-    using altair.save("filename.json") and altair.save("filename.png").
-    To get any output in the logs, use the print function.
-    Eg: print("df.head()")
+    """
+    Execute Python code to create data visualizations.
 
-    Return the logs and error if any.
+    Generate ONE visualization at a time. Use descriptive names (e.g., 'revenue_trend', not 'viz1').
+    Save both .json and .png with the same name.
+
+    Example:
+    ```python
+    import pandas as pd
+    import altair as alt
+
+    df = pd.read_csv('result_0.csv')
+    chart = alt.Chart(df).mark_bar().encode(x='category:N', y='sales:Q')
+
+    chart.save('sales_by_category.json')
+    chart.save('sales_by_category.png')
+    ```
+
+    Pandas and Altair are pre-installed. CSV files are at the paths provided in the prompt.
     """
     execution = await sandbox.run_code(code)
+    code_dict = {extract_viz_name_from_code(code): code}
+
     state_update = {
-        "executed_python_code": code,
-        "tool_call_count": tool_call_count + 1,
+        "executed_python_code": code_dict,
         "messages": [
             ToolMessage(
                 tool_call_id=tool_call_id,

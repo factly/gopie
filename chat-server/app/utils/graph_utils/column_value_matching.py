@@ -1,3 +1,5 @@
+import asyncio
+
 from langsmith import traceable
 
 from app.core.log import custom_logger as logger
@@ -6,13 +8,17 @@ from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
 
 
+def _is_valid_fuzzy_value(value) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 @traceable(run_type="tool", name="match_column_values")
 async def match_column_values(
     column_assumptions: list[ColumnAssumptions],
 ) -> ColumnValueMatching:
     """
-    Match column values against exact and fuzzy values and find similar values
-    when exact matches aren't found.
+    Match column values against fuzzy values and find similar values.
+    Exact values are trusted directly without validation.
 
     Args:
         column_assumptions: List of dictionaries containing dataset and columns
@@ -21,8 +27,8 @@ async def match_column_values(
             'fuzzy_values' keys.
 
     Returns:
-        ColumnValueMatching object with analyzed datasets, matched column
-        values, and value suggestions for each dataset
+        ColumnValueMatching object with analyzed datasets and value suggestions
+        for each dataset
     """
     result = ColumnValueMatching()
 
@@ -30,16 +36,19 @@ async def match_column_values(
         logger.warning("Empty column assumptions provided")
         return result
 
-    for dataset_assumption in column_assumptions:
+    async def process_dataset(dataset_assumption):
+        """Process a single dataset and return its analysis."""
         dataset_name = dataset_assumption.get("dataset")
         columns = dataset_assumption.get("columns", [])
 
         if not dataset_name:
             logger.warning("Dataset name not found in assumption, skipping")
-            continue
+            return None
 
         dataset_analysis = ColumnValueMatching.DatasetAnalysis(dataset_name=dataset_name)
-        result.datasets[dataset_name] = dataset_analysis
+
+        # Collect fuzzy verification tasks for parallel execution
+        fuzzy_tasks = []
 
         for col_idx, column_obj in enumerate(columns):
             column_name = column_obj.get("name")
@@ -55,57 +64,45 @@ async def match_column_values(
             dataset_analysis.columns_analyzed.append(column_entry)
 
             if exact_values:
-                await verify_exact_values(
-                    column_entry=column_entry,
-                    column_name=column_name,
-                    exact_values=exact_values,
-                    table_name=dataset_name,
-                )
+                for value in exact_values:
+                    column_entry.verified_values.append(
+                        ColumnValueMatching.VerifiedValue(
+                            value=value,
+                            match_type="exact",
+                            found_in_database=True,
+                        )
+                    )
+                logger.debug(f"Trusted {len(exact_values)} exact values for '{column_name}'")
 
             if fuzzy_values:
-                await verify_fuzzy_values(
-                    column_entry=column_entry,
-                    column_name=column_name,
-                    fuzzy_values=fuzzy_values,
-                    table_name=dataset_name,
+                fuzzy_tasks.append(
+                    verify_fuzzy_values(
+                        column_entry=column_entry,
+                        column_name=column_name,
+                        fuzzy_values=fuzzy_values,
+                        table_name=dataset_name,
+                    )
                 )
+
+        # Execute all fuzzy verifications concurrently for this dataset
+        if fuzzy_tasks:
+            await asyncio.gather(*fuzzy_tasks)
+
+        return dataset_name, dataset_analysis
+
+    # Process all datasets concurrently
+    dataset_results = await asyncio.gather(*[process_dataset(ds) for ds in column_assumptions])
+
+    # Collect results, filtering out None values (skipped datasets)
+    for dataset_result in dataset_results:
+        if dataset_result is not None:
+            dataset_name, dataset_analysis = dataset_result
+            result.datasets[dataset_name] = dataset_analysis
 
     result.datasets = {k: v for k, v in result.datasets.items() if v.columns_analyzed}
 
     result.summary = f"Analyzed values for {len(result.datasets)} datasets"
     return result
-
-
-@traceable(run_type="tool", name="verify_exact_values")
-async def verify_exact_values(
-    column_entry: ColumnValueMatching.ColumnAnalysis,
-    column_name: str,
-    exact_values: list,
-    table_name: str,
-) -> None:
-    """
-    Verify exact values against the column and collect matches.
-    """
-    for value in exact_values:
-        exact_match = await check_exact_match(
-            value=value, column_name=column_name, table_name=table_name
-        )
-        if exact_match:
-            column_entry.verified_values.append(
-                ColumnValueMatching.VerifiedValue(
-                    value=value,
-                    match_type="exact",
-                    found_in_database=True,
-                )
-            )
-        else:
-            column_entry.verified_values.append(
-                ColumnValueMatching.VerifiedValue(
-                    value=value,
-                    match_type="exact",
-                    found_in_database=False,
-                )
-            )
 
 
 @traceable(run_type="tool", name="verify_fuzzy_values")
@@ -117,112 +114,77 @@ async def verify_fuzzy_values(
 ) -> None:
     """
     Verify fuzzy values against the column and collect suggestions.
+    Invalid values are marked as failed to trigger fuzzy value regeneration.
     """
     for value in fuzzy_values:
-        similar_values = await find_similar_values(
-            value=value, column_name=column_name, table_name=table_name
+        if not _is_valid_fuzzy_value(value):
+            logger.warning(f"Invalid fuzzy value: {value} (type: {type(value).__name__})")
+            continue
+
+        str_value = str(value).strip()
+        similar_values, match_source, error_message = await find_similar_values(
+            value=str_value, column_name=column_name, table_name=table_name
         )
 
-        suggestion = ColumnValueMatching.SuggestedAlternative(
-            requested_value=value,
-            match_type="fuzzy",
-            found_similar_values=bool(similar_values),
-            similar_values=similar_values,
+        column_entry.suggested_alternatives.append(
+            ColumnValueMatching.SuggestedAlternative(
+                requested_value=str_value,
+                match_type="fuzzy",
+                found_similar_values=bool(similar_values),
+                similar_values=similar_values,
+                match_source=match_source,
+                error_message=error_message,
+            )
         )
-
-        column_entry.suggested_alternatives.append(suggestion)
-
-
-@traceable(run_type="tool", name="check_exact_match")
-async def check_exact_match(value: str, column_name: str, table_name: str) -> bool:
-    """
-    Check if the value exactly matches any value in the column.
-    """
-
-    try:
-        query = f"""
-        SELECT COUNT(*) as count
-        FROM {table_name}
-        WHERE LOWER({column_name}) = LOWER('{value}')
-        """
-        result = await execute_sql(query=query)
-
-        if isinstance(result, list) and result:
-            logger.debug(f"Exact match found for '{value}' in '{column_name}'")
-            return True
-    except Exception as e:
-        logger.exception(
-            f"Error checking exact match for '{value}' in "
-            f"'{table_name}.{column_name}': {str(e)}",
-            exc_info=True,
-        )
-
-    return False
 
 
 @traceable(run_type="tool", name="find_similar_values")
-async def find_similar_values(value: str, column_name: str, table_name: str) -> list[str]:
+async def find_similar_values(
+    value: str, column_name: str, table_name: str
+) -> tuple[list[str], str, str | None]:
     """
-    Search for values in a database column that are similar to the specified value using a
-    case-insensitive substring match.
-
-    Parameters:
-        value (str): The value to search for similar entries.
-        column_name (str): The name of the column to search within.
-        table_name (str): The name of the table containing the column.
-
-    Returns:
-        list[str]: A list of up to five distinct values from the column that contain the specified
-        value as a substring, matched case-insensitively.
+    Search for similar values in database column using ILIKE, fallback to Levenshtein.
+    Returns (list of similar values, match source, error message if any).
     """
-    similar_values = []
+    escaped_value = value.replace("'", "''")
 
-    # First attempt: ILIKE matching (case-insensitive exact substring)
     try:
         query = f"""
         SELECT DISTINCT {column_name}
         FROM {table_name}
-        WHERE LOWER({column_name}) LIKE '%' || LOWER('{value}') || '%'
+        WHERE LOWER({column_name}) LIKE '%' || LOWER('{escaped_value}') || '%'
         LIMIT 5
         """
         result = await execute_sql(query=query)
 
         if isinstance(result, list) and result:
             similar_values = [str(row.get(column_name)) for row in result if row]
-            logger.debug(
-                f"Found {len(similar_values)} ILIKE matches for '{value}' in '{column_name}'"
-            )
+            logger.debug(f"Found {len(similar_values)} ILIKE matches for '{value}'")
+            return similar_values, "ilike", None
 
     except Exception as e:
-        logger.exception(
-            f"Error in ILIKE search for '{value}' in " f"'{table_name}.{column_name}': {str(e)}",
-            exc_info=True,
-        )
+        error_msg = str(e)
+        logger.error(f"ILIKE search failed for '{value}': {error_msg}")
+        return [], "sql_error", error_msg
 
-    # Fallback: Levenshtein string matching if no LIKE results found
-    if not similar_values:
-        try:
-            levenshtein_query = f"""
-            SELECT DISTINCT {column_name},
-                levenshtein(lower({column_name}), lower('{value}')) AS distance
-            FROM {table_name}
-            ORDER BY distance ASC
-            LIMIT 5;
-            """
-            levenshtein_result = await execute_sql(query=levenshtein_query)
+    try:
+        query = f"""
+        SELECT DISTINCT {column_name},
+            levenshtein(lower({column_name}), lower('{escaped_value}')) AS distance
+        FROM {table_name}
+        ORDER BY distance ASC
+        LIMIT 5;
+        """
+        result = await execute_sql(query=query)
 
-            if isinstance(levenshtein_result, list) and levenshtein_result:
-                similar_values = [str(row.get(column_name)) for row in levenshtein_result if row]
-                logger.debug(
-                    f"Found {len(similar_values)} levenshtein matches for '{value}' in '{column_name}'"
-                )
+        if isinstance(result, list) and result:
+            similar_values = [str(row.get(column_name)) for row in result if row]
+            logger.debug(f"Found {len(similar_values)} Levenshtein matches for '{value}'")
+            return similar_values, "levenshtein", None
 
-        except Exception as e:
-            logger.exception(
-                f"Levenshtein similarity search failed for '{value}' in "
-                f"'{table_name}.{column_name}': {str(e)}. "
-                "This may indicate incompatibility with DuckDB.",
-                exc_info=True,
-            )
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Levenshtein search failed for '{value}': {error_msg}")
+        return [], "sql_error", error_msg
 
-    return similar_values
+    return [], "none", None

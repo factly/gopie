@@ -49,3 +49,15 @@ func (s *PgDatasetStore) DeleteDatasetSummary(ctx context.Context, datasetName s
 	}
 	return nil
 }
+
+func (s *PgDatasetStore) DeleteSummaryWithTx(ctx context.Context, tx pgx.Tx, dataseName string) error {
+	err := gen.New(tx).DeleteDatasetSummary(ctx, dataseName)
+	if err != nil {
+		s.logger.Error("Error deleting dataset summary with tx", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrRecordNotFound
+		}
+		return err
+	}
+	return nil
+}

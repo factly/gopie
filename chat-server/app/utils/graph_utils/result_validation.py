@@ -6,7 +6,6 @@ from app.core.config import settings
 from app.core.log import custom_logger as logger
 
 
-@traceable(run_type="tool", name="is_result_too_large")
 def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
     """
     Determine if a SQL query result exceeds size limits for LLM processing.

@@ -1,24 +1,13 @@
 package duckdbsql
 
 import (
-	"database/sql"
-	"testing"
-
 	_ "github.com/marcboeker/go-duckdb/v2"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 // setupDB creates an in-memory DuckDB database connection for testing.
 // It ensures the 'json' extension is loaded, which is required for the parser.
-func setupDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("duckdb", "")
-	require.NoError(t, err)
-
-	_, err = db.Exec("INSTALL json; LOAD json;")
-	require.NoError(t, err)
-
-	return db
-}
 
 func TestAST_RewriteLimit(t *testing.T) {
 	// Test cases covering various SQL query structures and rewrite scenarios.
@@ -158,7 +147,7 @@ func TestAST_RewriteLimit(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
 			// Setup a fresh DB connection for each test to ensure isolation.
-			db := setupDB(t)
+			db := SetupTestDB(t)
 			defer db.Close()
 
 			// 1. Parse the SQL to get the AST

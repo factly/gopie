@@ -60,6 +60,8 @@ def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
             return OpenRouterLLMProvider(metadata)
         case LLMProvider.CUSTOM:
             return CustomLLMProvider(metadata)
+        case _:
+            raise ValueError(f"Unsupported LLM provider: {gateway_type}")
 
 
 def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
@@ -73,6 +75,8 @@ def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
             return OpenAIEmbeddingProvider(metadata)
         case EmbeddingProvider.CUSTOM:
             return CustomEmbeddingProvider(metadata)
+        case _:
+            raise ValueError(f"Unsupported Embedding provider: {gateway_type}")
 
 
 class ModelProvider:

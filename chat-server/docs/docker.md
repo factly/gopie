@@ -1,7 +1,3 @@
-# GoPie Chat Server Documentation
-
-Repo: https://github.com/factly/gopie
-
 ## Chat Server Docker Setup
 
 A modular Docker Compose architecture for running the chat server with AI gateway services.

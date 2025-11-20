@@ -9,15 +9,12 @@ from app.models.provider import ModelCategory, TemperatureCategory
 
 @dataclass
 class NodeConfig:
-    """Configuration for a workflow node's LLM settings"""
-
     complexity: ModelCategory
     temperature: TemperatureCategory
     json_mode: bool = False
 
     @property
     def model_id(self) -> str:
-        """Get the model ID based on complexity"""
         match self.complexity:
             case ModelCategory.FAST:
                 return settings.FAST_MODEL or settings.DEFAULT_LLM_MODEL
@@ -48,7 +45,7 @@ NODE_CONFIGS = {
     "plan_sql_query_tool": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
     ),
-    "visualize_data": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED),
+    "visualize_data": NodeConfig(ModelCategory.ADVANCED, TemperatureCategory.BALANCED),
     "process_query": NodeConfig(
         ModelCategory.ADVANCED, TemperatureCategory.BALANCED, json_mode=True
     ),
@@ -63,12 +60,16 @@ NODE_CONFIGS = {
     ),
     "generate_result": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
     "response": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.CREATIVE),
+    "regenerate_fuzzy_values": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
+    ),
+    "validate_match_relevance": NodeConfig(
+        ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "feedback": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED),
 }
 
 EXTERNAL_FUNCTION_CONFIGS = {
-    "generate_col_descriptions": NodeConfig(
-        ModelCategory.BALANCED, TemperatureCategory.BALANCED, json_mode=True
-    ),
     "progress_message": NodeConfig(ModelCategory.FAST, TemperatureCategory.CREATIVE),
 }
 
