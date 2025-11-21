@@ -20,16 +20,16 @@ initContainers:
     args: {{- toYaml .args | nindent 6 }}
     {{- end }}
     env:
-      - name: GOOSE_DBSTRING
-        valueFrom:
-          secretKeyRef:
-            name: {{ include "gopie.fullname" $root }}-goose
-            key: goose-dbstring-template
-      - name: POSTGRES_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-postgresql" $root.Release.Name }}
-            key: postgres-password
+      # - name: GOOSE_DBSTRING
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: {{ include "gopie.fullname" $root }}-goose
+      #       key: goose-dbstring-template
+      # - name: POSTGRES_PASSWORD
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: {{ printf "%s-postgresql" $root.Release.Name }}
+      #       key: postgres-password
       {{- if .env }}
       {{- range .env }}
       - name: {{ .name }}
@@ -71,28 +71,14 @@ containers:
       - name: GOPIE_POSTGRES_DB
         value: {{ $root.Values.postgresql.auth.database }}
       - name: GOPIE_POSTGRES_USER
-        value: {{ $root.Values.postgresql.auth.username }}
+        value: postgres
       - name: GOPIE_POSTGRES_PASSWORD
         valueFrom:
           secretKeyRef:
             name: {{ printf "%s-postgresql" $root.Release.Name }}
             key: postgres-password
-      - name: GOPIE_S3_ACCESS_KEY
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-minio" $root.Release.Name }}
-            key: root-user
-      - name: GOPIE_S3_SECRET_KEY
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-minio" $root.Release.Name }}
-            key: root-password
-      - name: GOPIE_S3_ENDPOINT
-        value: {{ printf "http://%s-minio:9000" $root.Release.Name }}
-      - name: GOPIE_S3_SSL
-        value: {{ $root.Values.minio.tls.enabled | default "false" | quote }}
-      - name: GOPIE_S3_REGION
-        value: {{ $root.Values.minio.region | default "us-east-1" }}
+      - name: GOPIE_POSTGRES_PORT
+        value: "5432"
       - name: GOPIE_AIAGENT_URL
         value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
     {{- if .Values.deployment.env }}
@@ -186,28 +172,14 @@ containers:
       - name: GOPIE_POSTGRES_DB
         value: {{ $root.Values.postgresql.auth.database }}
       - name: GOPIE_POSTGRES_USER
-        value: {{ $root.Values.postgresql.auth.username }}
+        value: postgres
       - name: GOPIE_POSTGRES_PASSWORD
         valueFrom:
           secretKeyRef:
             name: {{ printf "%s-postgresql" $root.Release.Name }}
             key: postgres-password
-      - name: GOPIE_S3_ACCESS_KEY
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-minio" $root.Release.Name }}
-            key: root-user
-      - name: GOPIE_S3_SECRET_KEY
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-minio" $root.Release.Name }}
-            key: root-password
-      - name: GOPIE_S3_ENDPOINT
-        value: {{ printf "http://%s-minio:9000" $root.Release.Name }}
-      - name: GOPIE_S3_SSL
-        value: {{ $root.Values.minio.tls.enabled | default "false" | quote }}
-      - name: GOPIE_S3_REGION
-        value: {{ $root.Values.minio.region | default "us-east-1" }}
+      - name: GOPIE_POSTGRES_PORT
+        value: "5432"
       - name: GOPIE_AIAGENT_URL
         value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
     {{- if .Values.stateful.env }}
