@@ -27,7 +27,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.6
+version: 0.1.7
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -38,15 +38,15 @@ dependencies:
   - name: postgresql
     version: 15.5.2  # Use the version you want
     repository: https://charts.bitnami.com/bitnami
-  - name: minio
-    version: 17.0.13  # Use the version you want
-    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
 
   - name: companion
     version: 0.1.10
     repository: https://factly.github.io/helm-charts
+    condition: companion.enabled
 
   - name: qdrant
     version: 1.12.5
     repository: https://qdrant.github.io/qdrant-helm
+    condition: qdrant.enabled
 
