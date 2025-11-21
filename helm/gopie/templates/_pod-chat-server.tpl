@@ -31,7 +31,7 @@ containers:
       - name: CHAT_QDRANT_HOST
         value: {{ if .Values.qdrant.enabled }}{{ printf "%s-qdrant" .Release.Name }}{{ else }}{{ .Values.chatserver.qdrantHost }}{{ end }}
       - name: CHAT_QDRANT_PORT
-        value: {{ .Values.qdrant.service.port | default "6333" | quote }}
+        value: {{ if .Values.qdrant.enabled }}{{ .Values.qdrant.service.port | quote }}{{ else }}{{ .Values.chatserver.qdrantPort | default "6333" | quote }}{{ end }}
     {{- if .Values.chatserver.env }}
     {{- range .Values.chatserver.env }}
       - name: {{ .name }}
