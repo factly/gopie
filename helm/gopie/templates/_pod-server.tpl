@@ -167,21 +167,21 @@ containers:
       {{- toYaml .Values.stateful.readinessProbe | nindent 6 }}
     {{- end }}
     env:
-      - name: GOPIE_POSTGRES_HOST
-        value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
-      - name: GOPIE_POSTGRES_DB
-        value: {{ $root.Values.postgresql.auth.database }}
-      - name: GOPIE_POSTGRES_USER
-        value: postgres
-      - name: GOPIE_POSTGRES_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: {{ printf "%s-postgresql" $root.Release.Name }}
-            key: postgres-password
-      - name: GOPIE_POSTGRES_PORT
-        value: "5432"
-      - name: GOPIE_AIAGENT_URL
-        value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
+      # - name: GOPIE_POSTGRES_HOST
+      #   value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
+      # - name: GOPIE_POSTGRES_DB
+      #   value: {{ $root.Values.postgresql.auth.database }}
+      # - name: GOPIE_POSTGRES_USER
+      #   value: postgres
+      # - name: GOPIE_POSTGRES_PASSWORD
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: {{ printf "%s-postgresql" $root.Release.Name }}
+      #       key: postgres-password
+      # - name: GOPIE_POSTGRES_PORT
+      #   value: "5432"
+      # - name: GOPIE_AIAGENT_URL
+      #   value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
     {{- if .Values.stateful.env }}
     {{- range .Values.stateful.env }}
       - name: {{ .name }}

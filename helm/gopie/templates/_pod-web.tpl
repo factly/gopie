@@ -26,8 +26,8 @@ containers:
       {{- toYaml .Values.web.readinessProbe | nindent 6 }}
     {{- end }}
     env:
-      - name: GOPIE_API_URL
-        value: {{ printf "http://%s-server:%v" .Release.Name (.Values.service.portNumber | default 8000) }}
+      # - name: GOPIE_API_URL
+      #   value: {{ printf "http://%s-server:%v" .Release.Name (.Values.service.portNumber | default 8000) }}
     {{- if .Values.web.env }}
     {{- range .Values.web.env }}
       - name: {{ .name }}
