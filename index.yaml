@@ -3,6 +3,42 @@ entries:
   gopie:
   - apiVersion: v2
     appVersion: 0.1.2
+    created: "2025-11-21T11:35:08.123093006Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 15.5.2
+    - condition: companion.enabled
+      name: companion
+      repository: https://factly.github.io/helm-charts
+      version: 0.1.10
+    - condition: qdrant.enabled
+      name: qdrant
+      repository: https://qdrant.github.io/qdrant-helm
+      version: 1.12.5
+    description: A comprehensive Helm chart for deploying Gopie - an AI-powered data
+      analysis and chat platform
+    digest: 2d3dc82f0e8c1858c653ea77c3bf13ba6b6be94b9c11e871720da3c49c3986d2
+    home: https://github.com/factly/gopie
+    keywords:
+    - ai
+    - data-analysis
+    - chat
+    - analytics
+    - self-hosted
+    maintainers:
+    - name: Factly
+      url: https://factly.in
+    name: gopie
+    sources:
+    - https://github.com/factly/gopie
+    type: application
+    urls:
+    - https://github.com/factly/gopie/releases/download/gopie-0.1.8/gopie-0.1.8.tgz
+    version: 0.1.8
+  - apiVersion: v2
+    appVersion: 0.1.2
     created: "2025-11-10T10:46:46.89043506Z"
     dependencies:
     - name: postgresql
@@ -181,4 +217,4 @@ entries:
     urls:
     - helm/gopie-0.1.1.tgz
     version: 0.1.1
-generated: "2025-11-10T10:46:46.890453394Z"
+generated: "2025-11-21T11:35:08.123110228Z"
