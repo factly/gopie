@@ -22,31 +22,8 @@ deployment:
   annotations: {}  # Annotations for deployment resources
   Podannotations: {}  # Annotations for pods
 
-  env: 
-    - name: GOPIE_API_SERVER_HOST
-      value: localhost
-    - name: GOPIE_API_SERVER_PORT
-      value: "8000"
-    - name: GOPIE_LOGGER_LEVEL
-      value: info
-    - name: GOPIE_LOGGER_FILE
-      value: gopie.log
-    - name: GOPIE_LOGGER_MODE
-      value: dev
-    - name: GOPIE_PORTKEY_APIKEY
-      value: ""
-    - name: GOPIE_PORTKEY_BASEURL
-      value: ""
-    - name: GOPIE_PORTKEY_MODEL
-      value: ""
-    - name: GOPIE_PORTKEY_VIRTUALKEY
-      value: ""
-    - name: GOPIE_DUCKDB_PATH
-      value: "./dataful/gopie.duckdb"
-    - name: GOPIE_OLAPDB_DBTYPE
-      value: duckdb
-    - name: GOPIE_OLAPDB_ACCESS_MODE
-      value: read_write
+  env: []
+    
     # Environment variables for the container
     # Example:
     # - name: GOPIE_API_SERVER_HOST
@@ -257,9 +234,8 @@ web:
   annotations: {}  # Annotations to add to the Deployment
   Podannotations: {}  # Annotations to add to the pods
 
-  env: 
-    - name: NEXT_PUBLIC_ENABLE_AUTH
-      value: "false"
+  env: []
+    
     # - name: NEXT_PUBLIC_GOPIE_API_URL
     #   value: https://server.example.com # public_url
     # Define environment variables for the container
