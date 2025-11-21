@@ -28,10 +28,10 @@ containers:
       {{- toYaml .Values.chatserver.readinessProbe | nindent 6 }}
     {{- end }}
     env:
-      - name: CHAT_QDRANT_HOST
-        value: {{ if .Values.qdrant.enabled }}{{ printf "%s-qdrant" .Release.Name }}{{ else }}{{ .Values.chatserver.qdrantHost }}{{ end }}
-      - name: CHAT_QDRANT_PORT
-        value: {{ if .Values.qdrant.enabled }}{{ .Values.qdrant.service.port | quote }}{{ else }}{{ .Values.chatserver.qdrantPort | default "6333" | quote }}{{ end }}
+      # - name: CHAT_QDRANT_HOST
+      #   value: {{ if .Values.qdrant.enabled }}{{ printf "%s-qdrant" .Release.Name }}{{ else }}{{ .Values.chatserver.qdrantHost }}{{ end }}
+      # - name: CHAT_QDRANT_PORT
+      #   value: {{ if .Values.qdrant.enabled }}{{ .Values.qdrant.service.port | quote }}{{ else }}{{ .Values.chatserver.qdrantPort | default "6333" | quote }}{{ end }}
     {{- if .Values.chatserver.env }}
     {{- range .Values.chatserver.env }}
       - name: {{ .name }}
