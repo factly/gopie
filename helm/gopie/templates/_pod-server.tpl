@@ -19,23 +19,10 @@ initContainers:
     {{- if .args }}
     args: {{- toYaml .args | nindent 6 }}
     {{- end }}
+    {{- if .env }}
     env:
-      # - name: GOOSE_DBSTRING
-      #   valueFrom:
-      #     secretKeyRef:
-      #       name: {{ include "gopie.fullname" $root }}-goose
-      #       key: goose-dbstring-template
-      # - name: POSTGRES_PASSWORD
-      #   valueFrom:
-      #     secretKeyRef:
-      #       name: {{ printf "%s-postgresql" $root.Release.Name }}
-      #       key: postgres-password
-      {{- if .env }}
-      {{- range .env }}
-      - name: {{ .name }}
-        value: {{ .value | quote }}
-      {{- end }}
-      {{- end }}
+      {{- toYaml .env | nindent 6 }}
+    {{- end }}
     volumeMounts:
       {{- range .volumeMounts }}
       - name: {{ .name }}
@@ -65,7 +52,12 @@ containers:
     readinessProbe:
       {{- toYaml .Values.deployment.readinessProbe | nindent 6 }}
     {{- end }}
+    {{- if .Values.deployment.env }}
+    {{- with .Values.deployment.env }}
     env:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
       # - name: GOPIE_POSTGRES_HOST
       #   value: {{ printf "%s-postgresql" $root.Release.Name | quote }}
       # - name: GOPIE_POSTGRES_DB
@@ -81,12 +73,6 @@ containers:
       #   value: "5432"
       # - name: GOPIE_AIAGENT_URL
       #   value: {{ printf "http://%s-chatserver:%v" $root.Release.Name ($root.Values.chatserver.service.portNumber | default 8000) }}
-    {{- if .Values.deployment.env }}
-    {{- range .Values.deployment.env }}
-      - name: {{ .name }}
-        value: {{ .value | quote }}
-    {{- end }}
-    {{- end }}
     resources:
       {{- toYaml .Values.deployment.resources | nindent 6 }}
     volumeMounts:
