@@ -2,14 +2,11 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 15.5.2
-- name: minio
-  repository: https://charts.bitnami.com/bitnami
-  version: 17.0.13
 - name: companion
   repository: https://factly.github.io/helm-charts
   version: 0.1.10
 - name: qdrant
   repository: https://qdrant.github.io/qdrant-helm
   version: 1.12.5
-digest: sha256:19b56d62f9c24f835269ec4e99eff6fcdb0196c0708a638d327ab5fa7a90c9ff
-generated: "2025-07-23T17:32:31.250162+05:30"
+digest: sha256:8734b9e4d640b3b6e7876ce5fd50fa427a2b1b50d38ec46c2db867b7af200f4d
+generated: "2025-11-21T17:03:39.309977+05:30"
