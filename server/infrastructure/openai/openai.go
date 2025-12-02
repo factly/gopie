@@ -63,8 +63,53 @@ func NewOpenAIClient(cfg config.OpenAIConfig, logger *logger.Logger) *OpenAIClie
 	return &OpenAIClient{client, model, logger}
 }
 
-func (c *OpenAIClient) GenerateResponse(content string) (string, error) {
-	c.logger.Debug("generating sql from OpenAI")
+// GenerateResponseJSON is a generic function that generates a response from OpenAI
+// and unmarshals it into the provided type T. It enforces JSON output format
+// to ensure consistent structured responses.
+func GenerateResponseJSON[T any](c *OpenAIClient, content string) (*T, error) {
+	c.logger.Debug("generating JSON response from OpenAI", zap.String("model", c.model))
+	msgs := openai.ChatCompletionMessage{
+		Role:    "user",
+		Content: content,
+	}
+
+	ctx := context.Background()
+
+	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:    c.model,
+		Messages: []openai.ChatCompletionMessage{msgs},
+		ResponseFormat: &openai.ChatCompletionResponseFormat{
+			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+		},
+	})
+	if err != nil {
+		c.logger.Error("failed to generate response from OpenAI", zap.Error(err))
+		return nil, err
+	}
+
+	if len(res.Choices) == 0 {
+		c.logger.Error("no response choices returned from OpenAI")
+		return nil, domain.ErrFailedToGenerateSql
+	}
+
+	responseContent := res.Choices[0].Message.Content
+	c.logger.Debug("received JSON response from OpenAI", zap.Int("content_length", len(responseContent)))
+
+	var result T
+	if err := json.Unmarshal([]byte(responseContent), &result); err != nil {
+		c.logger.Error("failed to unmarshal OpenAI response",
+			zap.Error(err),
+			zap.String("response", responseContent))
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// GenerateResponseString is a non-generic version for backwards compatibility
+// when you need a plain string response without JSON parsing
+func (c *OpenAIClient) GenerateResponseString(content string) (string, error) {
+	c.logger.Debug("generating string response from OpenAI", zap.String("model", c.model))
 	msgs := openai.ChatCompletionMessage{
 		Role:    "user",
 		Content: content,
@@ -77,18 +122,26 @@ func (c *OpenAIClient) GenerateResponse(content string) (string, error) {
 		Messages: []openai.ChatCompletionMessage{msgs},
 	})
 	if err != nil {
-		c.logger.Critical("failed to generate sql from OpenAI", zap.Error(err))
+		c.logger.Error("failed to generate response from OpenAI", zap.Error(err))
 		return "", err
 	}
 
 	if len(res.Choices) == 0 {
+		c.logger.Error("no response choices returned from OpenAI")
 		return "", domain.ErrFailedToGenerateSql
 	}
-	return res.Choices[0].Message.Content, nil
+
+	responseContent := res.Choices[0].Message.Content
+	c.logger.Debug("received response from OpenAI", zap.Int("content_length", len(responseContent)))
+
+	return responseContent, nil
 }
 
 func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.D_ChatMessage) (string, error) {
-	c.logger.Debug("generating sql from OpenAI")
+	c.logger.Debug("generating chat response from OpenAI",
+		zap.Int("previous_messages", len(prevMsgs)),
+		zap.String("model", c.model))
+
 	msgs := make([]openai.ChatCompletionMessage, 0, len(prevMsgs)+1)
 	for _, msg := range prevMsgs {
 		if msg.Role == "assistant" || msg.Role == "user" {
@@ -103,24 +156,31 @@ func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*mode
 		Content: userMsg,
 	}
 	msgs = append(msgs, latestMessage)
+
 	ctx := context.Background()
 	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: msgs,
-		// Temperature: 0.2,
 	})
 	if err != nil {
+		c.logger.Error("failed to generate chat response from OpenAI", zap.Error(err))
 		return "", err
 	}
+
 	if len(res.Choices) == 0 {
+		c.logger.Error("no response choices returned from OpenAI")
 		return "", domain.ErrFailedToGenerateSql
 	}
-	c.logger.Debug("generated sql from OpenAI", zap.String("sql", res.Choices[0].Message.Content))
-	return res.Choices[0].Message.Content, nil
+
+	responseContent := res.Choices[0].Message.Content
+	c.logger.Debug("generated chat response from OpenAI",
+		zap.Int("response_length", len(responseContent)))
+	return responseContent, nil
 }
 
 func (c *OpenAIClient) GenerateSql(content string) (string, error) {
-	return c.GenerateResponse(content)
+	c.logger.Debug("generating SQL from OpenAI")
+	return c.GenerateResponseString(content)
 }
 
 func (c *OpenAIClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.D_ChatMessage) (*models.D_AiChatResponse, error) {
@@ -135,68 +195,56 @@ func (c *OpenAIClient) GenerateChatResponse(ctx context.Context, userMessage str
 }
 
 func (c *OpenAIClient) GenerateTitle(ctx context.Context, content string) (*models.D_AiChatResponse, error) {
+	c.logger.Debug("generating title from OpenAI")
 	systemPrompt := `
 	!! IMPORTANT: In the response only provide the title of the content. Do not provide any other information. !!
 		Generate a title for the following content:
 	` + content
 
-	resp, err := c.GenerateResponse(systemPrompt)
+	resp, err := c.GenerateResponseString(systemPrompt)
 	if err != nil {
+		c.logger.Error("failed to generate title", zap.Error(err))
 		return nil, err
 	}
 
+	c.logger.Debug("generated title from OpenAI", zap.Int("title_length", len(resp)))
 	return &models.D_AiChatResponse{
 		Response: resp,
 	}, nil
 }
 
 func (c *OpenAIClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error) {
+	c.logger.Debug("generating column descriptions from OpenAI")
 	systemPrompt := `
 	!! IMPORTANT: In the response only provide the column descriptions in JSON format. Do not provide any other information. !!
-	Valid format is:
+	The response must be a valid JSON object with column names as keys and descriptions as values.
+
+	Valid format:
 	{
 		"column_name_1": "description of column 1",
 		"column_name_2": "description of column 2",
-		...
 		"column_name_n": "description of column n"
 	}
-	Invalid format is:
-	response: {
-		"column_name_1": "description of column 1",
-		"column_name_2": "description of column 2",
-		...
-		"column_name_n": "description of column n"
-	}
-	or
-	result: {
-		"column_name_1": "description of column 1",
-		"column_name_2": "description of column 2",
-		...
-		"column_name_n": "description of column n"
-	}
-	and so on.
 
 	Generate column descriptions for the following rows and summary:
 	Rows: ` + rows + `
 	Summary: ` + summary
 
-	resp, err := c.GenerateResponse(systemPrompt)
+	result, err := GenerateResponseJSON[map[string]string](c, systemPrompt)
 	if err != nil {
-		return nil, err
-	}
-	// Parse the response into a map
-	descriptions := make(map[string]string)
-	// conver string to map
-	err = json.Unmarshal([]byte(resp), &descriptions)
-	if err != nil {
-		c.logger.Error("failed to parse column descriptions", zap.Error(err))
+		c.logger.Error("failed to generate column descriptions", zap.Error(err))
 		return nil, err
 	}
 
-	return descriptions, nil
+	c.logger.Debug("generated column descriptions from OpenAI", zap.Int("columns_count", len(*result)))
+	return *result, nil
 }
 
 func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetName string, columnNames []string, columnDescriptions map[string]string, rows string, summary string) (string, error) {
+	c.logger.Debug("generating dataset description from OpenAI",
+		zap.String("dataset_name", datasetName),
+		zap.Int("column_count", len(columnNames)))
+
 	// Prepare column info for the prompt
 	columnInfo := "Column Information:\n"
 	for _, colName := range columnNames {
@@ -209,32 +257,34 @@ func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetNa
 
 	systemPrompt := fmt.Sprintf(`
 	!! CRITICAL: The generated description MUST be less than 950 characters. This is a strict requirement - descriptions exceeding 950 characters will be rejected. !!
-	
+
 	Dataset Name: %s
-	
+
 	%s
-	
+
 	Sample Data (first few rows): %s
-	
+
 	Dataset Statistics: %s
-	
+
 	Based on the above information, generate a detailed and informative description for this dataset that:
 	1. Explains what type of data it contains and its structure
 	2. Mentions key columns and their purpose in detail
 	3. Suggests multiple potential analytical use cases
 	4. Describes the data's relevance and possible insights that can be derived
-	
+
 	IMPORTANT CONSTRAINTS:
 	- Target length: 600-900 characters for optimal detail
 	- MAXIMUM length: 950 characters (STRICTLY ENFORCED)
 	- Provide ONLY the description text, no additional formatting or explanations
 	`, datasetName, columnInfo, rows, summary)
 
-	resp, err := c.GenerateResponse(systemPrompt)
+	resp, err := c.GenerateResponseString(systemPrompt)
 	if err != nil {
 		c.logger.Error("failed to generate dataset description", zap.Error(err))
 		return "", err
 	}
 
+	c.logger.Debug("generated dataset description from OpenAI",
+		zap.Int("description_length", len(resp)))
 	return resp, nil
 }
