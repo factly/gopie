@@ -215,7 +215,9 @@ func (c *OpenAIClient) GenerateTitle(ctx context.Context, content string) (*mode
 
 func (c *OpenAIClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error) {
 	c.logger.Debug("generating column descriptions from OpenAI")
-	systemPrompt := `
+
+	const maxRetries = 3
+	basePrompt := `
 	!! IMPORTANT: In the response only provide the column descriptions in JSON format. Do not provide any other information. !!
 	The response must be a valid JSON object with column names as keys and descriptions as values.
 
@@ -230,14 +232,56 @@ func (c *OpenAIClient) GenerateColumnDescriptions(ctx context.Context, rows stri
 	Rows: ` + rows + `
 	Summary: ` + summary
 
-	result, err := GenerateResponseJSON[map[string]string](c, systemPrompt)
-	if err != nil {
-		c.logger.Error("failed to generate column descriptions", zap.Error(err))
-		return nil, err
+	var lastError error
+	var result *map[string]string
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		c.logger.Debug("attempting to generate column descriptions",
+			zap.Int("attempt", attempt),
+			zap.Int("max_retries", maxRetries))
+
+		systemPrompt := basePrompt
+		if lastError != nil {
+			// Add error feedback to the prompt for retry
+			systemPrompt = fmt.Sprintf(`%s
+
+!! PREVIOUS ATTEMPT FAILED !!
+The previous response was invalid with the following error: %s
+
+Please generate a valid JSON response following the exact format specified above. Ensure:
+1. The response is valid JSON
+2. All keys are column names from the provided data
+3. All values are descriptive strings
+4. No additional text or formatting outside the JSON object`, basePrompt, lastError.Error())
+
+			c.logger.Warn("retrying with error feedback",
+				zap.Int("attempt", attempt),
+				zap.String("previous_error", lastError.Error()))
+		}
+
+		result, lastError = GenerateResponseJSON[map[string]string](c, systemPrompt)
+		if lastError == nil && result != nil && len(*result) > 0 {
+			c.logger.Debug("successfully generated column descriptions",
+				zap.Int("columns_count", len(*result)),
+				zap.Int("attempt", attempt))
+			return *result, nil
+		}
+
+		if lastError != nil {
+			c.logger.Warn("failed to generate column descriptions",
+				zap.Error(lastError),
+				zap.Int("attempt", attempt))
+		} else if result != nil && len(*result) == 0 {
+			lastError = fmt.Errorf("received empty column descriptions map")
+			c.logger.Warn("received empty column descriptions",
+				zap.Int("attempt", attempt))
+		}
 	}
 
-	c.logger.Debug("generated column descriptions from OpenAI", zap.Int("columns_count", len(*result)))
-	return *result, nil
+	c.logger.Error("exhausted all retries for generating column descriptions",
+		zap.Int("max_retries", maxRetries),
+		zap.Error(lastError))
+	return nil, fmt.Errorf("failed to generate column descriptions after %d attempts: %w", maxRetries, lastError)
 }
 
 func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetName string, columnNames []string, columnDescriptions map[string]string, rows string, summary string) (string, error) {
