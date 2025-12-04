@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"time"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
@@ -88,7 +90,8 @@ func GenerateResponseJSON[T any](c *OpenAIClient, content string) (*T, error) {
 	}
 
 	if len(res.Choices) == 0 {
-		c.logger.Error("no response choices returned from OpenAI")
+		c.logger.Error("no response choices returned from OpenAI",
+			zap.String("full_response", fmt.Sprintf("%+v", res)))
 		return nil, domain.ErrFailedToGenerateSql
 	}
 
@@ -127,7 +130,8 @@ func (c *OpenAIClient) GenerateResponseString(content string) (string, error) {
 	}
 
 	if len(res.Choices) == 0 {
-		c.logger.Error("no response choices returned from OpenAI")
+		c.logger.Error("no response choices returned from OpenAI",
+			zap.String("full_response", fmt.Sprintf("%+v", res)))
 		return "", domain.ErrFailedToGenerateSql
 	}
 
@@ -168,7 +172,8 @@ func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*mode
 	}
 
 	if len(res.Choices) == 0 {
-		c.logger.Error("no response choices returned from OpenAI")
+		c.logger.Error("no response choices returned from OpenAI",
+			zap.String("full_response", fmt.Sprintf("%+v", res)))
 		return "", domain.ErrFailedToGenerateSql
 	}
 
@@ -275,6 +280,19 @@ Please generate a valid JSON response following the exact format specified above
 			lastError = fmt.Errorf("received empty column descriptions map")
 			c.logger.Warn("received empty column descriptions",
 				zap.Int("attempt", attempt))
+		}
+
+		// Apply exponential backoff before retrying (unless this was the last attempt)
+		if attempt < maxRetries {
+			// Exponential backoff: 2^(attempt-1) seconds with a cap at 16 seconds
+			backoffDuration := time.Duration(math.Pow(2, float64(attempt-1))) * time.Second
+			if backoffDuration > 16*time.Second {
+				backoffDuration = 16 * time.Second
+			}
+			c.logger.Debug("backing off before retry",
+				zap.Duration("backoff_duration", backoffDuration),
+				zap.Int("attempt", attempt))
+			time.Sleep(backoffDuration)
 		}
 	}
 
