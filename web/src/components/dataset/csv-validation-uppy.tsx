@@ -346,8 +346,6 @@ export const FileValidationUppy = forwardRef<
           onUploadSuccess(file, response, currentValidation);
         }
 
-        toast.success("File uploaded to S3 successfully!");
-
         // Don't reset file states here - keep them for the wizard
         // Only reset upload progress and flags
         setUploadProgress(0);
