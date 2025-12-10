@@ -18,7 +18,8 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  RefreshCwIcon, 
+  RefreshCwIcon,
+  Loader2, 
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -51,9 +52,11 @@ import {
 } from "@/components/ui/select";
 import { useCreateDownload } from "@/lib/mutations/download/create-download";
 import { useDownloadStore } from "@/lib/stores/download-store";
-import { Progress } from "@/components/ui/progress";
 import { format as formatSQL } from "sql-formatter";
-import { useRefreshDatabaseDataset } from "@/lib/mutations/dataset/refresh-dataset-database";
+import { toast } from "sonner"; 
+import { Progress } from "@/components/ui/progress"; 
+import { useRefreshDatabaseDatasetSSE } from "@/lib/mutations/dataset/refresh-dataset-database";
+import { SSEEvent } from "@/lib/sse-client";
 import { useCheckTimestampColumn } from "@/lib/queries/dataset/check-timestamp-column";
 // Dynamically import Monaco Editor to avoid SSR issues
 const Editor = dynamic(() => import("@monaco-editor/react"), {
@@ -141,7 +144,7 @@ export function DatasetHeader({
   projectId,
   onUpdate,
 }: DatasetHeaderProps) {
-  const { toast } = useToast();
+  const { toast : toasty } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { resolvedTheme } = useTheme();
@@ -176,21 +179,24 @@ export function DatasetHeader({
   const [isDbRefreshing, setIsDbRefreshing] = useState<
     "partial" | "full" | null
   >(null);
+  const [dialogProgress, setDialogProgress] = useState<{
+    message: string;
+    percentage: number;
+  } | null>(null);
 
   // Instantiate the mutation hook
-  const { mutateAsync: refreshDbDataset } = useRefreshDatabaseDataset();
+  const refreshDbDatasetSSE = useRefreshDatabaseDatasetSSE();
   const { data: hasTimestampColumn, isLoading: isLoadingTimestampCheck } =
-  useCheckTimestampColumn({
-    variables: { datasetId: dataset.id }, 
-    enabled: dataset.source === "database",
-  });
-  
- const canIncrementalRefresh = hasTimestampColumn === true;
+    useCheckTimestampColumn({
+      variables: { datasetId: dataset.id },
+      enabled: dataset.source === "database",
+    });
 
+  const canIncrementalRefresh = hasTimestampColumn === true;
 
   const handleUpdate = async () => {
     if (editedDescription.length < 10) {
-      toast({
+      toasty({
         title: "Validation Error",
         description: "Description must be at least 10 characters long.",
         variant: "destructive",
@@ -220,7 +226,7 @@ export function DatasetHeader({
       }
 
       setIsEditing(false);
-      toast({
+      toasty({
         title: "Dataset updated",
         description: "The dataset has been updated successfully.",
       });
@@ -233,7 +239,7 @@ export function DatasetHeader({
         error.response?.data?.message ||
         error.message ||
         "Failed to update dataset";
-      toast({
+      toasty({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
@@ -286,7 +292,7 @@ export function DatasetHeader({
         window.open(result.url, "_blank");
       }
 
-      toast({
+      toasty({
         title: "Download ready",
         description: "Your download has been prepared and opened in a new tab.",
       });
@@ -294,7 +300,7 @@ export function DatasetHeader({
       // Don't close the dialog, just update the state to show completion
       // User can close manually or download again
     } catch (error) {
-      toast({
+      toasty({
         title: "Download failed",
         description:
           error instanceof Error ? error.message : "Failed to create download",
@@ -305,50 +311,94 @@ export function DatasetHeader({
   };
 
   const handleDbRefresh = async (type: "partial" | "full") => {
-    setIsDbRefreshing(type); // Set UI loading state
-    toast({
-      title: "Refresh Started",
-      description: `Starting ${type} refresh...`,
-    });
+    setIsDbRefreshing(type);
+    
+    const isDialogFlow = isDbRefreshDialogOpen;
+    const toastId = "db-refresh-progress";
+    let currentProgress = 0;
+
+    if (isDialogFlow) {
+      // Init Dialog Progress
+      setDialogProgress({ message: "Initializing...", percentage: 0 });
+    } else {
+      // Init Toast Progress
+      toast.loading(
+        <div className="flex flex-col gap-2 w-full min-w-[250px]">
+          <span className="font-medium text-sm">Initializing refresh...</span>
+          <Progress value={0} className="h-2" />
+        </div>,
+        { id: toastId, duration: Infinity }
+      );
+    }
 
     // Translate "partial" to "incremental" for the API
     const apiRefreshType = type === "partial" ? "incremental" : "full";
 
     try {
-      await refreshDbDataset({
+      await refreshDbDatasetSSE({
         projectId: projectId,
         datasetName: dataset.name, // Use the real table name
         refreshType: apiRefreshType,
-      });
-
-      toast({
-        title: "Refresh Successful",
-        description: `Dataset ${type} refresh completed.`,
+        onProgress: (event: SSEEvent) => {
+          if (event.type === 'status_update') {
+            currentProgress = Math.min(currentProgress + 10, 90);
+            
+            if (isDialogFlow) {
+              // Update Dialog State
+              setDialogProgress({
+                message: event.message,
+                percentage: currentProgress
+              });
+            } else {
+              // Update Toast
+              toast.loading(
+                <div className="flex flex-col gap-2 w-full min-w-[250px]">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">{event.message}</span>
+                    <span className="text-muted-foreground">{currentProgress}%</span>
+                  </div>
+                  <Progress value={currentProgress} className="h-2" />
+                </div>,
+                { id: toastId }
+              );
+            }
+          }
+        }
       });
 
       // Invalidate queries to update data
-      await queryClient.invalidateQueries({
-        queryKey: ["dataset", { projectId, datasetId: dataset.id }],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["datasets"],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["get-schema", dataset.id],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["dataset", { projectId, datasetId: dataset.id }] }),
+        queryClient.invalidateQueries({ queryKey: ["datasets"] }),
+        queryClient.invalidateQueries({ queryKey: ["get-schema", dataset.id] }),
+        queryClient.invalidateQueries({ queryKey: ["get-table"] })
+      ]);
 
-      await queryClient.invalidateQueries({
-        queryKey: ["get-table"],
-      });
+      if (isDialogFlow) {
+        setIsDbRefreshDialogOpen(false); // Close dialog
+        setDialogProgress(null);
+        toast.success(`Dataset ${type} refresh completed.`);
+      } else {
+        toast.success(`Dataset ${type} refresh completed.`, {
+          id: toastId,
+          duration: 4000,
+        });
+      }
 
-      setIsDbRefreshDialogOpen(false); // Close dialog if it was open
     } catch (err) {
       const error = err as Error;
-      toast({
-        title: "Refresh Failed",
-        description: error.message || "An unknown error occurred.",
-        variant: "destructive",
-      });
+      
+      if (isDialogFlow) {
+        setIsDbRefreshDialogOpen(false);
+        setDialogProgress(null);
+        toast.error("Refresh Failed", { description: error.message });
+      } else {
+        toast.error("Refresh Failed", {
+          id: toastId,
+          description: error.message,
+          duration: 5000,
+        });
+      }
     } finally {
       setIsDbRefreshing(null); // Clear UI loading state
     }
@@ -901,7 +951,7 @@ export function DatasetHeader({
                       )}
 
                       {/* DB source: check if incremental is possible */}
-{dataset.source === "database" && (
+                      {dataset.source === "database" && (
                         <>
                           {/* Show a loader while checking for timestamp column */}
                           {isLoadingTimestampCheck ? (
@@ -918,7 +968,11 @@ export function DatasetHeader({
                             /* If incremental is possible, show dialog with options */
                             <Dialog
                               open={isDbRefreshDialogOpen}
-                              onOpenChange={setIsDbRefreshDialogOpen}
+                              onOpenChange={(open) => {
+                                // Prevent closing if refresh is in progress
+                                if (isDbRefreshing) return;
+                                setIsDbRefreshDialogOpen(open);
+                              }}
                             >
                               <DialogTrigger asChild>
                                 <Button
@@ -937,47 +991,56 @@ export function DatasetHeader({
                               </DialogTrigger>
                               <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
-                                  <DialogTitle>
-                                    Refresh Dataset
-                                  </DialogTitle>
+                                  <DialogTitle>Refresh Dataset</DialogTitle>
                                   <DialogDescription>
-                                    Choose the type of refresh to perform. This
-                                    will pull the latest data from the source
-                                    database.
+                                    {dialogProgress 
+                                      ? "Refreshing your data from the source database..."
+                                      : "Choose the type of refresh to perform. This will pull the latest data from the source database."
+                                    }
                                   </DialogDescription>
                                 </DialogHeader>
-                                <div className="flex flex-row space-x-3 py-4">
-                                  <Button
-                                    className="flex-1 justify-center gap-2 font-medium"
-                                    onClick={() => handleDbRefresh("partial")}
-                                    disabled={!!isDbRefreshing}
-                                  >
-                                    {isDbRefreshing === "partial" ? (
-                                      <Loader2Icon className="h-4 w-4 animate-spin" />
-                                    ) : (
+                                
+                                {dialogProgress ? (
+                                  <div className="py-6 space-y-4">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                        <span className="font-medium text-foreground">
+                                          {dialogProgress.message}
+                                        </span>
+                                      </div>
+                                      <span className="text-muted-foreground">
+                                        {dialogProgress.percentage}%
+                                      </span>
+                                    </div>
+                                    <Progress value={dialogProgress.percentage} className="h-2" />
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-row space-x-3 py-4">
+                                    <Button
+                                      className="flex-1 justify-center gap-2 font-medium"
+                                      onClick={() => handleDbRefresh("partial")}
+                                      disabled={!!isDbRefreshing}
+                                    >
                                       <RefreshCwIcon className="h-4 w-4" />
-                                    )}
-                                    <span className="inline-block min-w-[150px] text-center">
-                                      Incremental Refresh
-                                    </span>
-                                  </Button>
+                                      <span className="inline-block min-w-[150px] text-center">
+                                        Incremental Refresh
+                                      </span>
+                                    </Button>
 
-                                  <Button
-                                    className="flex-1 justify-center gap-2 font-medium"
-                                    variant="destructive"
-                                    onClick={() => handleDbRefresh("full")}
-                                    disabled={!!isDbRefreshing}
-                                  >
-                                    {isDbRefreshing === "full" ? (
-                                      <Loader2Icon className="h-4 w-4 animate-spin" />
-                                    ) : (
+                                    <Button
+                                      className="flex-1 justify-center gap-2 font-medium"
+                                      variant="destructive"
+                                      onClick={() => handleDbRefresh("full")}
+                                      disabled={!!isDbRefreshing}
+                                    >
                                       <RefreshCwIcon className="h-4 w-4" />
-                                    )}
-                                    <span className="inline-block min-w-[150px] text-center">
-                                      Full Refresh
-                                    </span>
-                                  </Button>
-                                </div>
+                                      <span className="inline-block min-w-[150px] text-center">
+                                        Full Refresh
+                                      </span>
+                                    </Button>
+                                  </div>
+                                )}
                                 <DialogFooter>
                                   <Button
                                     variant="outline"
@@ -986,7 +1049,7 @@ export function DatasetHeader({
                                     }
                                     disabled={!!isDbRefreshing}
                                   >
-                                    Cancel
+                                    {isDbRefreshing ? "Please wait..." : "Cancel"}
                                   </Button>
                                 </DialogFooter>
                               </DialogContent>
