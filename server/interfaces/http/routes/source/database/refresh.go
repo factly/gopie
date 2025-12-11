@@ -2,6 +2,7 @@ package database
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -198,7 +199,7 @@ func (h *httpHandler) refresh(ctx *fiber.Ctx) error {
 				return
 			}
 			if lastUpdatedAt != nil {
-				err = h.dbSourceSvc.Update(ctx.Context(), models.UpdateDatabaseSourceLastUpdatedAtParams{
+				err = h.dbSourceSvc.Update(context.Background(), models.UpdateDatabaseSourceLastUpdatedAtParams{
 					ID:            source.ID,
 					LastUpdatedAt: *lastUpdatedAt,
 				})
