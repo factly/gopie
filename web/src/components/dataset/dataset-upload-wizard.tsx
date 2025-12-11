@@ -43,6 +43,7 @@ import { sanitizeDatasetRows } from "@/lib/utils/serialization";
 import { useSourceDatasetSSE } from "@/lib/mutations/dataset/source-dataset";
 import { Progress } from "../ui/progress";
 import { SSEEvent } from "@/lib/sse-client";
+import { Dataset } from "@/lib/api-client";
 
 const WIZARD_STEPS: Step[] = [
   {
@@ -471,7 +472,7 @@ const handleCreateDataset = async () => {
             );
           }
         },
-      });
+      }) as { dataset: Dataset };
 
       if (!res?.dataset?.id) {
         throw new Error("Invalid response from server: Dataset ID not found.");
