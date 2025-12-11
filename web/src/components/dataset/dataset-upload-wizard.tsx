@@ -30,7 +30,6 @@ import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
 import { UnifiedUploader, UnifiedUploaderRef } from "@/components/dataset/unified-uploader";
 import { useRouter } from "next/navigation";
-import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useGenerateColumnDescriptions } from "@/lib/mutations/ai/generate-column-descriptions";
 import { useGenerateDatasetDescription } from "@/lib/mutations/ai/generate-dataset-description";
 import { useQueryClient } from "@tanstack/react-query";
@@ -135,7 +134,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   // Track if we've auto-navigated to prevent re-navigation
   const hasAutoNavigatedRef = useRef(false);
 
-  const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -268,7 +266,7 @@ const handleCreateDataset = async () => {
         </div>,
         { id: toastId, duration: Infinity }
       );
-      
+
       let uploadURL: string | undefined;
       const currentUploadResponse = useUploadStore.getState().uploadResponse;
       console.log("Current upload response from store:", currentUploadResponse);

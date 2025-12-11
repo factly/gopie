@@ -1,13 +1,13 @@
 import { getGlobalOrganizationId } from "@/lib/api-client";
 
-export interface SSEEvent<T = any> {
+export interface SSEEvent<T = unknown> {
   type: 'status_update' | 'progress' | 'complete' | 'error';
   message: string;
   data?: T;
   progress?: number;
 }
 
-export async function fetchWithSSE<T = any>(
+export async function fetchWithSSE<T = unknown>(
   url: string,
   options: RequestInit,
   onEvent: (event: SSEEvent<T>) => void,
@@ -41,8 +41,14 @@ const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "tr
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || error.error || 'Request failed');
+    let errorMsg = 'Request failed';
+    try {
+        const error = await response.json();
+        errorMsg = error.message || error.error || errorMsg;
+    } catch {
+        // ignore json parse error
+    }
+    throw new Error(errorMsg);
   }
 
   if (!response.body) throw new Error('No response body');
