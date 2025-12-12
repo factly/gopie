@@ -1,6 +1,7 @@
 from .base import BaseEmbeddingProvider
 from .custom import CustomEmbeddingProvider
 from .litellm import LiteLLMEmbeddingProvider
+from .local import LocalEmbeddingProvider
 from .openai import OpenAIEmbeddingProvider
 from .portkey import PortkeyEmbeddingProvider
 
@@ -10,4 +11,5 @@ __all__ = [
     "PortkeyEmbeddingProvider",
     "LiteLLMEmbeddingProvider",
     "BaseEmbeddingProvider",
+    "LocalEmbeddingProvider",
 ]

@@ -137,7 +137,8 @@ async def check_embedding_provider_health() -> Dict[str, Any]:
 
         # Test getting an embedding model if default model is configured
         if settings.DEFAULT_EMBEDDING_MODEL:
-            _ = provider.get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
+            embedding_model = provider.get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
+            _ = await embedding_model.aembed_query("test")
             return {
                 "status": "healthy",
                 "provider_type": settings.EMBEDDING_GATEWAY_PROVIDER,

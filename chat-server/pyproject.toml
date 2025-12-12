@@ -19,6 +19,7 @@ dependencies = [
   "langgraph-cli[inmem]>=0.3.3",
   "langsmith>=0.3.42",
   "logging>=0.4.9.6",
+  "model2vec>=0.7.0",
   "pillow>=12.0.0",
   "portkey-ai>=1.11.1",
   "pre-commit>=4.2.0",

@@ -22,6 +22,7 @@ class EmbeddingProvider(str, Enum):
     LITELLM = "litellm"
     OPENAI = "openai"
     CUSTOM = "custom"
+    LOCAL = "local"
 
 
 class TemperatureCategory(Enum):

@@ -17,6 +17,7 @@ from app.utils.providers.embedding_providers import (
     BaseEmbeddingProvider,
     CustomEmbeddingProvider,
     LiteLLMEmbeddingProvider,
+    LocalEmbeddingProvider,
     OpenAIEmbeddingProvider,
     PortkeyEmbeddingProvider,
 )
@@ -47,7 +48,7 @@ class StructuredLLM(Generic[StructuredOutputType]):
         ...
 
 
-def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
+def get_llm_provider(metadata: dict[str, str] = {}) -> BaseLLMProvider:
     gateway_type = LLMProvider(settings.LLM_GATEWAY_PROVIDER)
     match gateway_type:
         case LLMProvider.PORTKEY:
@@ -64,7 +65,7 @@ def get_llm_provider(metadata: dict[str, str]) -> BaseLLMProvider:
             raise ValueError(f"Unsupported LLM provider: {gateway_type}")
 
 
-def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
+def get_embedding_provider(metadata: Optional[dict[str, str]] = {}) -> BaseEmbeddingProvider:
     gateway_type = EmbeddingProvider(settings.EMBEDDING_GATEWAY_PROVIDER)
     match gateway_type:
         case EmbeddingProvider.PORTKEY:
@@ -75,6 +76,8 @@ def get_embedding_provider(metadata: dict[str, str]) -> BaseEmbeddingProvider:
             return OpenAIEmbeddingProvider(metadata)
         case EmbeddingProvider.CUSTOM:
             return CustomEmbeddingProvider(metadata)
+        case EmbeddingProvider.LOCAL:
+            return LocalEmbeddingProvider(metadata)
         case _:
             raise ValueError(f"Unsupported Embedding provider: {gateway_type}")
 
