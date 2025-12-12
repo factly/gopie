@@ -11,10 +11,10 @@ from app.api.v1.routers.dataset_upload import (
 from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
-from app.core.log import setup_logger
 from app.core.session import SingletonAiohttp
 from app.services.qdrant.qdrant_setup import QdrantSetup
 from app.utils.graph_utils.generate_graph import visualize_graph
+from app.utils.model_registry.model_provider import get_embedding_provider
 
 
 @asynccontextmanager
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     await QdrantSetup.get_async_client()
     SingletonAiohttp.get_aiohttp_client()
     QdrantSetup.get_sync_client()
-    setup_logger()
+    get_embedding_provider().get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
     visualize_graph()
 
     yield
