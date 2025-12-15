@@ -5,6 +5,7 @@ goose.env
 TODO.md
 img
 config-noauth.env
+config-auth.env
 agent_test.ipynb
 test_cases.py
 /*/dataful
