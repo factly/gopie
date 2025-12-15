@@ -160,6 +160,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   const setColumnMappings = useColumnNameStore(
     (state) => state.setColumnMappings
   );
+ const columnMappings = useColumnNameStore((state) => state.columnMappings); 
 
   // Add DuckDB initialization state
   const { isInitializing: isDuckDbInitializing } = useDuckDb();
@@ -658,7 +659,16 @@ const handleCreateDataset = async () => {
 
   // const canProceedFromStep1 = uploadedFile && validationResult;
   const canProceedFromStep2 = validationResult;
-  const canProceedFromStep3 = !isProcessing;
+    const hasInvalidColumns = React.useMemo(() => {
+    return Object.values(columnMappings).some((mapping) => !mapping.isValid);
+  }, [columnMappings]);
+  const canProceedFromStep3 = !isProcessing; 
+
+  const canProceedFromStep3 =
+    !isProcessing &&
+    !hasInvalidColumns &&
+    !isGeneratingDescriptions &&
+    descriptionsGenerated;
 
   // Ensure column store is populated when advancing to Step 3
   React.useEffect(() => {
@@ -1194,7 +1204,7 @@ const handleCreateDataset = async () => {
               <Button
                 size="sm"
                 onClick={handleNext}
-                disabled={!canProceedFromStep3 || isGeneratingDescriptions || !descriptionsGenerated}
+                disabled={!canProceedFromStep3}
               >
                 Next
               </Button>
