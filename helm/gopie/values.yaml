@@ -495,7 +495,7 @@ companion:
 #     #       key: COMPANION_GOOGLE_SECRET    
 
   ingress:
-    enabled: true  # Enable or disable Ingress for Companion
+    enabled: false  # Enable or disable Ingress for Companion
 
 qdrant:
   enabled: true  # Enable or disable the Qdrant vector database chart
