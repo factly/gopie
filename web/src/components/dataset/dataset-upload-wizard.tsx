@@ -1120,16 +1120,20 @@ const handleCreateDataset = async () => {
                   </Alert>
 
                   {/* Data Type Warnings (if any) */}
-                   {rejected.length > 0 && (
+                  {rejected.length > 0 && (
                     <Alert className="mb-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900">
                       <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                       <AlertTitle className="text-yellow-800 dark:text-yellow-200">
                         Data Type Validation Warnings
                       </AlertTitle>
 
-                      <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-                        {rejected.length} row(s) failed type validation.
-                        <div className="mt-2 space-y-1 text-sm">
+                      <AlertDescription className="text-yellow-700 dark:text-yellow-300 space-y-3">
+                        <div>
+                          {rejected.length} row(s) contain data that
+                          doesn&apos;t match the expected types and will be
+                          excluded from the dataset:
+                        </div>
+                        <div className="space-y-1 text-sm">
                           {rejected.slice(0, 5).map((err) => (
                             <div
                               key={`${err.rowNumber}-${err.columnName}`}
@@ -1150,6 +1154,10 @@ const handleCreateDataset = async () => {
                               …and {rejected.length - 5} more issue(s)
                             </div>
                           )}
+                        </div>
+                        <div>
+                          You can proceed with the upload (rejected rows will be
+                          skipped) or fix the data and try again.
                         </div>
                       </AlertDescription>
                     </Alert>
