@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     cookieStore.set(
       ACCESS_TOKEN_COOKIE,
       tokenResponse.access_token,
-      cookieOptions
+      {...cookieOptions, maxAge: tokenResponse.expires_in || 86400}
     );
 
     return response;
