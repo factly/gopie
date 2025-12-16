@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { zitadelClient } from "@/lib/auth/zitadel-client";
 import { cookies } from "next/headers";
-import { COOKIE_MAX_AGE, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE } from "@/constants/zitade";
+import {  getCookieOptions, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE } from "@/constants/zitade";
 
 const loginSchema = z.object({
   userId: z.string().min(1, "user id is required"),
@@ -16,8 +16,6 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     const validationResult = loginSchema.safeParse(body);
-
-    console.log({validationResult});
     
     if (!validationResult.success) {
       return NextResponse.json(
@@ -28,8 +26,6 @@ export async function POST(request: NextRequest) {
 
     const { userId, email, password } = validationResult.data;
 
-    console.log({userId, email, password});
-
     // step 1: create session
     const session = await zitadelClient.createSession(email);
     if (!session) {
@@ -39,15 +35,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log({session});
-
     // Step 2: Update session with password
     const authenticatedSession = await zitadelClient.updateSession(
       session.sessionId,
       password
     );
-
-    console.log({authenticatedSession});
 
     // Step 3: validate TOTP
     const resp = await zitadelClient.startTOTPRegistration(userId, authenticatedSession.sessionToken);
@@ -60,18 +52,8 @@ export async function POST(request: NextRequest) {
 
 
     const cookieStore = await cookies();
-    cookieStore.set(SESSION_ID_COOKIE, session.sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: COOKIE_MAX_AGE // 7 days
-    });
-    cookieStore.set(SESSION_TOKEN_COOKIE, authenticatedSession.sessionToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: COOKIE_MAX_AGE // 7 days
-    });
+    cookieStore.set(SESSION_ID_COOKIE, session.sessionId, getCookieOptions());
+    cookieStore.set(SESSION_TOKEN_COOKIE, authenticatedSession.sessionToken, getCookieOptions());
   
     return NextResponse.json({
       success: true,

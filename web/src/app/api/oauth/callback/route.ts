@@ -7,6 +7,7 @@ import {
   SESSION_ID_COOKIE,
   SESSION_TOKEN_COOKIE,
   AUTH_REQUEST_COOKIE,
+  getCookieOptions,
 } from "@/constants/zitade";
 import { cookies } from "next/headers";
 
@@ -74,13 +75,7 @@ export async function GET(req: NextRequest) {
     clearAuthCookies(response);
 
     // Set session cookies with the new tokens
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: tokenResponse.expires_in || 3600, // Use token expiry or default to 1 hour
-      path: "/",
-    };
+    const cookieOptions = getCookieOptions();
 
     const cookieStore = await cookies();
 

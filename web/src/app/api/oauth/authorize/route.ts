@@ -1,8 +1,8 @@
 import {
   AUTH_REQUEST_COOKIE,
-  COOKIE_MAX_AGE,
   PKCE_STATE_COOKIE,
   PKCE_VERIFIER_COOKIE,
+  getCookieOptions,
 } from "@/constants/zitade";
 import { zitadelClient } from "@/lib/auth/zitadel-client";
 import { NextRequest, NextResponse } from "next/server";
@@ -69,14 +69,7 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      // Set cookies with 10-minute expiry
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        maxAge: COOKIE_MAX_AGE,
-        path: "/",
-      };
+      const cookieOptions = getCookieOptions();
 
       const response = NextResponse.json({
         authRequestId,

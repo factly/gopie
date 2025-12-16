@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { zitadelClient } from "@/lib/auth/zitadel-client";
 import { cookies } from "next/headers";
-import { AUTH_REQUEST_COOKIE, COOKIE_MAX_AGE, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE } from "@/constants/zitade";
+import { AUTH_REQUEST_COOKIE, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE, getCookieOptions } from "@/constants/zitade";
 
 const loginSchema = z.object({
   loginName: z.string().min(1, "Login name is required"),
@@ -29,21 +29,9 @@ export async function POST(request: NextRequest) {
     // Step 1: Create session with user check
     const initialSession = await zitadelClient.createSession(loginName);
 
-    cookieStore.set(SESSION_ID_COOKIE, initialSession.sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: COOKIE_MAX_AGE,
-      path: '/'
-    });
+    cookieStore.set(SESSION_ID_COOKIE, initialSession.sessionId, getCookieOptions());
 
-    cookieStore.set(SESSION_TOKEN_COOKIE, initialSession.sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: COOKIE_MAX_AGE,
-      path: '/'
-    });
+    cookieStore.set(SESSION_TOKEN_COOKIE, initialSession.sessionToken, getCookieOptions());
     
     // step 2: get session
     const session = await zitadelClient.getSession(initialSession.sessionId);
