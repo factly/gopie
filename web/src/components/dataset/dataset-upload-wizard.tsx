@@ -161,6 +161,8 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     (state) => state.setColumnMappings
   );
 
+  const rejected = validationResult?.rejectedRows ?? [];
+
   // Add DuckDB initialization state
   const { isInitializing: isDuckDbInitializing } = useDuckDb();
 
@@ -1118,54 +1120,40 @@ const handleCreateDataset = async () => {
                   </Alert>
 
                   {/* Data Type Warnings (if any) */}
-                  {validationResult?.rejectedRows &&
-                    validationResult.rejectedRows.length > 0 && (
-                      <Alert className="mb-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                        <AlertTitle className="text-yellow-800 dark:text-yellow-200">
-                          Data Type Validation Warnings
-                        </AlertTitle>
-                        <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-                          {validationResult.rejectedRows.length} row(s) contain
-                          data that doesn&apos;t match the expected types and
-                          will be excluded from the dataset:
-                          <div className="mt-2 space-y-1 text-sm">
-                            {validationResult?.rejectedRows
-                              ?.slice(0, 5)
-                              .map((error, index) => (
-                                <div
-                                  key={index}
-                                  className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded border border-yellow-300 dark:border-yellow-800"
-                                >
-                                  <div className="font-medium text-yellow-800 dark:text-yellow-200">
-                                    Row {error.rowNumber}: Column &apos;
-                                    {error.columnName}&apos; expected a{" "}
-                                    {error.expectedType} type but is empty
-                                  </div>
-                                  <div className="text-xs text-yellow-600 dark:text-yellow-400">
-                                    Error when converting column &apos;
-                                    {error.columnName}&apos;: Could not convert
-                                    string &apos;Uncontested&apos; to
-                                    &apos;DOUBLE&apos;
-                                  </div>
-                                </div>
-                              ))}
-                            {validationResult?.rejectedRows &&
-                              validationResult.rejectedRows.length > 5 && (
-                                <div className="text-sm text-yellow-600 dark:text-yellow-400">
-                                  ... and{" "}
-                                  {validationResult.rejectedRows.length - 5}{" "}
-                                  more issue(s)
-                                </div>
-                              )}
-                          </div>
-                          <div className="mt-3 text-sm text-yellow-700 dark:text-yellow-300">
-                            You can proceed with the upload (rejected rows will
-                            be skipped) or fix the data and try again.
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                   {rejected.length > 0 && (
+                    <Alert className="mb-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTitle className="text-yellow-800 dark:text-yellow-200">
+                        Data Type Validation Warnings
+                      </AlertTitle>
+
+                      <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                        {rejected.length} row(s) failed type validation.
+                        <div className="mt-2 space-y-1 text-sm">
+                          {rejected.slice(0, 5).map((err) => (
+                            <div
+                              key={`${err.rowNumber}-${err.columnName}`}
+                              className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded border border-yellow-300 dark:border-yellow-800"
+                            >
+                              <div className="font-medium text-yellow-800 dark:text-yellow-200">
+                                {`Row ${err.rowNumber}: Column '${err.columnName}'`}
+                              </div>
+
+                              <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                                Error: {err.errorMessage}
+                              </div>
+                            </div>
+                          ))}
+
+                          {rejected.length > 5 && (
+                            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                              …and {rejected.length - 5} more issue(s)
+                            </div>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </>
               )}
             </div>
@@ -1553,31 +1541,22 @@ const handleCreateDataset = async () => {
               </div>
 
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {validationResult?.rejectedRows
-                  ?.slice(0, 5)
-                  .map((error, index) => (
-                    <div
-                      key={index}
-                      className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded border border-yellow-300 dark:border-yellow-800"
-                    >
-                      <div className="font-medium text-yellow-800 dark:text-yellow-200 text-sm">
-                        Row {error.rowNumber}: Column &apos;{error.columnName}
-                        &apos; expected a {error.expectedType} type but is empty
-                      </div>
-                      <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                        Error when converting column &apos;{error.columnName}
-                        &apos;: Could not convert string &apos;Uncontested&apos;
-                        to &apos;DOUBLE&apos;
-                      </div>
+                {rejected?.slice(0, 5).map((error, index) => (
+                  <div
+                    key={`${error.rowNumber}-${error.columnName}-${index}`}
+                    className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded border border-yellow-300 dark:border-yellow-800"
+                  >
+                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                      Error when converting column &apos;{error.columnName}&apos;:{" "}
+                      {error.errorMessage}
                     </div>
-                  ))}
-                {validationResult?.rejectedRows &&
-                  validationResult.rejectedRows.length > 5 && (
-                    <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
-                      ... and {validationResult.rejectedRows.length - 5} more
-                      issue(s)
-                    </div>
-                  )}
+                  </div>
+                ))}
+                {rejected && rejected.length > 5 && (
+                  <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                    ... and {rejected.length - 5} more issue(s)
+                  </div>
+                )}
               </div>
             </div>
 
