@@ -1554,10 +1554,12 @@ const handleCreateDataset = async () => {
                     key={`${error.rowNumber}-${error.columnName}-${index}`}
                     className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded border border-yellow-300 dark:border-yellow-800"
                   >
-                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                      Error when converting column &apos;{error.columnName}&apos;:{" "}
-                      {error.errorMessage}
-                    </div>
+                    <div className="font-medium text-yellow-800 dark:text-yellow-200 text-sm">
+                        Row {error.rowNumber}: Column {error.columnName}
+                      </div>
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        {error.errorMessage}
+                      </div>
                   </div>
                 ))}
                 {rejected && rejected.length > 5 && (
