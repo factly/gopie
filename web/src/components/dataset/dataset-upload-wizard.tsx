@@ -662,8 +662,6 @@ const handleCreateDataset = async () => {
     const hasInvalidColumns = React.useMemo(() => {
     return Object.values(columnMappings).some((mapping) => !mapping.isValid);
   }, [columnMappings]);
-  const canProceedFromStep3 = !isProcessing; 
-
   const canProceedFromStep3 =
     !isProcessing &&
     !hasInvalidColumns &&
