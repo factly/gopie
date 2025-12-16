@@ -3,7 +3,7 @@ import { ZitadelClient } from "@/lib/auth/zitadel-client";
 import { cookies } from "next/headers";
 import {
   AUTH_REQUEST_COOKIE,
-  COOKIE_MAX_AGE,
+  getCookieOptions,
   SESSION_ID_COOKIE,
   SESSION_TOKEN_COOKIE,
 } from "@/constants/zitade";
@@ -105,19 +105,7 @@ export async function GET(request: NextRequest) {
     }
     // Set session cookies properly - match what auth utils expects
     const cookieStore = await cookies();
-    const cookieOptions: {
-      httpOnly: boolean;
-      secure: boolean;
-      sameSite: "lax" | "strict" | "none" | boolean;
-      maxAge: number;
-      path: string;
-    } = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: COOKIE_MAX_AGE,
-      path: "/",
-    };
+    const cookieOptions = getCookieOptions();
 
     cookieStore.set(SESSION_ID_COOKIE, session.sessionId, cookieOptions);
     cookieStore.set(SESSION_TOKEN_COOKIE, session.sessionToken, cookieOptions);
@@ -141,13 +129,7 @@ export async function GET(request: NextRequest) {
       const response = NextResponse.redirect(
         new URL("/auth/login?mfa=enable", baseUrl)
       );
-      response.cookies.set("mfa_user_id", userId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 10 * 60, // 10 minutes
-        path: "/",
-      });
+      response.cookies.set("mfa_user_id", userId, cookieOptions);
       return response;
     } else {
       const authRequestId = cookieStore.get(AUTH_REQUEST_COOKIE)?.value;
