@@ -1,5 +1,8 @@
 import { createMutation } from "react-query-kit";
 import { apiClient, Dataset } from "@/lib/api-client";
+import { fetchWithSSE } from "@/lib/sse-client";
+import { useAuth } from "@/hooks/use-auth";
+import { SSEEvent } from "@/lib/sse-client";
 
 // Define the structure of the response based on the Go code
 interface RefreshDatasetResponse {
@@ -66,3 +69,38 @@ export const useRefreshDataset = createMutation({
     return (await res.json()) as RefreshDatasetResponse;
   },
 });
+
+export const useRefreshDatasetSSE = () => {
+  const { accessToken } = useAuth();
+  return async ({
+    datasetName,
+    projectId,
+    s3Url,
+    source,
+    ignoreErrors,
+    onProgress,
+  }: {
+    datasetName: string;
+    projectId: string;
+    s3Url: string;
+    source?: string;
+    ignoreErrors?: boolean;
+    onProgress: (event: SSEEvent) => void
+  }) => {
+    return await fetchWithSSE(
+      '/source/s3/refresh',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          dataset_name: datasetName,
+          project_id: projectId,
+          file_path: s3Url,
+          ignore_errors: ignoreErrors ?? true,
+          source: source,
+        }),
+      },
+      onProgress,
+      accessToken
+    );
+  };
+};

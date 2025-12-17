@@ -443,8 +443,6 @@ export const UnifiedUploader = forwardRef<
             validationResultRef.current
           );
         }
-
-        toast.success("File uploaded successfully!");
         setIsUploading(false);
         setUploadProgress(0);
       } catch (error) {

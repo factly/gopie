@@ -1,6 +1,7 @@
 import { createMutation } from "react-query-kit";
 import { apiClient, Dataset } from "@/lib/api-client"; 
-
+import { fetchWithSSE, SSEEvent } from "@/lib/sse-client";
+import { useAuth } from "@/hooks/use-auth";
 
 interface RefreshDatabaseDatasetResponse {
   data: {
@@ -61,3 +62,32 @@ export const useRefreshDatabaseDataset = createMutation({
     return (await res.json()) as RefreshDatabaseDatasetResponse;
   },
 });
+
+export const useRefreshDatabaseDatasetSSE = () => {
+  const { accessToken } = useAuth();
+  return async ({
+    projectId,
+    datasetName,
+    refreshType,
+    onProgress,
+  }: {
+    projectId: string;
+    datasetName: string;
+    refreshType: "full" | "incremental";
+    onProgress: (event: SSEEvent) => void;
+  }) => {
+    return await fetchWithSSE(
+      '/source/database/refresh',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          project_id: projectId,
+          dataset_name: datasetName,
+          refresh_type: refreshType,
+        }),
+      },
+      onProgress,
+      accessToken
+    );
+  };
+};
