@@ -64,55 +64,39 @@ export function ColumnDescriptionsModal({
     setTempDescription(descriptions[columnName] || "");
   };
 
-  const handleSaveDescription = (columnName: string) => {
-    setDescriptions((prev) => ({
-      ...prev,
-      [columnName]: tempDescription,
-    }));
-    setEditingColumn(null);
-    setTempDescription("");
+  const handleSaveDescription = async (columnName: string) => {
+    const updatedDescriptions = {
+      ...descriptions,
+      [columnName]: tempDescription.trim(),
+    };
+
+    try {
+      await updateMutation.mutateAsync({
+        datasetId,
+        data: { column_descriptions: updatedDescriptions },
+      });
+      setDescriptions(updatedDescriptions);
+
+      toast({
+        title: "Success",
+        description: `Description for ${columnName} updated.`,
+      });
+
+      setEditingColumn(null);
+      setTempDescription("");
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to update column description. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingColumn(null);
     setTempDescription("");
-  };
-
-  const handleSaveAll = async () => {
-    // Only send descriptions that have been added or modified
-    const changedDescriptions: Record<string, string> = {};
-    Object.entries(descriptions).forEach(([key, value]) => {
-      if (value && value.trim()) {
-        changedDescriptions[key] = value.trim();
-      }
-    });
-
-    if (Object.keys(changedDescriptions).length === 0) {
-      toast({
-        title: "No changes to save",
-        description: "Please add or modify at least one column description.",
-        variant: "default",
-      });
-      return;
-    }
-
-    try {
-      await updateMutation.mutateAsync({
-        datasetId,
-        data: { column_descriptions: changedDescriptions },
-      });
-      toast({
-        title: "Success",
-        description: "Column descriptions updated successfully.",
-      });
-      setOpen(false);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to update column descriptions. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
   const getColumnTypeColor = (type: string) => {
@@ -193,16 +177,16 @@ export function ColumnDescriptionsModal({
                                   }%
                                 </span>
                               )}
-                              {column.min && <span>Min: {column.min}</span>}
-                              {column.max && <span>Max: {column.max}</span>}
                             </div>
                           )}
                         </div>
                       </div>
+                      
                       {editingColumn !== column.column_name && (
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={editingColumn !== null} 
                           onClick={() => handleEditClick(column.column_name)}
                         >
                           <Edit2 className="h-4 w-4" />
@@ -218,19 +202,26 @@ export function ColumnDescriptionsModal({
                           placeholder="Enter a description for this column..."
                           className="min-h-[80px]"
                           autoFocus
+                          disabled={updateMutation.isPending}
                         />
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             onClick={() => handleSaveDescription(column.column_name)}
+                            disabled={updateMutation.isPending}
                           >
-                            <Save className="mr-1 h-3 w-3" />
+                            {updateMutation.isPending ? (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            ) : (
+                              <Save className="mr-1 h-3 w-3" />
+                            )}
                             Save
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={handleCancelEdit}
+                            disabled={updateMutation.isPending}
                           >
                             <X className="mr-1 h-3 w-3" />
                             Cancel
@@ -255,16 +246,7 @@ export function ColumnDescriptionsModal({
 
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveAll}
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save All Changes
+                Close
               </Button>
             </div>
           </>
