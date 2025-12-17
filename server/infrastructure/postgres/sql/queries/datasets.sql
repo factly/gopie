@@ -62,6 +62,35 @@ select * from datasets where id = $1;
 select * from datasets;
 
 -- name: GetDatasetsByIDs :many
-SELECT * FROM datasets 
+SELECT * FROM datasets
 WHERE org_id = $1 AND id = ANY($2::text[])
 ORDER BY created_at DESC;
+
+-- name: GetDatasetByOrgAndCreator :one
+select * from datasets where id = $1 and org_id = $2 and created_by = $3;
+
+-- name: ListDatasetsByOrgAndCreator :many
+select * from datasets
+where org_id = $1 and created_by = $2
+order by created_at desc;
+
+-- name: DeleteDatasetByOrgAndCreator :exec
+delete from datasets where id = $1 and org_id = $2 and created_by = $3;
+
+-- name: SearchDatasetsByOrgAndCreator :many
+select * from datasets
+where
+    org_id = $1 and
+    created_by = $2 and
+    (name ilike concat('%', $3, '%') or
+    description ilike concat('%', $3, '%') or
+    alias ilike concat('%', $3, '%'))
+order by
+    case
+        when alias ilike concat($3, '%') then 1
+        when name ilike concat($3, '%') then 2
+        when name ilike concat('%', $3, '%') then 3
+        else 4
+    end,
+    created_at desc
+limit $4 offset $5;

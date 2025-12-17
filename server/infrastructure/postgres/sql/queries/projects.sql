@@ -77,6 +77,50 @@ FROM datasets
 WHERE id = ANY($1::uuid[]) AND org_id = $2;
 
 -- name: GetProjectsByIDs :many
-SELECT * FROM projects 
+SELECT * FROM projects
 WHERE org_id = sqlc.arg(org_id) AND id = ANY(sqlc.arg(project_ids)::text[])
 ORDER BY created_at DESC;
+
+-- name: GetProjectByOrgAndCreator :one
+select
+    p.*,
+    array_remove(array_agg(pd.dataset_id), null) as dataset_ids,
+    count(pd.dataset_id) as dataset_count
+from projects p
+left join project_datasets pd on p.id = pd.project_id
+where p.id = $1 and p.org_id = $2 and p.created_by = $3
+group by p.id;
+
+-- name: ListProjectsByOrgAndCreator :many
+SELECT
+    p.*,
+    count(pd.dataset_id) as dataset_count
+FROM projects p
+LEFT JOIN project_datasets pd ON p.id = pd.project_id
+WHERE p.org_id = $1 AND p.created_by = $2
+GROUP BY p.id
+ORDER BY p.created_at DESC;
+
+-- name: DeleteProjectByOrgAndCreator :exec
+delete from projects where id = $1 and org_id = $2 and created_by = $3;
+
+-- name: SearchProjectsByOrgAndCreator :many
+SELECT
+    p.*,
+    count(pd.dataset_id) as dataset_count
+FROM projects p
+LEFT JOIN project_datasets pd ON p.id = pd.project_id
+WHERE
+    p.org_id = $1 AND
+    p.created_by = $2 AND
+    (p.name ILIKE concat('%', $3::text, '%') OR
+    p.description ILIKE concat('%', $3::text, '%'))
+GROUP BY p.id
+ORDER BY
+    CASE
+        WHEN p.name ILIKE concat($3::text, '%') THEN 1
+        WHEN p.name ILIKE concat('%', $3::text, '%') THEN 2
+        ELSE 3
+    END,
+    p.created_at DESC
+LIMIT $4 OFFSET $5;

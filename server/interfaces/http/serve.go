@@ -28,7 +28,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 		// zitadel interceptor setup
 		params.Logger.Info("Zitadel is enabled, setting up zitadel interceptor")
 		zitadel.SetupZitadelInterceptor(cfg, params.Logger)
-		authMiddleware = []fiber.Handler{middleware.ZitadelAuthorizer(params.Logger), middleware.ZitadelAuth(params.Logger)}
+		authMiddleware = []fiber.Handler{middleware.ZitadelAuthorizer(params.Logger), middleware.ZitadelAuth(params.Logger), middleware.RoleAuthorization()}
 	} else {
 		params.Logger.Info("Zitadel is disabled, setting up authorize headers interceptor")
 		authMiddleware = []fiber.Handler{middleware.AuthorizeHeaders(params.Logger)}

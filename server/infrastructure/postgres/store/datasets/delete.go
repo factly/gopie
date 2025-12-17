@@ -61,3 +61,19 @@ func (s *PgDatasetStore) DeleteSummaryWithTx(ctx context.Context, tx pgx.Tx, dat
 	}
 	return nil
 }
+
+func (s *PgDatasetStore) DeleteByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) error {
+	err := s.q.DeleteDatasetByOrgAndCreator(ctx, gen.DeleteDatasetByOrgAndCreatorParams{
+		ID:        datasetID,
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error deleting dataset by org and creator", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrRecordNotFound
+		}
+		return err
+	}
+	return nil
+}

@@ -109,3 +109,30 @@ func (s *PostgresProjectStore) DatasetsBelongToOrg(ctx context.Context, datasetN
 
 	return belongs, nil
 }
+
+func (s *PostgresProjectStore) DetailsByOrgAndCreator(ctx context.Context, id, orgID, createdBy string) (*models.Project, error) {
+	p, err := s.q.GetProjectByOrgAndCreator(ctx, gen.GetProjectByOrgAndCreatorParams{
+		ID:        id,
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error fetching project by org and creator", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return &models.Project{
+		ID:           p.ID,
+		Name:         p.Name,
+		Description:  p.Description.String,
+		CreatedAt:    p.CreatedAt.Time,
+		UpdatedAt:    p.UpdatedAt.Time,
+		CreatedBy:    p.CreatedBy.String,
+		UpdatedBy:    p.UpdatedBy.String,
+		OrgID:        p.OrgID.String,
+		CustomPrompt: p.CustomPrompt.String,
+	}, nil
+}

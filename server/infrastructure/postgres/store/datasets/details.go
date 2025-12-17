@@ -144,3 +144,42 @@ func (s *PgDatasetStore) GetDatasetByID(ctx context.Context, datasetID string) (
 		CustomPrompt: d.CustomPrompt.String,
 	}, nil
 }
+
+func (s *PgDatasetStore) DetailsByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) (*models.Dataset, error) {
+	d, err := s.q.GetDatasetByOrgAndCreator(ctx, gen.GetDatasetByOrgAndCreatorParams{
+		ID:        datasetID,
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error fetching dataset by org and creator", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	columns := make([]map[string]any, 0)
+	err = json.Unmarshal([]byte(d.Columns), &columns)
+	if err != nil {
+		s.logger.Error("Error unmarshaling columns", zap.Error(err))
+		return nil, err
+	}
+
+	return &models.Dataset{
+		ID:           d.ID,
+		Name:         d.Name,
+		Alias:        d.Alias.String,
+		Description:  d.Description.String,
+		RowCount:     int(d.RowCount.Int32),
+		Size:         int(d.Size.Int64),
+		FilePath:     d.FilePath,
+		CreatedAt:    time.Time(d.CreatedAt.Time),
+		CreatedBy:    d.CreatedBy.String,
+		UpdatedAt:    time.Time(d.UpdatedAt.Time),
+		UpdatedBy:    d.UpdatedBy.String,
+		Columns:      columns,
+		OrgID:        d.OrgID.String,
+		CustomPrompt: d.CustomPrompt.String,
+		Source:       d.Source,
+	}, nil
+}

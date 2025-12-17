@@ -70,3 +70,71 @@ func (s *PostgresProjectStore) ListAllProjects(ctx context.Context) ([]*models.P
 
 	return projects, nil
 }
+
+func (s *PostgresProjectStore) ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.SearchProjectsResults, error) {
+	ps, err := s.q.ListProjectsByOrgAndCreator(ctx, gen.ListProjectsByOrgAndCreatorParams{
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error listing projects by org and creator", zap.Error(err))
+		return nil, err
+	}
+
+	var projects []*models.SearchProjectsResults
+	for _, p := range ps {
+		projects = append(projects, &models.SearchProjectsResults{
+			ID:           p.ID,
+			Name:         p.Name,
+			Description:  p.Description.String,
+			CreatedAt:    p.CreatedAt.Time,
+			UpdatedAt:    p.UpdatedAt.Time,
+			DatasetCount: int(p.DatasetCount),
+			CreatedBy:    p.CreatedBy.String,
+			UpdatedBy:    p.UpdatedBy.String,
+			OrgID:        p.OrgID.String,
+			CustomPrompt: p.CustomPrompt.String,
+		})
+	}
+
+	return projects, nil
+}
+
+func (s *PostgresProjectStore) SearchProjectByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.SearchProjectsResults], error) {
+	ps, err := s.q.SearchProjectsByOrgAndCreator(ctx, gen.SearchProjectsByOrgAndCreatorParams{
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+		Column3:   query,
+		Limit:     int32(pagination.Limit),
+		Offset:    int32(pagination.Offset),
+	})
+	if err != nil {
+		s.logger.Error("Error searching projects by org and creator", zap.Error(err))
+		return nil, err
+	}
+
+	var projects []*models.SearchProjectsResults
+	for _, p := range ps {
+		projects = append(projects, &models.SearchProjectsResults{
+			ID:           p.ID,
+			Name:         p.Name,
+			Description:  p.Description.String,
+			CreatedAt:    p.CreatedAt.Time,
+			UpdatedAt:    p.UpdatedAt.Time,
+			DatasetCount: int(p.DatasetCount),
+			CreatedBy:    p.CreatedBy.String,
+			UpdatedBy:    p.UpdatedBy.String,
+			OrgID:        p.OrgID.String,
+			CustomPrompt: p.CustomPrompt.String,
+		})
+	}
+
+	count, err := s.q.GetProjectsCount(ctx, pgtype.Text{String: orgID, Valid: true})
+	if err != nil {
+		s.logger.Error("Error fetching projects count", zap.Error(err))
+		return nil, err
+	}
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, int(count), projects)
+	return &paginationView, nil
+}

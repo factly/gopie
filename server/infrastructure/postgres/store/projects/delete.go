@@ -25,3 +25,19 @@ func (s *PostgresProjectStore) Delete(ctx context.Context, id, orgID string) err
 	}
 	return nil
 }
+
+func (s *PostgresProjectStore) DeleteByOrgAndCreator(ctx context.Context, id, orgID, createdBy string) error {
+	err := s.q.DeleteProjectByOrgAndCreator(ctx, gen.DeleteProjectByOrgAndCreatorParams{
+		ID:        id,
+		OrgID:     pgtype.Text{String: orgID, Valid: true},
+		CreatedBy: pgtype.Text{String: createdBy, Valid: true},
+	})
+	if err != nil {
+		s.logger.Error("Error deleting project by org and creator", zap.Error(err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrRecordNotFound
+		}
+		return err
+	}
+	return nil
+}
