@@ -36,6 +36,12 @@ type ProjectStoreRepository interface {
 	ListAllProjects(ctx context.Context) ([]*models.Project, error)
 	DatasetsBelongToOrg(ctx context.Context, datasetNames []string, orgID string) (bool, error)
 	ProjectsBelongToOrg(ctx context.Context, projectIDs []string, orgID string) (bool, error)
+
+	// Methods scoped to org_id and created_by
+	DetailsByOrgAndCreator(ctx context.Context, id, orgID, createdBy string) (*models.Project, error)
+	ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.SearchProjectsResults, error)
+	SearchProjectByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.SearchProjectsResults], error)
+	DeleteByOrgAndCreator(ctx context.Context, id, orgID, createdBy string) error
 }
 
 type DatasetStoreRepository interface {
@@ -62,6 +68,13 @@ type DatasetStoreRepository interface {
 	ListAllDatasets(ctx context.Context) ([]*models.Dataset, error)
 	ListALlDatasetsFromProject(ctx context.Context, projectID string) ([]*models.Dataset, error)
 	GetProjectForDataset(ctx context.Context, datasetID string) (string, error)
+	SearchDatasets(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.Dataset], error)
+
+	// Methods scoped to org_id and created_by
+	DetailsByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) (*models.Dataset, error)
+	ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.Dataset, error)
+	SearchDatasetsByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.Dataset], error)
+	DeleteByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) error
 }
 
 type ChatStoreRepository interface {

@@ -149,6 +149,50 @@ func (s *PgDatasetStore) GetProjectForDataset(ctx context.Context, datasetID str
 	return projectID, nil
 }
 
+func (s *PgDatasetStore) SearchDatasets(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.Dataset], error) {
+	ds, err := s.q.SearchDatasets(ctx, gen.SearchDatasetsParams{
+		OrgID:  pgtype.Text{String: orgID, Valid: true},
+		Column2: query,
+		Limit:  int32(pagination.Limit),
+		Offset: int32(pagination.Offset),
+	})
+	if err != nil {
+		s.logger.Error("Error searching datasets", zap.Error(err))
+		return nil, err
+	}
+
+	var datasets []*models.Dataset
+	for _, d := range ds {
+		columns := make([]map[string]any, 0)
+		_ = json.Unmarshal([]byte(d.Columns), &columns)
+
+		datasets = append(datasets, &models.Dataset{
+			ID:           d.ID,
+			Name:         d.Name,
+			Alias:        d.Alias.String,
+			Description:  d.Description.String,
+			CreatedAt:    d.CreatedAt.Time,
+			CreatedBy:    d.CreatedBy.String,
+			UpdatedAt:    d.UpdatedAt.Time,
+			UpdatedBy:    d.UpdatedBy.String,
+			Source:       d.Source,
+			Columns:      columns,
+			RowCount:     int(d.RowCount.Int32),
+			Size:         int(d.Size.Int64),
+			FilePath:     d.FilePath,
+			OrgID:        d.OrgID.String,
+			CustomPrompt: d.CustomPrompt.String,
+		})
+	}
+
+	// Note: This count may not be accurate for filtered results
+	// You might want to add a separate count query for search results
+	count := len(datasets)
+
+	paginationView := models.NewPaginationView(pagination.Offset, pagination.Limit, count, datasets)
+	return &paginationView, nil
+}
+
 func (s *PgDatasetStore) ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.Dataset, error) {
 	ds, err := s.q.ListDatasetsByOrgAndCreator(ctx, gen.ListDatasetsByOrgAndCreatorParams{
 		OrgID:     pgtype.Text{String: orgID, Valid: true},

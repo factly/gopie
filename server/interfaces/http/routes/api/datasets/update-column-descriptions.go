@@ -29,6 +29,8 @@ type updateColumnDescriptionsParams struct {
 func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
 	var body updateColumnDescriptionsParams
 	if err := ctx.BodyParser(&body); err != nil {
@@ -50,7 +52,7 @@ func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 	}
 
 	// Get the dataset details to verify it exists and get the dataset name
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
 	if err != nil {
 		h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

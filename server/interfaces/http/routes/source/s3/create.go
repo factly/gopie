@@ -33,6 +33,8 @@ type resourceCleanup struct {
 	tableName  string
 	datasetID  string
 	orgID      string
+	userID     string
+	role       models.Role
 	hasDataset bool
 	hasSummary bool
 }
@@ -51,7 +53,7 @@ func (h *httpHandler) cleanupResources(rc resourceCleanup) {
 
 	// Delete dataset record if it was created
 	if rc.hasDataset {
-		deleteErr := h.datasetSvc.Delete(rc.datasetID, rc.orgID)
+		deleteErr := h.datasetSvc.Delete(rc.datasetID, rc.orgID, rc.userID, rc.role)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup",
 				zap.Error(deleteErr),
@@ -84,6 +86,7 @@ func (h *httpHandler) cleanupResources(rc resourceCleanup) {
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	orgID := ctx.Get(middleware.OrganizationIDHeader)
 	userID := ctx.Get(middleware.UserCtxKey)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 	if orgID == "" {
 		h.logger.Error("Organization ID header is missing")
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -115,7 +118,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	}
 
 	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID, orgID)
+	project, err := h.projectSvc.Details(body.ProjectID, orgID, userID, role)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
