@@ -107,17 +107,22 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       <Card className="border shadow-sm">
         <CardContent className="p-6">
           <div className="space-y-4 animate-in fade-in">
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
+            
+            {/* Name Section */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Project Name
+                </label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter project name"
-                  className="text-2xl font-semibold h-auto py-2 px-3"
+                  className="font-semibold"
                   autoFocus
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pb-0.5">
                 <Button
                   variant="default"
                   size="sm"
@@ -139,6 +144,9 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
               </div>
             </div>
             <div className="space-y-1">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Description
+              </label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
@@ -147,18 +155,23 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
                 rows={3}
                 maxLength={1000}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground text-right">
                 {description.length}/1000 characters
               </p>
             </div>
-            <Textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="Enter a custom prompt to guide AI interactions with this project's datasets..."
-              className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
-              rows={3}
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Custom Prompt
+              </label>
+              <Textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Enter a custom prompt to guide AI interactions with this project's datasets..."
+                className="text-base text-muted-foreground/90 resize-none min-h-[80px]"
+                rows={3}
+              />
+            </div>
+        </div>
         </CardContent>
       </Card>
     );
