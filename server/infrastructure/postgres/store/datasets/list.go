@@ -152,7 +152,6 @@ func (s *PgDatasetStore) GetProjectForDataset(ctx context.Context, datasetID str
 func (s *PgDatasetStore) SearchDatasets(ctx context.Context, query string, pagination models.Pagination, orgID string) (*models.PaginationView[*models.Dataset], error) {
 	ds, err := s.q.SearchDatasets(ctx, gen.SearchDatasetsParams{
 		OrgID:  pgtype.Text{String: orgID, Valid: true},
-		Column2: query,
 		Limit:  int32(pagination.Limit),
 		Offset: int32(pagination.Offset),
 	})
