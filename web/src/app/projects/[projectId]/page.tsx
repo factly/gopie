@@ -3,17 +3,18 @@
 import * as React from "react";
 import { useProject } from "@/lib/queries/project/get-project";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableIcon, UploadIcon } from "lucide-react";
+import { TableIcon, UploadIcon, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatasetCard } from "@/components/dataset/dataset-card";
 import { motion } from "framer-motion";
-import { useDatasets } from "@/lib/queries/dataset/list-datasets";
+import { useDatasetsInfinite } from "@/lib/queries/dataset/list-datasets"; // UPDATED
 import { deleteDataset } from "@/lib/mutations/dataset/delete-dataset";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { InlineProjectEditor } from "@/components/project/inline-project-editor";
 import Link from "next/link";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer"; // YOUR NEW HOOK
 
 export default function ProjectPage({
   params,
@@ -24,22 +25,37 @@ export default function ProjectPage({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = React.useState(false);
-  
+
   const {
     data: project,
-    isLoading,
-    error,
+    isLoading: isProjectLoading,
+    error: projectError,
   } = useProject({
     variables: {
       projectId,
     },
   });
 
-  const { data: datasets } = useDatasets({
-    variables: {
-      projectId,
-    },
+  // Use Infinite Query
+  const { 
+    data: datasetsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isDatasetsLoading,
+  } = useDatasetsInfinite(projectId, 12); 
+
+  // Use Custom Intersection Observer Hook
+  const { ref: loadMoreRef, inView } = useIntersectionObserver({
+    threshold: 0.1,
+    enabled: hasNextPage && !isFetchingNextPage,
   });
+
+  React.useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -48,8 +64,9 @@ export default function ProjectPage({
   const handleDeleteDataset = async (datasetId: string) => {
     try {
       await deleteDataset(projectId, datasetId);
+      // Invalidate specifically the infinite query
       await queryClient.invalidateQueries({
-        queryKey: ["datasets"],
+        queryKey: ["datasets", projectId, "infinite"],
       });
       toast({
         title: "Dataset deleted",
@@ -65,12 +82,9 @@ export default function ProjectPage({
     }
   };
 
-  // Return null during SSR and initial client render to avoid hydration mismatch
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
-  if (isLoading) {
+  if (isProjectLoading) {
     return (
       <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-4">
@@ -98,18 +112,22 @@ export default function ProjectPage({
     );
   }
 
-  if (error) {
+  if (projectError) {
     return (
       <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8">
         <div className="border border-destructive/50 bg-destructive/5 p-4">
           <h2 className="text-lg font-semibold text-destructive">Error</h2>
-          <p className="text-sm text-destructive/80">{error.message}</p>
+          <p className="text-sm text-destructive/80">{projectError.message}</p>
         </div>
       </div>
     );
   }
 
   if (!project) return null;
+
+  // Flatten the pages
+  const allDatasets = datasetsData?.pages.flatMap((page) => page.results || []) || [];
+  const totalDatasets = datasetsData?.pages[0]?.total || 0;
 
   return (
     <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8 space-y-8">
@@ -120,7 +138,7 @@ export default function ProjectPage({
           <h2 className="text-2xl font-medium tracking-tight text-foreground/90 flex items-center">
             Datasets
             <Badge variant="secondary" className="ml-2 font-normal">
-              {datasets?.total || 0}
+              {totalDatasets}
             </Badge>
           </h2>
           <Link href={`/projects/${projectId}/upload`}>
@@ -131,7 +149,7 @@ export default function ProjectPage({
           </Link>
         </div>
 
-        {datasets?.total === 0 ? (
+        {allDatasets.length === 0 && !isDatasetsLoading ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -149,26 +167,38 @@ export default function ProjectPage({
             </Link>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {datasets?.results?.map((dataset, idx) => (
-              <motion.div
-                key={dataset.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-              >
-                <DatasetCard
-                  dataset={dataset}
-                  projectId={projectId}
-                  onDelete={handleDeleteDataset}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="flex flex-col gap-6">
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {allDatasets.map((dataset, idx) => (
+                <motion.div
+                  key={dataset.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                >
+                  <DatasetCard
+                    dataset={dataset}
+                    projectId={projectId}
+                    onDelete={handleDeleteDataset}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Infinite Scroll Trigger */}
+            <div 
+              ref={loadMoreRef} 
+              className="h-10 flex w-full justify-center p-4 min-h-[40px]"
+            >
+              {isFetchingNextPage && (
+                <Loader2 className="animate-spin h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
