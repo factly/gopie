@@ -54,6 +54,7 @@ func (m *OlapDBDriver) generateHttpFsCommands() []string {
 		"INSTALL httpfs;", "LOAD httpfs;",
 		"INSTALL postgres;", "LOAD postgres;",
 		"INSTALL mysql;", "LOAD mysql;",
+		"INSTALL excel;", "LOAD excel;",
 	}
 }
 
