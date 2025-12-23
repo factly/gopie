@@ -378,16 +378,20 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               s3Url = `s3://${bucket}/${key}`;
             }
           } else {
-            // Non-S3 URL, might be MinIO, presigned URL, or proxy
-            // For localhost:9000 (MinIO) or similar, the format is usually: http://localhost:9000/bucket/key
-            // Try to extract path assuming format: /bucket/key
+            // Non-S3 URL, might be RUSTFS, presigned URL, or proxy
+            // For localhost:9000 (RUSTFS) or similar, the format is usually: http://localhost:9000/bucket
+            // Try to extract path assuming format: /bucket
             if (pathParts.length >= 2) {
               const bucket = pathParts[0];
               const key = pathParts.slice(1).join("/");
               s3Url = `s3://${bucket}/${key}`;
             } else if (pathParts.length === 1) {
               // Only one path part, assume it's just the bucket
-              s3Url = `s3://${pathParts[0]}`;
+              const uploadResponse = useUploadStore.getState()
+                .uploadResponse as { body?: { key?: string } } | undefined;
+
+              const key = uploadResponse?.body?.key;
+              s3Url = `${key ? `s3://${pathParts[0]}/${key}` : `s3://${pathParts[0]}`}`;
             } else {
               // No path parts, this shouldn't happen
               throw new Error("No path found in upload URL");

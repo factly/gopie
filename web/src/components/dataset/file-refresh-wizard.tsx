@@ -171,13 +171,17 @@ export function FileRefreshWizard({
             s3Url = `s3://${bucket}/${key}`;
           }
         } else {
-          // --- Handle MinIO / localhost / generic object storage ---
+          // --- Handle RUSTFS / localhost / generic object storage ---
           if (pathParts.length >= 2) {
             const bucket = pathParts[0];
             const key = pathParts.slice(1).join("/");
             s3Url = `s3://${bucket}/${key}`;
           } else if (pathParts.length === 1) {
-            s3Url = `s3://${pathParts[0]}`;
+            const uploadResponse = useUploadStore.getState().uploadResponse as
+              | { body?: { key?: string } }
+              | undefined;
+            const key = uploadResponse?.body?.key;
+            s3Url = `${key ? `s3://${pathParts[0]}/${key}` : `s3://${pathParts[0]}`}`;
           } else {
             throw new Error("No path found in upload URL");
           }
