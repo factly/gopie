@@ -42,6 +42,7 @@ type ProjectStoreRepository interface {
 	ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.SearchProjectsResults, error)
 	SearchProjectByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.SearchProjectsResults], error)
 	DeleteByOrgAndCreator(ctx context.Context, id, orgID, createdBy string) error
+	UpdateByOrgAndCreator(ctx context.Context, projectID, orgID, createdBy string, params *models.UpdateProjectParams) (*models.Project, error)
 }
 
 type DatasetStoreRepository interface {
@@ -75,6 +76,8 @@ type DatasetStoreRepository interface {
 	ListByOrgAndCreator(ctx context.Context, orgID, createdBy string) ([]*models.Dataset, error)
 	SearchDatasetsByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.Dataset], error)
 	DeleteByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) error
+	UpdateByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string, params *models.UpdateDatasetParams) (*models.Dataset, error)
+	ListByProjectAndRole(ctx context.Context, projectID, orgID, createdBy string, role models.Role, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
 }
 
 type ChatStoreRepository interface {

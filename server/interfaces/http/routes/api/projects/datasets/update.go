@@ -70,7 +70,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	dataset, err := h.datasetsSvc.Update(datasetID, &models.UpdateDatasetParams{
+	dataset, err := h.datasetsSvc.Update(datasetID, role, &models.UpdateDatasetParams{
 		Description:  body.Description,
 		Alias:        body.Alias,
 		UpdatedBy:    userID,

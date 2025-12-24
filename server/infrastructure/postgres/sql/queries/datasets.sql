@@ -94,3 +94,24 @@ order by
     end,
     created_at desc
 limit $4 offset $5;
+
+-- name: UpdateDatasetByOrgAndCreator :one
+update datasets
+set
+    description = coalesce($1, description),
+    row_count = coalesce($2, row_count),
+    size = coalesce($3, size),
+    file_path = coalesce($4, file_path),
+    columns = coalesce($5, columns),
+    alias = coalesce($6, alias),
+    updated_by = coalesce($7, updated_by),
+    custom_prompt = coalesce($8, custom_prompt)
+where id = $9::uuid and org_id = $10 and created_by = $11
+returning *;
+
+-- name: ListDatasetsByProjectAndCreator :many
+select d.* from datasets d
+inner join project_datasets pd on d.id = pd.dataset_id
+where pd.project_id = $1 and d.org_id = $2 and d.created_by = $3
+order by d.created_at desc
+limit $4 offset $5;

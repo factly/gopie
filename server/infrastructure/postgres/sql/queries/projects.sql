@@ -124,3 +124,13 @@ ORDER BY
     END,
     p.created_at DESC
 LIMIT $4 OFFSET $5;
+
+-- name: UpdateProjectByOrgAndCreator :one
+update projects
+set
+    name = coalesce($1, name),
+    description = coalesce($2, description),
+    updated_by = coalesce($3, updated_by),
+    custom_prompt = coalesce($4, custom_prompt)
+where id = $5 and org_id = $6 and created_by = $7
+returning *;

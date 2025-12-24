@@ -104,7 +104,8 @@ var reindexSchemasCmd = &cobra.Command{
 			page := 1
 
 			for {
-				datasets, err := datasetService.List(project.ID, limit, page)
+				// TODO: fix this later
+				datasets, err := datasetService.List(project.ID, "", "", "", limit, page)
 				if err != nil {
 					appLogger.Error("failed to list datasets for project",
 						zap.String("project_id", project.ID),

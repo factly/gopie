@@ -3,6 +3,8 @@ package projects
 import (
 	"strings"
 
+	"github.com/factly/gopie/domain/models"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
@@ -10,6 +12,10 @@ import (
 // projectOpenAPI handles the OpenAPI specification endpoint for a project
 // It returns OpenAPI specs for all datasets in a project
 func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
+	role := c.Locals(middleware.RoleCtxKey).(models.Role)
+	orgID := c.Locals(middleware.OrganizationCtxKey).(string)
+	userID := c.Locals(middleware.UserCtxKey).(string)
+
 	projectID := c.Params("projectID")
 	if projectID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -18,7 +24,7 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 	}
 
 	// Get all datasets for this project
-	datasets, err := h.datasetSvc.List(projectID, 1000, 0)
+	datasets, err := h.datasetSvc.List(projectID, role, orgID, userID, 1000, 0)
 	if err != nil {
 		h.logger.Error("Error getting datasets for project", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

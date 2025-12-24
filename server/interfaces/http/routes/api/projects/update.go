@@ -34,6 +34,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
 	body := updateProjectBody{}
 	if err := ctx.BodyParser(&body); err != nil {
@@ -53,7 +54,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	project, err := h.projectSvc.Update(projectID, &models.UpdateProjectParams{
+	project, err := h.projectSvc.Update(projectID, role, &models.UpdateProjectParams{
 		Name:         body.Name,
 		Description:  body.Description,
 		UpdatedBy:    userID,
