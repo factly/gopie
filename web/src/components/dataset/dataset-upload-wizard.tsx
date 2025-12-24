@@ -30,7 +30,6 @@ import { DatabaseSourceForm } from "@/components/dataset/database-source-form";
 import { ColumnNameEditor } from "@/components/dataset/column-name-editor";
 import { UnifiedUploader, UnifiedUploaderRef } from "@/components/dataset/unified-uploader";
 import { useRouter } from "next/navigation";
-import { useSourceDataset } from "@/lib/mutations/dataset/source-dataset";
 import { useGenerateColumnDescriptions } from "@/lib/mutations/ai/generate-column-descriptions";
 import { useGenerateDatasetDescription } from "@/lib/mutations/ai/generate-dataset-description";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,6 +40,10 @@ import { useUploadStore } from "@/lib/stores/uploadStore";
 import { useDuckDb } from "@/hooks/useDuckDb";
 import { CenteredLoading } from "@/components/ui/loading";
 import { sanitizeDatasetRows } from "@/lib/utils/serialization";
+import { useSourceDatasetSSE } from "@/lib/mutations/dataset/source-dataset";
+import { Progress } from "../ui/progress";
+import { SSEEvent } from "@/lib/sse-client";
+import { Dataset } from "@/lib/api-client";
 
 const WIZARD_STEPS: Step[] = [
   {
@@ -73,6 +76,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const startUpload = useSourceDatasetSSE();
   const [isGeneratingDescriptions, setIsGeneratingDescriptions] =
     useState<boolean>(false);
   const [descriptionsGenerated, setDescriptionsGenerated] = 
@@ -131,7 +135,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   // Track if we've auto-navigated to prevent re-navigation
   const hasAutoNavigatedRef = useRef(false);
 
-  const sourceDataset = useSourceDataset();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -235,11 +238,16 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
     [setUploadedFile, setValidationResult, setUploadResponse]
   );
 
-  const handleCreateDataset = async () => {
+const handleCreateDataset = async () => {
     if (!validationResult) {
       toast.error("No validation data available");
       return;
     }
+
+    // 1. Initialize Single Toast ID & Progress Tracker
+    const toastId = "dataset-creation-flow";
+    // We track progress in a variable to increment it smoothly
+    let currentProgress = 0;
 
     try {
       setUploadError(null);
@@ -250,6 +258,16 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       console.log("Dataset description:", datasetDescription);
 
       // Check if we already have the upload response
+
+      // 2. Show Initial Toast
+      toast.loading(
+        <div className="flex flex-col gap-2 w-full min-w-[250px]">
+          <span className="font-medium text-sm">Initializing process...</span>
+          <Progress value={0} className="h-2" />
+        </div>,
+        { id: toastId, duration: Infinity }
+      );
+
       let uploadURL: string | undefined;
       const currentUploadResponse = useUploadStore.getState().uploadResponse;
       console.log("Current upload response from store:", currentUploadResponse);
@@ -269,17 +287,36 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       // If we don't have the URL yet, trigger upload through the unified uploader component
       if (!uploadURL && unifiedUploaderRef.current) {
         console.log(
-          "No URL found, triggering storage upload through CSV validation component..."
+          "No URL found, triggering storage upload through CSV validation component...");
+        // 3. Update Toast for S3 Upload Phase
+        toast.loading(
+          <div className="flex flex-col gap-2 w-full min-w-[250px]">
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">Uploading file to storage...</span>
+              <span className="text-muted-foreground">10%</span>
+            </div>
+            <Progress value={10} className="h-2" />
+          </div>,
+          { id: toastId }
         );
 
         try {
-          // Show loading state
-          toast.loading("Uploading file to storage...", { id: "s3-upload" });
-
           // Trigger the upload through the ref
           await unifiedUploaderRef.current.triggerUpload(
             datasetName.trim(),
             datasetDescription.trim()
+          );
+
+          // 4. Update Toast for S3 Completion/Processing
+          toast.loading(
+            <div className="flex flex-col gap-2 w-full min-w-[250px]">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">File uploaded. Verifying...</span>
+                <span className="text-muted-foreground">25%</span>
+              </div>
+              <Progress value={25} className="h-2" />
+            </div>,
+            { id: toastId }
           );
 
           // Wait a bit longer for the store to update with the upload response
@@ -302,25 +339,12 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
           }
 
           if (!uploadURL) {
-            toast.error("Failed to get S3 URL after upload", {
-              id: "s3-upload",
-            });
             throw new Error(
               "File upload completed but S3 URL not found in response"
             );
           }
-
-          toast.success("File uploaded to storage successfully!", {
-            id: "s3-upload",
-          });
         } catch (error) {
           console.error("Upload error:", error);
-          toast.error(
-            `Upload failed: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
-            { id: "s3-upload" }
-          );
           throw error;
         }
       }
@@ -330,7 +354,6 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
           "No upload URL available. Please try uploading the file again."
         );
       }
-
       console.log("Extracted uploadURL:", uploadURL);
 
       // Construct S3 URL for dataset creation
@@ -412,38 +435,63 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
       const fileFormat = validationResult.format || "csv";
       const formatDisplay = fileFormat.toUpperCase();
 
-      // Use form data for dataset name and description
+      // Use form data for dataset name and description      
       const finalDatasetName = datasetName.trim();
       const finalDatasetDescription = datasetDescription.trim();
       const alter_column_names = getColumnMappings();
       const column_descriptions = getColumnDescriptions();
 
-      const res = await sourceDataset.mutateAsync({
+      // Start SSE progress where S3 left off
+      currentProgress = 25;
+
+      // 5. Call SSE Endpoint with the specific onProgress signature
+      const res = await startUpload({
         datasetUrl: s3Url,
         projectId,
         alias: finalDatasetName,
         createdBy: "system",
         description: finalDatasetDescription,
-        alter_column_names: alter_column_names,
-        column_descriptions: column_descriptions,
+        alter_column_names,
+        column_descriptions,
         custom_prompt: datasetCustomPrompt,
-      });
+        onProgress: (event: SSEEvent) => {
+          if (event.type === 'status_update') {
+            // Increment progress artificially (capped at 90%)
+            currentProgress = Math.min(currentProgress + 10, 90);
+            
+            // 6. UPDATE TOAST with SSE Message
+            toast.loading(
+              <div className="flex flex-col gap-2 w-full min-w-[250px]">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">{event.message}</span>
+                  <span className="text-muted-foreground">{currentProgress}%</span>
+                </div>
+                <Progress value={currentProgress} className="h-2" />
+              </div>,
+              { id: toastId } // Crucial: This targets the same toast ID
+            );
+          }
+        },
+      }) as { dataset: Dataset };
 
-      if (!res?.data.dataset.id) {
+      if (!res?.dataset?.id) {
         throw new Error("Invalid response from server: Dataset ID not found.");
       }
 
+      // 7. Update Toast to Success (Final State)
+     
       setCreatedDataset({
-        ...res.data.dataset,
+        ...res.dataset,
         formatDisplay,
         columnMappings: alter_column_names,
         columnDescriptions: column_descriptions,
         validationResult,
       });
 
-      toast.success(
-        `Dataset ${res.data.dataset.alias} (${formatDisplay}) created successfully`
-      );
+       toast.success(`Dataset ${res.dataset.alias} (${formatDisplay}) created successfully`, {
+        id: toastId, // Transforms the existing loading toast
+        duration: 4000, 
+      });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
 
@@ -461,10 +509,15 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
 
       // Dataset created successfully - stay in Step 4 but show success message
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setUploadError(errorMessage);
-      toast.error(`Failed to source dataset: ${errorMessage}`);
+      
+      // 8. Update Toast to Error (Final State)
+      toast.error("Dataset Creation Failed", {
+        id: toastId,
+        description: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -1228,7 +1281,22 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
                   Cancel Upload
                 </Button>
               </div>
-              <Button
+              {/* {uploadProgress.status === 'processing' && (
+      <div className="space-y-3 p-4 border rounded-lg bg-secondary/10">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            {uploadProgress.message}
+          </span>
+          <span className="text-muted-foreground">{uploadProgress.percentage}%</span>
+        </div>
+        <Progress value={uploadProgress.percentage} className="h-2" />
+        <p className="text-xs text-muted-foreground">
+          Processing your data. Large datasets may take a moment.
+        </p>
+      </div>
+    )} */}
+                           <Button
                 size="sm"
                 onClick={handleCreateDataset}
                 disabled={
