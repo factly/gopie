@@ -72,10 +72,29 @@ export interface IdpInformation {
   };
 }
 
+export interface ZitadelUserDetail {
+  id: string;
+  human?: {
+    profile: {
+      givenName?: string;
+      familyName?: string;
+      nickName?: string;
+      displayName?: string;
+      preferredLanguage?: string;
+      gender?: string;
+      avatarUrl?: string;
+    };
+    email: {
+      email: string;
+    };
+  };
+}
+
 export class ZitadelClient {
   private authority: string;
   private clientId: string;
   private pat: string;
+  private adminPat: string;
   private idpId: string;
   private redirectUri: string;
   private serviceUserId: string;
@@ -132,18 +151,19 @@ export class ZitadelClient {
     this.authority = process.env.ZITADEL_AUTHORITY!;
     this.clientId = process.env.ZITADEL_CLIENT_ID!;
     this.pat = process.env.ZITADEL_PAT!;
+    this.adminPat = process.env.ZITADEL_ADMIN_PAT!;
     this.idpId = process.env.ZITADEL_IDP_ID!;
     this.redirectUri = process.env.ZITADEL_REDIRECT_URI!;
     this.serviceUserId = process.env.ZITADEL_SERVICE_USER_ID!;
     this.projectId = process.env.ZITADEL_PROJECT_ID!;
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
+  private async makeRequest(endpoint: string, options: RequestInit = {}, isAdmin = false) {
     const url = `${this.authority}${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {
-        Authorization: `Bearer ${this.pat}`,
+        Authorization: `Bearer ${isAdmin ? this.adminPat : this.pat}`,
         "Content-Type": "application/json",
         ...options.headers,
       },
@@ -403,9 +423,8 @@ export class ZitadelClient {
       body: JSON.stringify({
         sendLink: {
           notificationType: "NOTIFICATION_TYPE_Email",
-          urlTemplate: `${
-            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-          }/auth/reset-password?userID={{.UserID}}&orgID={{.OrgID}}&codeID={{.CodeID}}&code={{.Code}}`,
+          urlTemplate: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+            }/auth/reset-password?userID={{.UserID}}&orgID={{.OrgID}}&codeID={{.CodeID}}&code={{.Code}}`,
         },
       }),
     });
@@ -485,9 +504,8 @@ export class ZitadelClient {
         displayName:
           user.human?.profile?.displayName ||
           user.username ||
-          `${user.human?.profile?.givenName || ""} ${
-            user.human?.profile?.familyName || ""
-          }`.trim() ||
+          `${user.human?.profile?.givenName || ""} ${user.human?.profile?.familyName || ""
+            }`.trim() ||
           "User",
         firstName: user.human?.profile?.givenName,
         lastName: user.human?.profile?.familyName,
@@ -718,6 +736,11 @@ export class ZitadelClient {
     });
 
     return response;
+  }
+
+  async getUserById(userId: string): Promise<ZitadelUserDetail> {
+    const response = await this.makeRequest(`/v2/users/${userId}`, {}, true);
+    return response.user;
   }
 }
 
