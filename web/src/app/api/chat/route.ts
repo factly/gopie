@@ -6,7 +6,7 @@ import {
 import type { GoPieUIMessage } from "@/types/chat-message";
 import { LRUCache } from "@/lib/utils/lru-cache";
 import { transformUIMessagesToBackend } from "@/lib/utils/message-transformation";
-
+import { signUrl } from "@/lib/s3/signer";
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
@@ -282,17 +282,25 @@ export async function POST(req: Request) {
 
                         case "visualization_paths":
                         case "visualization_result":
-                          const paths = args.paths ||
-                                      (args.visualization_json_paths?.map((v: { json_path?: string }) => v.json_path)) ||
-                                      [];
-                          if (paths.length > 0) {
+                          const rawPaths =
+                            args.paths ||
+                            args.visualization_json_paths?.map(
+                              (v: { json_path?: string }) => v.json_path
+                            ) ||
+                            [];
+
+                          if (rawPaths.length > 0) {
+                            const signedPaths = await Promise.all(
+                              rawPaths.map((p: string) => signUrl(p))
+                            );
+
                             writer.write({
-                              type: 'data-visualization',
+                              type: "data-visualization",
                               id: `viz-${toolCall.id || Date.now()}`,
                               data: {
                                 id: `viz-${toolCall.id || Date.now()}`,
-                                paths,
-                                status: 'ready',
+                                paths: signedPaths,
+                                status: "ready",
                               },
                             });
                           }

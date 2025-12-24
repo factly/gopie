@@ -809,7 +809,7 @@ export function ChatMessage({
                           Visualization {index + 1}
                         </p>
                         <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate font-mono">
-                          {path.split("/").pop() || path}
+                          {path.split("/").pop()?.split("?")[0] || path}
                         </p>
                       </div>
                     </div>

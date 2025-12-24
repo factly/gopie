@@ -5,7 +5,13 @@ import { BarChart3, Download, ExternalLink } from "lucide-react";
 import vegaEmbed from "vega-embed";
 
 interface VegaSpec {
-  title?: string;
+  title?: string | {
+    text?: string;
+    fontSize?: number;
+    anchor?: string;
+    [key: string]: unknown;
+  };
+
   [key: string]: unknown;
 }
 
@@ -94,8 +100,8 @@ export function VisualizationResults({
           },
           renderer: "svg" as const,
         };
-
-        vegaEmbed(vizRefs.current[index]!, updatedSpec, embedOptions).catch(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vegaEmbed(vizRefs.current[index]!, updatedSpec as any, embedOptions).catch(
           (error) => {
             console.error("Error rendering visualization:", error);
             setVisualizations((prev) =>
@@ -149,7 +155,9 @@ export function VisualizationResults({
               >
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium">
-                    {viz.spec?.title || `Visualization ${index + 1}`}
+                     {typeof viz.spec?.title === "string"
+    ? viz.spec.title
+    : viz.spec?.title?.text || `Visualization ${index + 1}`}
                   </h4>
                   <div className="flex gap-1">
                     {viz.spec && (

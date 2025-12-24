@@ -108,7 +108,9 @@ services:
         /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
         /usr/bin/mc mb -p myminio/downloads &&
-        /usr/bin/mc anonymous set public myminio/gopie/visualizations
+        /usr/bin/mc anonymous set private myminio/gopie &&
+        /usr/bin/mc anonymous set private myminio/gopie/visualizations &&
+        /usr/bin/mc anonymous set private myminio/downloads
       "
 
 include:

@@ -83,6 +83,39 @@ export const apiClient = ky.create({
   },
 });
 
+export const nextApiClient = ky.create({
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: false,
+  hooks: {
+    beforeRequest: [
+      (request) => {
+        const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
+
+        if (!isAuthEnabled) {
+          if (!request.headers.get("x-user-id")) {
+            request.headers.set("x-user-id", "system");
+          }
+          if (!request.headers.get("x-organization-id")) {
+            request.headers.set("x-organization-id", "system");
+          }
+          return;
+        }
+
+        const token = getGlobalAccessToken();
+        if (token && !request.headers.get("Authorization")) {
+          request.headers.set("Authorization", `Bearer ${token}`);
+        }
+        const orgId = getGlobalOrganizationId()
+        if (orgId && !request.headers.get("x-organization-id")) {
+          request.headers.set("x-organization-id", orgId);
+        }
+      },
+    ],
+  },
+});
+
 // Project Types
 export interface ProjectInput {
   name: string;

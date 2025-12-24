@@ -12,6 +12,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.27",
     "@ai-sdk/react": "^2.0.39",
+    "@aws-sdk/client-s3": "^3.933.0",
+    "@aws-sdk/s3-request-presigner": "^3.933.0",
     "@duckdb/duckdb-wasm": "^1.29.1-dev132.0",
     "@duckdb/duckdb-wasm-shell": "^1.29.1-dev132.0",
     "@hookform/resolvers": "^3.9.1",
