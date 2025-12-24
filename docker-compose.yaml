@@ -1,25 +1,22 @@
 services:
-  #########################################################################
-  #####                        DATABASE                                 #####
-  # #########################################################################
+  ###########################################################################
+  #######                        DATABASE                             #######
+  ###########################################################################
   postgres:
     image: postgres:17-alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_MULTIPLE_DATABASES=gopie
     ports:
       - "5432:5432"
     volumes:
-      - ./pg-init-scripts:/docker-entrypoint-initdb.d
-      - ./volumes/postgresql:/var/lib/postgresql/data/
+      - ./volumes/postgres_api:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gopie
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
     networks:
       - gopie
 
@@ -56,110 +53,56 @@ services:
   #########################################################################
   #####                        GOPIE SERVICES                          #####
   #########################################################################
-  gopie-server:
+  gopie-migrate:
     build:
       context: ./server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.migrate
     environment:
-      - GOPIE_SERVE_HOST=${GOPIE_SERVE_HOST}
-      - GOPIE_SERVE_PORT=${GOPIE_SERVE_PORT}
-      - GOPIE_S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - GOPIE_S3_SECRET_KEY=${MINIO_SECRET_KEY}
-      - GOPIE_S3_REGION=${MINIO_REGION}
-      - GOPIE_S3_ENDPOINT=${GOPIE_S3_ENDPOINT}
-      - GOPIE_LOGGER_LEVEL=${GOPIE_LOGGER_LEVEL}
-      - GOPIE_LOGGER_FILE=${GOPIE_LOGGER_FILE}
-      - GOPIE_LOGGER_MODE=${GOPIE_LOGGER_MODE}
-      - GOPIE_MOTHERDUCK_TOKEN=${GOPIE_MOTHERDUCK_TOKEN}
-      - GOPIE_MOTHERDUCK_DB_NAME=${GOPIE_MOTHERDUCK_DB_NAME}
-      - GOPIE_MOTHERDUCK_ACCESS_MODE=${GOPIE_MOTHERDUCK_ACCESS_MODE}
-      - GOPIE_PORTKEY_APIKEY=${GOPIE_PORTKEY_APIKEY}
-      - GOPIE_PORTKEY_BASEURL=${GOPIE_PORTKEY_BASEURL}
-      - GOPIE_PORTKEY_MODEL=${GOPIE_PORTKEY_MODEL}
-      - GOPIE_PORTKEY_VIRTUALKEY=${GOPIE_PORTKEY_VIRTUALKEY}
-      - GOPIE_POSTGRES_HOST=${POSTGRES_HOST}
-      - GOPIE_POSTGRES_PORT=${POSTGRES_PORT}
-      - GOPIE_POSTGRES_DB=${POSTGRES_DB}
-      - GOPIE_POSTGRES_USER=${POSTGRES_USER}
-      - GOPIE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - GOPIE_OLAPDB_DBTYPE=${GOPIE_OLAPDB_DBTYPE}
-      - GOPIE_OLAPDB_ACCESS_MODE=${GOPIE_OLAPDB_ACCESS_MODE}
-      - GOPIE_OLAPDB_PATH=${GOPIE_OLAPDB_PATH}
-      - GOPIE_OLAPDB_CPU=${GOPIE_OLAPDB_CPU}
-      - GOPIE_OLAPDB_MEMORY_LIMIT=${GOPIE_OLAPDB_MEMORY_LIMIT}
-      - GOPIE_OLAPDB_STORAGE_LIMIT=${GOPIE_OLAPDB_STORAGE_LIMIT}
-      - GOPIE_ZITADEL_DOMAIN=${ZITADEL_DOMAIN}
-      - GOPIE_ZITADEL_INSECURE_PORT=${ZITADEL_INSECURE_PORT}
-      - GOPIE_ZITADEL_PROTOCOL=${ZITADEL_PROTOCOL}
-      - GOPIE_ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID}
-      - GOPIE_ZITADEL_PERSONAL_ACCESS_TOKEN=${ZITADEL_PERSONAL_ACCESS_TOKEN}
-      - GOPIE_ZITADEL_SERVICE_USER_ID=${ZITADEL_SERVICE_USER_ID}
-      - GOPIE_ZITADEL_APP_LOGIN_URL=${ZITADEL_APP_LOGIN_URL}
-      - GOOSE_DBSTRING=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}
-      - GOOSE_DRIVER=${GOOSE_DRIVER}
-      - GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR}
-    volumes:
-      - ./zitadel/key.json:/home/gopie/zitadel_key.json:ro
-      - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
-    ports:
-      - "8000:8000"
+      - GOOSE_DBSTRING=postgres://postgres:postgres@postgres:5432/gopie?sslmode=disable
+      - GOOSE_DRIVER=postgres
+      - GOOSE_MIGRATION_DIR=migrations
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - gopie
-    command: >
-      sh -c "cd /home/gopie && goose up && gopie serve"
 
-  # downloads-server:
-  #   build:
-  #     context: ./downloads-server
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8003:8000"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - gopie
-  #   command: >
-  #     sh -c "cd /home/downloads-server && goose up && downloads-server serve"
+  gopie-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+      - ./config-noauth.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./volumes/duckdb:/home/gopie/dataful
+    networks:
+      - gopie
+    user: "0:0"
+    command: >
+      sh -c "chown -R 1001:1001 /home/gopie/dataful && 
+             chmod -R 755 /home/gopie/dataful && 
+             su -s /bin/sh gopie -c 'cd /home/gopie && gopie serve'"
 
   gopie-web:
     build:
       context: ./web
       dockerfile: Dockerfile.prod
-
-    environment:
-      - NEXT_PUBLIC_COMPANION_URL=http://localhost:3020
-      - NEXT_PUBLIC_GOPIE_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_LIVEKIT_URL=http://localhost:7880
-      - NEXTAUTH_URL=http://localhost:3000
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=secret
-      - AUTH_SECRET=secret
-      - NEXTAUTH_SECRET=secret
-      - ZITADEL_AUTHORITY=http://zitadel.gopie.io:80
-      - ZITADEL_PAT=ZITADEL_PAT_SECRET
-      - ZITADEL_SERVICE_USER_ID=ZITADEL_SERVICE_USER_ID_SECRET
-      - ZITADEL_CLIENT_ID=ZITADEL_CLIENT_ID_SECRET
-      - ZITADEL_PROJECT_ID=ZITADEL_PROJECT_ID_SECRET
-      - ZITADEL_IDP_ID=ZITADEL_IDP_ID
-      - ZITADEL_REDIRECT_URI=http://localhost:3000/api/oauth/callback
-      - NEXT_PUBLIC_ENABLE_AUTH=true
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
-      - GOPIE_API_URL=http://localhost:8000
+    env_file:
+      - ./config-auth.env
     ports:
       - "3000:3000"
     restart: unless-stopped
-    extra_hosts:
-      - "zitadel.gopie.io:host-gateway"
     networks:
       - gopie
 
-  #########################################################################
-  #####                        MINIO                                #######
-  #########################################################################
+  ###########################################################################
+  #######                        MINIO                                #######
+  ###########################################################################
   minio:
     image: minio/minio
     ports:
@@ -189,20 +132,13 @@ services:
       - gopie
     entrypoint: >
       /bin/sh -c "
-        echo 'Minio is up. Creating the bucket!!' &&
+        echo 'Minio is up. Creating required buckets...' &&
         /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
-        /usr/bin/mc anonymous set public myminio/gopie
+        /usr/bin/mc mb -p myminio/downloads &&
+        /usr/bin/mc anonymous set public myminio/gopie/visualizations
       "
 
-  gopie-reindex:
-    build:
-      context: ./server
-      dockerfile: Dockerfile.reindex
-    env_file:
-      - ./config.env
-    networks:
-      - gopie
   #########################################################################
   #####                          COMPANION                            #####
   #########################################################################
@@ -210,17 +146,8 @@ services:
     image: transloadit/companion:sha-e80a7f7
     ports:
       - "3020:3020"
-    environment:
-      - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
-      - COMPANION_AWS_REGION=${MINIO_REGION}
-      - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
-      - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
-      - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
-      - COMPANION_DOMAIN=${COMPANION_DOMAIN}
-      - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
-      - COMPANION_DATADIR=${COMPANION_DATADIR}
-      - COMPANION_SELF_ENDPOINT=${COMPANION_SELF_ENDPOINT}
-      - NODE_ENV=${COMPANION_NODE_ENV}
+    env_file:
+      - ./config-auth.env
     networks:
       - gopie
     depends_on:
@@ -231,7 +158,7 @@ services:
   #########################################################################
 
 include:
-  - ./chat-server/docker-compose.yaml
+  - ./chat-server/docker-compose-auth.yaml
 
 networks:
   gopie:

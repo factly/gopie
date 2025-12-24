@@ -79,7 +79,7 @@ services:
       - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
     ports:
       - "8000:8000"
-      - "8001:8001"
+      - "8004:8001"
       - "8002:8002"
     depends_on:
       postgres:
