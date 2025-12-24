@@ -72,7 +72,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     env_file:
-      - ./config-noauth.env
+      - ./config.env
     ports:
       - "8000:8000"
     depends_on:
@@ -93,7 +93,7 @@ services:
       context: ./web
       dockerfile: Dockerfile.prod
     env_file:
-      - ./config-auth.env
+      - ./config.env
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -147,7 +147,7 @@ services:
     ports:
       - "3020:3020"
     env_file:
-      - ./config-auth.env
+      - ./config.env
     networks:
       - gopie
     depends_on:
