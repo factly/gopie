@@ -46,4 +46,16 @@ export const useUserDetail = createQuery<
 >({
   queryKey: ["user-detail"],
   fetcher: fetchUserDetail,
+  use: [
+    (next) => (options, queryClient) => {
+      const { variables } = options;
+      return next(
+        {
+          ...options,
+          queryKey: ["user-detail", variables?.userId],
+        },
+        queryClient
+      );
+    },
+  ],
 });
