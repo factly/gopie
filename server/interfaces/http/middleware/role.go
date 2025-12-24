@@ -26,9 +26,7 @@ func RoleAuthorization() fiber.Handler {
 						if key == orgID {
 							if orgsRole == "" {
 								orgsRole = role
-							}
-
-							if orgsRole != "" && role != string(models.Member) {
+							} else if role == string(models.Admin) {
 								orgsRole = role
 							}
 						}
