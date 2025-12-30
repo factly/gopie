@@ -100,42 +100,41 @@ services:
       - gopie
 
   ###########################################################################
-  #######                        MINIO                                #######
+  #######                        RUSTFS                                #######
   ###########################################################################
-  minio:
-    image: minio/minio
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: always
     ports:
-      - "9000:9000"
-      - "9002:9002"
-    volumes:
-      - ./volumes/minio/data:/export
-      - ./volumes/minio/config:/root/.minio
+      - "9000:9000" # S3 API
+      - "9001:9001" # RustFS Console
     environment:
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_ADDRESS=:9000
+    volumes:
+      - ./volumes/rustfs/data:/data
     networks:
       - gopie
-    command: server -console-address :9002 /export
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
-  createbuckets:
-    image: minio/mc
+  create-buckets:
+    image: amazon/aws-cli:latest
     depends_on:
-      minio:
-        condition: service_healthy
+      - rustfs
+    environment:
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
+      - AWS_DEFAULT_REGION=us-east-1
     networks:
       - gopie
     entrypoint: >
       /bin/sh -c "
-        echo 'Minio is up. Creating required buckets...' &&
-        /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
-        /usr/bin/mc mb -p myminio/gopie &&
-        /usr/bin/mc mb -p myminio/downloads &&
-        /usr/bin/mc anonymous set public myminio/gopie/visualizations
+      sleep 5;
+      aws s3 mb s3://gopie --endpoint-url http://rustfs:9000 || true;
+      aws s3 mb s3://downloads --endpoint-url http://rustfs:9000 || true;
+      echo 'Buckets created successfully';
+      exit 0;
       "
 
   #########################################################################
@@ -150,7 +149,7 @@ services:
     networks:
       - gopie
     depends_on:
-      - minio
+      - rustfs
 
   #########################################################################
   #####                        CHAT SERVER SERVICES                   #####

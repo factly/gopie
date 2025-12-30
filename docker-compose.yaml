@@ -63,9 +63,9 @@ services:
     environment:
       - GOPIE_SERVE_HOST=${GOPIE_SERVE_HOST}
       - GOPIE_SERVE_PORT=${GOPIE_SERVE_PORT}
-      - GOPIE_S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - GOPIE_S3_SECRET_KEY=${MINIO_SECRET_KEY}
-      - GOPIE_S3_REGION=${MINIO_REGION}
+      - GOPIE_S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}
+      - GOPIE_S3_SECRET_KEY=${RUSTFS_SECRET_KEY}
+      - GOPIE_S3_REGION=${RUSTFS_REGION}
       - GOPIE_S3_ENDPOINT=${GOPIE_S3_ENDPOINT}
       - GOPIE_LOGGER_LEVEL=${GOPIE_LOGGER_LEVEL}
       - GOPIE_LOGGER_FILE=${GOPIE_LOGGER_FILE}
@@ -158,41 +158,40 @@ services:
       - gopie
 
   #########################################################################
-  #####                        MINIO                                #######
+  #####                        RUSTFS                                #######
   #########################################################################
-  minio:
-    image: minio/minio
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: always
     ports:
-      - "9000:9000"
-      - "9002:9002"
-    volumes:
-      - ./volumes/minio/data:/export
-      - ./volumes/minio/config:/root/.minio
+      - "9000:9000" # S3 API
+      - "9001:9001" # RustFS Console
     environment:
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_ADDRESS=:9000
+    volumes:
+      - ./volumes/rustfs/data:/data
     networks:
       - gopie
-    command: server -console-address :9002 /export
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
-  createbuckets:
-    image: minio/mc
+  create-buckets:
+    image: amazon/aws-cli:latest
     depends_on:
-      minio:
-        condition: service_healthy
+      - rustfs
+    environment:
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
+      - AWS_DEFAULT_REGION=us-east-1
     networks:
       - gopie
     entrypoint: >
       /bin/sh -c "
-        echo 'Minio is up. Creating the bucket!!' &&
-        /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
-        /usr/bin/mc mb -p myminio/gopie &&
-        /usr/bin/mc anonymous set public myminio/gopie
+      sleep 5;
+      aws s3 mb s3://gopie --endpoint-url http://rustfs:9000 || true;
+      echo 'Buckets created successfully';
+      exit 0;
       "
 
   gopie-reindex:
@@ -211,11 +210,11 @@ services:
     ports:
       - "3020:3020"
     environment:
-      - COMPANION_AWS_ENDPOINT=${MINIO_ENDPOINT}
-      - COMPANION_AWS_REGION=${MINIO_REGION}
-      - COMPANION_AWS_BUCKET=${MINIO_BUCKET}
-      - COMPANION_AWS_KEY=${MINIO_ACCESS_KEY}
-      - COMPANION_AWS_SECRET=${MINIO_SECRET_KEY}
+      - COMPANION_AWS_ENDPOINT=${RUSTFS_ENDPOINT}
+      - COMPANION_AWS_REGION=${RUSTFS_REGION}
+      - COMPANION_AWS_BUCKET=${RUSTFS_BUCKET}
+      - COMPANION_AWS_KEY=${RUSTFS_ACCESS_KEY}
+      - COMPANION_AWS_SECRET=${RUSTFS_SECRET_KEY}
       - COMPANION_DOMAIN=${COMPANION_DOMAIN}
       - COMPANION_PROTOCOL=${COMPANION_PROTOCOL}
       - COMPANION_DATADIR=${COMPANION_DATADIR}
@@ -224,7 +223,7 @@ services:
     networks:
       - gopie
     depends_on:
-      - minio
+      - rustfs
 
   #########################################################################
   #####                        CHAT SERVER SERVICES                   #####
