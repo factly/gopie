@@ -172,13 +172,14 @@ func (m *OlapDBDriver) connectToMotherDuckHelperDB(helperDSN, motherduckDsn, mot
 		"INSTALL postgres;", "LOAD postgres;",
 		"INSTALL mysql;", "LOAD mysql;",
 		"INSTALL motherduck;", "LOAD motherduck;",
+		"INSTALL excel;", "LOAD excel;",
 		fmt.Sprintf(`SET motherduck_token='%s';`, motherduckToken),
 		fmt.Sprintf("ATTACH '%s'", motherduckDsn),
 	}
 
 	for i, cmd := range commands {
 		logFields := []zap.Field{zap.String("command_index", fmt.Sprintf("%d/%d", i+1, len(commands)))}
-		if i == 6 { // This is the SET motherduck_token command
+		if i == 8 { // This is the SET motherduck_token command
 			logFields = append(logFields, zap.String("command", "SET motherduck_token='REDACTED'"))
 		} else {
 			logFields = append(logFields, zap.String("command", cmd))
