@@ -84,6 +84,33 @@ def create_dataset_schema(
     return dataset_schema
 
 
+def _estimate_tokens(text: str) -> int:
+    """Estimate token count using 1 token ≈ 1.5 words approximation."""
+    word_count = len(text.split())
+    return int(word_count / 1.5)
+
+
+def _build_page_content(
+    schema: DatasetSchema,
+    include_sample_values: bool = True,
+    include_column_type: bool = True,
+    include_description: bool = True,
+) -> str:
+    """Build page content with optional fields."""
+    page_content = f"Dataset Name: {schema.name}\n"
+    page_content += f"Dataset Description: {schema.dataset_description}\n"
+    for column in schema.columns:
+        page_content += f"Column Name: {column.column_name}\n"
+        if include_column_type:
+            page_content += f"Column Type: {column.column_type}\n"
+        if include_description:
+            page_content += f"Column Description: {column.description}\n"
+        if include_sample_values:
+            page_content += f"Sample Values: {column.sample_values}\n"
+
+    return page_content
+
+
 def format_schema_for_embedding(
     schema: DatasetSchema,
 ) -> str:
@@ -94,16 +121,43 @@ def format_schema_for_embedding(
         schema: The schema data containing the 'summary' field with column info
 
     Returns:
-        A string representation of the schema data
+        A string representation of the schema data, truncated if necessary
     """
-    page_content = f"Dataset Name: {schema.name}\n"
-    page_content += f"Dataset Description: {schema.dataset_description}\n"
-    for column in schema.columns:
-        # if not column.description:
-        #     raise ValueError(f"Column description not found for column:{column.column_name!s}")
-        page_content += f"Column Name: {column.column_name}\n"
-        page_content += f"Column Type: {column.column_type}\n"
-        page_content += f"Column Description: {column.description}\n"
-        page_content += f"Sample Values: {column.sample_values}\n"
+    max_tokens = settings.EMBEDDINGS_MAX_TOKEN
 
+    # Try with all fields
+    page_content = _build_page_content(schema)
+    if max_tokens is None:
+        return page_content
+    if _estimate_tokens(page_content) <= max_tokens:
+        return page_content
+
+    # Drop sample values
+    page_content = _build_page_content(schema, include_sample_values=False)
+    logger.info(
+        f"Sample values dropped for {schema.name}. Token count: {_estimate_tokens(page_content)}"
+    )
+    if _estimate_tokens(page_content) <= max_tokens:
+        return page_content
+
+    # Drop sample values and column type
+    page_content = _build_page_content(
+        schema, include_sample_values=False, include_column_type=False
+    )
+    logger.info(
+        f"Sample values and column type dropped for {schema.name}. Token count: {_estimate_tokens(page_content)}"
+    )
+    if _estimate_tokens(page_content) <= max_tokens:
+        return page_content
+
+    # Drop sample values, column type, and description
+    page_content = _build_page_content(
+        schema,
+        include_sample_values=False,
+        include_column_type=False,
+        include_description=False,
+    )
+    logger.info(
+        f"Sample values, column type, and description dropped for {schema.name}. Token count: {_estimate_tokens(page_content)}"
+    )
     return page_content

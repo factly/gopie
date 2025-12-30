@@ -85,15 +85,31 @@ class QdrantSetup:
 
     @classmethod
     def _collection_exists(cls, client: QdrantClient) -> bool:
-        collections = client.get_collections().collections
-        collection_names = [collection.name for collection in collections]
-        return settings.QDRANT_COLLECTION in collection_names
+        try:
+            collection_info = client.get_collection(settings.QDRANT_COLLECTION)
+        except Exception:
+            return False
+        vector_size = collection_info.config.params.vectors.size
+        if vector_size == settings.DEFAULT_EMBEDDING_SIZE:
+            return True
+        else:
+            raise Exception(
+                f"Failed to get collection {settings.QDRANT_COLLECTION} with size {settings.DEFAULT_EMBEDDING_SIZE}"
+            )
 
     @classmethod
     async def _async_collection_exists(cls, client: AsyncQdrantClient) -> bool:
-        collections = (await client.get_collections()).collections
-        collection_names = [collection.name for collection in collections]
-        return settings.QDRANT_COLLECTION in collection_names
+        try:
+            collection_info = await client.get_collection(settings.QDRANT_COLLECTION)
+        except Exception:
+            return False
+        vector_size = collection_info.config.params.vectors.size
+        if vector_size == settings.DEFAULT_EMBEDDING_SIZE:
+            return True
+        else:
+            raise Exception(
+                f"Failed to get collection {settings.QDRANT_COLLECTION} with size {settings.DEFAULT_EMBEDDING_SIZE}"
+            )
 
     @classmethod
     async def close_clients(cls) -> None:

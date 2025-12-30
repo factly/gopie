@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     DEFAULT_LLM_MODEL: str = ""
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_EMBEDDING_SIZE: int = 3072
+    EMBEDDINGS_MAX_TOKEN: int | None = None
 
     E2B_API_KEY: str = ""
     E2B_TIMEOUT: int = 120
