@@ -24,7 +24,7 @@ func (m *OlapDBDriver) buildReadFunctionSQL(escapedPath, format string) (string,
 	case "json":
 		return fmt.Sprintf("read_json_auto('%s')", escapedPath), nil
 	case "excel", "xlsx":
-		return fmt.Sprintf("read_xlsx('%s')", escapedPath), nil
+		return fmt.Sprintf("read_xlsx('%s', header=true)", escapedPath), nil
 	default:
 		return "", fmt.Errorf("unsupported format for table creation: %s", format)
 	}
