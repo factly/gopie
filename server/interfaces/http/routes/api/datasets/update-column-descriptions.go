@@ -68,7 +68,7 @@ func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 	}
 
 	// Get the current dataset summary from OLAP
-	datasetSummary, err := h.olapSvc.GetDatasetSummary(dataset.Name)
+	datasetSummary, err := h.datasetsSvc.GetDatasetSummary(dataset.Name)
 	if err != nil {
 		h.logger.Error("Error fetching dataset summary", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -88,14 +88,14 @@ func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 
 	// Update the column descriptions
 	summaryMap := make(map[string]int)
-	for i := range *datasetSummary {
-		summaryMap[(*datasetSummary)[i].ColumnName] = i
+	for i := range *datasetSummary.Summary {
+		summaryMap[(*datasetSummary.Summary)[i].ColumnName] = i
 	}
 
 	updatedColumns := 0
 	for colName, desc := range body.ColumnDescriptions {
 		if idx, exists := summaryMap[colName]; exists {
-			(*datasetSummary)[idx].Description = desc
+			(*datasetSummary.Summary)[idx].Description = desc
 			updatedColumns++
 		}
 	}
@@ -108,11 +108,10 @@ func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Delete existing summary first (if it exists) to avoid conflicts
 	_ = h.datasetsSvc.DeleteDatasetSummary(dataset.Name)
 
 	// Save the updated dataset summary
-	updatedSummary, err := h.datasetsSvc.CreateDatasetSummary(dataset.Name, datasetSummary)
+	updatedSummary, err := h.datasetsSvc.CreateDatasetSummary(dataset.Name, datasetSummary.Summary)
 	if err != nil {
 		h.logger.Error("Error updating dataset summary", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -122,8 +121,28 @@ func (h *httpHandler) updateColumnDescriptions(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Note: AI agent schema update should be triggered separately by the caller
-	// if needed, as this handler doesn't have access to the AI agent service
+	projectID, err := h.datasetsSvc.GetProjectForDataset(datasetID)
+	if err != nil {
+		h.logger.Error("Error updating dataset summary", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error updating dataset summary",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
+
+	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
+		ProjectID: projectID,
+		DatasetID: datasetID,
+	})
+	if err != nil {
+		h.logger.Error("Error refreshing ai agent schema", zap.Error(err))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   err.Error(),
+			"message": "Error refreshing ai agent schema",
+			"code":    fiber.StatusInternalServerError,
+		})
+	}
 
 	return ctx.JSON(map[string]*models.DatasetSummaryWithName{
 		"data": updatedSummary,
