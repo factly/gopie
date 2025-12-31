@@ -19,6 +19,8 @@ type nl2SqlRequest struct {
 	Query string `json:"query" validate:"required,min=3" example:"show me total sales by region"`
 	// Name of the dataset/table to query
 	TableName string `json:"table" validate:"required" example:"sales_data"`
+	// Maximum number of tokens to generate (optional)
+	MaxTokens *int `json:"maxTokens,omitempty" example:"1000"`
 }
 
 // @Summary Convert natural language to SQL
@@ -120,7 +122,7 @@ func (h *httpHandler) nl2sql(ctx *fiber.Ctx) error {
 	- String only generate SQL for read queries nothing else.
 		`, body.Query, body.TableName, schemaJson, rowsCsv)
 
-	sql, err := h.aiSvc.GenerateSql(content)
+	sql, err := h.aiSvc.GenerateSql(content, body.MaxTokens)
 	if err != nil {
 		h.logger.Error("Error generating SQL", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

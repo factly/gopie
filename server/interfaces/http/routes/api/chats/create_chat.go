@@ -15,6 +15,7 @@ type createChatRequestBody struct {
 	Title      string   `json:"title,omitempty"`
 	DatasetIDs []string `json:"dataset_ids,omitempty"`
 	ProjectIDs []string `json:"project_ids,omitempty"`
+	MaxTokens  *int     `json:"maxTokens,omitempty" example:"1000"`
 }
 
 // @Description Response body for creating a new chat session
@@ -79,7 +80,7 @@ func (h *httpHandler) createChat(ctx *fiber.Ctx) error {
 	}
 
 	// Use the CreateChat service which now handles empty messages
-	chatWithMessages, err := h.chatSvc.CreateChat(ctx.Context(), chatParams)
+	chatWithMessages, err := h.chatSvc.CreateChat(ctx.Context(), chatParams, body.MaxTokens)
 	if err != nil {
 		h.logger.Error("Error creating new chat", zap.Error(err), zap.String("chat_id", chatID))
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

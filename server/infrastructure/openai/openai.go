@@ -68,7 +68,8 @@ func NewOpenAIClient(cfg config.OpenAIConfig, logger *logger.Logger) *OpenAIClie
 // GenerateResponseJSON is a generic function that generates a response from OpenAI
 // and unmarshals it into the provided type T. It enforces JSON output format
 // to ensure consistent structured responses.
-func GenerateResponseJSON[T any](c *OpenAIClient, content string) (*T, error) {
+// maxTokens is optional - pass nil to use default, or a pointer to an int to limit tokens
+func GenerateResponseJSON[T any](c *OpenAIClient, content string, maxTokens *int) (*T, error) {
 	c.logger.Debug("generating JSON response from OpenAI", zap.String("model", c.model))
 	msgs := openai.ChatCompletionMessage{
 		Role:    "user",
@@ -77,13 +78,19 @@ func GenerateResponseJSON[T any](c *OpenAIClient, content string) (*T, error) {
 
 	ctx := context.Background()
 
-	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	req := openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: []openai.ChatCompletionMessage{msgs},
 		ResponseFormat: &openai.ChatCompletionResponseFormat{
 			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
 		},
-	})
+	}
+
+	if maxTokens != nil {
+		req.MaxTokens = *maxTokens
+	}
+
+	res, err := c.client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		c.logger.Error("failed to generate response from OpenAI", zap.Error(err))
 		return nil, err
@@ -111,7 +118,8 @@ func GenerateResponseJSON[T any](c *OpenAIClient, content string) (*T, error) {
 
 // GenerateResponseString is a non-generic version for backwards compatibility
 // when you need a plain string response without JSON parsing
-func (c *OpenAIClient) GenerateResponseString(content string) (string, error) {
+// maxTokens is optional - pass nil to use default, or a pointer to an int to limit tokens
+func (c *OpenAIClient) GenerateResponseString(content string, maxTokens *int) (string, error) {
 	c.logger.Debug("generating string response from OpenAI", zap.String("model", c.model))
 	msgs := openai.ChatCompletionMessage{
 		Role:    "user",
@@ -120,10 +128,16 @@ func (c *OpenAIClient) GenerateResponseString(content string) (string, error) {
 
 	ctx := context.Background()
 
-	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	req := openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: []openai.ChatCompletionMessage{msgs},
-	})
+	}
+
+	if maxTokens != nil {
+		req.MaxTokens = *maxTokens
+	}
+
+	res, err := c.client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		c.logger.Error("failed to generate response from OpenAI", zap.Error(err))
 		return "", err
@@ -141,7 +155,7 @@ func (c *OpenAIClient) GenerateResponseString(content string) (string, error) {
 	return responseContent, nil
 }
 
-func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.D_ChatMessage) (string, error) {
+func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*models.D_ChatMessage, maxTokens *int) (string, error) {
 	c.logger.Debug("generating chat response from OpenAI",
 		zap.Int("previous_messages", len(prevMsgs)),
 		zap.String("model", c.model))
@@ -162,10 +176,16 @@ func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*mode
 	msgs = append(msgs, latestMessage)
 
 	ctx := context.Background()
-	res, err := c.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	req := openai.ChatCompletionRequest{
 		Model:    c.model,
 		Messages: msgs,
-	})
+	}
+
+	if maxTokens != nil {
+		req.MaxTokens = *maxTokens
+	}
+
+	res, err := c.client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		c.logger.Error("failed to generate chat response from OpenAI", zap.Error(err))
 		return "", err
@@ -183,13 +203,13 @@ func (c *OpenAIClient) GenerateChatResponseFunc(userMsg string, prevMsgs []*mode
 	return responseContent, nil
 }
 
-func (c *OpenAIClient) GenerateSql(content string) (string, error) {
+func (c *OpenAIClient) GenerateSql(content string, maxTokens *int) (string, error) {
 	c.logger.Debug("generating SQL from OpenAI")
-	return c.GenerateResponseString(content)
+	return c.GenerateResponseString(content, maxTokens)
 }
 
-func (c *OpenAIClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.D_ChatMessage) (*models.D_AiChatResponse, error) {
-	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessages)
+func (c *OpenAIClient) GenerateChatResponse(ctx context.Context, userMessage string, prevMessages []*models.D_ChatMessage, maxTokens *int) (*models.D_AiChatResponse, error) {
+	resp, err := c.GenerateChatResponseFunc(userMessage, prevMessages, maxTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -199,14 +219,14 @@ func (c *OpenAIClient) GenerateChatResponse(ctx context.Context, userMessage str
 	}, nil
 }
 
-func (c *OpenAIClient) GenerateTitle(ctx context.Context, content string) (*models.D_AiChatResponse, error) {
+func (c *OpenAIClient) GenerateTitle(ctx context.Context, content string, maxTokens *int) (*models.D_AiChatResponse, error) {
 	c.logger.Debug("generating title from OpenAI")
 	systemPrompt := `
 	!! IMPORTANT: In the response only provide the title of the content. Do not provide any other information. !!
 		Generate a title for the following content:
 	` + content
 
-	resp, err := c.GenerateResponseString(systemPrompt)
+	resp, err := c.GenerateResponseString(systemPrompt, maxTokens)
 	if err != nil {
 		c.logger.Error("failed to generate title", zap.Error(err))
 		return nil, err
@@ -218,7 +238,7 @@ func (c *OpenAIClient) GenerateTitle(ctx context.Context, content string) (*mode
 	}, nil
 }
 
-func (c *OpenAIClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string) (map[string]string, error) {
+func (c *OpenAIClient) GenerateColumnDescriptions(ctx context.Context, rows string, summary string, maxTokens *int) (map[string]string, error) {
 	c.logger.Debug("generating column descriptions from OpenAI")
 
 	const maxRetries = 3
@@ -264,7 +284,7 @@ Please generate a valid JSON response following the exact format specified above
 				zap.String("previous_error", lastError.Error()))
 		}
 
-		result, lastError = GenerateResponseJSON[map[string]string](c, systemPrompt)
+		result, lastError = GenerateResponseJSON[map[string]string](c, systemPrompt, maxTokens)
 		if lastError == nil && result != nil && len(*result) > 0 {
 			c.logger.Debug("successfully generated column descriptions",
 				zap.Int("columns_count", len(*result)),
@@ -302,7 +322,7 @@ Please generate a valid JSON response following the exact format specified above
 	return nil, fmt.Errorf("failed to generate column descriptions after %d attempts: %w", maxRetries, lastError)
 }
 
-func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetName string, columnNames []string, columnDescriptions map[string]string, rows string, summary string) (string, error) {
+func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetName string, columnNames []string, columnDescriptions map[string]string, rows string, summary string, maxTokens *int) (string, error) {
 	c.logger.Debug("generating dataset description from OpenAI",
 		zap.String("dataset_name", datasetName),
 		zap.Int("column_count", len(columnNames)))
@@ -340,7 +360,7 @@ func (c *OpenAIClient) GenerateDatasetDescription(ctx context.Context, datasetNa
 	- Provide ONLY the description text, no additional formatting or explanations
 	`, datasetName, columnInfo, rows, summary)
 
-	resp, err := c.GenerateResponseString(systemPrompt)
+	resp, err := c.GenerateResponseString(systemPrompt, maxTokens)
 	if err != nil {
 		c.logger.Error("failed to generate dataset description", zap.Error(err))
 		return "", err

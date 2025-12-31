@@ -81,6 +81,8 @@ type createRequestBody struct {
 	// Alias of the dataset
 	Alias        string `json:"alias" validate:"required,min=3" example:"users_data"`
 	CustomPrompt string `json:"custom_prompt"`
+	// Maximum number of tokens to generate (optional)
+	MaxTokens *int `json:"maxTokens,omitempty" example:"1000"`
 }
 
 // @Summary Create dataset from Postgres
@@ -210,7 +212,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	rowsBytes, _ := json.Marshal(rows)
 	rowsString := string(rowsBytes)
 
-	descriptions, err := h.aiSvc.GenerateColumnDescriptions(rowsString, summaryString)
+	descriptions, err := h.aiSvc.GenerateColumnDescriptions(rowsString, summaryString, body.MaxTokens)
 	if err != nil {
 		h.logger.Error("Error generating column descriptions", zap.Error(err))
 		h.cleanupResources(cleanup)
@@ -236,6 +238,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 		descriptions,
 		rowsString,
 		summaryString,
+		body.MaxTokens,
 	)
 	if err != nil {
 		h.logger.Error("Error generating dataset description", zap.Error(err))
