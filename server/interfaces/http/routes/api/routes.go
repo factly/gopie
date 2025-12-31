@@ -18,7 +18,7 @@ type httpHandler struct {
 	config      *config.GopieConfig
 }
 
-func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
+func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, aiAgentSvc *services.AIService, logger *logger.Logger) {
 	// Use middleware to authorize datasets from params
 	router.Use(middleware.AuthorizeDatasetsFromParams(projectSvc, logger))
 
@@ -33,7 +33,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	router.Get("/openapi/:tableName", httpHandler.datasetOpenAPI)
 
 	// Register datasets routes
-	datasets.NewHTTPHandler(router, datasetsSvc, driverSvc, logger)
+	datasets.NewHTTPHandler(router, datasetsSvc, driverSvc, aiAgentSvc, logger)
 }
 
 func InternalRoutes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {

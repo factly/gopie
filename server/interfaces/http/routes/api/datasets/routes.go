@@ -9,15 +9,17 @@ import (
 type httpHandler struct {
 	datasetsSvc *services.DatasetService
 	olapSvc     *services.OlapService
+	aiAgentSvc  *services.AIService
 	logger      *logger.Logger
 }
 
 // NewHTTPHandler creates a new HTTP handler for datasets
-func NewHTTPHandler(router fiber.Router, datasetsSvc *services.DatasetService, olapSvc *services.OlapService, logger *logger.Logger) {
+func NewHTTPHandler(router fiber.Router, datasetsSvc *services.DatasetService, olapSvc *services.OlapService, aiAgentSvc *services.AIService, logger *logger.Logger) {
 	handler := &httpHandler{
 		datasetsSvc: datasetsSvc,
 		olapSvc:     olapSvc,
 		logger:      logger,
+		aiAgentSvc:  aiAgentSvc,
 	}
 
 	// Setup routes

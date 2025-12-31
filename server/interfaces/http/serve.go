@@ -97,7 +97,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	ai.Routes(apiGroup.Group("/ai"), params.AIService, appLogger)
 
 	// Main API routes
-	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, appLogger)
+	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, params.AIAgentService, appLogger)
 
 	// Project routes
 	projectApi.Routes(apiGroup.Group("/projects"), projectApi.RouterParams{
@@ -267,7 +267,7 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 	apiGroup := app.Group("/v1/api", middleware.WithApiKeyAuth(params.ApikeyService, appLogger))
 
 	// Main API routes
-	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, appLogger)
+	api.Routes(apiGroup, params.OlapService, params.AIService, params.DatasetService, params.ProjectService, params.AIAgentService, appLogger)
 	download.Routes(apiGroup.Group("/downloads"), params.DownloadsService, appLogger)
 
 	// Chat routes
