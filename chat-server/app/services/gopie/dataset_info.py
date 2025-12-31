@@ -85,9 +85,8 @@ def create_dataset_schema(
 
 
 def _estimate_tokens(text: str) -> int:
-    """Estimate token count using 1 token ≈ 1.5 words approximation."""
-    word_count = len(text.split())
-    return int(word_count / 1.5)
+    """Estimate token count using 1 token ≈ 4 characters approximation."""
+    return len(text) // 4
 
 
 def _build_page_content(
