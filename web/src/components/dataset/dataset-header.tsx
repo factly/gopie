@@ -384,31 +384,23 @@ export function DatasetHeader({
         {/* Left Section - Main Info */}
         <div className="flex items-start gap-4 flex-1 min-w-0 pr-[10px]">
           <div className="flex-1 min-w-0 space-y-3">
-            {/* Title and Badge */}
             {isEditing ? (
-              <div className="space-y-3">
-                <Input
-                  value={editedAlias}
-                  onChange={(e) => setEditedAlias(e.target.value)}
-                  className="text-2xl font-bold h-11 text-foreground"
-                  placeholder="Enter a friendly name..."
-                />
-                <div className="space-y-2">
-                  <Textarea
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    className="resize-none min-h-[100px]"
-                    placeholder="Enter a description..."
-                    rows={4}
-                  />
-                  <Textarea
-                    value={editedCustomPrompt}
-                    onChange={(e) => setEditedCustomPrompt(e.target.value)}
-                    className="resize-none min-h-[80px]"
-                    placeholder="Enter a custom prompt to guide AI interactions with this dataset..."
-                    rows={3}
-                  />
-                  <div className="flex gap-2">
+              <div className="space-y-4 animate-in fade-in">
+                {/* Name Section with Buttons */}
+                <div className="flex items-end gap-3">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Dataset Name
+                    </label>
+                    <Input
+                      value={editedAlias}
+                      onChange={(e) => setEditedAlias(e.target.value)}
+                      className="font-semibold text-lg h-10"
+                      placeholder="Enter a friendly name..."
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pb-0.5">
                     <Button
                       variant="default"
                       size="sm"
@@ -419,7 +411,7 @@ export function DatasetHeader({
                       Save
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={handleCancel}
                       disabled={isUpdating}
@@ -428,6 +420,32 @@ export function DatasetHeader({
                       Cancel
                     </Button>
                   </div>
+                </div>
+                {/* Description Section */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Description
+                  </label>
+                  <Textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    className="resize-none min-h-[100px]"
+                    placeholder="Enter a description..."
+                    rows={4}
+                  />
+                </div>
+                {/* Custom Prompt Section */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Custom Prompt
+                  </label>
+                  <Textarea
+                    value={editedCustomPrompt}
+                    onChange={(e) => setEditedCustomPrompt(e.target.value)}
+                    className="resize-none min-h-[80px]"
+                    placeholder="Enter a custom prompt to guide AI interactions with this dataset..."
+                    rows={3}
+                  />
                 </div>
               </div>
             ) : (
