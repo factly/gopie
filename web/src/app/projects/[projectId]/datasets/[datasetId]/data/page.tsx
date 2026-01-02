@@ -521,14 +521,9 @@ Please provide a corrected SQL query that will work.`;
             </div>
           </div>
 
-          {/* Results Content */}
+         {/* Results Content */}
           <div className="flex-1 min-h-0 overflow-auto">
-            {isExecuting ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin opacity-50" />
-                <p className="text-sm">Executing query...</p>
-              </div>
-            ) : queryError ? (
+            {queryError ? (
               <div className="flex h-full items-center justify-center px-8 pb-32">
                 <div className="w-full max-w-3xl">
                   <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
@@ -620,10 +615,10 @@ Please provide a corrected SQL query that will work.`;
                   </div>
                 </div>
               </div>
-            ) : results ? (
+            ) :(
               <div className="p-4">
                 <ResultsTable
-                  results={results}
+                  results={results || []}
                   total={totalCount}
                   columns={columns}
                   onPageChange={handlePageChange}
@@ -631,10 +626,6 @@ Please provide a corrected SQL query that will work.`;
                   sqlQuery={currentQuery}
                   datasetId={dataset?.name}
                 />
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground pb-32">
-                No results to display.
               </div>
             )}
           </div>
