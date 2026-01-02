@@ -601,113 +601,49 @@ async function validateTableStructure(
  * Retrieves rejected rows from DuckDB's reject_errors table
  */
 async function getRejectedRows(
-  conn: duckdb.AsyncDuckDBConnection
+  conn: duckdb.AsyncDuckDBConnection,
 ): Promise<{ rejectedRows: RejectedRow[]; rejectedRowCount: number }> {
   try {
-    // First check if reject_errors table exists
-    const tableExistsQuery = await conn.query(`
-      SELECT COUNT(*) as table_count 
-      FROM information_schema.tables 
+    // 1. Check reject_errors table
+    const existsQ = await conn.query(`
+      SELECT COUNT(*) AS c
+      FROM information_schema.tables
       WHERE table_name = 'reject_errors'
     `);
 
-    const tableExists =
-      Number(tableExistsQuery.toArray()[0]?.table_count || 0) > 0;
-
-    if (!tableExists) {
-      return {
-        rejectedRows: [],
-        rejectedRowCount: 0,
-      };
+    if (Number(existsQ.toArray()[0]?.c || 0) === 0) {
+      return { rejectedRows: [], rejectedRowCount: 0 };
     }
-
-    // First, let's see what columns are available in reject_errors
-    const columnsQuery = await conn.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'reject_errors'
-    `);
-
-    const availableColumns = columnsQuery
-      .toArray()
-      .map((row) => row.column_name?.toString());
-    console.log("Available columns in reject_errors:", availableColumns);
-
-    // Query the reject_errors table to get information about rejected rows
-    // Using the available column names
-    const rejectedQuery = await conn.query(`
+    // 4. Read rejected rows
+    const rejectedQ = await conn.query(`
       SELECT *
       FROM reject_errors
       ORDER BY file_id, line
-      LIMIT 100
+      LIMIT 200;
     `);
 
-    const rejectedData = rejectedQuery.toArray();
-    console.log("Sample rejected row data:", rejectedData[0]);
-    console.log("All rejected data keys:", Object.keys(rejectedData[0] || {}));
+    const rejectedRows: RejectedRow[] = [];
 
-    const rejectedRows: RejectedRow[] = rejectedData.map((row) => {
-      // Debug each row to understand the data structure
-      console.log("Processing row:", row);
+    for (const row of rejectedQ.toArray()) {
+      const columnName = row.column_name?.toString() ?? "unknown";
+      const errorMsg = row.error_message?.toString() ?? "Unknown error";
 
-      // Try to extract meaningful information from available fields
-      const rowNumber = Number(row.line || row.csv_line || row.row || 0);
-      const columnName =
-        row.column_name?.toString() || row.column?.toString() || "unknown";
-
-      // For expected type, DuckDB might store this differently
-      let expectedType = "unknown";
-      if (row.expected_type) {
-        expectedType = row.expected_type.toString();
-      } else if (row.type) {
-        expectedType = row.type.toString();
-      } else if (row.csv_type) {
-        expectedType = row.csv_type.toString();
-      }
-
-      // For actual value, try different possible column names
-      let actualValue = "";
-      if (row.actual_value !== undefined && row.actual_value !== null) {
-        actualValue = row.actual_value.toString();
-      } else if (row.value !== undefined && row.value !== null) {
-        actualValue = row.value.toString();
-      } else if (row.csv_value !== undefined && row.csv_value !== null) {
-        actualValue = row.csv_value.toString();
-      }
-
-      // For error message
-      const errorMessage =
-        row.error_message?.toString() ||
-        row.error?.toString() ||
-        row.message?.toString() ||
-        "Data type mismatch";
-
-      return {
-        rowNumber,
+      rejectedRows.push({
+        rowNumber: Number(row.line || 0),
         columnName,
-        expectedType,
-        actualValue,
-        errorMessage,
-      };
-    });
+        expectedType:"",
+        actualValue:"",
+        errorMessage: errorMsg,
+      });
+    }
 
-    // Get total count of rejected rows
-    const countQuery = await conn.query(
-      `SELECT COUNT(*) as total FROM reject_errors`
-    );
-    const totalCount = Number(countQuery.toArray()[0]?.total || 0);
-
-    return {
-      rejectedRows,
-      rejectedRowCount: totalCount,
-    };
-  } catch (error) {
-    // If reject_errors table doesn't exist or query fails, return empty results
-    console.warn("Could not retrieve rejected rows:", (error as Error).message);
-    return {
-      rejectedRows: [],
-      rejectedRowCount: 0,
-    };
+    // 5. Count rejected rows
+    const countQ = await conn.query(`SELECT COUNT(*) AS total FROM reject_errors`);
+    const rejectedRowCount = Number(countQ.toArray()[0]?.total || 0);
+    return { rejectedRows, rejectedRowCount };
+  } catch (err) {
+    console.warn("Error reading rejected rows:", (err as Error).message);
+    return { rejectedRows: [], rejectedRowCount: 0 };
   }
 }
 

@@ -1,6 +1,9 @@
 package database
 
 import (
+	"bufio"
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -20,12 +23,12 @@ type refreshRequestBody struct {
 }
 
 // @Summary Update dataset from database source
-// @Description Updates an existing dataset from a database source by re-executing the source query and refreshing metrics, columns, row count, summary, and schema embedding
+// @Description Updates an existing dataset from a database source by re-executing the source query and refreshing metrics, columns, row count, summary, and schema embedding with SSE progress updates
 // @Tags database
 // @Accept json
-// @Produce json
+// @Produce text/event-stream
 // @Param body body updateRequestBody true "Update request parameters"
-// @Success 201 {object} responses.SuccessResponse{data=models.Dataset}
+// @Success 200 {string} string "SSE stream of refresh progress"
 // @Failure 400 {object} responses.ErrorResponse "Invalid request body or database connection error"
 // @Failure 404 {object} responses.ErrorResponse "Project or dataset not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
@@ -54,220 +57,253 @@ func (h *httpHandler) refresh(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID, orgID)
-	if err != nil {
-		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
-			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
-			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error":   "Project not found",
-				"message": fmt.Sprintf("Project with ID %s not found", body.ProjectID),
-				"code":    fiber.StatusNotFound,
-			})
+	// Create SSE channel
+	sseChan := make(chan SSEData, 10)
+
+	// Helper to send SSE events
+	sendEvent := func(eventType, message string, data any) {
+		eventPayload := SSEEvent{
+			Type:    eventType,
+			Message: message,
+			Data:    data,
 		}
-		h.logger.Error("Error fetching project", zap.Error(err), zap.String("project_id", body.ProjectID))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error validating project",
-			"code":    fiber.StatusInternalServerError,
-		})
+		payloadBytes, _ := json.Marshal(eventPayload)
+		sseMessage := fmt.Sprintf("data: %s\n\n", payloadBytes)
+		sseChan <- SSEData{Data: []byte(sseMessage)}
 	}
 
-	d, err := h.datasetSvc.GetByTableName(body.DatasetName, orgID)
-	if err != nil {
-		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
-			h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.DatasetName))
-			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error":   "Dataset not found",
-				"message": fmt.Sprintf("Dataset with name %s not found", body.DatasetName),
-				"code":    fiber.StatusNotFound,
-			})
-		}
-		h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("dataset_id", body.DatasetName))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error validating dataset",
-			"code":    fiber.StatusInternalServerError,
-		})
+	// Helper to handle failures
+	handleFailure := func(failErr error) {
+		errMsg := failErr.Error()
+		errorPayload, _ := json.Marshal(map[string]string{"type": "error", "message": errMsg})
+		errorMsg := fmt.Sprintf("event: error\ndata: %s\n\n", errorPayload)
+		sseChan <- SSEData{Data: []byte(errorMsg)}
 	}
 
-	source, err := h.dbSourceSvc.Get(d.ID, orgID)
-	if err != nil {
-		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
-			h.logger.Error("Database source not found for dataset", zap.Error(err), zap.String("dataset_id", d.ID))
-			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error":   "Database source not found",
-				"message": fmt.Sprintf("Database source for dataset ID %s not found", d.ID),
-				"code":    fiber.StatusNotFound,
-			})
-		}
-		h.logger.Error("Error fetching database source for dataset", zap.Error(err), zap.String("dataset_id", d.ID))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error validating database source",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+	// Start async refresh process
+	go func() {
+		defer close(sseChan)
 
-	h.logger.Info("updating database source dataset", zap.String("project_id", project.ID))
+		sendEvent("status_update", "Validating project...", nil)
 
-	tableName := d.Name
-
-	var driver string
-
-	if strings.HasPrefix(source.ConnectionString, "postgres") {
-		driver = "postgres"
-	} else {
-		driver = "mysql"
-	}
-
-	var t time.Time
-	if body.RefreshType == "incremental" && source.TimestampColumn != "" {
-		t, err = time.Parse(time.RFC3339Nano, source.LastUpdatedAt)
+		// Check if project exists
+		project, err := h.projectSvc.Details(body.ProjectID, orgID)
 		if err != nil {
-			h.logger.Error("Error parsing last updated at timestamp", zap.Error(err), zap.String("timestamp", source.LastUpdatedAt))
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   err.Error(),
-				"message": "Error parsing last updated at timestamp",
-				"code":    fiber.StatusInternalServerError,
-			})
-		}
-	}
-
-	if body.RefreshType == "incremental" && source.TimestampColumn == "" {
-		h.logger.Error("Timestamp column is required for incremental refresh", zap.String("dataset_id", d.ID))
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Timestamp column is required for incremental refresh",
-			"message": "Cannot perform incremental refresh without a timestamp column",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
-
-	refreshErr := func() error {
-		if driver == "postgres" {
-			if body.RefreshType == "incremental" && source.TimestampColumn != "" {
-				return h.olapSvc.IncrementalRefreshPostgres(source.ConnectionString, source.SQLQuery, tableName, source.TimestampColumn, &t)
+			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+				h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
+				handleFailure(fmt.Errorf("project with ID %s not found", body.ProjectID))
+				return
 			}
-			return h.olapSvc.FullTableRefreshPostgres(source.ConnectionString, source.SQLQuery, tableName)
+			h.logger.Error("Error fetching project", zap.Error(err), zap.String("project_id", body.ProjectID))
+			handleFailure(fmt.Errorf("error validating project: %w", err))
+			return
 		}
-		if body.RefreshType == "incremental" && source.TimestampColumn != "" {
-			return h.olapSvc.IncrementalRefreshMySQL(source.ConnectionString, source.SQLQuery, tableName, source.TimestampColumn, &t)
-		}
-		return h.olapSvc.FullTableRefreshMySQL(source.ConnectionString, source.SQLQuery, tableName)
-	}()
 
-	if refreshErr != nil {
-		var msg string
-		if body.RefreshType == "incremental" && source.TimestampColumn != "" {
-			if driver == "postgres" {
-				msg = "Error performing incremental refresh from postgres"
-			} else {
-				msg = "Error performing incremental refresh from mysql"
+		sendEvent("status_update", "Validating dataset...", nil)
+
+		d, err := h.datasetSvc.GetByTableName(body.DatasetName, orgID)
+		if err != nil {
+			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+				h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.DatasetName))
+				handleFailure(fmt.Errorf("dataset with name %s not found", body.DatasetName))
+				return
 			}
+			h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("dataset_id", body.DatasetName))
+			handleFailure(fmt.Errorf("error validating dataset: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Fetching database source configuration...", nil)
+
+		source, err := h.dbSourceSvc.Get(d.ID, orgID)
+		if err != nil {
+			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+				h.logger.Error("Database source not found for dataset", zap.Error(err), zap.String("dataset_id", d.ID))
+				handleFailure(fmt.Errorf("database source for dataset ID %s not found", d.ID))
+				return
+			}
+			h.logger.Error("Error fetching database source for dataset", zap.Error(err), zap.String("dataset_id", d.ID))
+			handleFailure(fmt.Errorf("error validating database source: %w", err))
+			return
+		}
+
+		h.logger.Info("updating database source dataset", zap.String("project_id", project.ID))
+
+		tableName := d.Name
+
+		var driver string
+
+		if strings.HasPrefix(source.ConnectionString, "postgres") {
+			driver = "postgres"
 		} else {
-			if driver == "postgres" {
-				msg = "Error creating table from postgres"
-			} else {
-				msg = "Error creating table from mysql"
+			driver = "mysql"
+		}
+
+		var t time.Time
+		if body.RefreshType == "incremental" && source.TimestampColumn != "" {
+			t, err = time.Parse(time.RFC3339Nano, source.LastUpdatedAt)
+			if err != nil {
+				h.logger.Error("Error parsing last updated at timestamp", zap.Error(err), zap.String("timestamp", source.LastUpdatedAt))
+				handleFailure(fmt.Errorf("error parsing last updated at timestamp: %w", err))
+				return
 			}
 		}
-		h.logger.Error(msg, zap.Error(refreshErr))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   refreshErr.Error(),
-			"message": msg,
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
 
-	if body.RefreshType == "incremental" && source.TimestampColumn != "" {
-		lastUpdatedAt, err := h.olapSvc.GetLatestTimestamp(tableName, source.TimestampColumn)
+		if body.RefreshType == "incremental" && source.TimestampColumn == "" {
+			h.logger.Error("Timestamp column is required for incremental refresh", zap.String("dataset_id", d.ID))
+			handleFailure(fmt.Errorf("timestamp column is required for incremental refresh"))
+			return
+		}
+
+		sendEvent("status_update", fmt.Sprintf("Performing %s refresh from %s database...", body.RefreshType, driver), nil)
+
+		refreshErr := func() error {
+			if driver == "postgres" {
+				if body.RefreshType == "incremental" && source.TimestampColumn != "" {
+					return h.olapSvc.IncrementalRefreshPostgres(source.ConnectionString, source.SQLQuery, tableName, source.TimestampColumn, &t)
+				}
+				return h.olapSvc.FullTableRefreshPostgres(source.ConnectionString, source.SQLQuery, tableName)
+			}
+			if body.RefreshType == "incremental" && source.TimestampColumn != "" {
+				return h.olapSvc.IncrementalRefreshMySQL(source.ConnectionString, source.SQLQuery, tableName, source.TimestampColumn, &t)
+			}
+			return h.olapSvc.FullTableRefreshMySQL(source.ConnectionString, source.SQLQuery, tableName)
+		}()
+
+		if refreshErr != nil {
+			var msg string
+			if body.RefreshType == "incremental" && source.TimestampColumn != "" {
+				if driver == "postgres" {
+					msg = "error performing incremental refresh from postgres"
+				} else {
+					msg = "error performing incremental refresh from mysql"
+				}
+			} else {
+				if driver == "postgres" {
+					msg = "error creating table from postgres"
+				} else {
+					msg = "error creating table from mysql"
+				}
+			}
+			h.logger.Error(msg, zap.Error(refreshErr))
+			handleFailure(fmt.Errorf("%s: %w", msg, refreshErr))
+			return
+		}
+
+		if body.RefreshType == "incremental" && source.TimestampColumn != "" {
+			sendEvent("status_update", "Updating timestamp for incremental refresh...", nil)
+			lastUpdatedAt, err := h.olapSvc.GetLatestTimestamp(tableName, source.TimestampColumn)
+			if err != nil {
+				h.logger.Error("Error fetching latest timestamp from OLAP", zap.Error(err), zap.String("table_name", tableName), zap.String("timestamp_column", source.TimestampColumn))
+				handleFailure(fmt.Errorf("error fetching latest timestamp from OLAP: %w", err))
+				return
+			}
+			if lastUpdatedAt != nil {
+				err = h.dbSourceSvc.Update(context.Background(), models.UpdateDatabaseSourceLastUpdatedAtParams{
+					ID:            source.ID,
+					LastUpdatedAt: *lastUpdatedAt,
+				})
+				if err != nil {
+					h.logger.Error("Error updating database source timestamp", zap.Error(err))
+					handleFailure(fmt.Errorf("error updating database source timestamp: %w", err))
+					return
+				}
+			}
+		}
+
+		sendEvent("status_update", "Waiting for data commit...", nil)
+		time.Sleep(2 * time.Second) // Wait for the table to be created in OLAP
+
+		sendEvent("status_update", "Fetching dataset metrics...", nil)
+
+		count, columns, err := h.getMetrics(tableName)
 		if err != nil {
-			h.logger.Error("Error fetching latest timestamp from OLAP", zap.Error(err), zap.String("table_name", tableName), zap.String("timestamp_column", source.TimestampColumn))
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   err.Error(),
-				"message": "Error fetching latest timestamp from OLAP",
-				"code":    fiber.StatusInternalServerError,
-			})
+			h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", tableName))
+			handleFailure(fmt.Errorf("error fetching dataset metrics: %w", err))
+			return
 		}
-		if lastUpdatedAt != nil {
-			err = h.dbSourceSvc.Update(ctx.Context(), models.UpdateDatabaseSourceLastUpdatedAtParams{
-				ID:            source.ID,
-				LastUpdatedAt: *lastUpdatedAt,
-			})
+
+		sendEvent("status_update", "Updating dataset record...", nil)
+
+		dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
+			RowCount:  count,
+			Columns:   columns,
+			UpdatedBy: userID,
+			OrgID:     orgID,
+		})
+		if err != nil {
+			h.logger.Error("Error updating dataset record", zap.Error(err))
+			handleFailure(fmt.Errorf("error updating dataset record: %w", err))
+			return
 		}
-	}
 
-	time.Sleep(2 * time.Second) // Wait for the table to be created in OLAP
+		sendEvent("status_update", "Generating dataset summary...", nil)
 
-	count, columns, err := h.getMetrics(tableName)
-	if err != nil {
-		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", tableName))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching dataset metrics",
-			"code":    fiber.StatusInternalServerError,
+		datasetSummary, err := h.olapSvc.GetDatasetSummary(tableName)
+		if err != nil {
+			h.logger.Error("Error fetching dataset summary", zap.Error(err))
+			handleFailure(fmt.Errorf("error fetching dataset summary: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Saving dataset summary...", nil)
+
+		summary, err := h.datasetSvc.CreateDatasetSummary(tableName, datasetSummary)
+		if err != nil {
+			h.logger.Error("Error creating dataset summary", zap.Error(err))
+			handleFailure(fmt.Errorf("error creating dataset summary: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Uploading schema to AI agent...", nil)
+
+		err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
+			DatasetID: dataset.ID,
+			ProjectID: project.ID,
 		})
-	}
+		if err != nil {
+			h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
+			handleFailure(fmt.Errorf("error uploading schema to AI agent: %w", err))
+			return
+		}
 
-	dataset, err := h.datasetSvc.Update(d.ID, &models.UpdateDatasetParams{
-		RowCount:  count,
-		Columns:   columns,
-		UpdatedBy: userID,
-		OrgID:     orgID,
-	})
-	if err != nil {
-		h.logger.Error("Error creating dataset record", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating dataset record",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+		h.logger.Info("Database source dataset refresh completed successfully",
+			zap.String("dataset_id", dataset.ID),
+			zap.String("project_id", project.ID),
+			zap.String("table_name", tableName))
 
-	datasetSummary, err := h.olapSvc.GetDatasetSummary(tableName)
-	if err != nil {
-		h.logger.Error("Error fetching dataset summary", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	summary, err := h.datasetSvc.CreateDatasetSummary(tableName, datasetSummary)
-	if err != nil {
-		h.logger.Error("Error creating dataset summary", zap.Error(err))
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
-		DatasetID: dataset.ID,
-		ProjectID: project.ID,
-	})
-	if err != nil {
-		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
-
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error uploading schema to AI agent",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	h.logger.Info("Database source dataset creation completed successfully",
-		zap.String("dataset_id", dataset.ID),
-		zap.String("project_id", project.ID),
-		zap.String("table_name", tableName))
-
-	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": map[string]any{
+		// Send completion event with dataset and summary
+		sendEvent("complete", "Dataset refreshed successfully", map[string]any{
 			"dataset": dataset,
 			"summary": summary,
-		},
+		})
+	}()
+
+	// Set SSE headers
+	ctx.Set("Content-Type", "text/event-stream")
+	ctx.Set("Cache-Control", "no-cache")
+	ctx.Set("Connection", "keep-alive")
+	ctx.Set("Transfer-Encoding", "chunked")
+
+	// Stream SSE events to client
+	ctx.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
+		for sse := range sseChan {
+			if sse.Error != nil {
+				h.logger.Error("Error received from stream source", zap.Error(sse.Error))
+				return
+			}
+
+			if _, err := w.Write(sse.Data); err != nil {
+				h.logger.Error("Error writing to client stream", zap.Error(err))
+				return
+			}
+
+			if err := w.Flush(); err != nil {
+				h.logger.Error("Error flushing client stream", zap.Error(err))
+				return
+			}
+		}
 	})
+
+	return nil
 }

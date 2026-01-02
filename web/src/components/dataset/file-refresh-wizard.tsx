@@ -14,8 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Stepper, StepperContent, Step } from "@/components/ui/stepper";
+import { Progress } from "@/components/ui/progress";
 import {
-  RefreshFileUploader, // Import the new uploader
+  RefreshFileUploader,
   RefreshFileUploaderRef,
 } from "@/components/dataset/refresh-file-uploader";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,12 +24,12 @@ import { useUploadStore } from "@/lib/stores/uploadStore";
 import { useDuckDb } from "@/hooks/useDuckDb";
 import { CenteredLoading } from "@/components/ui/loading";
 import { useSchema } from "@/lib/queries/dataset/get-schema";
-import { ColumnInfo } from "@/lib/queries/dataset/get-schema"; // Assuming ColumnInfo is exported
-import { useRefreshDataset } from "@/lib/mutations/dataset/refresh-dataset";
+import { ColumnInfo } from "@/lib/queries/dataset/get-schema";
+import { useRefreshDatasetSSE } from "@/lib/mutations/dataset/refresh-dataset";
+import { SSEEvent } from "@/lib/sse-client";
 import { useParams } from "next/navigation";
 import { useDatasetById } from "@/lib/queries/dataset/get-dataset-by-id";
 
-// Simplified steps for the refresh flow
 const REFRESH_STEPS: Step[] = [
   {
     id: "upload",
@@ -48,8 +49,11 @@ type ValidationStateType =
   | "schema_match"
   | "schema_mismatch"
   | "validation_error"
-  | "no_schema_to_compare" // Added state
-  | "validation_unavailable"; // Added state
+  | "no_schema_to_compare"
+  | "validation_unavailable";
+
+// Constant ID to keep the toast persistent across the upload -> refresh gap
+const REFRESH_TOAST_ID = "dataset-refresh-flow";
 
 export interface FileRefreshWizardProps {
   projectId: string;
@@ -61,7 +65,7 @@ export function FileRefreshWizard({
   projectId,
   onRefreshComplete,
 }: FileRefreshWizardProps) {
-  const refreshDataset = useRefreshDataset();
+  const refreshDatasetSSE = useRefreshDatasetSSE();
   const [currentStep, setCurrentStep] = useState(1);
   const { datasetId } = useParams() as {
     projectId: string;
@@ -116,12 +120,13 @@ export function FileRefreshWizard({
         if (currentStep !== 1) setCurrentStep(1);
       }
     },
-    [currentStep] // Depend on currentStep to prevent unnecessary re-renders
+    [currentStep]
   );
     const callRefreshApiEndpoint = useCallback(async () => {
     setIsProcessingApi(true);
     setApiError(null);
     let s3Url = "";
+    let currentProgress = 25; // Resume progress from where S3 upload left off
 
     try {
       // Get S3 URL from store
@@ -187,66 +192,128 @@ export function FileRefreshWizard({
         throw new Error(`Invalid upload URL format: ${uploadURL}`);
       }
 
-      toast.loading("Sending refresh request to server...", {
-        id: "api-refresh",
-      });
-     console.log("datasetData", datasetData?.name)
-      await refreshDataset.mutateAsync({
-        datasetName: datasetData?.name||'',
+      // Update toast for API processing start
+      toast.loading(
+        <div className="flex flex-col gap-2 w-full min-w-[250px]">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium">Initializing refresh...</span>
+            <span className="text-muted-foreground">{currentProgress}%</span>
+          </div>
+          <Progress value={currentProgress} className="h-2" />
+        </div>,
+        { id: REFRESH_TOAST_ID }
+      );
+
+      // Call the SSE Hook
+      await refreshDatasetSSE({
+        datasetName: datasetData?.name || "",
         projectId: projectId,
         s3Url: s3Url,
-        source: 'file'
+        source: "file",
+        onProgress: (event: SSEEvent) => {
+          if (event.type === "status_update") {
+            currentProgress = Math.min(currentProgress + 10, 90);
+            toast.loading(
+              <div className="flex flex-col gap-2 w-full min-w-[250px]">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">{event.message}</span>
+                  <span className="text-muted-foreground">
+                    {currentProgress}%
+                  </span>
+                </div>
+                <Progress value={currentProgress} className="h-2" />
+              </div>,
+              { id: REFRESH_TOAST_ID }
+            );
+          }
+        },
       });
-      toast.success("Dataset refresh complete!", { id: "api-refresh" });
 
-      // Invalidate queries and call completion callback
+      // Success State
+      toast.success("Dataset refreshed successfully!", {
+        id: REFRESH_TOAST_ID,
+        duration: 4000,
+      });
+
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["datasets", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["get-schema", datasetData?.name] });
+      queryClient.invalidateQueries({
+        queryKey: ["get-schema", datasetData?.name],
+      });
       queryClient.invalidateQueries({ queryKey: ["dataset", datasetData?.id] });
 
       resetUploadState();
-      onRefreshComplete(); // Navigate back
+      onRefreshComplete();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
       setApiError(errorMessage);
-      toast.error(`Refresh failed: ${errorMessage}`, { id: "api-refresh" });
+      
+      // Error State
+      toast.error("Refresh Failed", {
+        id: REFRESH_TOAST_ID,
+        description: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setIsProcessingApi(false);
     }
   }, [
-  projectId,
-  queryClient,
-  refreshDataset,
-  resetUploadState,
-  onRefreshComplete,
-  datasetData?.name,
-  datasetData?.id
+    projectId,
+    queryClient,
+    refreshDatasetSSE,
+    resetUploadState,
+    onRefreshComplete,
+    datasetData?.name,
+    datasetData?.id,
   ]);
 
-  // 3. Callback for the RefreshFileUploader (after S3 upload)
-  const handleUploadComplete = (_file: UppyFile<Meta, Record<string, never>>, response: unknown) => {
-      setUploadResponse(response);
-      // S3 upload is complete, now we can call the final API endpoint
-      callRefreshApiEndpoint();
-    }
-  // 4. Function to call the final API endpoint
+  // Handle Upload Complete (Triggered by Uploader Component)
+  const handleUploadComplete = (
+    _file: UppyFile<Meta, Record<string, never>>,
+    response: unknown
+  ) => {
+    setUploadResponse(response);
+    
+    // Update toast to bridge the gap between S3 finish and API start
+    toast.loading(
+      <div className="flex flex-col gap-2 w-full min-w-[250px]">
+        <div className="flex justify-between text-sm">
+          <span className="font-medium">File uploaded. Starting refresh...</span>
+          <span className="text-muted-foreground">25%</span>
+        </div>
+        <Progress value={25} className="h-2" />
+      </div>,
+      { id: REFRESH_TOAST_ID }
+    );
 
+    callRefreshApiEndpoint();
+  };
 
-
-
-
-  // 5. Triggered by the "Confirm and Refresh" button
+  // Triggered by the "Confirm and Refresh" button
   const handleConfirmAndUpload = () => {
     if (uploaderRef.current && validationState === "schema_match") {
-      setApiError(null); // Clear previous API error before starting
+      setApiError(null);
+      
+      // Initialize the toast flow here
+      toast.loading(
+        <div className="flex flex-col gap-2 w-full min-w-[250px]">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium">Uploading file to storage...</span>
+            <span className="text-muted-foreground">10%</span>
+          </div>
+          <Progress value={10} className="h-2" />
+        </div>,
+        { id: REFRESH_TOAST_ID, duration: Infinity }
+      );
+
       uploaderRef.current.triggerUpload().catch((err) => {
-        // Error during S3 upload trigger (e.g., file removed)
         setApiError(err.message || "Failed to start upload.");
-        toast.error(err.message || "Failed to start upload.");
+        toast.error("Upload Failed", {
+          id: REFRESH_TOAST_ID,
+          description: err.message || "Failed to start upload.",
+        });
       });
-      // The actual API call happens in handleUploadComplete after S3 finishes
     } else {
       toast.error(
         "Cannot start upload. Ensure a file with a matching schema is selected."
@@ -345,11 +412,11 @@ export function FileRefreshWizard({
             </div>
             <div className="bg-card border p-6">
               <h2 className="text-xl font-semibold mb-1">
-                Validate & Upload  File
+                Validate & Upload File
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Select the new file. Its schema (column names,order and data types) will be
-                compared against the existing dataset.
+                Select the new file. Its schema (column names, order and data
+                types) will be compared against the existing dataset.
               </p>
 
               {/* Status messages based on validationState */}
@@ -412,13 +479,22 @@ export function FileRefreshWizard({
                 </Alert>
               )}
 
-              {<RefreshFileUploader
-                ref={uploaderRef}
-                existingSchema={existingSchemaData?.schema as ColumnInfo[]} // Pass existing schema
-                onValidationStateChange={handleValidationStateChange}
-                onUploadSuccess={handleUploadComplete}
-                onUploadError={(msg) => setApiError(msg)} // S3 upload errors shown as API errors
-              />}
+              {
+                <RefreshFileUploader
+                  ref={uploaderRef}
+                  existingSchema={existingSchemaData?.schema as ColumnInfo[]}
+                  onValidationStateChange={handleValidationStateChange}
+                  onUploadSuccess={handleUploadComplete}
+                  onUploadError={(msg) => {
+                    // Update toast if active, otherwise just set error
+                    toast.error("Upload Failed", {
+                      id: REFRESH_TOAST_ID,
+                      description: msg,
+                    });
+                    setApiError(msg);
+                  }}
+                />
+              }
             </div>
             <div className="flex justify-end items-center">
               <Button
@@ -443,7 +519,7 @@ export function FileRefreshWizard({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleClearUpload} // Allow clearing from confirm step too
+                  onClick={handleClearUpload}
                   className="flex items-center gap-1.5"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -470,8 +546,8 @@ export function FileRefreshWizard({
               <h2 className="text-xl font-semibold mb-4">Confirm Refresh</h2>
               <p className="text-sm text-muted-foreground">
                 You are about to replace the data in dataset{" "}
-                <strong>{datasetData?.name}</strong>. This action will upload the new
-                file and trigger the refresh process on the server.
+                <strong>{datasetData?.name}</strong>. This action will upload
+                the new file and trigger the refresh process on the server.
               </p>
               <Alert className="mt-4" variant="destructive">
                 <AlertTriangle className="h-4 w-4" />

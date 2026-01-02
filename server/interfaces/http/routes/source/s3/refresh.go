@@ -1,7 +1,9 @@
 package s3
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -24,12 +26,12 @@ type refreshRequestBody struct {
 }
 
 // @Summary Update dataset from S3
-// @Description Update an existing dataset with a new file from S3
+// @Description Update an existing dataset with a new file from S3 with SSE progress updates
 // @Tags s3
 // @Accept json
-// @Produce json
+// @Produce text/event-stream
 // @Param body body updateRequestBody true "Update request parameters"
-// @Success 200 {object} responses.SuccessResponse{data=models.Dataset}
+// @Success 200 {string} string "SSE stream of refresh progress"
 // @Failure 400 {object} responses.ErrorResponse "Invalid request body or S3 file access error"
 // @Failure 404 {object} responses.ErrorResponse "Dataset not found"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
@@ -58,179 +60,213 @@ func (h *httpHandler) refresh(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 
-	// Check if dataset exists
-	d, err := h.datasetSvc.GetByTableName(body.DatasetName, orgID)
-	if err != nil {
-		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
-			h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.DatasetName))
-			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error":   "Dataset not found",
-				"message": fmt.Sprintf("Dataset with name %s not found", body.DatasetName),
-				"code":    fiber.StatusNotFound,
-			})
+	// Create SSE channel
+	sseChan := make(chan SSEData, 10)
+
+	// Helper to send SSE events
+	sendEvent := func(eventType, message string, data any) {
+		eventPayload := SSEEvent{
+			Type:    eventType,
+			Message: message,
+			Data:    data,
 		}
-		h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("dataset_id", body.DatasetName))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error validating dataset",
-			"code":    fiber.StatusInternalServerError,
-		})
+		payloadBytes, _ := json.Marshal(eventPayload)
+		sseMessage := fmt.Sprintf("data: %s\n\n", payloadBytes)
+		sseChan <- SSEData{Data: []byte(sseMessage)}
 	}
 
-	h.logger.Info("Dataset found, proceeding with update", zap.String("dataset_id", d.ID), zap.String("table_name", d.Name))
-
-	olapDB := h.olapSvc.GetDB()
-	storeDB := h.datasetSvc.GetDB()
-	txCtx := context.Background()
-
-	olapTx, err := olapDB.Begin()
-	if err != nil {
-		h.logger.Error("Error starting OLAP transaction", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error starting OLAP transaction",
-			"code":    fiber.StatusInternalServerError,
-		})
+	// Helper to handle failures
+	handleFailure := func(failErr error) {
+		errMsg := failErr.Error()
+		errorPayload, _ := json.Marshal(map[string]string{"type": "error", "message": errMsg})
+		errorMsg := fmt.Sprintf("event: error\ndata: %s\n\n", errorPayload)
+		sseChan <- SSEData{Data: []byte(errorMsg)}
 	}
 
-	storeTx, err := storeDB.Begin(txCtx)
-	if err != nil {
-		h.logger.Error("Error starting Store transaction", zap.Error(err))
-		olapTx.Rollback()
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error starting Store transaction",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+	// Start async refresh process
+	go func() {
+		defer close(sseChan)
+		txCtx := context.Background()
 
-	// Ensure transactions are committed or rolled back
-	defer func() {
+		sendEvent("status_update", "Validating dataset...", nil)
+
+		// Check if dataset exists
+		d, err := h.datasetSvc.GetByTableName(body.DatasetName, orgID)
 		if err != nil {
-			h.logger.Error("Rolling back transactions due to error", zap.Error(err))
+			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
+				h.logger.Error("Dataset not found", zap.Error(err), zap.String("dataset_id", body.DatasetName))
+				handleFailure(fmt.Errorf("dataset with name %s not found", body.DatasetName))
+				return
+			}
+			h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("dataset_id", body.DatasetName))
+			handleFailure(fmt.Errorf("error validating dataset: %w", err))
+			return
+		}
+
+		h.logger.Info("Dataset found, proceeding with update", zap.String("dataset_id", d.ID), zap.String("table_name", d.Name))
+
+		sendEvent("status_update", "Starting database transactions...", nil)
+
+		olapDB := h.olapSvc.GetDB()
+		storeDB := h.datasetSvc.GetDB()
+
+		olapTx, err := olapDB.Begin()
+		if err != nil {
+			h.logger.Error("Error starting OLAP transaction", zap.Error(err))
+			handleFailure(fmt.Errorf("error starting OLAP transaction: %w", err))
+			return
+		}
+
+		storeTx, err := storeDB.Begin(txCtx)
+		if err != nil {
+			h.logger.Error("Error starting Store transaction", zap.Error(err))
 			olapTx.Rollback()
-			storeTx.Rollback(txCtx)
-		} else {
-			h.logger.Info("Committing transactions")
-			olapTx.Commit()
-			storeTx.Commit(txCtx)
+			handleFailure(fmt.Errorf("error starting Store transaction: %w", err))
+			return
 		}
-	}()
 
-	err = h.olapSvc.DropTableWithTx(olapTx, d.Name)
-	if err != nil {
-		// will not rollback here as there are no changes yet
-		h.logger.Error("Error droping existing OLAP table", zap.Error(err), zap.String("table_name", d.Name))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error droping existing OLAP table",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+		// Ensure transactions are committed or rolled back
+		defer func() {
+			if err != nil {
+				h.logger.Error("Rolling back transactions due to error", zap.Error(err))
+				olapTx.Rollback()
+				storeTx.Rollback(txCtx)
+			} else {
+				h.logger.Info("Committing transactions")
+				olapTx.Commit()
+				storeTx.Commit(txCtx)
+			}
+		}()
 
-	h.logger.Info("Starting file update", zap.String("file_path", d.FilePath), zap.String("dataset_id", d.ID))
+		sendEvent("status_update", "Dropping existing OLAP table...", nil)
 
-	// override file path if provided
-	if body.FilePath != "" {
-		d.FilePath = body.FilePath
-	}
-
-	// Upload file to OLAP service
-	res, err := h.olapSvc.IngestS3File(olapTx, ctx.Context(), d.FilePath, d.Name, nil, body.IgnoreErrors)
-	if err != nil {
-		h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", d.FilePath))
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Failed to upload file from S3. Please check if the file exists and you have proper access.",
-			"code":    fiber.StatusBadRequest,
-		})
-	}
-
-	time.Sleep(2 * time.Second) // wait for a while to ensure data is committed
-
-	count, columns, err := h.getMetrics(res.TableName)
-	if err != nil {
-		h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
-		// Clean up the updated OLAP table since metrics fetch failed
-		dropErr := h.olapSvc.DropTable(res.TableName)
-		if dropErr != nil {
-			h.logger.Error("Failed to drop table during cleanup", zap.Error(dropErr), zap.String("table_name", res.TableName))
+		err = h.olapSvc.DropTableWithTx(olapTx, d.Name)
+		if err != nil {
+			h.logger.Error("Error dropping existing OLAP table", zap.Error(err), zap.String("table_name", d.Name))
+			handleFailure(fmt.Errorf("error dropping existing OLAP table: %w", err))
+			return
 		}
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching dataset metrics",
-			"code":    fiber.StatusInternalServerError,
+
+		h.logger.Info("Starting file update", zap.String("file_path", d.FilePath), zap.String("dataset_id", d.ID))
+
+		// override file path if provided
+		if body.FilePath != "" {
+			d.FilePath = body.FilePath
+		}
+
+		sendEvent("status_update", "Ingesting file from S3...", nil)
+
+		// Upload file to OLAP service
+		res, err := h.olapSvc.IngestS3File(olapTx, txCtx, d.FilePath, d.Name, nil, body.IgnoreErrors)
+		if err != nil {
+			h.logger.Error("Error uploading file to OLAP service", zap.Error(err), zap.String("file_path", d.FilePath))
+			handleFailure(fmt.Errorf("failed to upload file from S3: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Waiting for data to commit...", nil)
+		time.Sleep(2 * time.Second) // wait for a while to ensure data is committed
+
+		sendEvent("status_update", "Fetching dataset metrics...", nil)
+
+		count, columns, err := h.getMetrics(res.TableName)
+		if err != nil {
+			h.logger.Error("Error fetching dataset metrics", zap.Error(err), zap.String("table_name", res.TableName))
+			handleFailure(fmt.Errorf("error fetching dataset metrics: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Updating dataset record...", nil)
+
+		// update dataset entry for successful upload
+		dataset, err := h.datasetSvc.UpdateWithTx(storeTx, d.ID, &models.UpdateDatasetParams{
+			FilePath:  body.FilePath,
+			RowCount:  int(count),
+			Size:      res.Size,
+			Columns:   columns,
+			UpdatedBy: userID,
+			OrgID:     orgID,
 		})
-	}
+		if err != nil {
+			h.logger.Error("Error updating dataset record", zap.Error(err))
+			handleFailure(fmt.Errorf("error updating dataset record: %w", err))
+			return
+		}
 
-	// update dataset entry for successful upload
-	dataset, err := h.datasetSvc.UpdateWithTx(storeTx, d.ID, &models.UpdateDatasetParams{
-		FilePath:  body.FilePath,
-		RowCount:  int(count),
-		Size:      res.Size,
-		Columns:   columns,
-		UpdatedBy: userID,
-		OrgID:     orgID,
-	})
-	if err != nil {
-		h.logger.Error("Error updating dataset record", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error updating dataset record",
-			"code":    fiber.StatusInternalServerError,
+		sendEvent("status_update", "Deleting old dataset summary...", nil)
+
+		err = h.datasetSvc.DeleteSummaryWithTx(storeTx, res.TableName)
+		if err != nil {
+			h.logger.Error("Error deleting existing dataset summary", zap.Error(err))
+			handleFailure(fmt.Errorf("error deleting existing dataset summary: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Generating new dataset summary...", nil)
+
+		datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
+		if err != nil {
+			h.logger.Error("Error fetching dataset summary", zap.Error(err))
+			handleFailure(fmt.Errorf("error fetching dataset summary: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Saving dataset summary...", nil)
+
+		summary, err := h.datasetSvc.CreateSummaryWithTx(storeTx, res.TableName, datasetSummary)
+		if err != nil {
+			h.logger.Error("Error creating dataset summary", zap.Error(err))
+			handleFailure(fmt.Errorf("error creating dataset summary: %w", err))
+			return
+		}
+
+		sendEvent("status_update", "Uploading schema to AI agent...", nil)
+
+		err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
+			DatasetID: d.ID,
+			ProjectID: body.ProjectID,
 		})
-	}
+		if err != nil {
+			h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
+			handleFailure(fmt.Errorf("error uploading schema to AI agent: %w", err))
+			return
+		}
 
-	err = h.datasetSvc.DeleteSummaryWithTx(storeTx, res.TableName)
-	if err != nil {
-		h.logger.Error("Error deleting existing dataset summary", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error deleting existing dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
+		h.logger.Info("File update completed successfully",
+			zap.String("dataset_id", dataset.ID))
 
-	datasetSummary, err := h.olapSvc.GetDatasetSummary(res.TableName)
-	if err != nil {
-		h.logger.Error("Error fetching dataset summary", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error fetching dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	summary, err := h.datasetSvc.CreateSummaryWithTx(storeTx, res.TableName, datasetSummary)
-	if err != nil {
-		h.logger.Error("Error creating dataset summary", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error creating dataset summary",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	err = h.aiAgentSvc.UploadSchema(&models.SchemaParams{
-		DatasetID: d.ID,
-		ProjectID: body.ProjectID,
-	})
-	if err != nil {
-		h.logger.Error("Error uploading schema to AI agent", zap.Error(err))
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   err.Error(),
-			"message": "Error uploading schema to AI agent",
-			"code":    fiber.StatusInternalServerError,
-		})
-	}
-
-	h.logger.Info("File update completed successfully",
-		zap.String("dataset_id", dataset.ID))
-
-	return ctx.Status(fiber.StatusOK).JSON(map[string]any{
-		"data": map[string]any{
+		// Send completion event with dataset and summary
+		sendEvent("complete", "Dataset refreshed successfully", map[string]any{
 			"dataset": dataset,
 			"summary": summary,
-		},
+		})
+	}()
+
+	// Set SSE headers
+	ctx.Set("Content-Type", "text/event-stream")
+	ctx.Set("Cache-Control", "no-cache")
+	ctx.Set("Connection", "keep-alive")
+	ctx.Set("Transfer-Encoding", "chunked")
+
+	// Stream SSE events to client
+	ctx.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
+		for sse := range sseChan {
+			if sse.Error != nil {
+				h.logger.Error("Error received from stream source", zap.Error(sse.Error))
+				return
+			}
+
+			if _, err := w.Write(sse.Data); err != nil {
+				h.logger.Error("Error writing to client stream", zap.Error(err))
+				return
+			}
+
+			if err := w.Flush(); err != nil {
+				h.logger.Error("Error flushing client stream", zap.Error(err))
+				return
+			}
+		}
 	})
+
+	return nil
 }
