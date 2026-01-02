@@ -94,6 +94,21 @@ func (q *Queries) DeleteDataset(ctx context.Context, arg DeleteDatasetParams) er
 	return err
 }
 
+const deleteDatasetByOrgAndCreator = `-- name: DeleteDatasetByOrgAndCreator :exec
+delete from datasets where id = $1 and org_id = $2 and created_by = $3
+`
+
+type DeleteDatasetByOrgAndCreatorParams struct {
+	ID        string
+	OrgID     pgtype.Text
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) DeleteDatasetByOrgAndCreator(ctx context.Context, arg DeleteDatasetByOrgAndCreatorParams) error {
+	_, err := q.db.Exec(ctx, deleteDatasetByOrgAndCreator, arg.ID, arg.OrgID, arg.CreatedBy)
+	return err
+}
+
 const getDataset = `-- name: GetDataset :one
 select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt from datasets where id = $1 and org_id = $2
 `
@@ -185,8 +200,41 @@ func (q *Queries) GetDatasetByName(ctx context.Context, arg GetDatasetByNamePara
 	return i, err
 }
 
+const getDatasetByOrgAndCreator = `-- name: GetDatasetByOrgAndCreator :one
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt from datasets where id = $1 and org_id = $2 and created_by = $3
+`
+
+type GetDatasetByOrgAndCreatorParams struct {
+	ID        string
+	OrgID     pgtype.Text
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) GetDatasetByOrgAndCreator(ctx context.Context, arg GetDatasetByOrgAndCreatorParams) (Dataset, error) {
+	row := q.db.QueryRow(ctx, getDatasetByOrgAndCreator, arg.ID, arg.OrgID, arg.CreatedBy)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.Source,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+		&i.OrgID,
+		&i.CustomPrompt,
+	)
+	return i, err
+}
+
 const getDatasetsByIDs = `-- name: GetDatasetsByIDs :many
-SELECT id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt FROM datasets 
+SELECT id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt FROM datasets
 WHERE org_id = $1 AND id = ANY($2::text[])
 ORDER BY created_at DESC
 `
@@ -238,6 +286,111 @@ select id, name, description, created_at, updated_at, row_count, alias, created_
 
 func (q *Queries) ListAllDatasets(ctx context.Context) ([]Dataset, error) {
 	rows, err := q.db.Query(ctx, listAllDatasets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Source,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+			&i.CustomPrompt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDatasetsByOrgAndCreator = `-- name: ListDatasetsByOrgAndCreator :many
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt from datasets
+where org_id = $1 and created_by = $2
+order by created_at desc
+`
+
+type ListDatasetsByOrgAndCreatorParams struct {
+	OrgID     pgtype.Text
+	CreatedBy pgtype.Text
+}
+
+func (q *Queries) ListDatasetsByOrgAndCreator(ctx context.Context, arg ListDatasetsByOrgAndCreatorParams) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, listDatasetsByOrgAndCreator, arg.OrgID, arg.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Source,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+			&i.CustomPrompt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDatasetsByProjectAndCreator = `-- name: ListDatasetsByProjectAndCreator :many
+select d.id, d.name, d.description, d.created_at, d.updated_at, d.row_count, d.alias, d.created_by, d.updated_by, d.source, d.size, d.file_path, d.columns, d.org_id, d.custom_prompt from datasets d
+inner join project_datasets pd on d.id = pd.dataset_id
+where pd.project_id = $1 and d.org_id = $2 and d.created_by = $3
+order by d.created_at desc
+limit $4 offset $5
+`
+
+type ListDatasetsByProjectAndCreatorParams struct {
+	ProjectID string
+	OrgID     pgtype.Text
+	CreatedBy pgtype.Text
+	Limit     int32
+	Offset    int32
+}
+
+func (q *Queries) ListDatasetsByProjectAndCreator(ctx context.Context, arg ListDatasetsByProjectAndCreatorParams) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, listDatasetsByProjectAndCreator,
+		arg.ProjectID,
+		arg.OrgID,
+		arg.CreatedBy,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -338,6 +491,75 @@ func (q *Queries) SearchDatasets(ctx context.Context, arg SearchDatasetsParams) 
 	return items, nil
 }
 
+const searchDatasetsByOrgAndCreator = `-- name: SearchDatasetsByOrgAndCreator :many
+select id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt from datasets
+where
+    org_id = $1 and
+    created_by = $2 and
+    (name ilike concat('%', $3, '%') or
+    description ilike concat('%', $3, '%') or
+    alias ilike concat('%', $3, '%'))
+order by
+    case
+        when alias ilike concat($3, '%') then 1
+        when name ilike concat($3, '%') then 2
+        when name ilike concat('%', $3, '%') then 3
+        else 4
+    end,
+    created_at desc
+limit $4 offset $5
+`
+
+type SearchDatasetsByOrgAndCreatorParams struct {
+	OrgID     pgtype.Text
+	CreatedBy pgtype.Text
+	Concat    interface{}
+	Limit     int32
+	Offset    int32
+}
+
+func (q *Queries) SearchDatasetsByOrgAndCreator(ctx context.Context, arg SearchDatasetsByOrgAndCreatorParams) ([]Dataset, error) {
+	rows, err := q.db.Query(ctx, searchDatasetsByOrgAndCreator,
+		arg.OrgID,
+		arg.CreatedBy,
+		arg.Concat,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Dataset
+	for rows.Next() {
+		var i Dataset
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RowCount,
+			&i.Alias,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.Source,
+			&i.Size,
+			&i.FilePath,
+			&i.Columns,
+			&i.OrgID,
+			&i.CustomPrompt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateDataset = `-- name: UpdateDataset :one
 update datasets
 set
@@ -378,6 +600,70 @@ func (q *Queries) UpdateDataset(ctx context.Context, arg UpdateDatasetParams) (D
 		arg.CustomPrompt,
 		arg.Column9,
 		arg.OrgID,
+	)
+	var i Dataset
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RowCount,
+		&i.Alias,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.Source,
+		&i.Size,
+		&i.FilePath,
+		&i.Columns,
+		&i.OrgID,
+		&i.CustomPrompt,
+	)
+	return i, err
+}
+
+const updateDatasetByOrgAndCreator = `-- name: UpdateDatasetByOrgAndCreator :one
+update datasets
+set
+    description = coalesce($1, description),
+    row_count = coalesce($2, row_count),
+    size = coalesce($3, size),
+    file_path = coalesce($4, file_path),
+    columns = coalesce($5, columns),
+    alias = coalesce($6, alias),
+    updated_by = coalesce($7, updated_by),
+    custom_prompt = coalesce($8, custom_prompt)
+where id = $9::uuid and org_id = $10 and created_by = $11
+returning id, name, description, created_at, updated_at, row_count, alias, created_by, updated_by, source, size, file_path, columns, org_id, custom_prompt
+`
+
+type UpdateDatasetByOrgAndCreatorParams struct {
+	Description  pgtype.Text
+	RowCount     pgtype.Int4
+	Size         pgtype.Int8
+	FilePath     string
+	Columns      []byte
+	Alias        pgtype.Text
+	UpdatedBy    pgtype.Text
+	CustomPrompt pgtype.Text
+	Column9      pgtype.UUID
+	OrgID        pgtype.Text
+	CreatedBy    pgtype.Text
+}
+
+func (q *Queries) UpdateDatasetByOrgAndCreator(ctx context.Context, arg UpdateDatasetByOrgAndCreatorParams) (Dataset, error) {
+	row := q.db.QueryRow(ctx, updateDatasetByOrgAndCreator,
+		arg.Description,
+		arg.RowCount,
+		arg.Size,
+		arg.FilePath,
+		arg.Columns,
+		arg.Alias,
+		arg.UpdatedBy,
+		arg.CustomPrompt,
+		arg.Column9,
+		arg.OrgID,
+		arg.CreatedBy,
 	)
 	var i Dataset
 	err := row.Scan(

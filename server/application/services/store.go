@@ -25,8 +25,11 @@ func (service *ProjectService) Create(params models.CreateProjectParams) (*model
 }
 
 // Details - Get project by id
-func (service *ProjectService) Details(id, orgID string) (*models.Project, error) {
-	return service.projectRepo.Details(context.Background(), id, orgID)
+func (service *ProjectService) Details(id, orgID, createdBy string, role models.Role) (*models.Project, error) {
+	if role == models.Admin {
+		return service.projectRepo.Details(context.Background(), id, orgID)
+	}
+	return service.projectRepo.DetailsByOrgAndCreator(context.Background(), id, orgID, createdBy)
 }
 
 func (service *ProjectService) GetProjectByID(id string) (*models.Project, error) {
@@ -34,13 +37,19 @@ func (service *ProjectService) GetProjectByID(id string) (*models.Project, error
 }
 
 // Update - Update project
-func (service *ProjectService) Update(projectID string, params *models.UpdateProjectParams) (*models.Project, error) {
-	return service.projectRepo.Update(context.Background(), projectID, params)
+func (service *ProjectService) Update(projectID string, role models.Role, params *models.UpdateProjectParams) (*models.Project, error) {
+	if role == models.Admin {
+		return service.projectRepo.Update(context.Background(), projectID, params)
+	}
+	return service.projectRepo.UpdateByOrgAndCreator(context.Background(), projectID, params.OrgID, params.UpdatedBy, params)
 }
 
 // Delete - Delete project
-func (service *ProjectService) Delete(id, orgID string) error {
-	return service.projectRepo.Delete(context.Background(), id, orgID)
+func (service *ProjectService) Delete(id, orgID, createdBy string, role models.Role) error {
+	if role == models.Admin {
+		return service.projectRepo.Delete(context.Background(), id, orgID)
+	}
+	return service.projectRepo.DeleteByOrgAndCreator(context.Background(), id, orgID, createdBy)
 }
 
 func (service *ProjectService) ProjectsBelongToOrg(projectIDs []string, orgID string) (bool, error) {
@@ -52,13 +61,17 @@ func (service *ProjectService) DatasetsBelongToOrg(datasetNames []string, orgID 
 }
 
 // List - Search projects
-func (service *ProjectService) List(query string, limit, page int, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
+func (service *ProjectService) List(query string, limit, page int, orgID, createdBy string, role models.Role) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
-	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
+
+	if role == models.Admin {
+		return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
+	}
+	return service.projectRepo.SearchProjectByOrgAndCreator(context.Background(), query, pagination, orgID, createdBy)
 }
 
 func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {
@@ -83,29 +96,38 @@ func (service *DatasetService) Create(params *models.CreateDatasetParams) (*mode
 	return service.datasetRepo.Create(context.Background(), params)
 }
 
-func (service *DatasetService) Details(id string, orgID string) (*models.Dataset, error) {
-	return service.datasetRepo.Details(context.Background(), id, orgID)
+func (service *DatasetService) Details(id, orgID, createdBy string, role models.Role) (*models.Dataset, error) {
+	if role == models.Admin {
+		return service.datasetRepo.Details(context.Background(), id, orgID)
+	}
+	return service.datasetRepo.DetailsByOrgAndCreator(context.Background(), id, orgID, createdBy)
 }
 
 func (service *DatasetService) GetByTableName(tableName string, orgID string) (*models.Dataset, error) {
 	return service.datasetRepo.GetByTableName(context.Background(), tableName, orgID)
 }
 
-func (service *DatasetService) List(projectID string, limit, page int) (*models.PaginationView[*models.Dataset], error) {
+func (service *DatasetService) List(projectID string, role models.Role, orgID, createdBy string, limit, page int) (*models.PaginationView[*models.Dataset], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
-	return service.datasetRepo.List(context.Background(), projectID, pagination)
+	return service.datasetRepo.ListByProjectAndRole(context.Background(), projectID, orgID, createdBy, role, pagination)
 }
 
-func (service *DatasetService) Delete(id string, orgID string) error {
-	return service.datasetRepo.Delete(context.Background(), id, orgID)
+func (service *DatasetService) Delete(id, orgID, createdBy string, role models.Role) error {
+	if role == models.Admin {
+		return service.datasetRepo.Delete(context.Background(), id, orgID)
+	}
+	return service.datasetRepo.DeleteByOrgAndCreator(context.Background(), id, orgID, createdBy)
 }
 
-func (service *DatasetService) Update(id string, params *models.UpdateDatasetParams) (*models.Dataset, error) {
-	return service.datasetRepo.Update(context.Background(), id, params)
+func (service *DatasetService) Update(id string, role models.Role, params *models.UpdateDatasetParams) (*models.Dataset, error) {
+	if role == models.Admin {
+		return service.datasetRepo.Update(context.Background(), id, params)
+	}
+	return service.datasetRepo.UpdateByOrgAndCreator(context.Background(), id, params.OrgID, params.UpdatedBy, params)
 }
 
 func (service *DatasetService) UpdateWithTx(tx pgx.Tx, id string, params *models.UpdateDatasetParams) (*models.Dataset, error) {

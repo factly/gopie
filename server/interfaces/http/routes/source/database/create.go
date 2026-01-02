@@ -20,6 +20,8 @@ type resourceCleanup struct {
 	tableName  string
 	datasetID  string
 	orgID      string
+	userID     string
+	role       models.Role
 	sourceID   string
 	hasDataset bool
 	hasSummary bool
@@ -38,7 +40,7 @@ func (h *httpHandler) cleanupResources(rc resourceCleanup) {
 
 	// Delete dataset record if it was created
 	if rc.hasDataset {
-		deleteErr := h.datasetSvc.Delete(rc.datasetID, rc.orgID)
+		deleteErr := h.datasetSvc.Delete(rc.datasetID, rc.orgID, rc.userID, rc.role)
 		if deleteErr != nil {
 			h.logger.Error("Failed to delete dataset during cleanup", zap.Error(deleteErr), zap.String("dataset_id", rc.datasetID))
 		}
@@ -97,6 +99,7 @@ type createRequestBody struct {
 func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
 	// Get request body from context
 	var body createRequestBody
@@ -119,7 +122,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID, orgID)
+	project, err := h.projectSvc.Details(body.ProjectID, orgID, userID, role)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))
@@ -169,6 +172,8 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 
 	cleanup := resourceCleanup{
 		tableName: tableName,
+		userID:    userID,
+		role:      role,
 	}
 
 	count, columns, err := h.getMetrics(tableName)

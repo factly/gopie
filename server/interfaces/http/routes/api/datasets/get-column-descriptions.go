@@ -22,9 +22,11 @@ import (
 func (h *httpHandler) getColumnDescriptions(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
 	// Get the dataset details to verify it exists and get the dataset name
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
 	if err != nil {
 		h.logger.Error("Error fetching dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

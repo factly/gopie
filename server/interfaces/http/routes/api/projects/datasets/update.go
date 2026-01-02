@@ -33,6 +33,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
 	var body updateDatasetParams
 	if err := ctx.BodyParser(&body); err != nil {
@@ -52,7 +53,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	existingDataset, err := h.datasetsSvc.Details(datasetID, orgID)
+	existingDataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
 	if err != nil {
 		h.logger.Error("Error updating dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -69,7 +70,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 		})
 	}
 
-	dataset, err := h.datasetsSvc.Update(datasetID, &models.UpdateDatasetParams{
+	dataset, err := h.datasetsSvc.Update(datasetID, role, &models.UpdateDatasetParams{
 		Description:  body.Description,
 		Alias:        body.Alias,
 		UpdatedBy:    userID,

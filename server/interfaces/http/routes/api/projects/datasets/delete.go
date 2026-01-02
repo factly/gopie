@@ -28,7 +28,9 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
 	if err != nil {
 		h.logger.Error("Error deleting dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
@@ -45,7 +47,7 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err = h.datasetsSvc.Delete(datasetID, orgID)
+	err = h.datasetsSvc.Delete(datasetID, orgID, userID, role)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   err.Error(),

@@ -2,6 +2,7 @@ package projects
 
 import (
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
@@ -22,13 +23,15 @@ import (
 // @Router /v1/api/projects [get]
 func (h *httpHandler) list(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 	limitStr := ctx.Query("limit")
 	pageStr := ctx.Query("page")
 	query := ctx.Query("query")
 
 	limit, page := pkg.ParseLimitAndPage(limitStr, pageStr)
 
-	projects, err := h.projectSvc.List(query, limit, page, orgID)
+	projects, err := h.projectSvc.List(query, limit, page, orgID, userID, role)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {

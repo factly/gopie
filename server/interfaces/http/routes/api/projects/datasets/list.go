@@ -2,7 +2,9 @@ package datasets
 
 import (
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg"
+	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -21,12 +23,15 @@ import (
 // @Router /v1/api/projects/{projectID}/datasets [get]
 func (h *httpHandler) list(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
+	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 	limitStr := ctx.Query("limit")
 	pageStr := ctx.Query("page")
 
 	limit, page := pkg.ParseLimitAndPage(limitStr, pageStr)
 
-	datasets, err := h.datasetsSvc.List(projectID, limit, page)
+	datasets, err := h.datasetsSvc.List(projectID, role, orgID, userID, limit, page)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {

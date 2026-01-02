@@ -19,6 +19,7 @@ import { Project } from "@/lib/api-client";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { UserDisplayName } from "@/components/user/user-display-name";
 
 interface InlineProjectEditorProps {
   project: Project;
@@ -258,9 +259,10 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
           <div className="flex items-center gap-2 text-muted-foreground">
             <UserIcon className="size-4" />
             <span>Created by:</span>
-            <span className="font-medium text-foreground">
-              {project.created_by}
-            </span>
+            <UserDisplayName 
+              userId={project.created_by} 
+              className="font-medium text-foreground" 
+            />
           </div>
         </div>
       </CardContent>

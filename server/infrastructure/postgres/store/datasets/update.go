@@ -34,7 +34,7 @@ func (s *PgDatasetStore) Update(ctx context.Context, datasetID string, updateDat
 		FilePath:     updateDatasetParams.FilePath,
 		UpdatedBy:    pgtype.Text{String: updateDatasetParams.UpdatedBy, Valid: true},
 		OrgID:        pgtype.Text{String: updateDatasetParams.OrgID, Valid: true},
-		CustomPrompt: pgtype.Text{String: updateDatasetParams.CustomPrompt, Valid: true},
+		CustomPrompt: pgtype.Text{String: updateDatasetParams.CustomPrompt, Valid: updateDatasetParams.CustomPrompt != ""},
 	})
 	if err != nil {
 		s.logger.Error("Error updating dataset", zap.Error(err))
@@ -82,7 +82,7 @@ func (s *PgDatasetStore) UpdateWithTx(ctx context.Context, tx pgx.Tx, datasetID 
 		FilePath:     updateDatasetParams.FilePath,
 		UpdatedBy:    pgtype.Text{String: updateDatasetParams.UpdatedBy, Valid: true},
 		OrgID:        pgtype.Text{String: updateDatasetParams.OrgID, Valid: true},
-		CustomPrompt: pgtype.Text{String: updateDatasetParams.CustomPrompt, Valid: true},
+		CustomPrompt: pgtype.Text{String: updateDatasetParams.CustomPrompt, Valid: updateDatasetParams.CustomPrompt != ""},
 	})
 	if err != nil {
 		s.logger.Error("Error updating dataset with tx", zap.Error(err))

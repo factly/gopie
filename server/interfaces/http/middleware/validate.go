@@ -3,16 +3,20 @@ package middleware
 import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain"
+	"github.com/factly/gopie/domain/models"
 	"github.com/gofiber/fiber/v2"
 )
 
 const OrganizationIDHeader = "X-Organization-ID"
+const UserIDHeader = "X-User-ID"
 
 // ValidateProjectMiddleware checks if a project exists before proceeding with dataset operations
 func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID := c.Params("projectID")
-		orgID := c.Get(OrganizationIDHeader)
+		orgID, _ := c.Locals(OrganizationCtxKey).(string)
+		userID, _ := c.Locals(UserCtxKey).(string)
+		role := c.Locals(RoleCtxKey).(models.Role)
 		if projectID == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   "Invalid request",
@@ -30,7 +34,7 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 			})
 		}
 
-		_, err := projectSvc.Details(projectID, orgID)
+		_, err := projectSvc.Details(projectID, orgID, userID, role)
 		if err != nil {
 			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

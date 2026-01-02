@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { UserDisplayName } from "@/components/user/user-display-name";
 import { Button } from "@/components/ui/button";
 import {
   DownloadIcon,
@@ -675,18 +676,20 @@ export function DatasetHeader({
                                 <span className="text-muted-foreground">
                                   Created by:
                                 </span>
-                                <span className="font-medium">
-                                  {dataset.created_by}
-                                </span>
+                                <UserDisplayName 
+                                  userId={dataset.created_by} 
+                                  className="font-medium" 
+                                />
                               </div>
                               <div className="flex items-center gap-2 text-sm">
                                 <UserIcon className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-muted-foreground">
                                   Updated by:
                                 </span>
-                                <span className="font-medium">
-                                  {dataset.updated_by}
-                                </span>
+                                <UserDisplayName 
+                                  userId={dataset.updated_by} 
+                                  className="font-medium" 
+                                />
                               </div>
                             </div>
                           </div>

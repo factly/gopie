@@ -1,0 +1,70 @@
+FROM golang:1.24.5 AS development
+
+WORKDIR /app
+
+# Install Air for hot reloading (compatible with Go 1.24.5)
+RUN go install github.com/air-verse/air@v1.61.1
+
+# Install goose migration tool
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Create air config file
+RUN echo '[build]\n\
+  cmd = "go build -o ./tmp/main ."\n\
+  bin = "tmp/main"\n\
+  full_bin = "APP_ENV=dev APP_USER=air ./tmp/main serve"\n\
+  include_ext = ["go", "tpl", "tmpl", "html"]\n\
+  exclude_dir = ["assets", "tmp", "vendor", "testdata"]\n\
+  include_dir = []\n\
+  exclude_file = []\n\
+  exclude_regex = ["_test.go"]\n\
+  exclude_unchanged = false\n\
+  follow_symlink = false\n\
+  log = "build-errors.log"\n\
+  delay = 1000\n\
+  stop_on_error = true\n\
+  send_interrupt = false\n\
+  kill_delay = 500\n\
+\n\
+[color]\n\
+  main = "magenta"\n\
+  watcher = "cyan"\n\
+  build = "yellow"\n\
+  runner = "green"\n\
+\n\
+[log]\n\
+  time = false\n\
+\n\
+[misc]\n\
+  clean_on_exit = false' > .air.toml
+
+# Create necessary directories
+RUN mkdir -p tmp
+
+# Set environment for development
+ENV GO_ENV=development
+ENV CGO_ENABLED=1
+
+# Create gopie user
+ENV USER=gopie
+ENV HOME_DIR=/home/$USER
+ENV DATA_DIR=$HOME_DIR/dataful
+
+RUN apt-get update && apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1001 gopie \
+  && useradd -m -u 1001 -s /bin/sh -g gopie gopie
+
+RUN mkdir -p $DATA_DIR
+RUN chown -R $USER:$USER $HOME_DIR
+RUN chown -R $USER:$USER /app
+
+USER gopie
+
+# Default command uses Air for hot reloading
+CMD ["air", "-c", ".air.toml"]

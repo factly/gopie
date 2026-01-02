@@ -1,27 +1,30 @@
 services:
   ###########################################################################
-  #######                        DATABASE                             #######
+  #####                        DATABASE                                 #####
   ###########################################################################
   postgres:
     image: postgres:17-alpine
+    restart: always
     ports:
       - "5432:5432"
     volumes:
-      - ./volumes/postgres_api:/var/lib/postgresql/data
+      - ./pg-init-scripts:/docker-entrypoint-initdb.d
+      - ./volumes/postgresql:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=gopie
+      - POSTGRES_MULTIPLE_DATABASES=gopie
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - gopie
 
   ###########################################################################
-  #######             Zitadel                                         #######
+  #######                      ZITADEL                                #######
   ###########################################################################
   zitadel:
     restart: "always"
@@ -71,16 +74,20 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./config-auth.env
+    volumes:
+      - ./server/zitadel_key.json:/home/gopie/zitadel_key.json
+      - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
     ports:
       - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./volumes/duckdb:/home/gopie/dataful
-      - ./server/zitadel_key.json:/home/gopie/zitadel_key.json
     networks:
       - gopie
+    extra_hosts:
+      - "127.0.0.1.zitadel.local:host-gateway"
     user: "0:0"
     command: >
       sh -c "chown -R 1001:1001 /home/gopie/dataful && 
@@ -96,12 +103,14 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    extra_hosts:
+      - "127.0.0.1.zitadel.local:host-gateway"
     networks:
       - gopie
 
-  ###########################################################################
-  #######                        MINIO                                #######
-  ###########################################################################
+  #########################################################################
+  #####                        MINIO                                #######
+  #########################################################################
   minio:
     image: minio/minio
     ports:
@@ -135,9 +144,10 @@ services:
         /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin &&
         /usr/bin/mc mb -p myminio/gopie &&
         /usr/bin/mc mb -p myminio/downloads &&
-        /usr/bin/mc anonymous set public myminio/gopie/visualizations
+        /usr/bin/mc anonymous set private myminio/gopie &&
+        /usr/bin/mc anonymous set private myminio/gopie/visualizations &&
+        /usr/bin/mc anonymous set private myminio/downloads
       "
-
   #########################################################################
   #####                          COMPANION                            #####
   #########################################################################
