@@ -182,6 +182,18 @@ export async function validateFileWithDuckDb(
   //   };
   // }
 
+// DuckDB auto-detects CSV column types by sampling the file.
+// By default, it scans the first 20,480 rows to infer types and other properties.
+//
+// You can control this behavior using the `sample_size` option:
+//   - A positive number limits detection to that many rows
+//   - `sample_size: -1` forces DuckDB to scan the entire file for type detection
+//
+// Example:
+//   read_csv('data.csv', { sample_size: -1 })
+//
+// Docs: https://duckdb.org/docs/stable/data/csv/auto_detection#sample-size
+
   // Route to specific validation function
   switch (format) {
     case "csv":
@@ -321,7 +333,43 @@ async function validateParquetFile(
 }
 
 /**
- * Validates a JSON file
+ * Helper to extract line number and value from DuckDB JSON errors
+ */
+function parseDuckDbJsonError(errorMessage: string): RejectedRow | null {
+  // Example Error: 
+  // Invalid Input Error: JSON transform error in file "...", in line 30904: Could not parse string "not-a-date" according to format...
+  
+  try {
+    // 1. Extract Line Number
+    const lineMatch = errorMessage.match(/in line (\d+)/);
+    const rowNumber = lineMatch ? parseInt(lineMatch[1], 10) : 0;
+
+    // 2. Extract the bad value (usually inside quotes after "Could not parse string")
+    const valueMatch = errorMessage.match(/Could not parse string "([^"]+)"/);
+    const actualValue = valueMatch ? valueMatch[1] : "unknown";
+
+    // 3. Extract a cleaner error message
+    let cleanMsg = errorMessage;
+    if (errorMessage.includes("Invalid Input Error: ")) {
+      cleanMsg = errorMessage.split("Invalid Input Error: ")[1];
+    }
+    // Clean up file names from message
+    cleanMsg = cleanMsg.replace(/ in file "[^"]+"/, "");
+
+    return {
+      rowNumber: rowNumber,
+      columnName: "unknown", // JSON errors often don't identify the key name easily
+      expectedType: "valid format",
+      actualValue: actualValue,
+      errorMessage: cleanMsg,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Validates a JSON file using a "Double Pass" strategy
  */
 async function validateJsonFile(
   db: duckdb.AsyncDuckDB,
@@ -329,6 +377,15 @@ async function validateJsonFile(
 ): Promise<ValidationResult> {
   const virtualFileName = `temp_${Date.now()}.json`;
   const conn = await db.connect();
+  
+  // We keep track of the successful format to run the strict check later
+  let successfulFormat: string | null = null;
+  
+  const tempTableName = `temp_validate_${Date.now()}`;
+  let tableCreated = false;
+
+  // Error to throw if everything fails (structural issues)
+  let criticalError: Error | null = null;
 
   try {
     await db.registerFileBuffer(
@@ -336,67 +393,132 @@ async function validateJsonFile(
       new Uint8Array(fileArrayBuffer)
     );
 
-    const tempTableName = `temp_validate_${Date.now()}`;
-
-    // Try different JSON formats with IGNORE_ERRORS
-    // Add LIMIT to process only first 1GB worth of data to avoid memory issues
-    let createQuery = "";
-    let lastError: Error | null = null;
-
-    try {
-      // Try auto-detection first with IGNORE_ERRORS
-      createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
-      await conn.query(createQuery);
-    } catch (autoError) {
-      lastError = autoError as Error;
+    // ============================================================
+    // PASS 1: LENIENT LOAD (Get the data, ignore errors)
+    // ============================================================
+    // We try to load data so the user has a preview, even if there are errors.
+    
+    // 1. Try Auto with ignore_errors
+    if (!tableCreated) {
       try {
-        // Try newline-delimited JSON
-        createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
-        await conn.query(createQuery);
-        lastError = null;
-      } catch (ndJsonError) {
-        lastError = ndJsonError as Error;
-        try {
-          // Try array format
-          createQuery = `CREATE TABLE ${tempTableName} AS SELECT * FROM read_json_auto('${virtualFileName}', format='array', ignore_errors=true, store_rejects=true) LIMIT 1000000`;
-          await conn.query(createQuery);
-          lastError = null;
-        } catch (ndJsonError) {
-          lastError = ndJsonError as Error;
-        }
+        await conn.query(`
+          CREATE TABLE ${tempTableName} AS 
+          SELECT * FROM read_json_auto('${virtualFileName}', ignore_errors=true) 
+          LIMIT 1000000
+        `);
+        tableCreated = true;
+        successfulFormat = "auto";
+      } catch (e) {
+        criticalError = e as Error;
       }
     }
 
-    if (lastError) {
-      throw lastError;
+    // 2. Try Newline Delimited with ignore_errors
+    if (!tableCreated) {
+      try {
+        await conn.query(`
+          CREATE TABLE ${tempTableName} AS 
+          SELECT * FROM read_json_auto('${virtualFileName}', format='newline_delimited', ignore_errors=true) 
+          LIMIT 1000000
+        `);
+        tableCreated = true;
+        successfulFormat = "newline_delimited";
+        criticalError = null;
+      } catch (e) {
+        criticalError = e as Error;
+      }
     }
 
+    // 3. Try Array with ignore_errors
+    if (!tableCreated) {
+      try {
+        await conn.query(`
+          CREATE TABLE ${tempTableName} AS 
+          SELECT * FROM read_json_auto('${virtualFileName}', format='array', ignore_errors=true) 
+          LIMIT 1000000
+        `);
+        tableCreated = true;
+        successfulFormat = "array";
+        criticalError = null;
+      } catch (e) {
+        criticalError = e as Error;
+      }
+    }
+
+    // If we couldn't create the table at all, it's a structural failure.
+    if (!tableCreated) {
+      throw criticalError || new Error("Could not parse JSON file in any supported format.");
+    }
+
+    // ============================================================
+    // PASS 2: STRICT CHECK (Re-create table without ignore_errors)
+    // ============================================================
+    // We attempt to create a second temporary table strictly. 
+    // If this fails, we catch the error to report it as a RejectedRow.
+    
+    const rejectedRows: RejectedRow[] = [];
+    const strictTableName = `temp_strict_${Date.now()}`;
+    
+    try {
+      // Build the query exactly like Pass 1 but remove ignore_errors
+      let strictQuery = `CREATE TABLE ${strictTableName} AS SELECT * FROM read_json_auto('${virtualFileName}'`;
+      
+      if (successfulFormat === 'newline_delimited') {
+        strictQuery += `, format='newline_delimited'`;
+      } else if (successfulFormat === 'array') {
+        strictQuery += `, format='array'`;
+      }
+      // Note: We deliberately exclude ignore_errors=true here
+      
+      strictQuery += `) LIMIT 1000000`; 
+
+      // Run it.
+      await conn.query(strictQuery);
+
+      // If it succeeds, great! No rejected rows.
+    } catch (strictError) {
+      const errMsg = (strictError as Error).message;
+      
+      // We only want to report data transformation errors as "Rejected Rows"
+      // (Structure errors would have been caught in Pass 1 unless ignore_errors hid them)
+      if (errMsg.includes("JSON transform error") || errMsg.includes("Could not parse")) {
+        const rejectedRow = parseDuckDbJsonError(errMsg);
+        if (rejectedRow) {
+          rejectedRows.push(rejectedRow);
+        }
+      }
+    } finally {
+      // Always clean up the strict table if it was created
+      await conn.query(`DROP TABLE IF EXISTS ${strictTableName}`);
+    }
+
+    // ============================================================
+    // FINALIZE
+    // ============================================================
+    
+    // Get structure from the successfully created Pass 1 table
     const result = await validateTableStructure(conn, tempTableName);
 
-    // Check for rejected rows
-    const rejectedRowsResult = await getRejectedRows(conn);
-
+    // Clean up the Pass 1 table
     await conn.query(`DROP TABLE IF EXISTS ${tempTableName}`);
     await conn.close();
 
     return {
       ...result,
       format: "json",
-      rejectedRows: rejectedRowsResult.rejectedRows,
-      rejectedRowCount: rejectedRowsResult.rejectedRowCount,
+      rejectedRows: rejectedRows,
+      rejectedRowCount: rejectedRows.length,
     };
+
   } catch (error) {
     await conn.close();
     return {
       isValid: false,
       format: "json",
-      error: `JSON validation failed: ${
-        (error as Error).message
-      }. Supported formats: auto-detect, newline-delimited, array`,
+      error: `JSON validation failed: ${(error as Error).message}`,
     };
   }
 }
-
 /**
  * Validates an Excel file by converting it to CSV first using SheetJS
  */
