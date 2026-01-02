@@ -14,8 +14,8 @@ const UserIDHeader = "X-User-ID"
 func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID := c.Params("projectID")
-		orgID := c.Get(OrganizationIDHeader)
-		userID := c.Get(UserIDHeader)
+		orgID, _ := c.Locals(OrganizationCtxKey).(string)
+		userID, _ := c.Locals(UserCtxKey).(string)
 		role := c.Locals(RoleCtxKey).(models.Role)
 		if projectID == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

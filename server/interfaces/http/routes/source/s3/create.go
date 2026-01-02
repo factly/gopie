@@ -84,8 +84,8 @@ func (h *httpHandler) cleanupResources(rc resourceCleanup) {
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
 // @Router /source/s3/upload [post]
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
-	orgID := ctx.Get(middleware.OrganizationIDHeader)
-	userID := ctx.Get(middleware.UserCtxKey)
+	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
+	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 	if orgID == "" {
 		h.logger.Error("Organization ID header is missing")
