@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,7 +163,7 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
   );
 
   const rejected = validationResult?.rejectedRows ?? [];
-
+  const isJsonFormat = validationResult?.format === 'json';
   // Add DuckDB initialization state
   const { isInitializing: isDuckDbInitializing } = useDuckDb();
 
@@ -576,12 +577,16 @@ const handleCreateDataset = async () => {
     }
   };
 
-  const handleProceedWithWarnings = () => {
-    setIsValidationWarningDialogOpen(false);
-    if (currentStep < WIZARD_STEPS.length) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+const handleProceedWithWarnings = () => {
+  if (isJsonFormat) {
+    toast.error("Cannot skip rows for JSON files. Please fix the data types.");
+    return;
+  }
+  setIsValidationWarningDialogOpen(false);
+  if (currentStep < WIZARD_STEPS.length) {
+    setCurrentStep(currentStep + 1);
+  }
+};
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -1570,36 +1575,56 @@ const handleCreateDataset = async () => {
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
-              <div className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>What happens if you continue:</strong>
-                <ul className="mt-2 space-y-1 list-disc list-inside">
-                  <li>
-                    Rows with data type issues will be automatically skipped
-                  </li>
-                  <li>
-                    Your dataset will be created with the remaining valid rows
-                  </li>
-                </ul>
-              </div>
-            </div>
+           {isJsonFormat ? (
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4 flex items-start gap-3">
+    <Ban className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+    <div className="text-sm text-red-800 dark:text-red-200">
+      <strong>Action Required: Fix Data Types</strong>
+      <p className="mt-1">
+        Row skipping is not supported for JSON files due to their
+        hierarchical structure. You must fix the data type errors in
+        your source JSON file and re-upload it to proceed.
+      </p>
+    </div>
+          </div>
+         ) : (
+      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+        <div className="text-sm text-blue-800 dark:text-blue-200">
+       <strong>What happens if you continue:</strong>
+      <ul className="mt-2 space-y-1 list-disc list-inside">
+        <li>
+          Rows with data type issues will be automatically skipped
+        </li>
+        <li>
+          Your dataset will be created with the remaining valid rows
+            </li>
+      </ul>
+          </div>
+        </div>
+          )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsValidationWarningDialogOpen(false)}
-            >
-              Go Back to Fix Data
-            </Button>
-            <Button
-              onClick={handleProceedWithWarnings}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              Continue with {validationResult?.rejectedRows?.length || 0} Rows
-              Skipped
-            </Button>
-          </div>
+<div className="flex justify-end gap-3 pt-4">
+  <Button
+    variant="outline"
+    onClick={() => setIsValidationWarningDialogOpen(false)}
+  >
+    Go Back to Fix Data
+  </Button>
+  {isJsonFormat ? (
+    <Button disabled className="opacity-50 cursor-not-allowed">
+      Cannot Skip Rows in JSON
+    </Button>
+  ) : (
+    <Button
+      onClick={handleProceedWithWarnings}
+      className="bg-yellow-600 hover:bg-yellow-700"
+    >
+      Continue with {validationResult?.rejectedRows?.length || 0} Rows
+      Skipped
+    </Button>
+  )}
+</div>
         </DialogContent>
       </Dialog>
     </div>
