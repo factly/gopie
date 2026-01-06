@@ -363,7 +363,7 @@ function parseDuckDbJsonError(errorMessage: string): RejectedRow | null {
       actualValue: actualValue,
       errorMessage: cleanMsg,
     };
-  } catch (e) {
+  } catch {
     return null;
   }
 }
