@@ -1,14 +1,17 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
-from .dataset_test_cases import (
-    MULTI_DATASET_TEST_CASES,
-    SINGLE_DATASET_TEST_CASES,
+from tests.e2e.utils.dataset_manager import (
+    cleanup_project,
+    setup_project_and_upload_datasets,
 )
-from .terminal_formatter import TerminalFormatter
-from .test_utils import (
+from tests.e2e.utils.generate_app_cases import generate_app_cases
+from tests.test_config import TestConfig
+
+from .utils.terminal_formatter import TerminalFormatter
+from .utils.test_utils import (
     create_evaluation_chain,
     get_user_query,
     handle_expected_error,
@@ -17,16 +20,18 @@ from .test_utils import (
     update_results_with_evaluation,
 )
 
-URL = "http://localhost:8000/api/v1/chat/completions"
+CHAT_SERVER_URL = TestConfig.CHAT_SERVER_URL
+GOPIE_API_URL = TestConfig.GOPIE_API_URL
 
 
 async def process_test_case(
-    test_case: Dict[str, Any],
+    test_case: dict[str, Any],
     evaluation_chain,
-    formatter: Optional[TerminalFormatter] = None,
-    test_num: Optional[int] = None,
-    total_tests: Optional[int] = None,
-) -> Dict[str, Any]:
+    url: str,
+    formatter: TerminalFormatter | None = None,
+    test_num: int | None = None,
+    total_tests: int | None = None,
+) -> dict[str, Any]:
     user_query = get_user_query(test_case)
 
     if formatter and test_num and total_tests:
@@ -39,7 +44,7 @@ async def process_test_case(
         if formatter:
             formatter.print_processing_status("Processing query...")
 
-        response = await send_chat_request(test_case, URL)
+        response = await send_chat_request(test_case, url)
 
         if "error" in response:
             # Check if this is an expected error test case
@@ -102,67 +107,62 @@ async def process_test_case(
 
 
 async def run_test_suite(
-    test_cases: List[Dict[str, Any]], test_type: str, evaluation_chain, use_formatter: bool = True
-) -> List[Dict[str, Any]]:
+    test_cases: list[dict],
+    test_type: str,
+    evaluation_chain,
+    url: str,
+    use_formatter: bool = True,
+) -> list[dict]:
     start_time = datetime.now()
     formatter = TerminalFormatter(use_colors=True) if use_formatter else None
 
     if formatter:
         formatter.print_framework_header(start_time)
-        formatter.print_test_suite_info(len(test_cases), test_type, URL)
+        formatter.print_test_suite_info(len(test_cases), test_type, url)
 
     results = []
     for i, test_case in enumerate(test_cases, 1):
-        result = await process_test_case(test_case, evaluation_chain, formatter, i, len(test_cases))
+        result = await process_test_case(
+            test_case, evaluation_chain, url, formatter, i, len(test_cases)
+        )
         results.append(result)
 
     if formatter:
-        formatter.print_results_summary(results, test_type, URL, start_time)
+        formatter.print_results_summary(results, test_type, url, start_time)
 
     return results
 
 
-def _create_pytest_test_function(test_cases: List[Dict[str, Any]], test_type: str):
-    async def test_function(request, capfd):
-        evaluation_chain = create_evaluation_chain()
-        use_formatter = not request.config.getoption("--disable-formatter", default=False)
+@pytest.mark.asyncio
+async def test_app_e2e(request, capfd):
+    test_type = request.config.getoption("--type", default="all").lower()
+    use_formatter = not request.config.getoption("--disable-formatter", default=False)
 
+    evaluation_chain = create_evaluation_chain()
+    project_id = setup_project_and_upload_datasets(gopie_url=GOPIE_API_URL)
+
+    results = []
+
+    try:
         if use_formatter:
             with capfd.disabled():
+                print(f"Project ID for this test run: {project_id}")
+                test_cases = await generate_app_cases(test_type, [project_id], GOPIE_API_URL)
                 results = await run_test_suite(
-                    test_cases, test_type, evaluation_chain, use_formatter
+                    test_cases, test_type, evaluation_chain, CHAT_SERVER_URL, use_formatter
                 )
         else:
-            results = await run_test_suite(test_cases, test_type, evaluation_chain, use_formatter)
+            test_cases = await generate_app_cases(test_type, [project_id], GOPIE_API_URL)
+            results = await run_test_suite(
+                test_cases, test_type, evaluation_chain, CHAT_SERVER_URL, use_formatter
+            )
 
         failed_tests = [r for r in results if r["status"] == "error"]
         if failed_tests:
             pytest.fail(f"{len(failed_tests)} tests failed")
 
-    return test_function
-
-
-@pytest.mark.asyncio
-async def test_single_dataset_cases(request, capfd):
-    test_function = _create_pytest_test_function(SINGLE_DATASET_TEST_CASES, "single dataset")
-    await test_function(request, capfd)
-
-
-@pytest.mark.asyncio
-async def test_multi_dataset_cases(request, capfd):
-    test_function = _create_pytest_test_function(MULTI_DATASET_TEST_CASES, "multi dataset")
-    await test_function(request, capfd)
-
-
-@pytest.mark.asyncio
-async def test_all_cases(request, capfd):
-    all_cases = SINGLE_DATASET_TEST_CASES + MULTI_DATASET_TEST_CASES
-    test_function = _create_pytest_test_function(all_cases, "all")
-    await test_function(request, capfd)
-
-
-if __name__ == "__main__":
-    print("Use pytest to run the tests:")
-    print("pytest tests/e2e/test_e2e_script.py::test_single_dataset_cases -v")
-    print("pytest tests/e2e/test_e2e_script.py::test_multi_dataset_cases -v")
-    print("pytest tests/e2e/test_e2e_script.py::test_all_cases -v")
+    finally:
+        if project_id:
+            with capfd.disabled():
+                print(f"\n\nCleaning up project {project_id}...")
+                cleanup_project(gopie_url=GOPIE_API_URL, project_id=project_id)

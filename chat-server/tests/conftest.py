@@ -23,10 +23,22 @@ sys.modules["app.core.session"] = mock_session
 
 def pytest_addoption(parser):
     parser.addoption(
+        "--type",
+        action="store",
+        default="all",
+        help="Test type: single, multi, or all (default: all)",
+    )
+    parser.addoption(
         "--disable-formatter",
         action="store_true",
         default=False,
-        help="Disable terminal formatter output for cleaner pytest output",
+        help="Disable colorful output for cleaner logs",
+    )
+    parser.addoption(
+        "--limit",
+        action="store",
+        default=None,
+        help="Limit the number of test cases to run (for visualization tests)",
     )
 
 
@@ -106,3 +118,21 @@ def sample_query_request():
         "user": "test_user",
         "metadata": {"project_id_1": "proj1,proj2", "dataset_id_1": "ds1,ds2"},
     }
+
+
+@pytest.fixture
+def silence_langsmith_events(monkeypatch):
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "app.workflow.graph.multi_dataset_graph.node.identify_datasets.adispatch_custom_event",
+        _noop,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.workflow.events.event_utils.adispatch_custom_event",
+        _noop,
+        raising=False,
+    )
+    return True

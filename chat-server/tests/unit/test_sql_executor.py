@@ -17,16 +17,15 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={"data": [{"id": 1, "name": "test"}]})
         mock_response.status = 200
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             result = await execute_sql("SELECT * FROM users")
 
             # The function returns result_data["data"], not the full response
             assert result == [{"id": 1, "name": "test"}]
+            mock_client_class.assert_called_once_with(org_id=None)
 
     @pytest.mark.asyncio
     async def test_execute_sql_empty_result(self):
@@ -37,11 +36,9 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={"data": []})
         mock_response.status = 200
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             result = await execute_sql("SELECT * FROM empty_table")
 
@@ -56,11 +53,9 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={"error": "Table 'nonexistent' doesn't exist"})
         mock_response.status = HTTPStatus.BAD_REQUEST
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Table 'nonexistent' doesn't exist"):
                 await execute_sql("SELECT * FROM nonexistent")
@@ -74,11 +69,9 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={})
         mock_response.status = HTTPStatus.INTERNAL_SERVER_ERROR
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Unknown error"):
                 await execute_sql("SELECT * FROM users")
@@ -92,11 +85,9 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={"error": "Unauthorized access"})
         mock_response.status = HTTPStatus.UNAUTHORIZED
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Unauthorized access"):
                 await execute_sql("SELECT * FROM sensitive_table")
@@ -110,12 +101,28 @@ class TestExecuteSQL:
         mock_response.json = AsyncMock(return_value={"data": None})
         mock_response.status = 200
 
-        mock_session = Mock()
-        mock_session.post.return_value = mock_response
-
-        with patch("app.services.gopie.sql_executor.SingletonAiohttp") as mock_singleton:
-            mock_singleton.get_aiohttp_client.return_value = mock_session
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
 
             result = await execute_sql("SELECT COUNT(*) FROM users WHERE false")
 
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_execute_sql_with_org_id(self):
+        """Test SQL query execution with org_id parameter."""
+        mock_response = Mock()
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+        mock_response.json = AsyncMock(return_value={"data": [{"id": 1, "org": "test_org"}]})
+        mock_response.status = 200
+
+        with patch("app.services.gopie.sql_executor.GopieClient") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.post = AsyncMock(return_value=mock_response)
+
+            result = await execute_sql("SELECT * FROM users", org_id="test_org_123")
+
+            assert result == [{"id": 1, "org": "test_org"}]
+            mock_client_class.assert_called_once_with(org_id="test_org_123")

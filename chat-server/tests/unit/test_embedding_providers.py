@@ -193,7 +193,7 @@ class TestCustomEmbeddingProvider:
             provider = CustomEmbeddingProvider(sample_metadata)
 
             with patch(
-                "app.utils.providers.embedding_providers.custom.OpenAIEmbeddings"
+                "app.utils.providers.embedding_providers.custom.CustomSelfHostedEmbeddingProvider"
             ) as mock_embeddings:
                 mock_model = Mock()
                 mock_embeddings.return_value = mock_model

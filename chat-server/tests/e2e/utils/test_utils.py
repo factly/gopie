@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 import requests
-from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -21,8 +20,6 @@ from app.utils.model_registry.model_provider import get_llm_provider
 
 from .terminal_formatter import TerminalFormatter
 
-load_dotenv()
-
 REQUEST_TIMEOUT = 120
 trace_id = str(uuid4())
 
@@ -39,7 +36,7 @@ def setup_model():
 
 
 def create_evaluation_chain():
-    template = """You are a fair and intelligent data analyst assistant evaluating query responses.
+    template = """You are a fair and intelligent data analyst assistant evaluating query responses using a numeric scoring system.
 
 You will be given:
 1. A comprehensive response object containing:
@@ -69,49 +66,33 @@ The expected_result may be:
 IMPORTANT EVALUATION PRINCIPLES:
 1. DO NOT expect exact numerical values to match - the test cases use schema-based data, not real values
 2. Focus on query approach, data structure, and result format rather than specific amounts or counts
-3. If the expected result shows examples (like "including: A, B, C") and the generated answer provides a MORE COMPREHENSIVE list that includes those examples plus additional valid items, this should be marked as 'true'
-4. Focus on whether the generated answer correctly addresses the query intent and uses the right data analysis approach
-5. For list queries, a more complete answer is better than a partial one, as long as the items are relevant and correct
-6. Evaluate based on whether the response demonstrates correct understanding of the data relationships and query requirements
-7. **IMPORTANT**: Now evaluate the COMPLETE response including datasets used, SQL queries, and processing approach, not just the text response
-8. Check if the datasets_used array contains the expected datasets mentioned in the expected_result
-9. Verify if the sql_query_count matches expectations (if specified in expected_result)
-10. Consider the processing_steps to understand if the right analytical approach was taken
+3. Evaluate the COMPLETE response including datasets used, SQL queries, and processing approach, not just the text response
+4. Check if the datasets_used array contains the expected datasets mentioned in the expected_result (Skip this step for single data type queries)
+5. Verify if the sql_query_count matches expectations (if specified in expected_result)
+6. Consider the processing_steps to understand if the right analytical approach was taken
+7. For single dataset queries (Data Type: single): The SQL query was executed correctly and produced meaningful results, regardless of whether datasets_used is empty
+8. For multi-dataset queries (Data Type: multi): The datasets_used array contains the expected multiple datasets
 
-RETURN 'true' if:
-- For string expected results: The ai_response addresses the key points AND the datasets/queries show correct approach
-- The answer provides equal or MORE comprehensive information than expected (especially for list queries)
-- For structured expected results: The answer meets all specified criteria (dataset identification, SQL query count, visualization needs)
-- The datasets_used array contains the expected datasets (if specified)
-- The sql_query_count matches or appropriately exceeds expectations (if specified)
-- The processing_steps demonstrate correct analytical workflow
-- The answer follows the expected format/structure even if specific values differ
-- The answer demonstrates correct understanding of the data relationships and query requirements
-- The answer includes the expected types of information AND provides additional relevant details
-- The response uses appropriate data analysis approach for the query type
+SCORING INSTRUCTIONS:
+Provide a numeric score from 0-10 based on how well the response addresses the query.
 
-RETURN 'false' if:
-- The answer is completely irrelevant or doesn't address the query at all
-- For structured results: Wrong dataset identified, significantly incorrect SQL query count, missing required visualizations
-- The datasets_used array is missing expected datasets or contains completely wrong datasets
-- The sql_query_count is significantly wrong (e.g., expected 2 queries but only 1 was generated)
-- The answer shows fundamental misunderstanding of the query intent or data relationships
-- The response uses completely wrong data analysis approach
-- The answer provides a fundamentally incorrect interpretation of the data
+Consider:
+- Does the response correctly understand and address the user's question?
+- Are the right datasets identified and used?
+- Are the SQL queries appropriate for the task?
+- Is the information provided accurate and relevant?
+- Does the response format match what was requested?
 
-RETURN 'partial' if:
-- The answer uses correct approach but has minor format/presentation issues
-- Some but not all requirements are met but the core query is addressed correctly
-- The datasets_used is partially correct (some right datasets but missing others)
-- The sql_query_count is close to expected but not exact
-- The answer demonstrates understanding but has implementation gaps
-- The response provides relevant information but misses some key aspects
-- The answer provides some but not all expected types of information in a complex query
+Score based on overall quality and relevance:
+- Higher scores (7-10): Response is accurate, relevant, and well-executed
+- Mid scores (4-6): Response has the right idea but notable issues
+- Lower scores (0-3): Response is incorrect, irrelevant, or fails to execute
 
 Return the response as JSON object:
 {{
-    "correct": "true" | "false" | "partial",
-    "reasoning": "reasoning for why the answer is incorrect or partial, no reasoning needed for correct answers"
+    "evaluation_score": <numeric score 0-10>,
+    "reasoning": "Brief explanation for the score - what was done well or what could be improved",
+    "summary": "A brief one-line summary of the evaluation result"
 }}"""
 
     prompt = ChatPromptTemplate.from_template(template)
@@ -153,10 +134,10 @@ def process_tool_calls(
                 category = args.get("category", "")
                 tool_messages.append(content)
 
-                if category == DATASETS_USED or (content and "dataset" in content.lower()):
+                if category == DATASETS_USED:
                     _extract_datasets_from_content(args, content, selected_datasets)
 
-                if category == SQL_QUERIES_GENERATED or _contains_sql_keywords(content):
+                if category == SQL_QUERIES_GENERATED:
                     _extract_sql_from_content(args, content, generated_sql_queries)
 
         except json.JSONDecodeError:
@@ -207,12 +188,6 @@ def _extract_sql_from_content(args: Dict[str, Any], content: str, sql_queries: L
         sql_queries.append(str(args.get("query")))
     elif "queries" in args:
         _extract_sql_queries(args, sql_queries)
-    elif _contains_sql_keywords(content):
-        sql_queries.append(content)
-
-
-def _contains_sql_keywords(content: str) -> bool:
-    return any(keyword in content.upper() for keyword in ["SELECT", "FROM", "WHERE"])
 
 
 def get_user_query(test_case: Dict[str, Any]) -> str:
@@ -293,13 +268,13 @@ def initialize_test_results(user_query: str, expected_result: Any) -> Dict[str, 
 
     return {
         "query": user_query,
-        "passed": False,
         "reasoning": "",
         "used_datasets": [],
         "sql_query_count": 0,
         "expected_dataset": "",
         "expected_sql_count": expected_sql_count,
         "status": "error",
+        "evaluation_score": 0,
     }
 
 
@@ -310,7 +285,7 @@ def handle_expected_error(
         {
             "evaluation": {"note": "Expected error test case - passed"},
             "status": "success",
-            "passed": True,
+            "evaluation_score": 10,
         }
     )
     if formatter:
@@ -341,14 +316,16 @@ def update_results_with_evaluation(
     else:
         results["expected_dataset"] = "Not applicable for single dataset case"
 
-    correct = evaluation["correct"]
-    if correct == "true":
-        results["passed"] = True
+    # Use numeric score (0-10) - save score, display based on thresholds
+    score = evaluation.get("evaluation_score", 0)
+    results["evaluation_score"] = score
+
+    # Display formatting based on score thresholds (not saved to JSON)
+    if score >= 8:
         results["status"] = "success"
         if formatter:
             formatter.print_test_result("passed")
-    elif correct == "partial":
-        results["passed"] = "partial"
+    elif score >= 5:
         results["status"] = "success"
         if formatter:
             formatter.print_test_result("partial", results["reasoning"])

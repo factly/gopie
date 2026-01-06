@@ -398,9 +398,14 @@ class TestModelProviderUtilities:
                 mock_get_node_model.assert_called_once_with("test_node")
                 mock_get_model_provider.assert_called_once_with(config)
                 mock_model_provider.get_llm.assert_called_once_with("gpt-4")
+                mock_llm.bind.assert_called_once_with(temperature=0.7)
+                mock_llm.with_structured_output.assert_called_once_with(
+                    schema=TestOutput, method="json_schema"
+                )
+                mock_llm.with_retry.assert_called_once()
 
-                # Verify the returned type is cast to StructuredLLM
-                assert result == mock_llm
+                # Verify the returned type is the result of with_retry()
+                assert result == mock_llm.with_retry.return_value
 
     def test_get_configured_llm_for_node_with_tools(self):
         """
@@ -438,7 +443,9 @@ class TestModelProviderUtilities:
             mock_model_provider.get_llm_with_tools.assert_called_once_with(
                 "gpt-4", [ToolNames.EXECUTE_SQL_QUERY]
             )
-            assert result == mock_llm
+            mock_llm.with_retry.assert_called_once()
+            # Verify the returned type is the result of with_retry()
+            assert result == mock_llm.with_retry.return_value
 
     def test_get_chat_history(self):
         """

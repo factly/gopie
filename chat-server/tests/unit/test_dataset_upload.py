@@ -66,8 +66,11 @@ class TestDatasetUpload:
 
             assert result["success"] is True
             assert "successfully" in result["message"]
-            mock_get_info.assert_called_once_with("test_dataset_456", "test_project_123")
-            mock_generate.assert_called_once_with(mock_dataset_details.name)
+            mock_get_info.assert_called_once_with(
+                "test_dataset_456", "test_project_123", org_id=None
+            )
+            mock_get_project_info.assert_called_once_with("test_project_123", org_id=None)
+            mock_generate.assert_called_once_with(mock_dataset_details.name, org_id=None)
             mock_store.assert_called_once()
 
     @pytest.mark.asyncio
@@ -198,3 +201,42 @@ class TestDatasetUpload:
 
             assert exc_info.value.status_code == 500
             assert "Failed to delete schema" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_upload_schema_with_org_id(self, upload_request, mock_dataset_details):
+        """
+        Test that upload_schema correctly passes org_id header to service functions.
+
+        Verifies that when an org_id header is provided, it is correctly propagated to all service calls.
+        """
+        with (
+            patch("app.api.v1.routers.dataset_upload.get_dataset_info") as mock_get_info,
+            patch("app.api.v1.routers.dataset_upload.get_project_info") as mock_get_project_info,
+            patch("app.api.v1.routers.dataset_upload.generate_summary") as mock_generate,
+            patch("app.api.v1.routers.dataset_upload.store_schema_in_qdrant") as mock_store,
+        ):
+            mock_project_details = Mock()
+            mock_project_details.id = "test_project_123"
+            mock_project_details.name = "Test Project"
+            mock_project_details.description = "Test project description"
+
+            mock_get_info.return_value = mock_dataset_details
+            mock_get_project_info.return_value = mock_project_details
+            mock_generate.return_value = (
+                {"schema": "test_schema"},
+                {"sample": "test_data"},
+            )
+            mock_store.return_value = True
+
+            result = await upload_schema(upload_request, x_organization_id="test_org_123")
+
+            assert result["success"] is True
+            assert "successfully" in result["message"]
+            mock_get_info.assert_called_once_with(
+                "test_dataset_456", "test_project_123", org_id="test_org_123"
+            )
+            mock_get_project_info.assert_called_once_with("test_project_123", org_id="test_org_123")
+            mock_generate.assert_called_once_with(mock_dataset_details.name, org_id="test_org_123")
+            # Verify org_id is passed to store function
+            call_args = mock_store.call_args
+            assert call_args.kwargs["org_id"] == "test_org_123"
