@@ -9,6 +9,9 @@ from tests.test_config import TestConfig
 
 class OptimizedEvaluator:
     def __init__(self, evaluator_path: str | None = None) -> None:
+        if not TestConfig.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY environment variable is required for DSPy evaluation")
+
         lm = dspy.LM(
             model=f"openai/{TestConfig.DEFAULT_LLM_MODEL}",
             api_key=TestConfig.OPENAI_API_KEY,

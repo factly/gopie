@@ -183,9 +183,9 @@ class TestCaseRunner:
                 "Note: Dataset identification in 'datasets_used' is NOT required for single-dataset queries."
             )
         elif query_type == "viz" and data_type == "multi":
-            expected[
-                "description"
-            ] = "Should create comparative or combined visualizations across datasets"
+            expected["description"] = (
+                "Should create comparative or combined visualizations across datasets"
+            )
         else:
             expected["description"] = "Should process the query appropriately"
 
@@ -286,7 +286,7 @@ class TestCaseRunner:
         model_config = self.get_model_configuration()
 
         # Display configuration
-        print(f"\nModel Configuration:")
+        print("\nModel Configuration:")
         print(f"  FAST:     {model_config['fast_model']}")
         print(f"  BALANCED: {model_config['balanced_model']}")
         print(f"  ADVANCED: {model_config['advanced_model']}")

@@ -56,7 +56,7 @@ class TestConfig:
     # LLM Configuration (for DSPy optimizations)
     # NOTE: OPENAI_API_KEY is REQUIRED for DSPy evaluation
     DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "gpt-4o")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
     # DSPy Optimization Settings
     DSPY_CACHE_DIR = str(TEST_ROOT / "dspy" / ".cache")
