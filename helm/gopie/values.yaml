@@ -22,12 +22,75 @@ deployment:
   annotations: {}  # Annotations for deployment resources
   Podannotations: {}  # Annotations for pods
 
-  env: []
-    
-    # Environment variables for the container
-    # Example:
-    # - name: GOPIE_API_SERVER_HOST
-    #   value: "localhost"
+  env:
+    - name: POSTGRES_USER
+      value: "postgres"
+    - name: POSTGRES_PASSWORD
+      value: "postgres"
+    - name: POSTGRES_DB
+      value: "gopie"
+    - name: POSTGRES_HOST
+      value: "postgres"
+    - name: POSTGRES_PORT
+      value: "5432"
+    - name: GOPIE_LOGGER_LEVEL
+      value: "info"
+    - name: GOPIE_LOGGER_FILE
+      value: "gopie.log"
+    - name: GOPIE_LOGGER_MODE
+      value: "dev"
+    - name: GOPIE_OPENAI_APIKEY
+      value: "bRUBnBaNaOg8Qou7B7jVHsuIVsc="
+    - name: GOPIE_OPENAI_BASEURL
+      value: "https://api.portkey.ai/v1"
+    - name: GOPIE_OPENAI_MODEL
+      value: "o3-mini"
+    - name: GOPIE_OPENAI_OPTIONS
+      value: "x-portkey-virtual-key=openai-test-11e8b7,x-portkey-api-key=bRUBnBaNaOg8Qou7B7jVHsuIVsc="
+    - name: GOPIE_DUCKDB_PATH
+      value: "./dataful/gopie.duckdb"
+    - name: GOPIE_OLAPDB_ACCESS_MODE
+      value: "read_write"
+    - name: GOPIE_OLAPDB_DBTYPE
+      value: "motherduck_org"
+    - name: GOPIE_MOTHERDUCK_TOKEN
+      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6InVXY3hLakNuVVhvQ2RYd3lUSFdjZ1ZnUHpmaTFId2NjdWxSWkFhNmUyMVEiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3NTQ1NTE5ODh9.3cAa_0z5CrGQgU6r4SYlj_oc6yrQOH2UkpdU8fSLgT4"
+    - name: GOPIE_MOTHERDUCK_DB_NAME
+      value: "test"
+    - name: GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH
+      value: "./motherduck"
+    - name: GOPIE_CORS_HANDLED_BY_INGRESS
+      value: "false"
+    - name: GOPIE_POSTGRES_HOST
+      value: "postgres"
+    - name: GOPIE_POSTGRES_PORT
+      value: "5432"
+    - name: GOPIE_POSTGRES_DB
+      value: "gopie"
+    - name: GOPIE_POSTGRES_USER
+      value: "postgres"
+    - name: GOPIE_POSTGRES_PASSWORD
+      value: "postgres"
+    - name: GOPIE_POSTGRES_SSLMODE
+      value: "disable"
+    - name: GOPIE_AIAGENT_URL
+      value: "http://chat-server:8003"
+    - name: GOPIE_ENCRYPTION_KEY
+      value: "E5B8A0F3C1D9E7B2A5F0C3D8E6B1A4F2"
+    - name: GOPIE_ENABLED_SERVERS
+      value: "api"
+    - name: GOPIE_S3_ACCESS_KEY
+      value: "IHJWCLQNI113NEQODJXT"
+    - name: GOPIE_S3_SECRET_KEY
+      value: "HeH6eHrfdmS0i55C6UZz0KgJDvp9ODjEfMB4YVVh"
+    - name: GOPIE_S3_ENDPOINT
+      value: "https://s3.eu-central-1.wasabisys.com"
+    - name: GOPIE_S3_SSL
+      value: "true"
+    - name: GOPIE_S3_REGION
+      value: "eu-central-1"
+    - name: GOPIE_DOWNLOADS_S3_BUCKET
+      value: "downloads"
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
@@ -58,15 +121,29 @@ deployment:
     targetCPUUtilizationPercentage: 80  # Target average CPU usage
     targetMemoryUtilizationPercentage: 80  # Target average Memory usage
 
+  podDisruptionBudget:
+    enabled: false  # Enable Pod Disruption Budget for high availability
+    maxUnavailable: 1  # Maximum number of pods that can be unavailable during voluntary disruptions
+
   # Uncomment and configure liveness/readiness probes if needed
-  livenessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
-  readinessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
+  livenessProbe:
+    httpGet:
+      path: /health/live  # Health endpoint to check application liveness
+      port: http  # Port to use for health checks
+    initialDelaySeconds: 60  # Wait 60s after container starts before first check (allows app startup)
+    periodSeconds: 10  # Check health every 10 seconds
+    timeoutSeconds: 5  # Wait up to 5 seconds for health check response
+    successThreshold: 1  # Need 1 successful check to be considered healthy
+    failureThreshold: 3  # Restart container after 3 consecutive failures
+  readinessProbe:
+    httpGet:
+      path: /health/ready  # Health endpoint to check application readiness
+      port: http  # Port to use for readiness checks
+    initialDelaySeconds: 10  # Wait 10s after container starts before first check
+    periodSeconds: 5  # Check readiness every 5 seconds
+    timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
+    successThreshold: 1  # Need 1 successful check to be considered ready
+    failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
 
   nodeSelector: {}  # Node selector for scheduling the pods
 
@@ -76,16 +153,31 @@ deployment:
 
   extraVolumeMounts: []  # Additional volume mounts for the container
     # Example:
-    # - name: zitadel-key
-    #   mountPath: ./home/gopie/zitadel_key.json
-    #   subPath: zitadel_key.json
+    # - name: config-volume
+    #   mountPath: /etc/config
+    #   readOnly: true
+    # - name: data-volume
+    #   mountPath: /data
+    #   subPath: myapp-data
 
   extraVolumes: []  # Additional volumes for the pod
-    # Example:
-    # - name: zitadel-key
+    # Supports: persistentVolumeClaim, hostPath, configMap, secret, emptyDir, csi
+    # Examples:
+    # - name: config-volume
+    #   configMap:
+    #     name: app-config
+    # - name: secret-volume
     #   secret:
-    #     secretName: zitadel-key
-  volumes: []
+    #     secretName: app-secrets
+    # - name: data-volume
+    #   existingClaim: my-pvc
+    # - name: host-volume
+    #   hostPath:
+    #     path: /mnt/data
+    #     type: Directory
+    # - name: cache-volume
+    #   emptyDir:
+    #     sizeLimit: 1Gi
 
 
 stateful:
@@ -101,10 +193,75 @@ stateful:
   annotations: {}  # Annotations for deployment resources
   Podannotations: {}  # Annotations for pods
 
-  env: []  # Environment variables for the container
-    # Example:
-    # - name: GOPIE_API_SERVER_HOST
-    #   value: "localhost"
+  env:
+    - name: POSTGRES_USER
+      value: "postgres"
+    - name: POSTGRES_PASSWORD
+      value: "postgres"
+    - name: POSTGRES_DB
+      value: "gopie"
+    - name: POSTGRES_HOST
+      value: "postgres"
+    - name: POSTGRES_PORT
+      value: "5432"
+    - name: GOPIE_LOGGER_LEVEL
+      value: "info"
+    - name: GOPIE_LOGGER_FILE
+      value: "gopie.log"
+    - name: GOPIE_LOGGER_MODE
+      value: "dev"
+    - name: GOPIE_OPENAI_APIKEY
+      value: "bRUBnBaNaOg8Qou7B7jVHsuIVsc="
+    - name: GOPIE_OPENAI_BASEURL
+      value: "https://api.portkey.ai/v1"
+    - name: GOPIE_OPENAI_MODEL
+      value: "o3-mini"
+    - name: GOPIE_OPENAI_OPTIONS
+      value: "x-portkey-virtual-key=openai-test-11e8b7,x-portkey-api-key=bRUBnBaNaOg8Qou7B7jVHsuIVsc="
+    - name: GOPIE_DUCKDB_PATH
+      value: "./dataful/gopie.duckdb"
+    - name: GOPIE_OLAPDB_ACCESS_MODE
+      value: "read_write"
+    - name: GOPIE_OLAPDB_DBTYPE
+      value: "motherduck_org"
+    - name: GOPIE_MOTHERDUCK_TOKEN
+      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6InVXY3hLakNuVVhvQ2RYd3lUSFdjZ1ZnUHpmaTFId2NjdWxSWkFhNmUyMVEiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3NTQ1NTE5ODh9.3cAa_0z5CrGQgU6r4SYlj_oc6yrQOH2UkpdU8fSLgT4"
+    - name: GOPIE_MOTHERDUCK_DB_NAME
+      value: "test"
+    - name: GOPIE_MOTHERDUCK_HELPER_DB_DIR_PATH
+      value: "./motherduck"
+    - name: GOPIE_CORS_HANDLED_BY_INGRESS
+      value: "false"
+    - name: GOPIE_POSTGRES_HOST
+      value: "postgres"
+    - name: GOPIE_POSTGRES_PORT
+      value: "5432"
+    - name: GOPIE_POSTGRES_DB
+      value: "gopie"
+    - name: GOPIE_POSTGRES_USER
+      value: "postgres"
+    - name: GOPIE_POSTGRES_PASSWORD
+      value: "postgres"
+    - name: GOPIE_POSTGRES_SSLMODE
+      value: "disable"
+    - name: GOPIE_AIAGENT_URL
+      value: "http://chat-server:8003"
+    - name: GOPIE_ENCRYPTION_KEY
+      value: "E5B8A0F3C1D9E7B2A5F0C3D8E6B1A4F2"
+    - name: GOPIE_ENABLED_SERVERS
+      value: "api"
+    - name: GOPIE_S3_ACCESS_KEY
+      value: "IHJWCLQNI113NEQODJXT"
+    - name: GOPIE_S3_SECRET_KEY
+      value: "HeH6eHrfdmS0i55C6UZz0KgJDvp9ODjEfMB4YVVh"
+    - name: GOPIE_S3_ENDPOINT
+      value: "https://s3.eu-central-1.wasabisys.com"
+    - name: GOPIE_S3_SSL
+      value: "true"
+    - name: GOPIE_S3_REGION
+      value: "eu-central-1"
+    - name: GOPIE_DOWNLOADS_S3_BUCKET
+      value: "downloads"
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
@@ -128,14 +285,24 @@ stateful:
     #   memory: 100Mi
 
   # Uncomment and configure liveness/readiness probes if needed
-  livenessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
-  readinessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
+  livenessProbe:
+    httpGet:
+      path: /health/live  # Health endpoint to check application liveness
+      port: http  # Port to use for health checks
+    initialDelaySeconds: 60  # Wait 60s after container starts before first check (allows app startup)
+    periodSeconds: 10  # Check health every 10 seconds
+    timeoutSeconds: 5  # Wait up to 5 seconds for health check response
+    successThreshold: 1  # Need 1 successful check to be considered healthy
+    failureThreshold: 3  # Restart container after 3 consecutive failures
+  readinessProbe:
+    httpGet:
+      path: /health/ready  # Health endpoint to check application readiness
+      port: http  # Port to use for readiness checks
+    initialDelaySeconds: 10  # Wait 10s after container starts before first check
+    periodSeconds: 5  # Check readiness every 5 seconds
+    timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
+    successThreshold: 1  # Need 1 successful check to be considered ready
+    failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
 
   nodeSelector: {}  # Node selector for scheduling the pods
 
@@ -143,17 +310,50 @@ stateful:
 
   affinity: {}  # Pod affinity/anti-affinity rules
 
-  extraVolumeMounts: []  # Additional volume mounts for the container
+  extraVolumeMounts:  # Additional volume mounts for the container
     # Example:
-    # - name: zitadel-key
-    #   mountPath: ./home/gopie/zitadel_key.json
-    #   subPath: zitadel_key.json
+    # - name: config-volume
+    #   mountPath: /etc/config
+    #   readOnly: true
+    # - name: data-volume
+    #   mountPath: /data
+    #   subPath: myapp-data
+    # - name: test-config
+      # mountPath: /etc/test-config
+      # readOnly: true
+    # - name: test-secret
+      # mountPath: /etc/test-secret
+      # readOnly: true
+    # - name: test-cache
+      # mountPath: /tmp/cache
 
-  extraVolumes: []  # Additional volumes for the pod
-    # Example:
-    # - name: zitadel-key
+  extraVolumes:  # Additional volumes for the pod
+    # Supports: persistentVolumeClaim, hostPath, configMap, secret, emptyDir, csi
+    # Examples:
+    # - name: config-volume
+    #   configMap:
+    #     name: app-config
+    # - name: secret-volume
     #   secret:
-    #     secretName: zitadel-key
+    #     secretName: app-secrets
+    # - name: data-volume
+    #   existingClaim: my-pvc
+    # - name: host-volume
+    #   hostPath:
+    #     path: /mnt/data
+    #     type: Directory
+    # - name: cache-volume
+    #   emptyDir:
+    #     sizeLimit: 1Gi
+    # - name: test-config
+      # configMap:
+        # name: test-config-map
+    # - name: test-secret
+      # secret:
+        # secretName: test-secret
+    # - name: test-cache
+      # emptyDir:
+        # sizeLimit: 500Mi
 
   persistence:  # Persistent volume claim configuration
     type: pvc  # Type of persistence: pvc or hostPath
@@ -180,6 +380,7 @@ serviceAccount:
   automount: true  # Auto-mount API credentials for the service account
   annotations: {}  # Annotations for the service account
   name: ""  # Existing service account name to use
+  extraLabels: {}  # Extra labels to add to service account
 
 service:
   ports:
@@ -187,7 +388,17 @@ service:
       targetPort: http
       protocol: TCP
       name: http
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+      name: metrics
+    - port: 8002
+      targetPort: 8002
+      protocol: TCP
+      name: admin
   type: ClusterIP  # Kubernetes Service type: ClusterIP, NodePort, LoadBalancer
+  annotations: {}  # Annotations for the service
+  extraLabels: {}  # Extra labels to add to service
 
 ingress:
   enabled: false  # Enable ingress for external access
@@ -196,6 +407,7 @@ ingress:
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
     # cert-manager.io/cluster-issuer: letsencrypt-prod
+  extraLabels: {}  # Extra labels to add to ingress
   hosts:
     - host: gopie.example.com
       paths:
@@ -205,6 +417,10 @@ ingress:
     # - secretName: gopie-tls
     #   hosts:
     #     - gopie.example.com
+
+autoscaling:
+  annotations: {}  # Annotations for HPA
+  extraLabels: {}  # Extra labels to add to HPA
 
 reIndexingJob:  # Re-indexing job configuration
   enabled: false  # Enable the re-indexing job
@@ -216,6 +432,10 @@ reIndexingJob:  # Re-indexing job configuration
   env: []  # Environment variables for the re-indexing job
   volumeMounts: []  # Additional volume mounts for the re-indexing job
   volumes: []  # Additional volumes for the re-indexing job
+  annotations: {}  # Annotations for the job
+  extraLabels: {}  # Extra labels to add to job
+  podAnnotations: {}  # Annotations for job pods
+  extraPodLabels: {}  # Extra labels to add to job pods
 
 
 web:
@@ -234,20 +454,40 @@ web:
   annotations: {}  # Annotations to add to the Deployment
   Podannotations: {}  # Annotations to add to the pods
 
-  env: []
-    
-    # - name: NEXT_PUBLIC_GOPIE_API_URL
-    #   value: https://server.example.com # public_url
-    # Define environment variables for the container
-    # Example:
-    # - name: NEXT_PUBLIC_ENABLE_AUTH
-    #   value: "false"
+  env:
+    - name: NEXT_PUBLIC_COMPANION_URL
+      value: "http://localhost:3020"
+    - name: NEXT_PUBLIC_GOPIE_API_URL
+      value: "http://localhost:8000"
+    - name: NEXT_PUBLIC_ENABLE_AUTH
+      value: "false"
+    - name: GOPIE_API_URL
+      value: "http://gopie-server:8000"
+    - name: COMPANION_AWS_ENDPOINT
+      value: "https://s3.eu-central-1.wasabisys.com"
+    - name: COMPANION_AWS_REGION
+      value: "eu-central-1"
+    - name: COMPANION_AWS_BUCKET
+      value: "prod-factly-gopie-sas-new"
+    - name: COMPANION_AWS_KEY
+      value: "IHJWCLQNI113NEQODJXT"
+    - name: COMPANION_AWS_SECRET
+      value: "HeH6eHrfdmS0i55C6UZz0KgJDvp9ODjEfMB4YVVh"
+    - name: COMPANION_DOMAIN
+      value: "localhost:3020"
+    - name: COMPANION_PROTOCOL
+      value: "http"
+    - name: COMPANION_DATADIR
+      value: "/"
+    - name: COMPANION_SELF_ENDPOINT
+      value: "localhost:3020"
 
   serviceAccount:
     create: false  # Whether to create a new Kubernetes service account
     automount: true  # Auto-mount the service account token in the pod
     annotations: {}  # Annotations for the service account
     name: ""  # Name of an existing service account to use
+    extraLabels: {}  # Extra labels to add to service account
 
   podSecurityContext: {}
     # Security context for the entire pod
@@ -264,19 +504,32 @@ web:
     # runAsNonRoot: true
     # runAsUser: 1000
 
-  livenessProbe: {}
-    #   httpGet:
-    #     path: /
-    #     port: http
-  readinessProbe: {}
-    #   httpGet:
-    #     path: /
-    #     port: http
+  # Uncomment and configure liveness/readiness probes if needed
+  livenessProbe:
+    httpGet:
+      path: /  # Root endpoint to check application liveness
+      port: http  # Port to use for health checks
+    initialDelaySeconds: 30  # Wait 30s after container starts before first check (allows app startup)
+    periodSeconds: 10  # Check health every 10 seconds
+    timeoutSeconds: 5  # Wait up to 5 seconds for health check response
+    successThreshold: 1  # Need 1 successful check to be considered healthy
+    failureThreshold: 3  # Restart container after 3 consecutive failures
+  readinessProbe:
+    httpGet:
+      path: /  # Root endpoint to check application readiness
+      port: http  # Port to use for readiness checks
+    initialDelaySeconds: 10  # Wait 10s after container starts before first check
+    periodSeconds: 5  # Check readiness every 5 seconds
+    timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
+    successThreshold: 1  # Need 1 successful check to be considered ready
+    failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
 
   service:
     portName: http  # Name of the service port
     type: ClusterIP  # Kubernetes Service type (ClusterIP, NodePort, LoadBalancer)
     portNumber: 3000  # Port the container listens on
+    annotations: {}  # Annotations for the service
+    extraLabels: {}  # Extra labels to add to service
 
   resources: {}
     # Resource requests and limits for the web container
@@ -303,6 +556,12 @@ web:
     maxReplicas: 10  # Maximum number of replicas if autoscaling is enabled
     targetCPUUtilizationPercentage: 80  # Target average CPU utilization
     targetMemoryUtilizationPercentage: 80  # Target average Memory utilization
+    annotations: {}  # Annotations for HPA
+    extraLabels: {}  # Extra labels to add to HPA
+
+  podDisruptionBudget:
+    enabled: false  # Enable Pod Disruption Budget for high availability
+    minAvailable: "90%"  # Minimum percentage of pods that must remain available during voluntary disruptions
 
   nodeSelector: {}  # Node selector for scheduling pods to specific nodes
 
@@ -310,23 +569,40 @@ web:
 
   affinity: {}  # Affinity rules for pod scheduling
 
-  extraVolumeMounts: []
-    # Extra volume mounts for the pod
+  extraVolumeMounts:  # Additional volume mounts for the container
     # Example:
-    # - name: extra-volume-0
-    #   mountPath: /mnt/volume0
+    # - name: config-volume
+    #   mountPath: /etc/config
     #   readOnly: true
+    # - name: static-assets
+    #   mountPath: /app/public
+    #   subPath: assets
+    # - name: web-config
+      # mountPath: /etc/web-config
+      # readOnly: true
+    # - name: web-assets
+      # mountPath: /app/assets
 
-  extraVolumes: []
-    # Additional volumes for the pod
-    # Example:
-    # - name: extra-volume-0
-    #   existingClaim: volume-claim
-    # - name: extra-volume-1
-    #   hostPath:
-    #     path: /usr/shared/
-    #     type: ""
-  volumes: []
+  extraVolumes:  # Additional volumes for the pod
+    # Supports: persistentVolumeClaim, hostPath, configMap, secret, emptyDir, csi
+    # Examples:
+    # - name: config-volume
+    #   configMap:
+    #     name: web-config
+    # - name: tls-certs
+    #   secret:
+    #     secretName: web-tls
+    # - name: static-assets
+    #   existingClaim: web-assets-pvc
+    # - name: nginx-cache
+    #   emptyDir:
+    #     sizeLimit: 500Mi
+    # - name: web-config
+      # configMap:
+        # name: web-config-map
+    # - name: web-assets
+      # existingClaim: web-assets-pvc
+
   ingress:
     enabled: true  # Enable ingress for external access
     className: ""  # Ingress class name (e.g., nginx, traefik)
@@ -334,6 +610,7 @@ web:
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
       # cert-manager.io/cluster-issuer: letsencrypt-prod
+    extraLabels: {}  # Extra labels to add to ingress
     hosts:
       - host: gopie.example.com
         paths:
@@ -360,19 +637,66 @@ chatserver:
   annotations: {}  # Annotations for the Deployment
   Podannotations: {}  # Annotations for pods
 
-  env: []
-    # Environment variables for the chatserver
-    # Example:
-    # - name: GOPIE_API_ENDPOINT
-    #   value: "GOPIE_URL"
-    # - name: E2B_API_KEY
-    #   value: ""
+  env:
+    - name: CHAT_GOPIE_API_ENDPOINT
+      value: "http://gopie-server:8001"
+    - name: CHAT_E2B_API_KEY
+      value: "e2b_d07b6fb3ffab800b95c68b7646ca1d88cce8dd74"
+    - name: CHAT_LLM_GATEWAY_PROVIDER
+      value: "openrouter"
+    - name: CHAT_EMBEDDING_GATEWAY_PROVIDER
+      value: "openai"
+    - name: OPENAI_API_KEY
+      value: ""
+    - name: CHAT_OPENROUTER_API_KEY
+      value: "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"
+    - name: CHAT_OPENROUTER_BASE_URL
+      value: "https://openrouter.ai/api/v1"
+    - name: CHAT_FAST_MODEL
+      value: "google/gemini-2.5-flash"
+    - name: CHAT_BALANCED_MODEL
+      value: "google/gemini-2.5-flash"
+    - name: CHAT_ADVANCED_MODEL
+      value: "google/gemini-2.5-pro"
+    - name: CHAT_S3_HOST
+      value: "http://host.docker.local:9000"
+    - name: CHAT_S3_ACCESS_KEY
+      value: "minioadmin"
+    - name: CHAT_S3_SECRET_KEY
+      value: "minioadmin"
+    - name: CHAT_S3_BUCKET
+      value: "gopie"
+    - name: CHAT_S3_REGION
+      value: "us-central-1"
+    - name: CHAT_DEFAULT_LLM_MODEL
+      value: "google/gemini-2.5-flash"
+    - name: CHAT_DEFAULT_EMBEDDING_MODEL
+      value: "text-embedding-3-large"
+    - name: CHAT_QDRANT_HOST
+      value: "host.docker.local"
+    - name: CHAT_QDRANT_COLLECTION
+      value: "dataset_collection_prod"
+    - name: CHAT_QDRANT_PORT
+      value: "6333"
+    - name: CHAT_QDRANT_TOP_K
+      value: "5"
+    - name: CHAT_LANGSMITH_TRACING
+      value: "true"
+    - name: CHAT_LANGSMITH_ENDPOINT
+      value: "https://api.smith.langchain.com"
+    - name: CHAT_LANGSMITH_API_KEY
+      value: "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"
+    - name: CHAT_LANGSMITH_PROJECT
+      value: "gopie-chat-server-local"
+    - name: CHAT_LANGSMITH_PROMPT
+      value: "false"
 
   serviceAccount:
     create: false  # Whether to create a new service account
     automount: true  # Auto-mount the service account token in the pod
     annotations: {}  # Annotations for the service account
     name: ""  # Existing service account name
+    extraLabels: {}  # Extra labels to add to service account
 
   podSecurityContext: {}
     # Pod-level security context
@@ -391,6 +715,8 @@ chatserver:
     portName: http  # Service port name
     type: ClusterIP  # Service type
     portNumber: 8000  # Port the container listens on
+    annotations: {}  # Annotations for the service
+    extraLabels: {}  # Extra labels to add to service
 
   resources: {}
     # Resource requests and limits for the chatserver container
@@ -401,14 +727,25 @@ chatserver:
     #   cpu: 100m
     #   memory: 128Mi
 
-  livenessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
-  readinessProbe: {}
-    # httpGet:
-    #   path: /
-    #   port: http
+  # Uncomment and configure liveness/readiness probes if needed
+  livenessProbe:
+    httpGet:
+      path: /health/live  # Health endpoint to check application liveness
+      port: http  # Port to use for health checks
+    initialDelaySeconds: 60  # Wait 60s after container starts before first check (allows app startup)
+    periodSeconds: 10  # Check health every 10 seconds
+    timeoutSeconds: 5  # Wait up to 5 seconds for health check response
+    successThreshold: 1  # Need 1 successful check to be considered healthy
+    failureThreshold: 3  # Restart container after 3 consecutive failures
+  readinessProbe:
+    httpGet:
+      path: /health/ready  # Health endpoint to check application readiness
+      port: http  # Port to use for readiness checks
+    initialDelaySeconds: 10  # Wait 10s after container starts before first check
+    periodSeconds: 5  # Check readiness every 5 seconds
+    timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
+    successThreshold: 1  # Need 1 successful check to be considered ready
+    failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
 
   autoscaling:
     enabled: false  # Enable autoscaling for the chatserver
@@ -416,6 +753,12 @@ chatserver:
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 80
+    annotations: {}  # Annotations for HPA
+    extraLabels: {}  # Extra labels to add to HPA
+
+  podDisruptionBudget:
+    enabled: false  # Enable Pod Disruption Budget for high availability
+    maxUnavailable: 1  # Maximum number of pods that can be unavailable during voluntary disruptions
 
   nodeSelector: {}  # Node selector rules
 
@@ -423,21 +766,38 @@ chatserver:
 
   affinity: {}  # Affinity rules
 
-  extraVolumeMounts: []
-    # Additional volume mounts
-    # - name: extra-volume-0
-    #   mountPath: /mnt/volume0
+  extraVolumeMounts:  # Additional volume mounts for the container
+    # Example:
+    # - name: config-volume
+    #   mountPath: /etc/config
     #   readOnly: true
+    # - name: static-assets
+    #   mountPath: /app/public
+    #   subPath: assets
+    # - name: chat-models
+      # mountPath: /app/models
+    # - name: chat-logs
+      # mountPath: /app/logs
 
-  extraVolumes: []
-    # Additional volumes
-    # - name: extra-volume-0
-    #   existingClaim: volume-claim
-    # - name: extra-volume-1
-    #   hostPath:
-    #     path: /usr/shared/
-    #     type: ""
-  volumes: []
+  extraVolumes:  # Additional volumes for the pod
+    # Supports: persistentVolumeClaim, hostPath, configMap, secret, emptyDir, csi
+    # Examples:
+    # - name: config-volume
+    #   configMap:
+    #     name: web-config
+    # - name: tls-certs
+    #   secret:
+    #     secretName: web-tls
+    # - name: static-assets
+    #   existingClaim: web-assets-pvc
+    # - name: nginx-cache
+    #   emptyDir:
+    #     sizeLimit: 500Mi
+    # - name: chat-models
+      # existingClaim: chat-models-pvc
+    # - name: chat-logs
+      # emptyDir:
+        # sizeLimit: 1Gi
 
 
 postgresql:
@@ -452,10 +812,25 @@ postgresql:
 
 companion:
   enabled: true  # Enable or disable the Companion service
-  env: []
-    # Environment variables for Companion service
-    # - name: COMPANION_PROTOCOL  # Protocol to use (http/https)
-    #   value: https
+  env:
+    - name: COMPANION_AWS_ENDPOINT
+      value: "https://s3.eu-central-1.wasabisys.com"
+    - name: COMPANION_AWS_REGION
+      value: "eu-central-1"
+    - name: COMPANION_AWS_BUCKET
+      value: "prod-factly-gopie-sas-new"
+    - name: COMPANION_AWS_KEY
+      value: "IHJWCLQNI113NEQODJXT"
+    - name: COMPANION_AWS_SECRET
+      value: "HeH6eHrfdmS0i55C6UZz0KgJDvp9ODjEfMB4YVVh"
+    - name: COMPANION_DOMAIN
+      value: "localhost:3020"
+    - name: COMPANION_PROTOCOL
+      value: "http"
+    - name: COMPANION_DATADIR
+      value: "/"
+    - name: COMPANION_SELF_ENDPOINT
+      value: "localhost:3020"
 #     # - name: COMPANION_PORT      # Port number for Companion server
 #     #   value: "3020"
 #     # - name: COMPANION_DATADIR   # Data directory for Companion
@@ -500,65 +875,65 @@ companion:
 qdrant:
   enabled: true  # Enable or disable the Qdrant vector database chart
 
-# zitadel:
-#   enabled: false  # Enable or disable the ZITADEL identity provider chart
-#   zitadel:
-#     masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
-#     configmapConfig:
-#       ExternalSecure: true  # Enable HTTPS for external access
-#       ExternalPort:         # External port for ZITADEL (optional)
-#       ExternalDomain: login.degacms.com  # Public domain for ZITADEL
-#       TLS:
-#         Enabled: false  # Enable TLS (handled by ingress or external proxy)
-#       Database:
-#         Postgres:
-#           Host: postgres-host  # PostgreSQL host for ZITADEL database
-#           Port: 5432           # PostgreSQL port
-#           Database: zitadel    # Database name
-#           MaxOpenConns: 20     # Maximum open DB connections
-#           MaxIdleConns: 10     # Maximum idle DB connections
-#           MaxConnLifetime: 30m # Max connection lifetime
-#           MaxConnIdleTime: 5m  # Max idle time for DB connections
-#           User:
-#             Username: ""       # DB username
-#             Password: ""       # DB password
-#             SSL:
-#               Mode: disable    # SSL mode for DB connection
-#           Admin:
-#             Username: ""       # Admin DB username
-#             Password: ""       # Admin DB password
-#             SSL:
-#               Mode: disable    # SSL mode for admin DB connection
+zitadel:
+  enabled: false  # Enable or disable the ZITADEL identity provider chart
+  zitadel:
+    masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
+    configmapConfig:
+      ExternalSecure: true  # Enable HTTPS for external access
+      ExternalPort:         # External port for ZITADEL (optional)
+      ExternalDomain: login.degacms.com  # Public domain for ZITADEL
+      TLS:
+        Enabled: false  # Enable TLS (handled by ingress or external proxy)
+      Database:
+        Postgres:
+          Host: postgres-host  # PostgreSQL host for ZITADEL database
+          Port: 5432           # PostgreSQL port
+          Database: zitadel    # Database name
+          MaxOpenConns: 20     # Maximum open DB connections
+          MaxIdleConns: 10     # Maximum idle DB connections
+          MaxConnLifetime: 30m # Max connection lifetime
+          MaxConnIdleTime: 5m  # Max idle time for DB connections
+          User:
+            Username: ""       # DB username
+            Password: ""       # DB password
+            SSL:
+              Mode: disable    # SSL mode for DB connection
+          Admin:
+            Username: ""       # Admin DB username
+            Password: ""       # Admin DB password
+            SSL:
+              Mode: disable    # SSL mode for admin DB connection
   
-#       DefaultInstance:
-#         LoginPolicy:
-#           DefaultRedirectURI:   # Optional: redirect URL after login
+      DefaultInstance:
+        LoginPolicy:
+          DefaultRedirectURI:   # Optional: redirect URL after login
 
-#   env: []
-#     # Additional ZITADEL environment variables
-#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
-#     #   value: admin
-#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
-#     #   value: admin
-#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
-#     #   value: admin@domain.com
-#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
-#     #   value: "true"
-#     # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
-#     #   value: Password1!
+  env: []
+    # Additional ZITADEL environment variables
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
+    #   value: admin
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
+    #   value: admin
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
+    #   value: admin@domain.com
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
+    #   value: "true"
+    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
+    #   value: Password1!
 
-#   ingress:
-#     enabled: true  # Enable or disable Ingress for ZITADEL
-#     className: "nginx"  # Ingress class to use
-#     annotations:
-#       kubernetes.io/ingress.class: nginx  # Ingress controller annotation
-#       cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
-#     hosts:
-#       - host: ""  # Hostname for ZITADEL Ingress
-#         paths:
-#           - path: /  # Path to route to ZITADEL
-#             pathType: Prefix
-#     tls:
-#       - secretName: ""  # Secret name for TLS cert
-#         hosts:
-#           - ""          # Hosts covered by the TLS cert
+  ingress:
+    enabled: true  # Enable or disable Ingress for ZITADEL
+    className: "nginx"  # Ingress class to use
+    annotations:
+      kubernetes.io/ingress.class: nginx  # Ingress controller annotation
+      cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
+    hosts:
+      - host: ""  # Hostname for ZITADEL Ingress
+        paths:
+          - path: /  # Path to route to ZITADEL
+            pathType: Prefix
+    tls:
+      - secretName: ""  # Secret name for TLS cert
+        hosts:
+          - ""          # Hosts covered by the TLS cert

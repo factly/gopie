@@ -8,5 +8,8 @@ dependencies:
 - name: qdrant
   repository: https://qdrant.github.io/qdrant-helm
   version: 1.12.5
-digest: sha256:8734b9e4d640b3b6e7876ce5fd50fa427a2b1b50d38ec46c2db867b7af200f4d
-generated: "2025-11-21T17:03:39.309977+05:30"
+- name: zitadel
+  repository: https://charts.zitadel.com
+  version: 8.6.2
+digest: sha256:800337654c501f38ca60acfb645b2bca91383e69829ad787af340293010dec7a
+generated: "2026-01-09T11:51:20.510797+05:30"
