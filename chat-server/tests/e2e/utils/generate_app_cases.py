@@ -1,17 +1,14 @@
-import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
+import aiohttp
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from app.core.session import SingletonAiohttp
 from app.utils.model_registry.model_provider import get_configured_llm_for_node
-
-load_dotenv()
+from tests.e2e.utils.dataset_manager import GOPIE_ORG_ID, GOPIE_USER_ID
 
 
 class TestCase(BaseModel):
@@ -44,8 +41,21 @@ class ProjectDatasetsFetcher:
         self.project_ids = project_ids
         self.headers = {
             "accept": "application/json",
+            "X-Organization-ID": GOPIE_ORG_ID,
+            "X-User-ID": GOPIE_USER_ID,
         }
         self.all_projects_data: list[dict[str, Any]] = []
+        self.session: aiohttp.ClientSession | None = None
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession()
+        return self.session
+
+    async def _close_session(self):
+        if self.session and not self.session.closed:
+            await self.session.close()
+            self.session = None
 
     async def fetch_datasets_for_project(self, project_id: str) -> list[str]:
         print(f"Fetching datasets for project: {project_id}")
@@ -54,12 +64,12 @@ class ProjectDatasetsFetcher:
         dataset_ids = []
 
         try:
-            session = SingletonAiohttp.get_aiohttp_client()
+            session = await self._get_session()
             async with session.get(url, params=params, headers=self.headers) as response:
                 response.raise_for_status()
                 response_json = await response.json()
 
-            for data in response_json:
+            for data in response_json["results"]:
                 dataset_id = data.get("id", "")
                 if dataset_id:
                     dataset_ids.append(dataset_id)
@@ -78,7 +88,7 @@ class ProjectDatasetsFetcher:
         )
 
         try:
-            session = SingletonAiohttp.get_aiohttp_client()
+            session = await self._get_session()
             async with session.get(details_url, headers=self.headers) as response:
                 response.raise_for_status()
                 dataset_details = await response.json()
@@ -94,7 +104,7 @@ class ProjectDatasetsFetcher:
         dataset_summary = {"summary": ""}
 
         try:
-            session = SingletonAiohttp.get_aiohttp_client()
+            session = await self._get_session()
             async with session.get(summary_url, headers=self.headers) as response:
                 response.raise_for_status()
                 dataset_summary = await response.json()
@@ -109,7 +119,7 @@ class ProjectDatasetsFetcher:
         sample_data = {}
 
         try:
-            session = SingletonAiohttp.get_aiohttp_client()
+            session = await self._get_session()
             async with session.post(sql_url, json=body, headers=self.headers) as response:
                 response.raise_for_status()
                 sample_data = await response.json()
@@ -342,7 +352,7 @@ Return ONLY the test cases as a JSON array, no additional text.
             print(f"Error calling LLM: {e}")
             return ListOfTestCases()
 
-    async def generate_test_cases_for_all_datasets(self) -> TestCasesList:
+    async def generate_test_cases_for_all_datasets(self, test_type: str) -> TestCasesList:
         print("=== Starting test case generation ===")
 
         all_test_cases = TestCasesList()
@@ -353,23 +363,24 @@ Return ONLY the test cases as a JSON array, no additional text.
 
             print(f"\nGenerating test cases for project {project_id} with {len(datasets)} datasets")
 
-            print("Generating single dataset test cases...")
-            for i, dataset_schema in enumerate(datasets, 1):
-                dataset_name = dataset_schema.get("dataset_name", "unknown")
-                print(f"  {i}/{len(datasets)}: {dataset_name}")
+            if test_type in ("single", "all"):
+                print("Generating single dataset test cases...")
+                for i, dataset_schema in enumerate(datasets, 1):
+                    dataset_name = dataset_schema.get("dataset_name", "unknown")
+                    print(f"  {i}/{len(datasets)}: {dataset_name}")
 
-                single_prompt = self._create_single_dataset_prompt(dataset_schema)
-                single_cases = await self._call_llm(single_prompt)
+                    single_prompt = self._create_single_dataset_prompt(dataset_schema)
+                    single_cases = await self._call_llm(single_prompt)
 
-                for case_data in single_cases.test_cases:
-                    try:
-                        all_test_cases.single_dataset_cases.append(case_data)
-                    except Exception as e:
-                        print(f"    Error creating test case: {e}")
+                    for case_data in single_cases.test_cases:
+                        try:
+                            all_test_cases.single_dataset_cases.append(case_data)
+                        except Exception as e:
+                            print(f"    Error creating test case: {e}")
 
-                print(f"    → Generated {len(single_cases.test_cases)} test cases")
+                    print(f"    → Generated {len(single_cases.test_cases)} test cases")
 
-            if len(datasets) > 1:
+            if len(datasets) > 1 and test_type in ("multi", "all"):
                 print("Generating multi-dataset test cases...")
                 multi_prompt = self._create_multi_dataset_prompt(datasets, project_id)
                 multi_cases = await self._call_llm(multi_prompt)
@@ -483,27 +494,21 @@ SINGLE_DATASET_TEST_CASES = [
         print(f"  - {len(test_cases.multi_dataset_cases)} multi dataset test cases")
 
 
-async def main():
-    project_ids = [
-        "70c32a4a-598f-464e-9340-0819ce1021d1",
-    ]
-
+async def generate_app_cases(
+    test_type: str, project_ids: list[str], gopie_api_endpoint: str
+) -> list[dict]:
     if not project_ids:
-        print("ERROR: No project IDs provided!")
-        print(
-            "Please update the project_ids list in the main() function with your actual project IDs."
-        )
-        return
+        raise Exception("No project IDs provided!")
 
-    fetcher = ProjectDatasetsFetcher(
-        gopie_api_endpoint="http://localhost:8001", project_ids=project_ids
-    )
+    fetcher = ProjectDatasetsFetcher(gopie_api_endpoint, project_ids=project_ids)
+
+    all_test_cases = []
 
     try:
         all_data = await fetcher.fetch_all_datasets()
 
         print(f"\nFetched data for {len(all_data)} projects")
-        test_cases = await fetcher.generate_test_cases_for_all_datasets()
+        test_cases = await fetcher.generate_test_cases_for_all_datasets(test_type)
 
         output_filename = "dataset_test_cases.py"
         fetcher.save_test_cases_to_python_file(test_cases, output_filename)
@@ -521,11 +526,14 @@ async def main():
         print(f"Total test cases generated: {total_tests}")
         print(f"Output file: {output_filename}")
 
+        multi_dataset_cases = [case.model_dump() for case in test_cases.multi_dataset_cases]
+        single_dataset_cases = [case.model_dump() for case in test_cases.single_dataset_cases]
+
+        all_test_cases = multi_dataset_cases + single_dataset_cases
+
     finally:
-        await SingletonAiohttp.close_aiohttp_client()
+        await fetcher._close_session()
 
     print("=== Finished ===")
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    return all_test_cases

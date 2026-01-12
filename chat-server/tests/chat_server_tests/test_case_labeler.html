@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Case Results Viewer</title>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for SQL syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+    <!-- Vega-Lite for visualization rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #1a252f;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-inline {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+        }
+
+        .stat-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-inline .value {
+            font-weight: 600;
+        }
+
+        .upload-section {
+            padding: 20px 24px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #2c3e50;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .file-input-label:hover {
+            background: #34495e;
+        }
+
+        .file-name {
+            margin-left: 12px;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        .conversation-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        .message-role {
+            font-size: 11px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .message-content ul,
+        .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .message-content li {
+            margin-bottom: 4px;
+        }
+
+        .message-content strong {
+            font-weight: 600;
+        }
+
+        .message-content em {
+            font-style: italic;
+        }
+
+        .message-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .message-content blockquote {
+            border-left: 3px solid #2c3e50;
+            padding-left: 12px;
+            margin-left: 0;
+            color: #555;
+            font-style: italic;
+        }
+
+        .sql-query-block {
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        .sql-query-block pre {
+            margin: 0;
+            background: none;
+        }
+
+        .sql-query-block code {
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .feedback-section {
+            border-top: 1px solid #e0e0e0;
+            padding: 20px;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .feedback-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .feedback-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .feedback-btn {
+            flex: 1;
+            padding: 8px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .feedback-btn:hover {
+            border-color: #2c3e50;
+        }
+
+        .feedback-btn.active {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .ai-summary {
+            background: #f8f9fa;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #555;
+            display: none;
+            user-select: text;
+        }
+
+        .custom-feedback {
+            display: none;
+        }
+
+        .custom-feedback textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            user-select: text;
+        }
+
+        .right-panel {
+            width: 55%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .test-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #fafafa;
+            flex-shrink: 0;
+        }
+
+        .test-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .evaluation-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .eval-btn {
+            padding: 8px 20px;
+            border: 2px solid;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .eval-btn-pass {
+            background: white;
+            color: #27ae60;
+            border-color: #27ae60;
+        }
+
+        .eval-btn-pass:hover,
+        .eval-btn-pass.active {
+            background: #27ae60;
+            color: white;
+        }
+
+        .eval-btn-fail {
+            background: white;
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .eval-btn-fail:hover,
+        .eval-btn-fail.active {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .eval-btn-partial {
+            background: white;
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+
+        .eval-btn-partial:hover,
+        .eval-btn-partial.active {
+            background: #f39c12;
+            color: white;
+        }
+
+        .test-details {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .detail-field {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .detail-value {
+            background: #fafafa;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            font-size: 13px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        .detail-value pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .field-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .field-toggle:hover {
+            background: #e0e0e0;
+        }
+
+        .field-toggle input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .field-toggle.checked {
+            background: #d4edda;
+            border-color: #27ae60;
+            color: #155724;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .metadata-item {
+            background: white;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            font-size: 12px;
+            user-select: text;
+        }
+
+        .metadata-item strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 2px;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #777;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #fafafa;
+            border-top: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+
+        .nav-button {
+            padding: 8px 20px;
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #2c3e50;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .nav-button:hover:not(:disabled) {
+            background: #34495e;
+        }
+
+        .nav-button:disabled {
+            background: #bdc3c7;
+            border-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 13px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .export-button {
+            padding: 8px 20px;
+            background: #27ae60;
+            color: white;
+            border: 1px solid #27ae60;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .export-button:hover {
+            background: #229954;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                flex-direction: column;
+            }
+
+            .left-panel,
+            .right-panel {
+                width: 100%;
+            }
+
+            .left-panel {
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+        }
+
+        /* Field Selection Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #2c3e50;
+        }
+
+        .field-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 8px 20px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .modal-btn-primary:hover {
+            background: #34495e;
+        }
+
+        .modal-btn-secondary {
+            background: white;
+            color: #2c3e50;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .intermediate-message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-left: 3px solid #3498db;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        .intermediate-steps-container {
+            margin: 16px 0;
+            background: #e8f4f8;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .intermediate-steps-header {
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .intermediate-steps-header:hover {
+            background: #d4e9f3;
+        }
+
+        .intermediate-steps-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .intermediate-steps-toggle {
+            font-size: 16px;
+            color: #2c3e50;
+            transition: transform 0.3s;
+        }
+
+        .intermediate-steps-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .intermediate-steps-content {
+            padding: 0 12px 12px 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+        }
+
+        .intermediate-steps-content.collapsed {
+            max-height: 0;
+            padding: 0 12px;
+            overflow: hidden;
+        }
+
+        .viz-container {
+            margin: 12px 0;
+            padding: 16px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .viz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .viz-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .viz-button {
+            padding: 6px 12px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .viz-button:hover {
+            background: #34495e;
+        }
+
+        .viz-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .viz-chart {
+            min-height: 300px;
+            background: #fafafa;
+            border-radius: 3px;
+        }
+
+        .viz-chart canvas,
+        .viz-chart svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .viz-loading {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .viz-error {
+            color: #e74c3c;
+            font-size: 13px;
+            padding: 12px;
+            background: #fee;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-row">
+                <div>
+                    <h1>Test Case Results Viewer</h1>
+                </div>
+                <div class="stats-inline hidden" id="statsInline"></div>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="jsonFileInput" accept=".json" />
+                <label for="jsonFileInput" class="file-input-label">
+                    Choose JSON File
+                </label>
+                <span class="file-name" id="fileName"></span>
+            </div>
+        </div>
+
+        <div class="main-layout hidden" id="mainLayout">
+            <!-- Left Panel: Conversation and Feedback -->
+            <div class="left-panel">
+                <div class="conversation-area" id="conversationArea">
+                    <!-- Messages will be displayed here -->
+                </div>
+                <div class="feedback-section">
+                    <div class="feedback-header">Evaluation Feedback</div>
+                    <div class="feedback-options">
+                        <button class="feedback-btn" data-type="ai" onclick="selectFeedbackType('ai')">
+                            Use AI Summary
+                        </button>
+                        <button class="feedback-btn" data-type="custom" onclick="selectFeedbackType('custom')">
+                            Custom Feedback
+                        </button>
+                    </div>
+                    <div class="ai-summary" id="aiSummary"></div>
+                    <div class="custom-feedback" id="customFeedback">
+                        <textarea id="customFeedbackText" placeholder="Enter your custom feedback..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Test Details and Evaluation -->
+            <div class="right-panel">
+                <div class="test-header">
+                    <div class="test-number" id="testNumber"></div>
+                    <div class="evaluation-controls">
+                        <button class="eval-btn eval-btn-pass" onclick="setEvaluation('true')">
+                            Pass
+                        </button>
+                        <button class="eval-btn eval-btn-partial" onclick="setEvaluation('partial')">
+                            Partial
+                        </button>
+                        <button class="eval-btn eval-btn-fail" onclick="setEvaluation('false')">
+                            Fail
+                        </button>
+                    </div>
+                </div>
+                <div class="test-details" id="testDetails">
+                    <!-- Test details will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation hidden" id="navigation">
+            <button class="nav-button" id="prevButton" onclick="previousTestCase()">
+                ← Previous
+            </button>
+            <div class="page-info" id="pageInfo"></div>
+            <div style="display: flex; gap: 10px;">
+                <button class="export-button" onclick="exportToCSV()">
+                    Export to CSV
+                </button>
+                <button class="nav-button" id="nextButton" onclick="nextTestCase()">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Selection Modal -->
+    <div class="modal-overlay" id="fieldSelectionModal">
+        <div class="modal-content">
+            <div class="modal-header">Select Fields to Export</div>
+            <div class="field-checkboxes" id="fieldCheckboxes">
+                <!-- Checkboxes will be generated here -->
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeFieldSelectionModal()">
+                    Cancel
+                </button>
+                <button class="modal-btn modal-btn-secondary" onclick="selectAllFields()">
+                    Select All
+                </button>
+                <button class="modal-btn modal-btn-secondary" onclick="deselectAllFields()">
+                    Deselect All
+                </button>
+                <button class="modal-btn modal-btn-primary" onclick="closeFieldSelectionModal()">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testCases = [];
+        let currentIndex = 0;
+        let currentFeedbackType = null;
+
+        // Field selection for CSV export (all enabled by default)
+        let selectedFields = {
+            'Test Number': true,
+            'Query': true,
+            'Query Type': true,
+            'Data Type': true,
+            'Project Name': true,
+            'Dataset Name': true,
+            'Dataset ID': true,
+            'Expected Dataset IDs': true,
+            'Selected Datasets': true,
+            'SQL Query Count': true,
+            'Visualization Count': true,
+            'AI Evaluation Result': true,
+            'User Evaluation': true,
+            'Feedback Type': true,
+            'User Feedback': true,
+            'AI Summary': true,
+            'AI Reasoning': true,
+            'Response': true,
+            'Tool Messages': true
+        };
+
+        // Configure marked.js for better markdown rendering and highlight code blocks with highlight.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false,
+            highlight: function (code, lang) {
+                try {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                } catch (e) {
+                    return code;
+                }
+            }
+        });
+
+        document.getElementById('jsonFileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileName').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    testCases = Array.isArray(data) ? data : data.test_cases || [];
+
+                    if (testCases.length === 0) {
+                        alert('No test cases found in the JSON file');
+                        return;
+                    }
+
+                    // Initialize evaluation data if not present
+                    testCases.forEach(tc => {
+                        if (!tc.user_evaluation) {
+                            tc.user_evaluation = null;
+                        }
+                        if (!tc.user_feedback) {
+                            tc.user_feedback = '';
+                        }
+                        if (!tc.feedback_type) {
+                            tc.feedback_type = null;
+                        }
+                    });
+
+                    currentIndex = 0;
+                    displayStats();
+                    displayTestCase();
+                    document.getElementById('mainLayout').classList.remove('hidden');
+                    document.getElementById('navigation').classList.remove('hidden');
+                    document.getElementById('statsInline').classList.remove('hidden');
+                } catch (error) {
+                    alert('Error parsing JSON file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function displayStats() {
+            const statsInline = document.getElementById('statsInline');
+
+            const total = testCases.length;
+            const passed = testCases.filter(tc => {
+                const result = tc.user_evaluation || tc.ai_evaluation?.result || tc.evaluation_result;
+                return result === 'true';
+            }).length;
+            const partial = testCases.filter(tc => {
+                const result = tc.user_evaluation || tc.ai_evaluation?.result || tc.evaluation_result;
+                return result === 'partial';
+            }).length;
+            const failed = testCases.filter(tc => {
+                const result = tc.user_evaluation || tc.ai_evaluation?.result || tc.evaluation_result;
+                return result === 'false';
+            }).length;
+
+            statsInline.innerHTML = `
+                <div class="stat-inline">
+                    <span>Total:</span>
+                    <span class="value">${total}</span>
+                </div>
+                <div class="stat-inline" style="color: #27ae60;">
+                    <span>Pass:</span>
+                    <span class="value">${passed}</span>
+                </div>
+                <div class="stat-inline" style="color: #f39c12;">
+                    <span>Partial:</span>
+                    <span class="value">${partial}</span>
+                </div>
+                <div class="stat-inline" style="color: #e74c3c;">
+                    <span>Fail:</span>
+                    <span class="value">${failed}</span>
+                </div>
+            `;
+        }
+
+        function displayTestCase() {
+            if (testCases.length === 0) return;
+
+            const testCase = testCases[currentIndex];
+
+            // Display conversation
+            displayConversation(testCase);
+
+            // Display test details
+            displayTestDetails(testCase);
+
+            // Update evaluation buttons
+            updateEvaluationButtons(testCase);
+
+            // Update feedback section
+            updateFeedbackSection(testCase);
+
+            updateNavigation();
+            // Auto-load all visualizations
+            loadAllVisualizations();
+        }
+
+        function displayConversation(testCase) {
+            const conversationArea = document.getElementById('conversationArea');
+            // helper to render a single message (role + markdown content)
+            const renderMessage = (role, content) => {
+                let text = '';
+                if (content === null || content === undefined) {
+                    text = '';
+                } else if (typeof content === 'string') {
+                    text = content;
+                } else {
+                    try {
+                        text = JSON.stringify(content, null, 2);
+                    } catch (e) {
+                        text = String(content);
+                    }
+                }
+
+                const markdownHtml = marked.parse(text);
+                return `\n                    <div class="message">\n                        <div class="message-role">${escapeHtml(role)}</div>\n                        <div class="message-content">${markdownHtml}</div>\n                    </div>\n                `;
+            };
+
+            let html = '';
+
+            // User query
+            html += renderMessage('User Query', testCase.query || 'N/A');
+
+            const csr = testCase.chat_server_response || {};
+
+            // Render tool_messages as intermediate steps (collapsible)
+            if (Array.isArray(csr.tool_messages) && csr.tool_messages.length > 0) {
+                const stepsId = `intermediate-steps-${currentIndex}`;
+                html += '<div class="intermediate-steps-container">';
+                html += `<div class="intermediate-steps-header" onclick="toggleIntermediateSteps('${stepsId}')">`;
+                html += '<div class="intermediate-steps-title">Intermediate Steps (' + csr.tool_messages.length + ')</div>';
+                html += `<div class="intermediate-steps-toggle" id="${stepsId}-toggle">▼</div>`;
+                html += '</div>';
+                html += `<div class="intermediate-steps-content" id="${stepsId}">`;
+                csr.tool_messages.forEach((msg, idx) => {
+                    html += `<div class="intermediate-message">${escapeHtml(String(msg))}</div>`;
+                });
+                html += '</div>';
+                html += '</div>';
+            }
+
+            // Render structured messages if present (ordered conversation)
+            if (Array.isArray(csr.messages) && csr.messages.length > 0) {
+                csr.messages.forEach(msg => {
+                    const role = msg.role || msg.sender || msg.from || (msg.is_ai ? 'AI' : 'System') || 'Message';
+                    const content = msg.content || msg.text || msg.message || msg.response || msg.body || msg;
+                    html += renderMessage(role, content);
+                });
+            }
+
+            // Render intermediate / step responses (common alternative keys)
+            const intermediateKeys = ['intermediate_responses', 'intermediate_messages', 'responses', 'steps', 'response_steps'];
+            for (const key of intermediateKeys) {
+                if (Array.isArray(csr[key]) && csr[key].length > 0) {
+                    csr[key].forEach((item, idx) => {
+                        const role = item.role || item.sender || `Intermediate ${idx + 1}`;
+                        const content = item.content || item.text || item.response || item;
+                        html += renderMessage(role, content);
+                    });
+                    break; // only render the first matching intermediate key
+                }
+            }
+
+            // Fallback single-string responses
+            const finalResponse = csr.final_response || csr.response || testCase.response || null;
+            if (finalResponse) {
+                html += renderMessage('AI Response', finalResponse);
+            }
+
+            conversationArea.innerHTML = html;
+        }
+
+        function displayTestDetails(testCase) {
+            const testNumber = document.getElementById('testNumber');
+            const testDetails = document.getElementById('testDetails');
+
+            testNumber.textContent = `Test Case ${currentIndex + 1} of ${testCases.length}`;
+
+            const chatResponse = testCase.chat_server_response || {};
+            const aiEval = testCase.ai_evaluation || {};
+            const selectedDatasets = chatResponse.selected_datasets || [];
+            const sqlQueries = chatResponse.generated_sql_queries || [];
+            const visualizations = chatResponse.visualization_results || []; let html = `
+                <div class="metadata-grid">
+                    <div class="metadata-item">
+                        <strong>Query Type</strong>
+                        <div>${testCase.query_type || 'N/A'}</div>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Data Type</strong>
+                        <div>${testCase.data_type || 'N/A'}</div>
+                    </div>
+                    ${testCase.project_name ? `
+                    <div class="metadata-item">
+                        <strong>Project Name</strong>
+                        <div>${escapeHtml(testCase.project_name)}</div>
+                    </div>
+                    ` : ''}
+                    ${testCase.dataset_name ? `
+                    <div class="metadata-item">
+                        <strong>Dataset Name</strong>
+                        <div>${escapeHtml(testCase.dataset_name)}</div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                ${testCase.dataset_id ? `
+                <div class="detail-field" style="margin-top: 20px;">
+                    <span class="detail-label">
+                        Dataset ID
+                        <label class="field-toggle ${selectedFields['Dataset ID'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['Dataset ID'] ? 'checked' : ''} onchange="toggleField('Dataset ID', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value"><code>${testCase.dataset_id}</code></div>
+                </div>
+                ` : ''}
+
+                ${testCase.expected_dataset_ids && testCase.expected_dataset_ids.length > 0 ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        Expected Dataset IDs
+                        <label class="field-toggle ${selectedFields['Expected Dataset IDs'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['Expected Dataset IDs'] ? 'checked' : ''} onchange="toggleField('Expected Dataset IDs', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">
+                        ${testCase.expected_dataset_ids.map(id => `<code>${id}</code>`).join('<br>')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${selectedDatasets.length > 0 ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        Selected Datasets (${selectedDatasets.length})
+                        <label class="field-toggle ${selectedFields['Selected Datasets'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['Selected Datasets'] ? 'checked' : ''} onchange="toggleField('Selected Datasets', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">
+                        ${selectedDatasets.map(id => `<code>${id}</code>`).join('<br>')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${sqlQueries.length > 0 ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        Generated SQL Queries (${sqlQueries.length})
+                        <label class="field-toggle ${selectedFields['SQL Query Count'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['SQL Query Count'] ? 'checked' : ''} onchange="toggleField('SQL Query Count', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">
+                        ${sqlQueries.map((query, idx) => `
+                            <strong>Query ${idx + 1}:</strong>
+                            <div class="sql-query-block">
+                                <pre><code class="language-sql">${escapeHtml(formatSQL(query))}</code></pre>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${visualizations.length > 0 ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        Visualizations (${visualizations.length})
+                        <label class="field-toggle ${selectedFields['Visualization Count'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['Visualization Count'] ? 'checked' : ''} onchange="toggleField('Visualization Count', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">
+                        ${visualizations.map((viz, idx) => {
+                try {
+                    const vizObj = typeof viz === 'string' ? JSON.parse(viz.replace(/'/g, '"')) : viz;
+                    const vizId = `viz-${currentIndex}-${idx}`;
+                    return `
+                    <div class="viz-container">
+                        <div class="viz-header">
+                            <div>
+                                <div class="viz-title">Visualization ${idx + 1}</div>
+                                ${vizObj.description ? `<div style="font-size: 12px; color: #777; margin-top: 4px;">${escapeHtml(vizObj.description)}</div>` : ''}
+                            </div>
+                        </div>
+                        ${vizObj.json_path ? `
+                            <div id="${vizId}" class="viz-chart">
+                                <div class="viz-loading">Loading visualization...</div>
+                            </div>
+                        ` : ''}
+                        ${vizObj.json_path ? `<div style="margin-top: 8px; font-size: 11px; color: #999;"><a href="${vizObj.json_path}" target="_blank" style="color: #2c3e50;">View JSON</a></div>` : ''}
+                    </div>
+                `;
+                } catch {
+                    return `<div style="margin-bottom: 8px;"><strong>Viz ${idx + 1}:</strong> ${escapeHtml(String(viz))}</div>`;
+                }
+            }).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="detail-field">
+                    <span class="detail-label">
+                        AI Evaluation Result
+                        <label class="field-toggle ${selectedFields['AI Evaluation Result'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['AI Evaluation Result'] ? 'checked' : ''} onchange="toggleField('AI Evaluation Result', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value" style="background: ${aiEval.result === 'true' ? '#d4edda' : aiEval.result === 'false' ? '#f8d7da' : '#fff3cd'}; color: ${aiEval.result === 'true' ? '#155724' : aiEval.result === 'false' ? '#721c24' : '#856404'}; font-weight: 600; text-transform: uppercase;">
+                        ${aiEval.result || testCase.evaluation_result || 'N/A'}
+                    </div>
+                </div>
+
+                ${aiEval.summary ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        AI Evaluation Summary
+                        <label class="field-toggle ${selectedFields['AI Summary'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['AI Summary'] ? 'checked' : ''} onchange="toggleField('AI Summary', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">${escapeHtml(aiEval.summary)}</div>
+                </div>
+                ` : ''}
+
+                ${aiEval.reasoning ? `
+                <div class="detail-field">
+                    <span class="detail-label">
+                        AI Evaluation Reasoning
+                        <label class="field-toggle ${selectedFields['AI Reasoning'] ? 'checked' : ''}" style="margin-left: 8px;">
+                            <input type="checkbox" ${selectedFields['AI Reasoning'] ? 'checked' : ''} onchange="toggleField('AI Reasoning', this.checked)">
+                            <span>Export</span>
+                        </label>
+                    </span>
+                    <div class="detail-value">${escapeHtml(aiEval.reasoning)}</div>
+                </div>
+                ` : ''}
+            `;
+
+            testDetails.innerHTML = html;
+
+            // Apply syntax highlighting to SQL queries
+            document.querySelectorAll('.sql-query-block code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        function updateEvaluationButtons(testCase) {
+            document.querySelectorAll('.eval-btn').forEach(btn => btn.classList.remove('active'));
+
+            const evaluation = testCase.user_evaluation || testCase.ai_evaluation?.result || testCase.evaluation_result;
+            if (evaluation === 'true') {
+                document.querySelector('.eval-btn-pass').classList.add('active');
+            } else if (evaluation === 'partial') {
+                document.querySelector('.eval-btn-partial').classList.add('active');
+            } else if (evaluation === 'false') {
+                document.querySelector('.eval-btn-fail').classList.add('active');
+            }
+        }
+
+        function updateFeedbackSection(testCase) {
+            const aiSummary = document.getElementById('aiSummary');
+            const customFeedback = document.getElementById('customFeedback');
+            const customFeedbackText = document.getElementById('customFeedbackText');
+
+            // Set AI summary from new structure or fallback to old
+            const aiSummaryText = testCase.ai_evaluation?.summary ||
+                testCase.ai_evaluation?.reasoning ||
+                testCase.evaluation_reasoning ||
+                'No AI evaluation available';
+            aiSummary.textContent = aiSummaryText;
+
+            // Set custom feedback if exists
+            customFeedbackText.value = testCase.user_feedback || '';
+
+            // Reset feedback type selection
+            document.querySelectorAll('.feedback-btn').forEach(btn => btn.classList.remove('active'));
+            aiSummary.style.display = 'none';
+            customFeedback.style.display = 'none';
+
+            if (testCase.feedback_type === 'ai') {
+                selectFeedbackType('ai', false);
+            } else if (testCase.feedback_type === 'custom') {
+                selectFeedbackType('custom', false);
+            }
+        }
+
+        function selectFeedbackType(type, save = true) {
+            currentFeedbackType = type;
+
+            document.querySelectorAll('.feedback-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-type="${type}"]`).classList.add('active');
+
+            const aiSummary = document.getElementById('aiSummary');
+            const customFeedback = document.getElementById('customFeedback');
+
+            if (type === 'ai') {
+                aiSummary.style.display = 'block';
+                customFeedback.style.display = 'none';
+                if (save) {
+                    testCases[currentIndex].feedback_type = 'ai';
+                    const aiSummaryText = testCases[currentIndex].ai_evaluation?.summary ||
+                        testCases[currentIndex].ai_evaluation?.reasoning ||
+                        testCases[currentIndex].evaluation_reasoning || '';
+                    testCases[currentIndex].user_feedback = aiSummaryText;
+                }
+            } else {
+                aiSummary.style.display = 'none';
+                customFeedback.style.display = 'block';
+                if (save) {
+                    testCases[currentIndex].feedback_type = 'custom';
+                }
+            }
+        }
+
+        function setEvaluation(result) {
+            testCases[currentIndex].user_evaluation = result;
+
+            // Save custom feedback if custom type is selected
+            if (currentFeedbackType === 'custom') {
+                testCases[currentIndex].user_feedback = document.getElementById('customFeedbackText').value;
+            }
+
+            updateEvaluationButtons(testCases[currentIndex]);
+            displayStats();
+        }
+
+        function updateNavigation() {
+            document.getElementById('prevButton').disabled = currentIndex === 0;
+            document.getElementById('nextButton').disabled = currentIndex === testCases.length - 1;
+            document.getElementById('pageInfo').textContent = `${currentIndex + 1} / ${testCases.length}`;
+        }
+
+        function previousTestCase() {
+            if (currentIndex > 0) {
+                // Save custom feedback before moving
+                if (currentFeedbackType === 'custom') {
+                    testCases[currentIndex].user_feedback = document.getElementById('customFeedbackText').value;
+                }
+
+                currentIndex--;
+                displayTestCase();
+            }
+        }
+
+        function nextTestCase() {
+            if (currentIndex < testCases.length - 1) {
+                // Save custom feedback before moving
+                if (currentFeedbackType === 'custom') {
+                    testCases[currentIndex].user_feedback = document.getElementById('customFeedbackText').value;
+                }
+
+                currentIndex++;
+                displayTestCase();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatSQL(sql) {
+            if (!sql || typeof sql !== 'string') return '';
+
+            // Remove extra whitespace and normalize
+            let formatted = sql.replace(/\s+/g, ' ').trim();
+
+            // Add newlines before major keywords
+            formatted = formatted
+                .replace(/\b(SELECT|FROM|WHERE|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|JOIN|GROUP BY|HAVING|ORDER BY|LIMIT|OFFSET|UNION|UNION ALL|EXCEPT|INTERSECT)\b/gi, '\n$1')
+                .replace(/\b(AND|OR)\b/gi, '\n  $1')
+                .replace(/\b(ON)\b/gi, '\n    $1')
+                .replace(/,(?=\s*(?![^()]*\)))/g, ',\n  ') // Add newline after commas not in parentheses
+                .trim();
+
+            // Split into lines and properly indent
+            const lines = formatted.split('\n');
+            let result = [];
+            let indentLevel = 0;
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+
+                // Adjust indent based on keywords
+                if (line.match(/^(FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|OFFSET|UNION|EXCEPT|INTERSECT)/i)) {
+                    indentLevel = 0;
+                } else if (line.match(/^(INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|JOIN)/i)) {
+                    indentLevel = 0;
+                } else if (line.match(/^(AND|OR)/i)) {
+                    indentLevel = 1;
+                } else if (line.match(/^(ON)/i)) {
+                    indentLevel = 2;
+                } else if (line.match(/^SELECT/i)) {
+                    indentLevel = 0;
+                } else if (!line.match(/^(SELECT|FROM|WHERE|JOIN|GROUP BY|ORDER BY|HAVING|LIMIT|UNION)/i)) {
+                    indentLevel = 1; // Default indent for field names, etc.
+                }
+
+                result.push('  '.repeat(indentLevel) + line);
+            }
+
+            return result.join('\n');
+        } function exportToCSV() {
+            if (testCases.length === 0) {
+                alert('No test cases to export');
+                return;
+            }
+
+            // Save current custom feedback before export
+            if (currentFeedbackType === 'custom') {
+                testCases[currentIndex].user_feedback = document.getElementById('customFeedbackText').value;
+            }
+
+            // Build headers based on selected fields
+            const allHeaders = [
+                'Test Number',
+                'Query',
+                'Query Type',
+                'Data Type',
+                'Project Name',
+                'Dataset Name',
+                'Dataset ID',
+                'Expected Dataset IDs',
+                'Selected Datasets',
+                'SQL Query Count',
+                'Visualization Count',
+                'AI Evaluation Result',
+                'User Evaluation',
+                'Feedback Type',
+                'User Feedback',
+                'AI Summary',
+                'AI Reasoning',
+                'Response',
+                'Tool Messages'
+            ];
+
+            const headers = allHeaders.filter(h => selectedFields[h]);
+
+            const rows = testCases.map((tc, index) => {
+                const chatResponse = tc.chat_server_response || {};
+                const aiEval = tc.ai_evaluation || {};
+                const response = chatResponse.final_response || tc.response || '';
+                const evaluation = tc.user_evaluation || aiEval.result || tc.evaluation_result || '';
+                const selectedDatasets = chatResponse.selected_datasets || [];
+                const sqlQueries = chatResponse.generated_sql_queries || [];
+                const toolMessages = Array.isArray(chatResponse.tool_messages) ? chatResponse.tool_messages.join(' | ') : '';
+
+                const allFields = [
+                    index + 1,
+                    tc.query || '',
+                    tc.query_type || '',
+                    tc.data_type || '',
+                    tc.project_name || '',
+                    tc.dataset_name || '',
+                    tc.dataset_id || '',
+                    Array.isArray(tc.expected_dataset_ids) ? tc.expected_dataset_ids.join('; ') : (tc.expected_dataset_id || ''),
+                    selectedDatasets.join('; '),
+                    sqlQueries.length,
+                    (chatResponse.visualization_results || []).length,
+                    aiEval.result || tc.evaluation_result || '',
+                    evaluation,
+                    tc.feedback_type || '',
+                    tc.user_feedback || '',
+                    aiEval.summary || '',
+                    aiEval.reasoning || tc.evaluation_reasoning || '',
+                    response,
+                    toolMessages
+                ];
+
+                // Filter fields based on selection
+                const selectedRow = [];
+                allHeaders.forEach((header, idx) => {
+                    if (selectedFields[header]) {
+                        selectedRow.push(allFields[idx]);
+                    }
+                });
+
+                return selectedRow.map(field => {
+                    const fieldStr = String(field).replace(/"/g, '""');
+                    return /[",\n]/.test(fieldStr) ? `"${fieldStr}"` : fieldStr;
+                });
+            });
+
+            const csvContent = [
+                headers.map(h => `"${h}"`).join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `test_results_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function (event) {
+            if (testCases.length === 0) return;
+
+            if (event.key === 'ArrowLeft' && !event.target.matches('textarea')) {
+                previousTestCase();
+            } else if (event.key === 'ArrowRight' && !event.target.matches('textarea')) {
+                nextTestCase();
+            }
+        });
+
+        // Toggle intermediate steps visibility
+        function toggleIntermediateSteps(stepsId) {
+            const content = document.getElementById(stepsId);
+            const toggle = document.getElementById(stepsId + '-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        }
+
+        // Field toggle function for inline checkboxes
+        function toggleField(fieldName, checked) {
+            selectedFields[fieldName] = checked;
+
+            // Update the visual state of the toggle
+            const label = event.target.closest('.field-toggle');
+            if (label) {
+                if (checked) {
+                    label.classList.add('checked');
+                } else {
+                    label.classList.remove('checked');
+                }
+            }
+        }
+
+        // Auto-save custom feedback on blur
+        document.addEventListener('DOMContentLoaded', function () {
+            const customFeedbackText = document.getElementById('customFeedbackText');
+            if (customFeedbackText) {
+                customFeedbackText.addEventListener('blur', function () {
+                    if (currentFeedbackType === 'custom') {
+                        testCases[currentIndex].user_feedback = this.value;
+                    }
+                });
+            }
+        });
+
+        // Visualization loading and rendering
+        async function loadAndRenderVisualization(containerId, jsonUrl) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // Show loading state
+            container.innerHTML = '<div class="viz-loading">Loading visualization...</div>';
+
+            try {
+                // Fetch JSON config from URL
+                const response = await fetch(jsonUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+                }
+
+                let vegaLiteSpec = await response.json();
+
+                // --- Patch for Altair-style datasets ---
+                if (vegaLiteSpec.datasets && vegaLiteSpec.data && vegaLiteSpec.data.name) {
+                    const datasetName = vegaLiteSpec.data.name;
+                    const dataset = vegaLiteSpec.datasets[datasetName];
+                    if (dataset) {
+                        vegaLiteSpec.data = { values: dataset };
+                        delete vegaLiteSpec.datasets;
+                    }
+                }
+
+                // --- Ensure default width/height for PNG export ---
+                if (!vegaLiteSpec.width || vegaLiteSpec.width === 'container') {
+                    vegaLiteSpec.width = 600;
+                }
+                if (!vegaLiteSpec.height || vegaLiteSpec.height === 'container') {
+                    vegaLiteSpec.height = 400;
+                }
+
+                // Clear container
+                container.innerHTML = '';
+
+                // Render using Vega-Embed (canvas for PNG export)
+                const result = await vegaEmbed(`#${containerId}`, vegaLiteSpec, {
+                    actions: {
+                        export: true,
+                        source: false,
+                        compiled: false,
+                        editor: false
+                    },
+                    renderer: 'canvas',
+                    // width/height are set above
+                });
+
+                // Ensure the chart is properly sized
+                if (result && result.view) {
+                    result.view.resize().run();
+                }
+
+                // Fallback for PNG export error
+                const exportMenu = container.querySelector('.vega-actions');
+                if (exportMenu) {
+                    exportMenu.addEventListener('click', function (e) {
+                        setTimeout(() => {
+                            const pngLinks = exportMenu.querySelectorAll('a');
+                            pngLinks.forEach(link => {
+                                if (link.textContent && link.textContent.toLowerCase().includes('png')) {
+                                    link.addEventListener('click', function (ev) {
+                                        setTimeout(() => {
+                                            if (link.download && link.download.endsWith('.png') && link.href && link.href.length < 100) {
+                                                alert('PNG export failed. Try using a different browser or check chart size.');
+                                            }
+                                        }, 500);
+                                    });
+                                }
+                            });
+                        }, 500);
+                    }, { once: true });
+                }
+
+                console.log(`Successfully rendered visualization in ${containerId}`);
+            } catch (error) {
+                console.error('Error loading visualization:', error);
+                container.innerHTML = `<div class="viz-error">Error loading visualization: ${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        // Function to load all visualizations for current test case
+        function loadAllVisualizations() {
+            const testCase = testCases[currentIndex];
+            const visualizations = testCase.chat_server_response?.visualization_results || [];
+
+            visualizations.forEach((viz, idx) => {
+                try {
+                    const vizObj = typeof viz === 'string' ? JSON.parse(viz.replace(/'/g, '"')) : viz;
+                    if (vizObj.json_path) {
+                        const vizId = `viz-${currentIndex}-${idx}`;
+                        loadAndRenderVisualization(vizId, vizObj.json_path);
+                    }
+                } catch (error) {
+                    console.error(`Error parsing visualization ${idx}:`, error);
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

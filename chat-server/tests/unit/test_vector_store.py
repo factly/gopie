@@ -1,3 +1,70 @@
+import pytest
+
+from app.services.qdrant.vector_store import perform_similarity_search
+
+pytestmark = pytest.mark.unit
+
+
+class DummyVS:
+    def __init__(self):
+        self.calls = []
+
+    async def asimilarity_search(self, query, k, filter=None):
+        self.calls.append({"query": query, "k": k, "filter": filter})
+        return ["ok"]
+
+
+@pytest.mark.asyncio
+async def test_perform_similarity_search_success_with_filter():
+    vs = DummyVS()
+    results = await perform_similarity_search(vs, query="hello", top_k=3, query_filter={"x": 1})
+    assert results == ["ok"]
+    assert len(vs.calls) == 1
+    assert vs.calls[0]["filter"] == {"x": 1}
+
+
+@pytest.mark.asyncio
+async def test_perform_similarity_search_fallback_without_filter(monkeypatch):
+    """Test that when filtered search fails, it retries without filter."""
+    vs = DummyVS()
+
+    call_state = {"count": 0}
+
+    async def flaky_search(query, k, filter=None):
+        call_state["count"] += 1
+        if call_state["count"] == 1:
+            raise RuntimeError("fail with filter")
+        return ["unfiltered"]
+
+    monkeypatch.setattr(vs, "asimilarity_search", flaky_search)
+    dummy_logger = type(
+        "L",
+        (),
+        {
+            "exception": lambda *args, **kwargs: None,
+            "info": lambda *args, **kwargs: None,
+        },
+    )()
+    monkeypatch.setattr("app.services.qdrant.vector_store.logger", dummy_logger)
+
+    results = await perform_similarity_search(vs, query="q", top_k=2, query_filter={"y": 2})
+    assert results == ["unfiltered"]
+    assert call_state["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_perform_similarity_search_raises_without_filter_on_error(monkeypatch):
+    vs = DummyVS()
+
+    async def always_fail(query, k, filter=None):
+        raise RuntimeError("always fail")
+
+    monkeypatch.setattr(vs, "asimilarity_search", always_fail)
+
+    with pytest.raises(RuntimeError):
+        await perform_similarity_search(vs, query="q", top_k=2, query_filter=None)
+
+
 from typing import Union, cast
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -179,6 +246,7 @@ class TestSchemaSearch:
                     "dataset_name": "test1",  # Required field
                     "dataset_description": "Test dataset 1",
                     "project_id": "proj1",
+                    "org_id": "org1",
                     "dataset_id": "ds1",
                     "columns": [],
                 },
@@ -190,6 +258,7 @@ class TestSchemaSearch:
                     "dataset_name": "test2",  # Required field
                     "dataset_description": "Test dataset 2",
                     "project_id": "proj2",
+                    "org_id": "org2",
                     "dataset_id": "ds2",
                     "columns": [],
                 },
@@ -226,6 +295,7 @@ class TestSchemaSearch:
                 "dataset_name": "filtered_test",  # Required field
                 "dataset_description": "Filtered test dataset",
                 "project_id": "proj1",
+                "org_id": "org1",
                 "dataset_id": "ds1",
                 "columns": [],
             },
@@ -338,7 +408,7 @@ class TestSchemaVectorization:
             mock_add_document.return_value = None
 
             result = await store_schema_in_qdrant(
-                dataset_summary, sample_data, dataset_details, project_details
+                dataset_summary, sample_data, dataset_details, project_details, org_id="org1"
             )
 
             assert result is True
@@ -367,7 +437,7 @@ class TestSchemaVectorization:
             mock_create_schema.side_effect = Exception("Storage error")
 
             result = await store_schema_in_qdrant(
-                dataset_summary, sample_data, dataset_details, project_details
+                dataset_summary, sample_data, dataset_details, project_details, org_id="org1"
             )
             assert result is False
             # Verify that the exception was logged
