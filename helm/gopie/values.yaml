@@ -26,11 +26,14 @@ deployment:
     - name: POSTGRES_USER
       value: "postgres"
     - name: POSTGRES_PASSWORD
-      value: "postgres"
+      valueFrom:
+        secretKeyRef:
+          name: gopie-postgresql
+          key: postgres-password
     - name: POSTGRES_DB
       value: "gopie"
     - name: POSTGRES_HOST
-      value: "postgres"
+      value: "gopie-postgresql"
     - name: POSTGRES_PORT
       value: "5432"
     - name: GOPIE_LOGGER_LEVEL
@@ -52,7 +55,7 @@ deployment:
     - name: GOPIE_OLAPDB_ACCESS_MODE
       value: "read_write"
     - name: GOPIE_OLAPDB_DBTYPE
-      value: "motherduck_org"
+      value: "motherduck"
     - name: GOPIE_MOTHERDUCK_TOKEN
       value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6InVXY3hLakNuVVhvQ2RYd3lUSFdjZ1ZnUHpmaTFId2NjdWxSWkFhNmUyMVEiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3NTQ1NTE5ODh9.3cAa_0z5CrGQgU6r4SYlj_oc6yrQOH2UkpdU8fSLgT4"
     - name: GOPIE_MOTHERDUCK_DB_NAME
@@ -62,7 +65,7 @@ deployment:
     - name: GOPIE_CORS_HANDLED_BY_INGRESS
       value: "false"
     - name: GOPIE_POSTGRES_HOST
-      value: "postgres"
+      value: "gopie-postgresql"
     - name: GOPIE_POSTGRES_PORT
       value: "5432"
     - name: GOPIE_POSTGRES_DB
@@ -70,7 +73,10 @@ deployment:
     - name: GOPIE_POSTGRES_USER
       value: "postgres"
     - name: GOPIE_POSTGRES_PASSWORD
-      value: "postgres"
+      valueFrom:
+        secretKeyRef:
+          name: gopie-postgresql
+          key: postgres-password
     - name: GOPIE_POSTGRES_SSLMODE
       value: "disable"
     - name: GOPIE_AIAGENT_URL
@@ -95,7 +101,20 @@ deployment:
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
     image: "factly/gopie-migrate:latest"  # Image for the init container (e.g., your-registry/gopie-migrate:tag)
-    env: []  # Environment variables for the init container
+    command:
+      - sh
+      - -c
+      - |
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        goose postgres "host=gopie-postgresql port=5432 user=postgres dbname=gopie sslmode=disable" up
+    env:
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: gopie-postgresql
+            key: postgres-password
+      - name: GOOSE_MIGRATION_DIR
+        value: /app/migrations
 
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
     # Example:
@@ -197,11 +216,14 @@ stateful:
     - name: POSTGRES_USER
       value: "postgres"
     - name: POSTGRES_PASSWORD
-      value: "postgres"
+      valueFrom:
+        secretKeyRef:
+          name: gopie-postgresql
+          key: postgres-password
     - name: POSTGRES_DB
       value: "gopie"
     - name: POSTGRES_HOST
-      value: "postgres"
+      value: "gopie-postgresql"
     - name: POSTGRES_PORT
       value: "5432"
     - name: GOPIE_LOGGER_LEVEL
@@ -223,7 +245,7 @@ stateful:
     - name: GOPIE_OLAPDB_ACCESS_MODE
       value: "read_write"
     - name: GOPIE_OLAPDB_DBTYPE
-      value: "motherduck_org"
+      value: "motherduck"
     - name: GOPIE_MOTHERDUCK_TOKEN
       value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFrc2hpdGgua2F0a3VyaUBmYWN0bHkuaW4iLCJzZXNzaW9uIjoiYWtzaGl0aC5rYXRrdXJpLmZhY3RseS5pbiIsInBhdCI6InVXY3hLakNuVVhvQ2RYd3lUSFdjZ1ZnUHpmaTFId2NjdWxSWkFhNmUyMVEiLCJ1c2VySWQiOiJhYTgwZmU0My1kNTdmLTRlNTQtOGRkNS1iNzA5NDY2NTExMmEiLCJpc3MiOiJtZF9wYXQiLCJyZWFkT25seSI6ZmFsc2UsInRva2VuVHlwZSI6InJlYWRfd3JpdGUiLCJpYXQiOjE3NTQ1NTE5ODh9.3cAa_0z5CrGQgU6r4SYlj_oc6yrQOH2UkpdU8fSLgT4"
     - name: GOPIE_MOTHERDUCK_DB_NAME
@@ -233,7 +255,7 @@ stateful:
     - name: GOPIE_CORS_HANDLED_BY_INGRESS
       value: "false"
     - name: GOPIE_POSTGRES_HOST
-      value: "postgres"
+      value: "gopie-postgresql"
     - name: GOPIE_POSTGRES_PORT
       value: "5432"
     - name: GOPIE_POSTGRES_DB
@@ -241,7 +263,10 @@ stateful:
     - name: GOPIE_POSTGRES_USER
       value: "postgres"
     - name: GOPIE_POSTGRES_PASSWORD
-      value: "postgres"
+      valueFrom:
+        secretKeyRef:
+          name: gopie-postgresql
+          key: postgres-password
     - name: GOPIE_POSTGRES_SSLMODE
       value: "disable"
     - name: GOPIE_AIAGENT_URL
@@ -266,7 +291,20 @@ stateful:
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
     image: "factly/gopie-migrate:latest"  # Image for the init container
-    env: []  # Environment variables for the init container
+    command:
+      - sh
+      - -c
+      - |
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        goose postgres "host=gopie-postgresql port=5432 user=postgres dbname=gopie sslmode=disable" up
+    env:
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: gopie-postgresql
+            key: postgres-password
+      - name: GOOSE_MIGRATION_DIR
+        value: /app/migrations
 
   podSecurityContext: {}  # Pod-level security context (e.g., fsGroup)
     # Example:
@@ -659,7 +697,7 @@ chatserver:
     - name: CHAT_ADVANCED_MODEL
       value: "google/gemini-2.5-pro"
     - name: CHAT_S3_HOST
-      value: "http://host.docker.local:9000"
+      value: "http://minio:9000"
     - name: CHAT_S3_ACCESS_KEY
       value: "minioadmin"
     - name: CHAT_S3_SECRET_KEY
@@ -673,7 +711,7 @@ chatserver:
     - name: CHAT_DEFAULT_EMBEDDING_MODEL
       value: "text-embedding-3-large"
     - name: CHAT_QDRANT_HOST
-      value: "host.docker.local"
+      value: "gopie-qdrant"
     - name: CHAT_QDRANT_COLLECTION
       value: "dataset_collection_prod"
     - name: CHAT_QDRANT_PORT
@@ -728,24 +766,24 @@ chatserver:
     #   memory: 128Mi
 
   # Uncomment and configure liveness/readiness probes if needed
-  livenessProbe:
-    httpGet:
-      path: /health/live  # Health endpoint to check application liveness
-      port: http  # Port to use for health checks
-    initialDelaySeconds: 60  # Wait 60s after container starts before first check (allows app startup)
-    periodSeconds: 10  # Check health every 10 seconds
-    timeoutSeconds: 5  # Wait up to 5 seconds for health check response
-    successThreshold: 1  # Need 1 successful check to be considered healthy
-    failureThreshold: 3  # Restart container after 3 consecutive failures
-  readinessProbe:
-    httpGet:
-      path: /health/ready  # Health endpoint to check application readiness
-      port: http  # Port to use for readiness checks
-    initialDelaySeconds: 10  # Wait 10s after container starts before first check
-    periodSeconds: 5  # Check readiness every 5 seconds
-    timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
-    successThreshold: 1  # Need 1 successful check to be considered ready
-    failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health/live  # Health endpoint to check application liveness
+  #     port: http  # Port to use for health checks
+  #   initialDelaySeconds: 60  # Wait 60s after container starts before first check (allows app startup)
+  #   periodSeconds: 10  # Check health every 10 seconds
+  #   timeoutSeconds: 5  # Wait up to 5 seconds for health check response
+  #   successThreshold: 1  # Need 1 successful check to be considered healthy
+  #   failureThreshold: 3  # Restart container after 3 consecutive failures
+  # readinessProbe:
+  #   httpGet:
+  #     path: /health/ready  # Health endpoint to check application readiness
+  #     port: http  # Port to use for readiness checks
+  #   initialDelaySeconds: 10  # Wait 10s after container starts before first check
+  #   periodSeconds: 5  # Check readiness every 5 seconds
+  #   timeoutSeconds: 3  # Wait up to 3 seconds for readiness check response
+  #   successThreshold: 1  # Need 1 successful check to be considered ready
+  #   failureThreshold: 3  # Stop traffic to pod after 3 consecutive failures
 
   autoscaling:
     enabled: false  # Enable autoscaling for the chatserver
@@ -870,70 +908,8 @@ companion:
 #     #       key: COMPANION_GOOGLE_SECRET    
 
   ingress:
-    enabled: true  # Enable or disable Ingress for Companion
+    enabled: false  # Enable or disable Ingress for Companion
 
 qdrant:
   enabled: true  # Enable or disable the Qdrant vector database chart
 
-zitadel:
-  enabled: false  # Enable or disable the ZITADEL identity provider chart
-  zitadel:
-    masterkey: x123456789012345678901234567891y  # Master encryption key for ZITADEL
-    configmapConfig:
-      ExternalSecure: true  # Enable HTTPS for external access
-      ExternalPort:         # External port for ZITADEL (optional)
-      ExternalDomain: login.degacms.com  # Public domain for ZITADEL
-      TLS:
-        Enabled: false  # Enable TLS (handled by ingress or external proxy)
-      Database:
-        Postgres:
-          Host: postgres-host  # PostgreSQL host for ZITADEL database
-          Port: 5432           # PostgreSQL port
-          Database: zitadel    # Database name
-          MaxOpenConns: 20     # Maximum open DB connections
-          MaxIdleConns: 10     # Maximum idle DB connections
-          MaxConnLifetime: 30m # Max connection lifetime
-          MaxConnIdleTime: 5m  # Max idle time for DB connections
-          User:
-            Username: ""       # DB username
-            Password: ""       # DB password
-            SSL:
-              Mode: disable    # SSL mode for DB connection
-          Admin:
-            Username: ""       # Admin DB username
-            Password: ""       # Admin DB password
-            SSL:
-              Mode: disable    # SSL mode for admin DB connection
-  
-      DefaultInstance:
-        LoginPolicy:
-          DefaultRedirectURI:   # Optional: redirect URL after login
-
-  env: []
-    # Additional ZITADEL environment variables
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME  # Initial admin username
-    #   value: admin
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_DISPLAYNAME  # Initial admin display name
-    #   value: admin
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS  # Initial admin email
-    #   value: admin@domain.com
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED  # Mark admin email as verified
-    #   value: "true"
-    # - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD  # Initial admin password
-    #   value: Password1!
-
-  ingress:
-    enabled: true  # Enable or disable Ingress for ZITADEL
-    className: "nginx"  # Ingress class to use
-    annotations:
-      kubernetes.io/ingress.class: nginx  # Ingress controller annotation
-      cert-manager.io/cluster-issuer: ""  # Cert Manager issuer for TLS certs
-    hosts:
-      - host: ""  # Hostname for ZITADEL Ingress
-        paths:
-          - path: /  # Path to route to ZITADEL
-            pathType: Prefix
-    tls:
-      - secretName: ""  # Secret name for TLS cert
-        hosts:
-          - ""          # Hosts covered by the TLS cert
