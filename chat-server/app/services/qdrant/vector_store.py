@@ -8,7 +8,10 @@ from app.utils.model_registry.model_provider import get_model_provider
 
 
 async def add_document_to_vector_store(document: Document):
-    vector_store = QdrantSetup.get_vector_store(get_model_provider().get_embeddings_model())
+    vector_store = QdrantSetup.get_vector_store(
+        embeddings=get_model_provider().get_embeddings_model(),
+        collection_name=settings.QDRANT_COLLECTION,
+    )
     project_id = document.metadata["project_id"]
     dataset_id = document.metadata["dataset_id"]
     document_id = QdrantSetup.get_document_id(project_id, dataset_id)

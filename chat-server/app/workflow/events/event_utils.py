@@ -6,7 +6,6 @@ from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 
-from app.core.log import custom_logger as logger
 from app.models.chat import NodeEventConfig, Role
 from app.utils.model_registry.model_provider import get_llm_for_other_task
 
@@ -90,27 +89,9 @@ async def non_streaming_dynamic_message(context: str, config: RunnableConfig):
     )
 
 
-async def stream_dynamic_message(context: str, config: RunnableConfig):
-    """
-    Stream a dynamic message based on the context.
-    """
-    prev_metadata = config.get("metadata")
-    config.update(
-        metadata=NodeEventConfig(
-            role=Role.INTERMEDIATE,
-            progress_message="",
-        ).model_dump()
-    )
-
-    dynamic_message = await create_dynamic_progress_message(context, config)
-    logger.debug(f"dynamic_message: {dynamic_message}")
-
-    config.update(metadata=prev_metadata or {})
-
-
 async def fake_streaming_response(response: str, config: RunnableConfig):
     """
-    Stream a dynamic message based on the context.
+    Dispatch a message as a custom event to the client.
     """
     await adispatch_custom_event(
         "gopie-agent",
@@ -118,18 +99,3 @@ async def fake_streaming_response(response: str, config: RunnableConfig):
             "content": response,
         },
     )
-
-    # prev_metadata = config.get("metadata")
-
-    # config.update(
-    #     metadata=NodeEventConfig(
-    #         role=Role.INTERMEDIATE,
-    #         progress_message=response,
-    #     ).model_dump()
-    # )
-
-    # llm = GenericFakeChatModel(
-    #     messages=iter([AIMessage(content=response)]),
-    # )
-    # await llm.ainvoke(input=response, config=config)
-    # config.update(metadata=prev_metadata or {})

@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 )
 
 
-def create_validate_match_relevance_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def validate_match_relevance_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 

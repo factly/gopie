@@ -31,7 +31,7 @@ class InputState(TypedDict):
     messages: list[BaseMessage]
     user_query: str
     relevant_datasets_ids: list[str] | None
-    previous_sql_queries: list[str] | None
+    prev_sql_queries: list[str] | None
 
 
 class OutputState(TypedDict):
@@ -51,7 +51,7 @@ class State(TypedDict):
     query_result: QueryResult
     tool_call_count: int
     relevant_datasets_ids: list[str] | None
-    previous_sql_queries: list[str] | None
+    prev_sql_queries: list[str] | None
     retry_count: int
     recommendation: str
     continue_execution: bool | None
@@ -67,11 +67,3 @@ class ConfigSchema(TypedDict):
     trace_id: str
     chat_history: list[BaseMessage]
     user: str
-
-
-class ValidationResult(TypedDict):
-    is_valid: bool
-    reasoning: str
-    recommendation: str
-    confidence: float
-    missing_elements: list[str]

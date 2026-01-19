@@ -1,0 +1,15 @@
+---
+config:
+  flowchart:
+    curve: basis
+---
+graph TD;
+	__start__(<p>__start__</p>)
+	generate_sql(generate_sql)
+	search_duckdb_docs(search_duckdb_docs)
+	__end__(<p>__end__</p>)
+	__start__ --> generate_sql;
+	generate_sql --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

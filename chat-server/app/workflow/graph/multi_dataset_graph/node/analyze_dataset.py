@@ -45,8 +45,7 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
     last_message = state.get("messages", [])[-1]
     retry_count = state.get("analyze_dataset_retry_count", 0)
     subqueries = state.get("subqueries", [])
-    subquery_index = state.get("subquery_index", 0)
-    current_query = subqueries[subquery_index]
+    current_query = subqueries[state.get("subquery_index", 0)]
 
     try:
         if isinstance(last_message, ErrorMessage):
@@ -56,7 +55,10 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
         if not column_assumptions:
             raise ValueError("No column assumptions found in the datasets_info.")
 
-        column_mappings = await match_column_values(column_assumptions=column_assumptions)
+        org_id = config.get("metadata", {}).get("org_id", None)
+        column_mappings = await match_column_values(
+            column_assumptions=column_assumptions, org_id=org_id
+        )
 
         logger.debug("Validating fuzzy match relevance with LLM...")
         column_mappings = await validate_match_relevance(
@@ -83,7 +85,6 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
                     config=config,
                 )
 
-                # Merge regenerated assumptions with existing ones, preserving validated columns
                 merged_assumptions = _merge_column_assumptions(
                     existing_assumptions=column_assumptions,
                     regenerated_assumptions=response.column_assumptions,
@@ -106,7 +107,6 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
             except Exception as e:
                 logger.exception(f"Error regenerating fuzzy values: {e!s}")
 
-        # Only log the final state if there are failures even after retries
         if has_failures:
             if retry_count >= 3:
                 logger.warning(
@@ -149,7 +149,6 @@ def _merge_column_assumptions(
     Only updates fuzzy values for columns that failed validation.
     Preserves all other column assumptions that passed validation.
     """
-    # Create a lookup for regenerated assumptions by dataset and column
     regenerated_lookup = {}
     for dataset_assumption in regenerated_assumptions:
         dataset_name = dataset_assumption["dataset"]
@@ -157,7 +156,6 @@ def _merge_column_assumptions(
         for column in dataset_assumption["columns"]:
             regenerated_lookup[dataset_name][column["name"]] = column
 
-    # Merge assumptions
     merged_assumptions = []
     for dataset_assumption in existing_assumptions:
         dataset_name = dataset_assumption["dataset"]
@@ -165,13 +163,10 @@ def _merge_column_assumptions(
 
         for column in dataset_assumption["columns"]:
             column_name = column["name"]
-
-            # Check if this column had failed searches
             has_failed_searches = (
                 dataset_name in failed_searches and column_name in failed_searches[dataset_name]
             )
 
-            # If column failed and we have a regenerated version, use it
             if (
                 has_failed_searches
                 and dataset_name in regenerated_lookup
@@ -179,7 +174,6 @@ def _merge_column_assumptions(
             ):
                 merged_columns.append(regenerated_lookup[dataset_name][column_name])
             else:
-                # Keep the existing column assumption (it passed validation)
                 merged_columns.append(column)
 
         merged_assumptions.append({"dataset": dataset_name, "columns": merged_columns})

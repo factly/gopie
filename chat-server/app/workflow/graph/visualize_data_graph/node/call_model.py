@@ -10,7 +10,11 @@ from app.utils.model_registry.model_provider import get_configured_llm_for_node
 
 from ...visualize_data_graph.types import State
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_FEEDBACK_FOR_IMAGES]
+tool_names = [
+    ToolNames.RUN_PYTHON_CODE,
+    ToolNames.RETURN_RESULT_PATHS,
+    ToolNames.GET_FEEDBACK_FOR_IMAGES,
+]
 
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
@@ -43,7 +47,7 @@ def should_continue(state: State):
         if has_tool_calls(last_message):
             is_final_result = (
                 len(last_message.tool_calls) == 1
-                and last_message.tool_calls[0]["name"] == "result_paths"
+                and last_message.tool_calls[0]["name"] == "return_result_paths"
             )
             if is_final_result:
                 return Command(goto="process_result")

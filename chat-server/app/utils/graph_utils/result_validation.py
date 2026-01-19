@@ -19,12 +19,10 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
         if len(result) > settings.ROW_TRUNCATION_LIMIT:
             return True, f"Query returned too many records: {len(result)}"
 
-        result_json = json.dumps(result)
-        # ~25k tokens approximation
+        result_json = json.dumps(result, default=str)
         if len(result_json) > settings.DATASET_TOKEN_TRUNCATION_LIMIT:
             return True, f"Query result is too large: {len(result_json)}"
 
-        # Check number of columns in first record
         if (
             result
             and isinstance(result[0], dict)

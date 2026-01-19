@@ -43,13 +43,20 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
         dict: A dictionary containing the updated `retry_count`, the `validation_result` (or `None` on error), and a list of workflow messages.
     """
     query_result = state.get("query_result", None)
-    retry_count = state.get("retry_count", 0)
+
+    if not query_result or not query_result.single_dataset_query_result:
+        return {
+            "messages": [ErrorMessage(content="No query result available")],
+        }
 
     if (
         query_result.single_dataset_query_result
-        and query_result.single_dataset_query_result.response_for_non_sql
+        and query_result.single_dataset_query_result.non_sql_response
     ):
-        pass
+        return {
+            "messages": [AIMessage(content="Non-SQL response, skipping validation.")],
+            "recommendation": "pass_on_results",
+        }
 
     # Validate the result with the LLM
     try:
@@ -68,7 +75,7 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
             raise ValueError(f"Invalid recommendation: {recommendation}")
 
         if recommendation == "rerun_query":
-            retry_count += 1
+            query_result.single_dataset_query_result.retry_count += 1
 
         await adispatch_custom_event(
             "gopie-agent",
@@ -78,7 +85,7 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
         )
 
         return {
-            "retry_count": retry_count,
+            "query_result": query_result,
             "messages": [AIMessage(content=response)],
             "recommendation": recommendation,
             "validation_result": response,
@@ -89,7 +96,6 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
         logger.exception(error_msg)
 
         return {
-            "retry_count": retry_count,
             "messages": [ErrorMessage(content=error_msg)],
         }
 
@@ -102,8 +108,12 @@ async def route_result_validation(state: State) -> str:
         str: The recommended action, either "pass_on_results" or "rerun_query", based on validation outcome and workflow state.
     """
     recommendation = state.get("recommendation", "pass_on_results")
-    retry_count = state.get("retry_count", 0)
+    query_result = state.get("query_result", None)
     last_message = state.get("messages", [])[-1]
+
+    retry_count = 0
+    if query_result and query_result.single_dataset_query_result:
+        retry_count = query_result.single_dataset_query_result.retry_count
 
     if (
         recommendation == "pass_on_results"

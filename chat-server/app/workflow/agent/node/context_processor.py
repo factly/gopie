@@ -26,26 +26,29 @@ class SQLQuery(BaseModel):
 
 class ProcessContextOutput(BaseModel):
     is_follow_up: bool = Field(
-        description="Whether this is a follow-up query from conversation history"
+        description="Whether this query references or builds upon previous conversation"
     )
     is_new_data_needed: bool = Field(
-        description="Whether new data retrieval is needed to answer the query"
+        description="Whether SQL execution is needed (new or modified query)"
     )
     generate_visualization: bool = Field(
-        description="Whether to generate a visualization for the query"
+        description="Whether user explicitly requested a visualization"
     )
-    relevant_sql_queries: list[SQLQuery] = Field(
-        description="Most relevant SQL queries from previously used queries", default=[]
+    previous_sql_queries: list[SQLQuery] = Field(
+        description="IDs of relevant SQL queries from history (most recent first)", default=[]
+    )
+    sql_modification_type: str = Field(
+        description="Type of SQL modification needed based on the user's request. Leave empty if no modification is needed.",
+        default="",
     )
     enhanced_query: str = Field(
-        description="Self-contained and unambiguous rewritten query with context"
+        description="User's exact query with only ambiguous pronouns resolved"
     )
     context_summary: str = Field(
-        description="Summary of how the present query relates to previous conversation", default=""
+        description="One sentence about what previous result user is referring to", default=""
     )
     status_message: str = Field(
-        description="""Create a short user friendly message that tells what it understand from the input
-        user query, this message will be displayed to the user in the UI. It should be a 1-2 sentence message.""",
+        description="Brief user-friendly acknowledgment (1-2 sentences)",
         default="",
     )
 
@@ -119,25 +122,29 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
         is_follow_up = parsed_response.is_follow_up
         is_new_data_needed = parsed_response.is_new_data_needed
         generate_visualization = parsed_response.generate_visualization
-        relevant_sql_queries_ids = [query.id for query in parsed_response.relevant_sql_queries]
-        relevant_sql_queries = history_processor.ids_to_sql_queries(ids=relevant_sql_queries_ids)
+        previous_sql_queries_ids = [query.id for query in parsed_response.previous_sql_queries]
+        previous_sql_queries = history_processor.ids_to_sql_queries(ids=previous_sql_queries_ids)
         enhanced_query = parsed_response.enhanced_query
-        context_summary = parsed_response.context_summary
+        context_summary = parsed_response.context_summary.strip()
+        sql_modification_type = parsed_response.sql_modification_type
 
-        if is_follow_up:
-            final_query = f"""
-            This is a follow-up question to a previous query.
-
-            User Query: {enhanced_query}
-
-            Context Summary: {context_summary}
-            """
+        if is_follow_up and is_new_data_needed and sql_modification_type:
+            if previous_sql_queries:
+                final_query = f"[SQL_MODIFICATION: {sql_modification_type}]\n{enhanced_query}"
+                if context_summary:
+                    final_query += f"\n(Context: {context_summary})"
+            else:
+                final_query = enhanced_query
+                if context_summary:
+                    final_query += f"\n(Context: {context_summary})"
+        elif is_follow_up and context_summary:
+            final_query = f"{enhanced_query}\n(Context: {context_summary})"
         else:
             final_query = enhanced_query
 
         await fake_streaming_response(parsed_response.status_message, config)
 
-        if generate_visualization and not (last_vizpaths or relevant_sql_queries):
+        if generate_visualization and not (last_vizpaths or previous_sql_queries):
             is_new_data_needed = True
 
         return {
@@ -145,9 +152,10 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             "new_data_needed": is_new_data_needed,
             "generate_visualization": generate_visualization,
             "relevant_datasets_ids": relevant_datasets_ids,
-            "relevant_sql_queries": relevant_sql_queries,
+            "previous_sql_queries": previous_sql_queries,
             "enhanced_query": enhanced_query,
             "previous_json_paths": last_vizpaths,
+            "sql_modification_type": sql_modification_type,
         }
 
     except Exception as e:
@@ -157,7 +165,8 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
             "new_data_needed": True,
             "generate_visualization": False,
             "relevant_datasets_ids": relevant_datasets_ids,
-            "relevant_sql_queries": [],
+            "previous_sql_queries": [],
             "enhanced_query": user_input,
             "previous_json_paths": last_vizpaths,
+            "sql_modification_type": "",
         }

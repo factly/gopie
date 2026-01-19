@@ -15,6 +15,7 @@ async def search_schemas(
     embeddings: OpenAIEmbeddings,
     project_ids: list[str] | None = None,
     dataset_ids: list[str] | None = None,
+    org_id: str | None = None,
     top_k: int = settings.QDRANT_TOP_K,
 ) -> list[DatasetSchema]:
     """
@@ -24,7 +25,9 @@ async def search_schemas(
         List of matching dataset schemas
     """
     try:
-        vector_store = QdrantSetup.get_vector_store(embeddings=embeddings)
+        vector_store = QdrantSetup.get_vector_store(
+            embeddings=embeddings, collection_name=settings.QDRANT_COLLECTION
+        )
         query_filter = None
 
         filter_conditions = []
@@ -42,6 +45,14 @@ async def search_schemas(
                 models.FieldCondition(
                     key="metadata.dataset_id",
                     match=models.MatchAny(any=dataset_ids),
+                )
+            )
+
+        if org_id:
+            filter_conditions.append(
+                models.FieldCondition(
+                    key="metadata.org_id",
+                    match=models.MatchValue(value=org_id),
                 )
             )
 

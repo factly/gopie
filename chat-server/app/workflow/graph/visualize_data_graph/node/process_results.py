@@ -1,6 +1,6 @@
 import base64
+import json
 
-import orjson
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -78,14 +78,11 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
 
         final_result_data = []
         for result in result_data:
-            result = orjson.loads(result)
-            # removing the default config
+            result = json.loads(result)
             result.pop("config")
-            # set the width and height to responsive
             result["width"] = "container"
             result["height"] = "container"
-            # convert the result to string
-            result = orjson.dumps(result)
+            result = json.dumps(result)
             final_result_data.append(result)
 
         s3_paths = await upload_visualization_result_data(

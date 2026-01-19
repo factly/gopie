@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 )
 
 
-def create_validate_input_prompt(
+def validate_input_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """

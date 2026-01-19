@@ -53,8 +53,10 @@ class Settings(BaseSettings):
 
     QDRANT_HOST: str = "host.docker.local"
     QDRANT_COLLECTION: str = "dataset_collection"
+    QDRANT_DUCKDB_COLLECTION: str = "duckdb_docs_collection"
     QDRANT_PORT: int = 6333
     QDRANT_TOP_K: int = 5
+    QDRANT_DUCKDB_TOP_K: int = 5
 
     GOPIE_API_ENDPOINT: str = ""
 
@@ -107,6 +109,10 @@ class Settings(BaseSettings):
     DATASET_TOKEN_TRUNCATION_LIMIT: int = 100000
     COLUMN_TRUNCATION_LIMIT: int = 200
     DISPLAY_ROWS_AFTER_TRUNCATION_LIMIT: int = 20
+
+    # Dataset Sampling Constants
+    TARGET_ROWS: int = 150000
+    SAMPLING_THRESHOLD: int = 150000
 
     model_config = SettingsConfigDict(
         env_file=".env", extra="ignore", case_sensitive=True, env_prefix="CHAT_"

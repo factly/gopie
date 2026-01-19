@@ -7,15 +7,16 @@ requires-python = ">=3.11"
 
 dependencies = [
   "aioboto3>=14.3.0",
+  "beautifulsoup4>=4.14.2",
   "altair>=5.5.0",
-  "dspy-ai>=2.5.0",
+  "dspy==3.1.0",
   "e2b-code-interpreter>=1.5.1",
   "fastapi[standard]>=0.115.12",
   "langchain>=0.3.21",
   "langchain-community>=0.3.20",
   "langchain-openai>=0.3.9",
   "langchain-qdrant>=0.2.0",
-  "langgraph==0.5.2",
+  "langgraph>=0.6.0",
   "langgraph-cli[inmem]>=0.3.3",
   "langsmith>=0.3.42",
   "logging>=0.4.9.6",

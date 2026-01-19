@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
-from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
@@ -53,6 +52,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             "tool_call_count": tool_call_count,
             "dataset_ids": state.get("dataset_ids", []),
             "project_ids": state.get("project_ids", []),
+            "previous_sql_queries": state.get("previous_sql_queries", []),
         }
 
         tools_names = [
@@ -60,12 +60,18 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             ToolNames.GET_TABLE_SCHEMA,
             ToolNames.LIST_DATASETS,
             ToolNames.PLAN_SQL_QUERY,
+            ToolNames.RESPOND_TO_USER,
         ]
 
-        chain = get_prompt_llm_chain("analyze_query", config, tool_names=tools_names)
+        chain = get_prompt_llm_chain(
+            "analyze_query", config, tool_names=tools_names, force_tool_calls=True
+        )
         response = await chain.ainvoke(chain_input)
 
-        if has_tool_calls(response):
+        if not response.tool_calls:
+            raise ValueError("No tool calls found in the response")
+
+        if response.tool_calls[0]["name"] != "respond_to_user":
             return await _handle_tool_call_response(response, query_result, tool_call_count)
         else:
             return await _handle_analysis_response(response, query_result, tool_call_count, config)
@@ -149,15 +155,13 @@ async def _handle_analysis_response(
     tool_call_count: int,
     config: RunnableConfig,
 ) -> dict:
-    parser = JsonOutputParser()
-    response_content = str(response.content)
-    parsed_content = parser.parse(response_content)
+    tool_args = response.tool_calls[0]["args"]
 
-    query_type = parsed_content.get("query_type", "conversational")
-    confidence_score = parsed_content.get("confidence_score", 5)
-    reasoning = parsed_content.get("reasoning", "")
-    clarification_needed = parsed_content.get("clarification_needed", "")
-    status_message = parsed_content.get("status_message", "")
+    query_type = tool_args.get("query_type", "conversational")
+    confidence_score = tool_args.get("confidence_score", 5)
+    reasoning = tool_args.get("reasoning", "")
+    clarification_needed = tool_args.get("clarification_needed", "")
+    status_message = tool_args.get("status_message", "")
 
     analyze_result = query_result.analyze_query_result
     analyze_result.query_type = query_type

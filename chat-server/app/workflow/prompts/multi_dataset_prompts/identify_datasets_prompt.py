@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 from app.models.schema import DatasetSchema
 
 
-def create_identify_datasets_prompt(
+def identify_datasets_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """

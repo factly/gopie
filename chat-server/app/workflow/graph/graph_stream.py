@@ -18,6 +18,7 @@ async def stream_graph_updates(
     chat_id: str,
     dataset_ids: list[str] | None = None,
     project_ids: list[str] | None = None,
+    org_id: str | None = None,
 ):
     """
     Asynchronously streams graph-based agent updates in response to user messages, yielding event data suitable for Server-Sent Events (SSE).
@@ -45,6 +46,7 @@ async def stream_graph_updates(
         "trace_id": trace_id,
         "chat_id": chat_id,
         "user": user,
+        "org_id": org_id,
     }
     config = RunnableConfig(
         metadata=metadata,

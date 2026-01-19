@@ -2,14 +2,13 @@ from typing import Optional, Tuple
 
 from langchain_core.runnables.schema import StreamEvent
 
-from app.core.log import logger
+from app.core.log import custom_logger as logger
 from app.models.chat import EventChunkData, ExtraData, Role
 
 CHAT_MODEL_EVENTS = {"on_chat_model_start", "on_chat_model_stream", "on_chat_model_end"}
 CUSTOM_EVENT = "on_custom_event"
 TOOL_EVENT_PREFIX = "on_tool"
 TOOL_START_EVENT = "on_tool_start"
-DEFAULT_TOOL_TEXT = "Using Tool"
 
 
 class EventStreamHandler:
@@ -123,7 +122,7 @@ class EventStreamHandler:
             return "", "", False
 
         metadata = event.get("metadata", {})
-        content = metadata.get("tool_text", DEFAULT_TOOL_TEXT)
+        content = metadata.get("tool_text", "Using Tool")
         category = metadata.get("tool_category", "")
         should_display_tool = metadata.get("should_display_tool", False)
 

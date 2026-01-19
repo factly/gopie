@@ -47,9 +47,9 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
     retry_count = state.get("retry_count", 0)
     subquery_index = state.get("subquery_index", 0)
 
-    no_sql_response = query_result.subqueries[subquery_index].no_sql_response
+    non_sql_response = query_result.subqueries[subquery_index].non_sql_response
 
-    if no_sql_response:
+    if non_sql_response:
         return {
             "retry_count": retry_count,
             "messages": [

@@ -1,6 +1,19 @@
-import pytest
+from typing import Union, cast
+from unittest.mock import AsyncMock, Mock, patch
 
-from app.services.qdrant.vector_store import perform_similarity_search
+import pytest
+from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
+
+from app.services.qdrant.schema_search import search_schemas
+from app.services.qdrant.schema_vectorization import (
+    delete_schema_from_qdrant,
+    store_schema_in_qdrant,
+)
+from app.services.qdrant.vector_store import (
+    add_document_to_vector_store,
+    perform_similarity_search,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -65,24 +78,6 @@ async def test_perform_similarity_search_raises_without_filter_on_error(monkeypa
         await perform_similarity_search(vs, query="q", top_k=2, query_filter=None)
 
 
-from typing import Union, cast
-from unittest.mock import AsyncMock, Mock, patch
-
-import pytest
-from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
-
-from app.services.qdrant.schema_search import search_schemas
-from app.services.qdrant.schema_vectorization import (
-    delete_schema_from_qdrant,
-    store_schema_in_qdrant,
-)
-from app.services.qdrant.vector_store import (
-    add_document_to_vector_store,
-    perform_similarity_search,
-)
-
-
 class TestVectorStore:
     @pytest.fixture
     def mock_document(self):
@@ -136,7 +131,9 @@ class TestVectorStore:
 
             await add_document_to_vector_store(mock_document)
 
-            mock_qdrant_setup_class.get_vector_store.assert_called_once_with(mock_embeddings)
+            mock_qdrant_setup_class.get_vector_store.assert_called_once_with(
+                embeddings=mock_embeddings, collection_name="dataset_collection"
+            )
             mock_qdrant_setup_class.get_document_id.assert_called_once_with("proj1", "ds1")
             mock_vector_store.aadd_documents.assert_called_once_with(
                 documents=[mock_document], ids=["doc_id_123"]

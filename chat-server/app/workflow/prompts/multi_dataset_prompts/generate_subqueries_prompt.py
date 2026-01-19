@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 )
 
 
-def create_assess_query_complexity_prompt(
+def assess_query_complexity_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
@@ -62,7 +62,7 @@ User Query: {user_input}
     ]
 
 
-def create_generate_subqueries_prompt(**kwargs) -> list | ChatPromptTemplate:
+def generate_subqueries_prompt(**kwargs) -> list | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     user_input = kwargs.get("user_input", "")
 

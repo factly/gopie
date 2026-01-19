@@ -1,4 +1,9 @@
-from langchain_core.messages import AIMessage, BaseMessage, ToolCall
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    ToolCall,
+)
 from langchain_core.runnables import RunnableConfig
 from langsmith import traceable
 
@@ -64,16 +69,6 @@ class ChatHistoryProcessor:
             self._context_cache["tool_calls"] = tool_calls
         return self._context_cache["tool_calls"]
 
-    def get_sql_queries(self) -> list[str]:
-        if "sql_queries" not in self._context_cache:
-            sql_queries = []
-            for tool_call in self.get_all_tool_calls():
-                if tool_call.get("name") == SQL_QUERIES_GENERATED:
-                    args = tool_call.get("args", {})
-                    sql_queries.extend(args.get(SQL_QUERIES_GENERATED_ARG, []))
-            self._context_cache["sql_queries"] = sql_queries
-        return self._context_cache["sql_queries"]
-
     def get_datasets_used(self) -> list[str]:
         if "datasets_used" not in self._context_cache:
             datasets_used = []
@@ -95,45 +90,69 @@ class ChatHistoryProcessor:
             self._context_cache["vizpaths"] = vizpaths
         return self._context_cache["vizpaths"]
 
-    def formatted_sql_queries(self, sql_queries: list[str]) -> str:
-        text = ""
-        for i, sql_query in enumerate(sql_queries, start=1):
-            text += f"id: {i}\n{sql_query}\n\n"
-            self.sql_queries_mapping[i] = sql_query
-        return text
-
     @traceable(run_type="tool", name="ids_to_sql_queries")
     def ids_to_sql_queries(self, ids: list[int]) -> list[str]:
-        sql_queries = [self.sql_queries_mapping.get(id, "") for id in ids]
-        return [sql_query for sql_query in sql_queries if sql_query]
+        """
+        Convert IDs to SQL queries, returned sorted by ID descending (most recent first).
+        """
+        id_query_pairs = [
+            (id, self.sql_queries_mapping.get(id, ""))
+            for id in ids
+            if self.sql_queries_mapping.get(id)
+        ]
+        id_query_pairs.sort(key=lambda x: x[0], reverse=True)
+        return [q for _, q in id_query_pairs]
+
+    def _format_tool_call(self, tool_call: dict, sql_counter: int) -> tuple[list[str], int]:
+        """
+        Format a single tool call and return formatted lines and updated SQL counter.
+        """
+        lines = []
+        tool_name = tool_call.get("name", "")
+        tool_args = tool_call.get("args", {})
+
+        if tool_name == SQL_QUERIES_GENERATED:
+            for query in tool_args.get(SQL_QUERIES_GENERATED_ARG, []):
+                sql_counter += 1
+                self.sql_queries_mapping[sql_counter] = query
+                lines.append(f"\n[id:{sql_counter}]\n{query}\n")
+        elif tool_name == "tool_messages":
+            lines.append(tool_args.get("content", "").strip())
+        elif tool_name:
+            lines.append(f"{tool_name}: {tool_args.get('content', tool_args)}")
+
+        return lines, sql_counter
 
     def format_chat_history(self) -> str:
         """
-        Format chat history for inclusion in prompts.
-
-        Returns:
-            Formatted chat history string
+        Format chat history with SQL queries inline (with IDs for selection).
         """
-        if "formatted_history" not in self._context_cache:
-            if not self.filtered_history:
-                formatted_history = ""
-            else:
-                formatted_messages = []
-                for message in self.filtered_history:
-                    if message.type == "human":
-                        formatted_messages.append(f"User: {message.content}")
-                    else:
-                        formatted_messages.append(f"Assistant: {message.content}")
+        if "formatted_history" in self._context_cache:
+            return self._context_cache["formatted_history"]
 
-                formatted_history = "\n".join(formatted_messages)
+        if not self.filtered_history:
+            self._context_cache["formatted_history"] = ""
+            return ""
 
-                sql_queries = self.get_sql_queries()
-                if sql_queries:
-                    formatted_sql_queries = self.formatted_sql_queries(sql_queries)
-                    formatted_history += f"\nRecent SQL Queries:\n{formatted_sql_queries}"
+        lines = []
+        sql_counter = 0
+        query_num = 0
 
-            self._context_cache["formatted_history"] = formatted_history
+        for msg in self.filtered_history:
+            if isinstance(msg, HumanMessage):
+                query_num += 1
+                if query_num > 1:
+                    lines.append("")
+                lines.append(f"--- Query {query_num} ---\nUser: {(msg.content or '').strip()}")
 
+            elif isinstance(msg, AIMessage):
+                for tc in getattr(msg, "tool_calls", []) or []:
+                    tc_lines, sql_counter = self._format_tool_call(tc, sql_counter)
+                    lines.extend(tc_lines)
+
+                lines.append(f"Assistant: {(msg.content or '').strip()}")
+
+        self._context_cache["formatted_history"] = "\n".join(lines)
         return self._context_cache["formatted_history"]
 
     def get_context_summary(self) -> dict:
@@ -145,11 +164,8 @@ class ChatHistoryProcessor:
         """
         return {
             "formatted_history": self.format_chat_history(),
-            "sql_queries": self.get_sql_queries(),
             "datasets_used": self.get_datasets_used(),
             "vizpaths": self.get_vizpaths(),
-            "message_count": len(self.filtered_history),
-            "original_message_count": len(self.raw_history),
         }
 
     def has_history(self) -> bool:

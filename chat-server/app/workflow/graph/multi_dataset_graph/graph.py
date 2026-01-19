@@ -8,9 +8,9 @@ from .node.analyze_query import analyze_query, route_from_analysis
 from .node.execute_query import execute_query
 from .node.generate_subqueries import generate_subqueries
 from .node.identify_datasets import identify_datasets, route_from_datasets
-from .node.plan_query import plan_query
 from .node.response_handler import route_response_handler
 from .node.semantic_search import semantic_search
+from .node.sql_agent import sql_agent
 from .node.stream_updates import (
     check_further_execution_requirement,
     stream_updates,
@@ -29,7 +29,7 @@ graph_builder.add_node("generate_subqueries", generate_subqueries)
 graph_builder.add_node("semantic_search", semantic_search)
 graph_builder.add_node("identify_datasets", identify_datasets)
 graph_builder.add_node("analyze_query", analyze_query)
-graph_builder.add_node("plan_query", plan_query)
+graph_builder.add_node("plan_query", sql_agent)
 graph_builder.add_node("execute_query", execute_query)
 graph_builder.add_node("analyze_dataset", analyze_dataset)
 graph_builder.add_node("stream_updates", stream_updates)

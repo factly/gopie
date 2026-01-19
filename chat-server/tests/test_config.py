@@ -19,13 +19,18 @@ Environment Variables:
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+_env_path = Path(__file__).parent / ".env"
+load_dotenv(_env_path)
+
 
 class TestConfig:
     # ============================================================================
     # API Endpoints (can be overridden via environment variables)
     # ============================================================================
     GOPIE_API_URL = os.getenv("GOPIE_API_URL", "http://localhost:8000")
-    CHAT_SERVER_URL = os.getenv("CHAT_SERVER_URL", "http://localhost:8001/api/v1/chat/completions")
+    CHAT_SERVER_URL = os.getenv("CHAT_SERVER_URL", "http://localhost:8003/api/v1/chat/completions")
 
     # Gopie Authentication
     GOPIE_USER_ID = os.getenv("GOPIE_USER_ID", "system")
@@ -55,8 +60,8 @@ class TestConfig:
 
     # LLM Configuration (for DSPy optimizations)
     # NOTE: OPENAI_API_KEY is REQUIRED for DSPy evaluation
-    DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "gpt-4o")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "openai/gpt-4o")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
     # DSPy Optimization Settings
     DSPY_CACHE_DIR = str(TEST_ROOT / "dspy" / ".cache")

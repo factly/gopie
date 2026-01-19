@@ -10,7 +10,7 @@ from app.workflow.prompts.formatters.format_query_result import (
 )
 
 
-def create_validate_result_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def validate_result_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Create a prompt for validating query results against the user's original question.
 

@@ -51,13 +51,14 @@ uv sync --dev
 
 ## Files
 
-| File                     | Purpose                                   |
-| ------------------------ | ----------------------------------------- |
-| `test_case_generator.py` | Generate test cases from project datasets |
-| `test_case_runner.py`    | Run tests and evaluate responses          |
-| `test_case_labeler.html` | Web UI for manual labeling                |
-| `golden_dataset_*.json`  | Generated test cases                      |
-| `labeled_golden.json`    | Human-labeled ground truth                |
+| File                              | Purpose                                   |
+| --------------------------------- | ----------------------------------------- |
+| `test_case_generator.py`          | Generate test cases from project datasets |
+| `test_case_runner.py`             | Run tests and evaluate responses          |
+| `test_case_labeler.html`          | Web UI for manual labeling                |
+| `output/golden_dataset_*.json`    | Generated test cases                      |
+| `output/labeled_golden.json`      | Human-labeled ground truth                |
+| `output/performance_history.json` | Performance tracking data                 |
 
 ## Quick Start
 
@@ -111,14 +112,14 @@ Open `test_case_labeler.html` in a browser to:
 
 - Review test results with rendered visualizations
 - Assign Pass/Partial/Fail labels with feedback
-- Export labeled data for DSPy optimization
+- Export labeled data to `output/labeled_golden.json` for DSPy optimization
 
 ### 4. Optimize Evaluator (Optional)
 
 Train a DSPy-optimized evaluator using labeled data:
 
 ```bash
-# Requires labeled_golden.json
+# Requires output/labeled_golden.json
 python -m tests.dspy.optimize_evaluator
 ```
 

@@ -4,8 +4,6 @@ from app.services.qdrant.schema_search import search_schemas
 
 pytestmark = pytest.mark.unit
 
-import pytest
-
 
 @pytest.mark.asyncio
 async def test_search_schemas_no_filters(monkeypatch):
@@ -18,7 +16,7 @@ async def test_search_schemas_no_filters(monkeypatch):
         def __init__(self, metadata):
             self.metadata = metadata
 
-    def fake_get_vector_store(embeddings):
+    def fake_get_vector_store(embeddings=None, collection_name=None):
         captured["vs"] = True
         return DummyVS()
 
@@ -65,7 +63,7 @@ async def test_search_schemas_with_project_filter(monkeypatch):
     class DummyVS:
         pass
 
-    def fake_get_vector_store(embeddings):
+    def fake_get_vector_store(embeddings=None, collection_name=None):
         return DummyVS()
 
     async def fake_perform_similarity_search(vector_store, query, top_k, query_filter):
@@ -95,7 +93,7 @@ async def test_search_schemas_with_dataset_filter(monkeypatch):
     class DummyVS:
         pass
 
-    def fake_get_vector_store(embeddings):
+    def fake_get_vector_store(embeddings=None, collection_name=None):
         return DummyVS()
 
     async def fake_perform_similarity_search(vector_store, query, top_k, query_filter):
@@ -125,7 +123,7 @@ async def test_search_schemas_with_both_filters(monkeypatch):
     class DummyVS:
         pass
 
-    def fake_get_vector_store(embeddings):
+    def fake_get_vector_store(embeddings=None, collection_name=None):
         return DummyVS()
 
     async def fake_perform_similarity_search(vector_store, query, top_k, query_filter):

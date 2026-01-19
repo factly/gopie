@@ -1,17 +1,20 @@
+from langchain_core.runnables import RunnableConfig
+
 from app.core.log import custom_logger as logger
 from app.services.gopie.sql_executor import execute_sql
 from app.workflow.graph.visualize_data_graph.types import Dataset, State
 
 
-async def pre_process_visualization_data(state: State) -> dict:
+async def pre_process_visualization_data(state: State, config: RunnableConfig) -> dict:
     datasets = state["datasets"] or []
     relevant_sql_queries = state["relevant_sql_queries"] or []
+    org_id = config.get("metadata", {}).get("org_id", None)
 
     try:
         for sql_query in relevant_sql_queries:
             query_snippet = sql_query[:100]
             logger.debug(f"Executing SQL query for context: {query_snippet}...")
-            sql_result = await execute_sql(query=sql_query)
+            sql_result = await execute_sql(query=sql_query, org_id=org_id)
 
             if sql_result:
                 data = [list(d.values()) for d in sql_result]
