@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/factly/gopie/infrastructure/zitadel"
 	"github.com/gofiber/adaptor/v2"
@@ -69,6 +70,9 @@ func AuthorizeHeaders(logger *logger.Logger) fiber.Handler {
 		}
 		c.Locals(OrganizationCtxKey, orgID)
 
+		// Set default Admin role for no-auth mode (when Zitadel is disabled)
+		c.Locals(RoleCtxKey, models.Admin)
+
 		return c.Next()
 	}
 }
@@ -93,6 +97,9 @@ func APIAuth(logger *logger.Logger) fiber.Handler {
 			})
 		}
 		c.Locals(OrganizationCtxKey, orgID)
+
+		// Set default Admin role for API auth mode
+		c.Locals(RoleCtxKey, models.Admin)
 
 		return c.Next()
 	}
