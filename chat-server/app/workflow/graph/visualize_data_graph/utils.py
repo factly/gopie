@@ -7,12 +7,14 @@ from io import StringIO
 from typing import Annotated
 
 import aioboto3
+from e2b.exceptions import SandboxException
 from e2b_code_interpreter import AsyncSandbox
 from langchain_core.runnables import RunnableConfig
 from langgraph.prebuilt import InjectedState
 from langsmith import traceable
 
 from app.core.config import settings
+from app.core.log import custom_logger as logger
 from app.core.session import SingletonAiohttp
 
 from .types import Dataset, PreviousVisualizationJsonType
@@ -95,8 +97,22 @@ async def get_sandbox():
 
 
 @traceable(run_type="chain", name="update_sandbox_timeout")
-async def update_sandbox_timeout(sandbox: AsyncSandbox):
-    await sandbox.set_timeout(settings.E2B_TIMEOUT)
+async def update_sandbox_timeout(sandbox: AsyncSandbox | None) -> tuple[AsyncSandbox, bool]:
+    """
+    Extend timeout on an existing sandbox, or create one if none or if the existing one is gone.
+
+    Returns:
+        (sandbox, created_new): The sandbox to use and True if a new sandbox was created
+        (either sandbox was None or set_timeout raised SandboxException e.g. 404).
+    """
+    if sandbox is None:
+        return await get_sandbox(), True
+    try:
+        await sandbox.set_timeout(settings.E2B_TIMEOUT)
+        return sandbox, False
+    except SandboxException:
+        logger.warning("Existing sandbox not found (may have expired), creating a new one")
+        return await get_sandbox(), True
 
 
 @traceable(run_type="chain", name="upload_csv_files")

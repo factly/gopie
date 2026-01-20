@@ -37,7 +37,7 @@ def _build_ilike_query(
     Returns:
         SQL query string
     """
-    where_clause = f"WHERE LOWER({column_name}) LIKE '%' || LOWER('{escaped_value}') || '%'"
+    where_clause = f"WHERE LOWER(CAST({column_name} AS VARCHAR)) LIKE '%' || LOWER('{escaped_value}') || '%'"
 
     if not should_use_sampling(estimated_size):
         return f"""
@@ -84,10 +84,11 @@ def _build_levenshtein_query(
     Returns:
         SQL query string
     """
+    cast_col = f"CAST({column_name} AS VARCHAR)"
     if not should_use_sampling(estimated_size):
         return f"""
         SELECT DISTINCT {column_name},
-            levenshtein(lower({column_name}), lower('{escaped_value}')) AS distance
+            levenshtein(lower({cast_col}), lower('{escaped_value}')) AS distance
         FROM (SELECT * FROM {table_name} LIMIT 200000)
         ORDER BY distance ASC
         LIMIT {limit}
@@ -102,7 +103,7 @@ def _build_levenshtein_query(
 
         return f"""
         SELECT DISTINCT {column_name},
-            levenshtein(lower({column_name}), lower('{escaped_value}')) AS distance
+            levenshtein(lower({cast_col}), lower('{escaped_value}')) AS distance
         FROM {table_name}
         USING SAMPLE {pct_str}% (system)
         ORDER BY distance ASC

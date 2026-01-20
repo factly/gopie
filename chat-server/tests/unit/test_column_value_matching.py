@@ -27,16 +27,18 @@ async def test_find_similar_values_uses_ilike_first(monkeypatch):
     )
 
     assert similar_values == ["Finance", "Financial Services"]
-    # Ensure LIKE path used (no levenshtein in query)
     assert "levenshtein(" not in captured_query["query"]
+    assert "CAST(" in captured_query["query"] and "AS VARCHAR)" in captured_query["query"]
 
 
 @pytest.mark.asyncio
 async def test_find_similar_values_falls_back_to_levenshtein(monkeypatch):
     calls = {"count": 0}
+    captured = {}
 
     async def fake_execute_sql(query: str, org_id=None):
         calls["count"] += 1
+        captured["query"] = query
         if "levenshtein(" in query:
             return [
                 {"name": "Alison"},
@@ -53,6 +55,8 @@ async def test_find_similar_values_falls_back_to_levenshtein(monkeypatch):
     assert similar_values == ["Alison", "Alicia"]
     # Called twice: LIKE path then Levenshtein
     assert calls["count"] == 2
+    # Levenshtein query must CAST column to VARCHAR for BOOLEAN/non-string columns
+    assert "CAST(" in captured["query"] and "AS VARCHAR)" in captured["query"]
 
 
 @pytest.mark.asyncio
@@ -76,7 +80,9 @@ async def test_find_similar_values_handles_errors_and_returns_empty(monkeypatch)
     monkeypatch.setattr("app.utils.graph_utils.column_value_matching.logger", dummy_logger)
     # Allow real logger; function should handle exceptions and return []
 
-    similar_values, match_source, error_message = await find_similar_values("foo", "name", "t")
+    similar_values, match_source, error_message = await find_similar_values(
+        "foo", "name", "t", estimated_size=1000
+    )
 
     # Both LIKE and Levenshtein will raise; function should still return []
     assert similar_values == []

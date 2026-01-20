@@ -27,7 +27,7 @@ PreviousVisualizationJsonType = dict[str, str]
 
 
 class VisualizationResult(BaseModel):
-    data: list[bytes]
+    data: list[str]
     errors: list[str] = []
 
 
