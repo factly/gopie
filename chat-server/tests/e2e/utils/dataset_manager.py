@@ -1,3 +1,4 @@
+import csv
 import io
 import json
 import sys
@@ -34,9 +35,92 @@ def validate_config():
         print(f"Missing required environment variables: {', '.join(missing_vars)}")
         sys.exit(1)
 
-    if not Path(LOCAL_DATASET_FOLDER).is_dir():
-        print(f"Dataset folder not found at: {LOCAL_DATASET_FOLDER}")
-        sys.exit(1)
+    dataset_path = Path(LOCAL_DATASET_FOLDER)
+    if not dataset_path.is_dir():
+        dataset_path.mkdir(parents=True, exist_ok=True)
+        print(f"Created dataset folder at: {LOCAL_DATASET_FOLDER}")
+
+
+def _ensure_sample_dataset(dataset_root: Path) -> None:
+    """If no CSVs exist, create a minimal sample.csv and metadata.json so E2E can run."""
+    if list(dataset_root.rglob("*.csv")):
+        return
+    sample_path = dataset_root / "sample.csv"
+    sample_path.write_text(
+        "id,name,value\n1,Item A,10.5\n2,Item B,20.3\n3,Item C,15.0\n",
+        encoding="utf-8",
+    )
+    meta_path = dataset_root / "metadata.json"
+    if not meta_path.is_file():
+        meta_path.write_text("{}", encoding="utf-8")
+    print(f"Created {sample_path.name} (no CSVs found; add your own to {dataset_root})")
+
+
+def _load_metadata_json(dataset_root: Path) -> dict:
+    """Load metadata.json from the dataset folder. Returns {} if missing or invalid."""
+    path = dataset_root / "metadata.json"
+    if not path.is_file():
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            loaded = json.load(f)
+        return loaded if isinstance(loaded, dict) else {}
+    except Exception:
+        return {}
+
+
+def _infer_description_from_csv(file_path: Path) -> str | None:
+    """Infer a short description from CSV header (column names). Returns None on failure."""
+    try:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
+            reader = csv.reader(f)
+            row = next(reader, None)
+        if not row or not any(c and str(c).strip() for c in row):
+            return None
+        cols = [str(c).strip().strip('"\'') for c in row if c and str(c).strip()][:25]
+        if not cols:
+            return None
+        suffix = "..." if len(row) > 25 else ""
+        return f"Table with columns: {', '.join(cols)}{suffix}"
+    except Exception:
+        return None
+
+
+def get_metadata_for_file(file_path: Path, dataset_root: Path) -> dict:
+    """
+    Get alias, description, custom_prompt, and column_descriptions for a dataset file.
+
+    Uses metadata.json by filename (e.g. "block_E.csv") or stem (e.g. "block_E").
+    If no entry exists, infers description from CSV headers. Alias defaults to stem.
+
+    Returns:
+        {"alias": str|None, "description": str|None, "custom_prompt": str|None,
+         "column_descriptions": dict[str,str]|None}
+    """
+    meta_map = _load_metadata_json(dataset_root)
+    name, stem = file_path.name, file_path.stem
+    entry = meta_map.get(name) or meta_map.get(f"{stem}.csv") or meta_map.get(stem)
+    if not entry or not isinstance(entry, dict):
+        entry = {}
+    alias = entry.get("alias") if isinstance(entry.get("alias"), str) else None
+    desc = entry.get("description") if isinstance(entry.get("description"), str) else None
+    if desc is None:
+        desc = _infer_description_from_csv(file_path)
+    custom_prompt = entry.get("custom_prompt") if isinstance(entry.get("custom_prompt"), str) else None
+    raw_cd = entry.get("column_descriptions")
+    column_descriptions = None
+    if isinstance(raw_cd, dict) and raw_cd:
+        column_descriptions = {
+            str(k): str(v) for k, v in raw_cd.items() if v is not None and str(v).strip()
+        }
+        if not column_descriptions:
+            column_descriptions = None
+    return {
+        "alias": alias,
+        "description": desc,
+        "custom_prompt": custom_prompt,
+        "column_descriptions": column_descriptions,
+    }
 
 
 def create_gopie_project(
@@ -163,6 +247,8 @@ def ingest_dataset_to_gopie(
     s3_path: str,
     alias: str | None = None,
     description: str | None = None,
+    custom_prompt: str | None = None,
+    column_descriptions: dict[str, str] | None = None,
 ) -> str:
     """
     Ingest a dataset from S3 into Gopie project.
@@ -172,7 +258,9 @@ def ingest_dataset_to_gopie(
         project_id: Target project ID
         s3_path: S3 path to the dataset file
         alias: Optional dataset alias. If not provided, extracted from filename.
-        description: Optional dataset description.
+        description: Dataset description (min 10 chars for API). Used in schema and prompts.
+        custom_prompt: Optional dataset-specific instructions for the LLM.
+        column_descriptions: Optional map of column_name -> description. Stored in schema.
 
     Returns:
         The dataset ID created in Gopie.
@@ -186,13 +274,20 @@ def ingest_dataset_to_gopie(
     file_name = s3_path.split("/")[-1]
     dataset_alias = alias or Path(file_name).stem
 
+    desc = (description or "").strip()
+    if len(desc) < 10:
+        desc = "Dataset ingested for E2E testing. See table and column definitions for details."
     payload = {
         "file_path": s3_path,
         "project_id": project_id,
         "created_by": GOPIE_USER_ID,
         "alias": dataset_alias,
-        "description": description or f"Dataset for {file_name} ingested via automation script.",
+        "description": desc,
     }
+    if custom_prompt and isinstance(custom_prompt, str) and custom_prompt.strip():
+        payload["custom_prompt"] = custom_prompt.strip()
+    if column_descriptions and isinstance(column_descriptions, dict):
+        payload["column_descriptions"] = {k: str(v) for k, v in column_descriptions.items() if v}
 
     print(f"Ingesting dataset '{dataset_alias}' from {s3_path}...")
     try:
@@ -237,6 +332,7 @@ def upload_and_ingest_datasets(
     dataset_mapping = {}
 
     if local_files:
+        dataset_root = Path(LOCAL_DATASET_FOLDER)
         print(f"Processing {len(local_files)} local file(s)...")
         for file_path in local_files:
             try:
@@ -251,12 +347,27 @@ def upload_and_ingest_datasets(
                     prefix="dataset",
                 )
 
+                meta = get_metadata_for_file(file_path, dataset_root)
+                alias = meta.get("alias") or Path(file_path.name).stem
+                description = meta.get("description") or (
+                    f"Dataset for {file_path.name} ingested via automation script."
+                )
+
                 dataset_id = ingest_dataset_to_gopie(
                     gopie_url=gopie_url,
                     project_id=project_id,
                     s3_path=s3_path,
+                    alias=alias,
+                    description=description,
+                    custom_prompt=meta.get("custom_prompt"),
+                    column_descriptions=meta.get("column_descriptions"),
                 )
-                dataset_mapping[file_path.stem] = dataset_id
+                try:
+                    rel = file_path.relative_to(dataset_root)
+                    mapping_key = str(rel.with_suffix("")).replace("\\", "/")
+                except ValueError:
+                    mapping_key = file_path.stem
+                dataset_mapping[mapping_key] = dataset_id
 
             except (IOError, ClientError, requests.exceptions.RequestException, ValueError) as e:
                 print(f"Error processing local file '{file_path.name}': {e}")
@@ -346,11 +457,15 @@ def setup_project_and_upload_datasets(
 
     local_files = None
     if not vega_dataset_names:
-        local_files = [f for f in Path(LOCAL_DATASET_FOLDER).iterdir() if f.is_file()]
+        dataset_root = Path(LOCAL_DATASET_FOLDER)
+        local_files = sorted(dataset_root.rglob("*.csv"))
         if not local_files:
-            print("No files found in the dataset folder.")
+            _ensure_sample_dataset(dataset_root)
+            local_files = sorted(dataset_root.rglob("*.csv"))
+        if not local_files:
+            print("No CSV files found in the dataset folder.")
             return project_id
-        print(f"Found {len(local_files)} local file(s) to upload.")
+        print(f"Found {len(local_files)} CSV file(s) to upload.")
 
     upload_and_ingest_datasets(
         gopie_url=gopie_url,

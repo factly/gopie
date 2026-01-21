@@ -61,7 +61,7 @@ async def delete_schema_from_qdrant(
         bool: True if deletion was successful, False otherwise.
     """
     try:
-        client = await QdrantSetup.get_async_client()
+        client = await QdrantSetup.get_async_client(settings.QDRANT_COLLECTION)
         document_id = QdrantSetup.get_document_id(project_id, dataset_id)
         await client.delete(
             collection_name=settings.QDRANT_COLLECTION,

@@ -26,13 +26,9 @@ async def get_dataset_info(
     client = GopieClient(org_id=org_id)
     path = f"/v1/api/projects/{project_id}/datasets/{dataset_id}"
 
-    try:
-        async with await client.get(path) as response:
-            data = await response.json()
-        return DatasetDetails(**data)
-    except Exception as e:
-        logger.exception(f"Error getting dataset info: {e!s}")
-        raise e
+    async with await client.get(path) as response:
+        data = await response.json()
+    return DatasetDetails(**data)
 
 
 async def get_project_info(
@@ -51,13 +47,9 @@ async def get_project_info(
     client = GopieClient(org_id=org_id)
     path = f"/v1/api/projects/{project_id}"
 
-    try:
-        async with await client.get(path) as response:
-            data = await response.json()
-        return ProjectDetails(**data)
-    except Exception as e:
-        logger.exception(f"Error getting project info: {e!s}")
-        raise e
+    async with await client.get(path) as response:
+        data = await response.json()
+    return ProjectDetails(**data)
 
 
 def create_dataset_schema(

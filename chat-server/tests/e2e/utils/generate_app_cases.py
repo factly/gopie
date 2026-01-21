@@ -399,6 +399,27 @@ Return ONLY the test cases as a JSON array, no additional text.
 
         return all_test_cases
 
+    def _normalize_message(self, message: Any) -> tuple[str, str]:
+        """Extract role and content from a message dict; handle missing/alternate keys."""
+        if isinstance(message, dict):
+            role = message.get("role") or message.get("type") or "user"
+            if role == "human":
+                role = "user"
+            content = (
+                message.get("content")
+                or message.get("text")
+                or message.get("message")
+                or ""
+            )
+            content = str(content) if content is not None else ""
+        else:
+            role = "user"
+            content = str(message) if message is not None else ""
+        content_escaped = (content or "").replace("\\", "\\\\").replace(
+            '"', '\\"'
+        ).replace("\n", "\\n").replace("\r", "")
+        return role, content_escaped
+
     def save_test_cases_to_python_file(
         self, test_cases: TestCasesList, filename: str = "dataset_test_cases.py"
     ):
@@ -423,9 +444,10 @@ SINGLE_DATASET_TEST_CASES = [
             for j, message in enumerate(test_case.messages):
                 if j > 0:
                     messages_str += "        ,\n"
+                role, content_escaped = self._normalize_message(message)
                 messages_str += f"""        {{
-            "role": "{message['role']}",
-            "content": "{message['content']}",
+            "role": "{role}",
+            "content": "{content_escaped}",
         }}"""
             messages_str += "\n    ]"
 
@@ -455,9 +477,10 @@ SINGLE_DATASET_TEST_CASES = [
             for j, message in enumerate(test_case.messages):
                 if j > 0:
                     messages_str += "        ,\n"
+                role, content_escaped = self._normalize_message(message)
                 messages_str += f"""        {{
-            "role": "{message['role']}",
-            "content": "{message['content']}",
+            "role": "{role}",
+            "content": "{content_escaped}",
         }}"""
             messages_str += "\n    ]"
 

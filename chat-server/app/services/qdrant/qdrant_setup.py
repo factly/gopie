@@ -26,10 +26,9 @@ class QdrantSetup:
                 check_compatibility=False,
                 timeout=cls.CONNECTION_TIMEOUT,
             )
-
-            if not await cls._async_collection_exists(cls.async_client, connection_name):
-                config = cls.get_qdrant_config(connection_name)
-                await cls.async_client.create_collection(**config)
+        if not await cls._async_collection_exists(cls.async_client, connection_name):
+            config = cls.get_qdrant_config(connection_name)
+            await cls.async_client.create_collection(**config)
         return cls.async_client
 
     @classmethod
@@ -40,9 +39,9 @@ class QdrantSetup:
                 check_compatibility=False,
                 timeout=cls.CONNECTION_TIMEOUT,
             )
-            if not cls._collection_exists(cls.sync_client, connection_name):
-                config = cls.get_qdrant_config(connection_name)
-                cls.sync_client.create_collection(**config)
+        if not cls._collection_exists(cls.sync_client, connection_name):
+            config = cls.get_qdrant_config(connection_name)
+            cls.sync_client.create_collection(**config)
         return cls.sync_client
 
     @classmethod

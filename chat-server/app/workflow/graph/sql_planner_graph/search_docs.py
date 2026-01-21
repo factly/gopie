@@ -1,5 +1,5 @@
-from langchain.schema.runnable import RunnableConfig
 from langchain_core.callbacks import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 
 from app.core.log import custom_logger as logger
 from app.models.message import IntermediateStep

@@ -1,0 +1,100 @@
+{
+  "blkD202324.csv": {
+    "alias": "Block D",
+    "description": "ASI (Annual Survey of Industries) Block D: characteristics and identifiers. Key columns: yr (reference year), blk (block code), ad01 (establishment/factory ID for joins), dI1–dI4 (block D indicators). Filter by yr for a specific year; join to other blocks on ad01 where applicable.",
+    "column_descriptions": {
+      "yr": "Reference year of the survey (e.g. 2023). Use in WHERE for year-specific queries.",
+      "blk": "Block or segment code. Use to filter by block type.",
+      "ad01": "Establishment identifier. Use to JOIN with other blocks when they share the same ID column.",
+      "dI1": "Block D indicator 1.",
+      "dI3": "Block D indicator 3.",
+      "dI4": "Block D indicator 4."
+    }
+  },
+  "blkE202324.csv": {
+    "alias": "Block E",
+    "description": "ASI Block E: fixed capital, investments, and related indicators. Key columns: yr, blk, AE01 (establishment ID; join key with Block F on AE01=AF01), EI1–EI8 (block E indicators). Use for capital and investment metrics; join to Block F on AE01=AF01 for combined analysis.",
+    "column_descriptions": {
+      "yr": "Reference year. Filter for a specific survey year.",
+      "blk": "Block code.",
+      "AE01": "Establishment ID. Primary join key to Block F (AF01). Use AE01=AF01 in JOINs.",
+      "EI1": "Block E indicator 1.",
+      "EI3": "Block E indicator 3.",
+      "EI4": "Block E indicator 4.",
+      "EI5": "Block E indicator 5.",
+      "EI6": "Block E indicator 6.",
+      "EI7": "Block E indicator 7.",
+      "EI8": "Block E indicator 8."
+    }
+  },
+  "blkF202324.csv": {
+    "alias": "Block F",
+    "description": "ASI Block F: working capital, inputs, and operating metrics. Key columns: yr, blk, AF01 (join to Block E on AE01=AF01), F1–F13 (block F indicators). Use for inputs, costs, and operating aggregates; JOIN with Block E on AE01=AF01 for capital-and-operations analysis.",
+    "column_descriptions": {
+      "yr": "Reference year.",
+      "blk": "Block code.",
+      "AF01": "Establishment ID. Join to Block E on AE01=AF01.",
+      "F1": "Block F indicator 1.",
+      "F2A": "Block F indicator 2A.",
+      "F2B": "Block F indicator 2B.",
+      "F3": "Block F indicator 3.",
+      "F4": "Block F indicator 4.",
+      "F5": "Block F indicator 5.",
+      "F10": "Block F indicator 10.",
+      "F11": "Block F indicator 11.",
+      "F12": "Block F indicator 12.",
+      "F13": "Block F indicator 13."
+    }
+  },
+  "blkH202324.csv": {
+    "alias": "Block H",
+    "description": "ASI Block H: employment and labour-related indicators. Key columns: yr, blk, AH01 (establishment ID for joins), HI1–HI7 (block H indicators). Use for employment and labour metrics; join to other blocks on AH01 where they share the same ID scheme.",
+    "column_descriptions": {
+      "yr": "Reference year.",
+      "blk": "Block code.",
+      "AH01": "Establishment ID. Use to JOIN with other blocks when they share this identifier.",
+      "HI1": "Block H indicator 1.",
+      "HI3": "Block H indicator 3.",
+      "HI4": "Block H indicator 4.",
+      "HI5": "Block H indicator 5.",
+      "HI6": "Block H indicator 6.",
+      "HI7": "Block H indicator 7."
+    }
+  },
+  "blkI202324.csv": {
+    "alias": "Block I",
+    "description": "ASI Block I: output, revenue, or product-related indicators. Key columns: yr, blk, AI01 (establishment ID), II1–II7 (block I indicators). Use for output and revenue metrics; join on AI01 where other blocks use the same ID.",
+    "column_descriptions": {
+      "yr": "Reference year.",
+      "blk": "Block code.",
+      "AI01": "Establishment ID. Join key when other blocks share this ID.",
+      "II1": "Block I indicator 1.",
+      "II3": "Block I indicator 3.",
+      "II4": "Block I indicator 4.",
+      "II5": "Block I indicator 5.",
+      "II6": "Block I indicator 6.",
+      "II7": "Block I indicator 7."
+    }
+  },
+  "blkJ202324.csv": {
+    "alias": "Block J",
+    "description": "ASI Block J: additional sector or industry indicators. Key columns: yr, blk, AJ01 (establishment ID), J11–J113 (block J indicators). Use for block J metrics; join on AJ01 when other blocks share this identifier.",
+    "column_descriptions": {
+      "yr": "Reference year.",
+      "blk": "Block code.",
+      "AJ01": "Establishment ID. Use to JOIN with other blocks.",
+      "J11": "Block J indicator 11.",
+      "J13": "Block J indicator 13.",
+      "J14": "Block J indicator 14.",
+      "J15": "Block J indicator 15.",
+      "J16": "Block J indicator 16.",
+      "J17": "Block J indicator 17.",
+      "J18": "Block J indicator 18.",
+      "J19": "Block J indicator 19.",
+      "J110": "Block J indicator 110.",
+      "J111": "Block J indicator 111.",
+      "J112": "Block J indicator 112.",
+      "J113": "Block J indicator 113."
+    }
+  }
+}
