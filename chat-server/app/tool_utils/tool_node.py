@@ -1,7 +1,7 @@
 from typing import Literal, Union
 
 from langchain_core.messages import AIMessage, ToolCall, ToolMessage
-from langchain_core.runnables.config import RunnableConfig, merge_configs
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
@@ -45,7 +45,23 @@ class ModifiedToolNode(ToolNode):
             },
         }
 
-        return merge_configs(config, tool_config)
+        if isinstance(config, dict):
+            merged_config: RunnableConfig = config.copy()
+            if "tags" in tool_config:
+                existing_tags = merged_config.get("tags", [])
+                if not isinstance(existing_tags, list):
+                    existing_tags = [existing_tags] if existing_tags else []
+                merged_config["tags"] = existing_tags + tool_config["tags"]
+
+            if "metadata" in tool_config:
+                existing_metadata = merged_config.get("metadata", {})
+                if not isinstance(existing_metadata, dict):
+                    existing_metadata = {}
+                merged_config["metadata"] = {**existing_metadata, **tool_config["metadata"]}
+
+            return merged_config
+
+        return config
 
     def _run_one(
         self,
