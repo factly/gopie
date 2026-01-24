@@ -21,6 +21,7 @@ class EmbeddingProvider(str, Enum):
     PORTKEY = "portkey"
     LITELLM = "litellm"
     OPENAI = "openai"
+    VLLM = "vllm"
     CUSTOM = "custom"
     LOCAL = "local"
 

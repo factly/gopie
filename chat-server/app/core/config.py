@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = "dataset_collection"
     QDRANT_DUCKDB_COLLECTION: str = "duckdb_docs_collection"
     QDRANT_PORT: int = 6333
-    QDRANT_TOP_K: int = 5
+    QDRANT_TOP_K: int = 10
     QDRANT_DUCKDB_TOP_K: int = 5
 
     GOPIE_API_ENDPOINT: str = ""

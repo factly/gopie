@@ -20,6 +20,7 @@ from app.utils.providers.embedding_providers import (
     LocalEmbeddingProvider,
     OpenAIEmbeddingProvider,
     PortkeyEmbeddingProvider,
+    VLLMEmbeddingProvider,
 )
 from app.utils.providers.llm_providers import (
     BaseLLMProvider,
@@ -78,6 +79,8 @@ def get_embedding_provider(metadata: Optional[dict[str, str]] = {}) -> BaseEmbed
             return CustomEmbeddingProvider(metadata)
         case EmbeddingProvider.LOCAL:
             return LocalEmbeddingProvider(metadata)
+        case EmbeddingProvider.VLLM:
+            return VLLMEmbeddingProvider(metadata)
         case _:
             raise ValueError(f"Unsupported Embedding provider: {gateway_type}")
 
