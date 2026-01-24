@@ -52,7 +52,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
             "tool_call_count": tool_call_count,
             "dataset_ids": state.get("dataset_ids", []),
             "project_ids": state.get("project_ids", []),
-            "previous_sql_queries": state.get("previous_sql_queries", []),
+            "previous_sql_queries": state.get("prev_sql_queries", []),
         }
 
         tools_names = [
@@ -90,9 +90,7 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
                     }
                 ],
             )
-            return await _handle_analysis_response(
-                fallback, query_result, tool_call_count, config
-            )
+            return await _handle_analysis_response(fallback, query_result, tool_call_count, config)
 
         if response.tool_calls[0]["name"] != "respond_to_user":
             return await _handle_tool_call_response(response, query_result, tool_call_count)

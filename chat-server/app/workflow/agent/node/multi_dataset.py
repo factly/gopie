@@ -83,7 +83,7 @@ async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) ->
         "project_ids": state["project_ids"],
         "user_query": state["user_query"] or "",
         "relevant_datasets_ids": state.get("relevant_datasets_ids", []),
-        "prev_sql_queries": state.get("relevant_sql_queries", []),
+        "prev_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await multi_dataset_graph.ainvoke(input_state, config=config)

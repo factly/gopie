@@ -71,7 +71,7 @@ async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -
         "messages": state["messages"],
         "dataset_id": dataset_id,
         "user_query": user_query,
-        "prev_sql_queries": state.get("relevant_sql_queries", []),
+        "prev_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await single_dataset_graph.ainvoke(input_state, config=config)
