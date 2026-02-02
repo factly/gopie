@@ -1,7 +1,7 @@
 from typing import Optional
 
-from app.core.log import custom_logger as logger
 from app.core.config import settings
+from app.core.log import custom_logger as logger
 from app.models.data import DatasetDetails, ProjectDetails
 from app.models.schema import ColumnSchema, DatasetSchema, DatasetSummary
 from app.services.gopie.client import GopieClient
@@ -12,23 +12,35 @@ async def get_dataset_info(
     dataset_id: str,
     project_id: str,
     org_id: Optional[str] = None,
+    is_view: bool = False,
 ) -> DatasetDetails:
     """Get dataset information from Gopie API.
 
     Args:
-        dataset_id: The dataset ID
+        dataset_id: The dataset ID (or view ID if is_view is True)
         project_id: The project ID
         org_id: Optional organization ID for multi-tenant support
+        is_view: Whether the dataset_id refers to a view
 
     Returns:
         DatasetDetails object
     """
     client = GopieClient(org_id=org_id)
-    path = f"/v1/api/projects/{project_id}/datasets/{dataset_id}"
+    if is_view:
+        path = f"/v1/api/projects/{project_id}/views/{dataset_id}"
+    else:
+        path = f"/v1/api/projects/{project_id}/datasets/{dataset_id}"
 
-    async with await client.get(path) as response:
-        data = await response.json()
-    return DatasetDetails(**data)
+    try:
+        async with await client.get(path) as response:
+            response_data = await response.json()
+        data = response_data["data"] if is_view else response_data
+        if is_view and data.get("sql_query"):
+            data["description"] = f"{data['description']}\n\nSQL Query:\n{data['sql_query']}"
+        return DatasetDetails(**data)
+    except Exception as e:
+        logger.exception(f"Error getting dataset info: {e!s}")
+        raise e
 
 
 async def get_project_info(
@@ -47,9 +59,13 @@ async def get_project_info(
     client = GopieClient(org_id=org_id)
     path = f"/v1/api/projects/{project_id}"
 
-    async with await client.get(path) as response:
-        data = await response.json()
-    return ProjectDetails(**data)
+    try:
+        async with await client.get(path) as response:
+            data = await response.json()
+        return ProjectDetails(**data)
+    except Exception as e:
+        logger.exception(f"Error getting project info: {e!s}")
+        raise e
 
 
 def create_dataset_schema(

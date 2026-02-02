@@ -68,29 +68,8 @@ async def analyze_query(state: State, config: RunnableConfig) -> dict:
         )
         response = await chain.ainvoke(chain_input)
 
-        # Fallback when model does not return tool_calls (e.g. gpt-oss-120b or weak tool-calling)
-        if not (getattr(response, "tool_calls", None) or []):
-            logger.warning(
-                "analyze_query: model returned no tool_calls; using fallback respond_to_user(data_query)"
-            )
-            fallback = AIMessage(
-                content=getattr(response, "content", "") or "",
-                tool_calls=[
-                    {
-                        "name": "respond_to_user",
-                        "args": {
-                            "query_type": "data_query",
-                            "confidence_score": 5,
-                            "reasoning": "Model did not return a tool call; defaulting to full workflow.",
-                            "clarification_needed": "",
-                            "status_message": "Analyzing your question...",
-                            "response_data": None,
-                        },
-                        "id": "fallback_respond_to_user",
-                    }
-                ],
-            )
-            return await _handle_analysis_response(fallback, query_result, tool_call_count, config)
+        if not response.tool_calls:
+            raise ValueError("No tool calls found in the response")
 
         if response.tool_calls[0]["name"] != "respond_to_user":
             return await _handle_tool_call_response(response, query_result, tool_call_count)

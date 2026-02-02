@@ -10,10 +10,7 @@ from app.utils.graph_utils.validate_match_relevance import (
 )
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
-from app.workflow.graph.multi_dataset_graph.types import (
-    ColumnAssumptions,
-    State,
-)
+from app.workflow.graph.sql_planner_graph.types import ColumnAssumptions, State
 
 
 class RegenerateFuzzyValuesOutput(BaseModel):
@@ -32,20 +29,34 @@ class RegenerateFuzzyValuesOutput(BaseModel):
     role="intermediate",
     progress_message="Analyzing dataset structure and validating column values...",
 )
-async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
+async def match_columns(state: State, config: RunnableConfig) -> dict:
     """
     Analyze dataset structure and validate fuzzy matches.
 
     - Matches column values against database
     - Validates Levenshtein matches with LLM for relevance
     - Retries with regenerated fuzzy values (up to 3 times) if matches fail
+
+    Supports both multi-dataset and single-dataset workflows.
     """
-    query_result = state["query_result"]
-    datasets_info = state["datasets_info"]
-    last_message = state.get("messages", [])[-1]
-    retry_count = state.get("analyze_dataset_retry_count", 0)
-    subqueries = state.get("subqueries", [])
-    current_query = subqueries[state.get("subquery_index", 0)]
+    # Determine which dataset info to use
+    multi_datasets_info = state.get("multi_datasets_info")
+    single_dataset_info = state.get("single_dataset_info")
+
+    # Use whichever is available
+    datasets_info = multi_datasets_info or single_dataset_info
+    is_single_dataset = single_dataset_info is not None and multi_datasets_info is None
+
+    if not datasets_info:
+        return {}
+
+    user_query = state.get("user_query", "")
+    messages = state.get("messages", [])
+    last_message = messages[-1] if messages else None
+    retry_count = state.get("match_columns_retry_count", 0)
+
+    # subqueries not present in SQL Planner State, using user_query directly
+    current_query = user_query
 
     try:
         if isinstance(last_message, ErrorMessage):
@@ -53,17 +64,17 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
 
         column_assumptions = datasets_info.get("column_assumptions", [])
         if not column_assumptions:
-            raise ValueError("No column assumptions found in the datasets_info.")
+            # It's possible there are no assumptions to verify, so we just proceed
+            return {}
 
         org_id = config.get("metadata", {}).get("org_id", None)
         column_mappings = await match_column_values(
             column_assumptions=column_assumptions, org_id=org_id
         )
 
-        logger.debug("Validating fuzzy match relevance with LLM...")
         column_mappings = await validate_match_relevance(
             analyze_dataset_result=column_mappings,
-            user_query=state["user_query"],
+            user_query=user_query,
             config=config,
         )
 
@@ -94,15 +105,22 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
                 datasets_info["column_assumptions"] = merged_assumptions
                 datasets_info["correct_column_requirements"] = None
 
-                return {
-                    "datasets_info": datasets_info,
-                    "analyze_dataset_retry_count": retry_count + 1,
+                result = {
+                    "match_columns_retry_count": retry_count + 1,
                     "messages": [
                         IntermediateStep(
                             content=f"Retrying with alternative search terms: {response.reasoning}"
                         )
                     ],
                 }
+
+                # Return the updated info in the correct state key
+                if is_single_dataset:
+                    result["single_dataset_info"] = datasets_info
+                else:
+                    result["multi_datasets_info"] = datasets_info
+
+                return result
 
             except Exception as e:
                 logger.exception(f"Error regenerating fuzzy values: {e!s}")
@@ -117,9 +135,8 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
         datasets_info["correct_column_requirements"] = column_mappings
         datasets_info["column_assumptions"] = None
 
-        return {
-            "datasets_info": datasets_info,
-            "analyze_dataset_retry_count": 0,
+        result = {
+            "match_columns_retry_count": 0,
             "messages": [
                 IntermediateStep(
                     content=f"Analyzed values for {len(column_mappings.datasets)} datasets"
@@ -127,14 +144,19 @@ async def analyze_dataset(state: State, config: RunnableConfig) -> dict:
             ],
         }
 
+        # Return the updated info in the correct state key
+        if is_single_dataset:
+            result["single_dataset_info"] = datasets_info
+        else:
+            result["multi_datasets_info"] = datasets_info
+
+        return result
+
     except Exception as e:
         error_msg = f"Error analyzing dataset: {e!s}"
-        query_result.add_error_message(error_msg, "Error analyzing dataset")
         logger.exception(error_msg)
-
         return {
-            "query_result": query_result,
-            "analyze_dataset_retry_count": 0,
+            "match_columns_retry_count": 0,
             "messages": [ErrorMessage(content=error_msg)],
         }
 
@@ -229,7 +251,12 @@ async def _regenerate_fuzzy_values(
     Regenerate fuzzy values using LLM for failed searches.
     """
 
-    dataset_schemas = datasets_info.get("schemas", [])
+    # Handle both multi-dataset ("schemas") and single-dataset ("dataset_schema")
+    dataset_schemas = datasets_info.get("schemas") or []
+    if not dataset_schemas:
+        single_schema = datasets_info.get("dataset_schema")
+        if single_schema:
+            dataset_schemas = [single_schema]
 
     chain_input = {
         "user_query": current_query,
@@ -253,14 +280,17 @@ async def _regenerate_fuzzy_values(
     return response
 
 
-def route_from_analyze_dataset(state: State) -> str:
-    datasets_info = state.get("datasets_info", {})
-    retry_count = state.get("analyze_dataset_retry_count", 0)
+def route_from_match_columns(state: State) -> str:
+    multi_datasets_info = state.get("multi_datasets_info", {})
+    single_dataset_info = state.get("single_dataset_info", {})
+    retry_count = state.get("match_columns_retry_count", 0)
 
-    column_assumptions = datasets_info.get("column_assumptions")
+    # Use whichever dataset info is available
+    datasets_info = multi_datasets_info or single_dataset_info
+    column_assumptions = datasets_info.get("column_assumptions") if datasets_info else None
 
     if column_assumptions and retry_count > 0 and retry_count < 3:
-        logger.info(f"Routing back to analyze_dataset for retry {retry_count}")
-        return "analyze_dataset"
+        logger.info(f"Routing back to match_columns for retry {retry_count}")
+        return "match_columns"
 
-    return "plan_query"
+    return "generate_sql"

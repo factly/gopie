@@ -71,8 +71,8 @@ services:
       - gopie
     user: "0:0"
     command: >
-      sh -c "chown -R 1001:1001 /home/gopie/dataful && 
-             chmod -R 755 /home/gopie/dataful && 
+      sh -c "chown -R 1001:1001 /home/gopie/dataful &&
+             chmod -R 755 /home/gopie/dataful &&
              su -s /bin/sh gopie -c 'cd /home/gopie && gopie serve'"
 
   minio:
@@ -112,7 +112,7 @@ services:
       "
 
 include:
-  - ./chat-server/docker-compose.yaml
+  - ./chat-server/docker-compose-noauth.yaml
 
 networks:
   gopie:

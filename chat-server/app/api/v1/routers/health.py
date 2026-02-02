@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
 from app.core.config import settings
+from app.core.log import logger
 
 router = APIRouter()
 
@@ -49,6 +50,7 @@ async def check_qdrant_health() -> Dict[str, Any]:
                 "collection_exists": False,
             }
     except Exception as e:
+        logger.exception("Error checking Qdrant health: %s", e)
         return {"status": "unhealthy", "error": str(e), "collection_exists": False}
 
 
@@ -85,6 +87,7 @@ async def check_llm_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking LLM provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.LLM_GATEWAY_PROVIDER,
@@ -109,6 +112,7 @@ async def check_gopie_server_health() -> Dict[str, Any]:
             # Any response (even 404) means the server is reachable
             return {"status": "healthy", "response_code": response.status, "server_reachable": True}
     except Exception as e:
+        logger.exception("Error checking Gopie server health: %s", e)
         return {"status": "unhealthy", "error": str(e), "server_reachable": False}
 
 
@@ -148,6 +152,7 @@ async def check_embedding_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking embedding provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.EMBEDDING_GATEWAY_PROVIDER,

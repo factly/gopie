@@ -6,41 +6,44 @@ from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.query import SqlQueryInfo
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
+from app.workflow.events.event_utils import configure_node
 
 from .types import State
 
 
 class SqlQueryOutput(BaseModel):
     sql_query: str = Field(
-        description="The SQL SELECT query. No semicolon. DuckDB-compatible. Double-quote identifiers.",
+        description="SQL query without semicolon, compatible with the configured OLAP backend"
     )
     explanation: str = Field(
-        description="Short technical explanation: query strategy, key columns, JOIN approach if multiple tables, and what the result represents.",
+        description="""concise explanation including: Query strategy (e.g., filtering by X to get Y),
+        key columns used and their data types, table metadata (table name, what data it contains),
+        JOIN strategy if multiple tables, and expected result format"""
     )
-    tables_used: list[str] = Field(
-        description="Exact table names from the schema used in this query (e.g. gp_xxx).",
-    )
+    tables_used: list[str] = Field(description="List of table names used in the query")
 
 
 class PlanQueryOutput(BaseModel):
     sql_queries: list[SqlQueryOutput] = Field(
-        description="List of SQL queries to execute. Use [] when not generating SQL (Path B).",
-        default=[],
+        description="List of SQL queries to execute", default=[]
     )
     non_sql_response: str = Field(
-        description="ONLY when NOT generating SQL (Path B): technical explanation why no SQL. MUST be empty string '' when sql_queries is non-empty.",
-        default="",
+        description="Clear explanation when SQL queries cannot be generated", default=""
     )
     user_friendly_response: str = Field(
-        description="ONLY when NOT generating SQL (Path B): short user message (<200 chars) why no query. MUST be empty string '' when sql_queries is non-empty.",
+        description="A short user friendly (no technical jargon or error messages revealed in this field) "
+        "message not more than 200 characters telling why there was no SQL query generated otherwise this field should be empty",
         default="",
     )
     limitations: str = Field(
-        description="Always required. 1-2 sentences: assumptions (join keys, same ID across tables), missing data, units, or exclusions.",
-        default="",
+        description="Any constraints or assumptions in the analysis", default=""
     )
 
 
+@configure_node(
+    role="intermediate",
+    progress_message="Generating SQL queries...",
+)
 async def generate_sql(state: State, config: RunnableConfig) -> dict:
     """
     Plan SQL queries based on user input and dataset information.
@@ -81,17 +84,10 @@ async def generate_sql(state: State, config: RunnableConfig) -> dict:
         response = await chain.ainvoke(chain_input)
 
         sql_queries = response.sql_queries
-        non_sql_response = response.non_sql_response or ""
-        limitations = response.limitations or ""
-        user_friendly_response = response.user_friendly_response or ""
-
-        # Defensive: if model generated SQL, treat as Path A and ignore non_sql/user_friendly
-        # (avoids dropping SQL when model wrongly fills both paths)
-        if sql_queries:
-            non_sql_response = ""
-            user_friendly_response = ""
-
-        if non_sql_response:
+        non_sql_response = response.non_sql_response
+        limitations = response.limitations
+        user_friendly_response = response.user_friendly_response
+        if non_sql_response and len(sql_queries) == 0:
             await adispatch_custom_event(
                 "gopie-agent",
                 {

@@ -11,11 +11,20 @@ from app.workflow.events.event_utils import (
     configure_node,
     fake_streaming_response,
 )
-from app.workflow.graph.multi_dataset_graph.types import (
+from app.workflow.graph.multi_dataset_graph.types import State
+from app.workflow.graph.sql_planner_graph.types import (
     ColumnAssumptions,
     DatasetsInfo,
-    State,
 )
+
+
+def _create_empty_datasets_info() -> DatasetsInfo:
+    """Create an empty DatasetsInfo object for error scenarios."""
+    return DatasetsInfo(
+        schemas=[],
+        column_assumptions=None,
+        correct_column_requirements=None,
+    )
 
 
 class IdentifyDatasetsOutput(BaseModel):
@@ -46,7 +55,7 @@ class IdentifyDatasetsOutput(BaseModel):
     role="intermediate",
     progress_message="Identifying datasets...",
 )
-async def identify_datasets(state: State, config: RunnableConfig):
+async def identify_datasets(state: State, config: RunnableConfig) -> dict:
     """
     Identify relevant dataset based on natural language query.
 
@@ -93,11 +102,7 @@ async def identify_datasets(state: State, config: RunnableConfig):
             return {
                 "query_result": query_result,
                 "identified_datasets": None,
-                "datasets_info": DatasetsInfo(
-                    schemas=[],
-                    column_assumptions=None,
-                    correct_column_requirements=None,
-                ),
+                "datasets_info": _create_empty_datasets_info(),
                 "messages": [
                     ErrorMessage(
                         content="No relevant datasets found for the query, ask user to rephrase or ask more relevant query"
@@ -170,23 +175,21 @@ async def identify_datasets(state: State, config: RunnableConfig):
         }
 
     except Exception as e:
-        error_msg = f"Error identifying datasets: {e!s}"
-        query_result.add_error_message(str(e), "Error identifying datasets")
+        error_msg = f"Failed to identify datasets for query '{user_query}': {e!s}"
+        query_result.add_error_message(
+            str(e), f"Error in identify_datasets node (subquery index: {query_index})"
+        )
         await adispatch_custom_event(
             "gopie-agent",
-            {"content": "Error identifying datasets"},
+            {"content": f"Error identifying datasets: {type(e).__name__}"},
         )
 
-        logger.exception(error_msg)
+        logger.exception(f"Dataset identification failed - Query: '{user_query}', Error: {e!s}")
 
         return {
             "query_result": query_result,
             "identified_datasets": None,
-            "datasets_info": DatasetsInfo(
-                schemas=[],
-                column_assumptions=None,
-                correct_column_requirements=None,
-            ),
+            "datasets_info": _create_empty_datasets_info(),
             "messages": [ErrorMessage(content=error_msg)],
         }
 
@@ -194,6 +197,9 @@ async def identify_datasets(state: State, config: RunnableConfig):
 def route_from_datasets(state: State) -> str:
     """
     Route to the appropriate next node based on dataset identification results.
+
+    Returns:
+        str: One of "no_datasets_found", "retry_semantic_search", or "analyze_dataset"
     """
     last_message = state.get("messages", [])[-1] if state.get("messages") else None
     identified_datasets = state.get("identified_datasets")
@@ -209,4 +215,4 @@ def route_from_datasets(state: State) -> str:
     if not identified_datasets:
         return "no_datasets_found"
 
-    return "analyze_dataset"
+    return "plan_query"

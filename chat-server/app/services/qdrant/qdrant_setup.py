@@ -10,49 +10,88 @@ UUID_NAMESPACE = UUID("3896d314-1e95-4a3a-b45a-945f9f0b541d")
 
 
 class QdrantSetup:
-    async_client: AsyncQdrantClient | None = None
-    sync_client: QdrantClient | None = None
-    CONNECTION_TIMEOUT = 30
+    """Singleton manager for Qdrant client connections and collection setup."""
+
+    _async_client: AsyncQdrantClient | None = None
+    _sync_client: QdrantClient | None = None
+    _CONNECTION_TIMEOUT = 30
 
     @classmethod
     def get_document_id(cls, project_id: str, dataset_id: str) -> str:
+        """Generate deterministic document ID from project and dataset IDs."""
         return str(uuid5(UUID_NAMESPACE, f"{project_id}_{dataset_id}"))
 
     @classmethod
-    async def get_async_client(cls, connection_name: str) -> AsyncQdrantClient:
-        if cls.async_client is None:
-            cls.async_client = AsyncQdrantClient(
-                url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
-                check_compatibility=False,
-                timeout=cls.CONNECTION_TIMEOUT,
-            )
-        if not await cls._async_collection_exists(cls.async_client, connection_name):
-            config = cls.get_qdrant_config(connection_name)
-            await cls.async_client.create_collection(**config)
-        return cls.async_client
+    def _get_qdrant_url(cls) -> str:
+        """Get Qdrant connection URL from settings."""
+        return f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
 
     @classmethod
-    def get_sync_client(cls, connection_name: str) -> QdrantClient:
-        if cls.sync_client is None:
-            cls.sync_client = QdrantClient(
-                url=f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}",
+    async def get_async_client(cls, collection_name: str) -> AsyncQdrantClient:
+        """
+        Get or create async Qdrant client singleton.
+        Creates collection if it doesn't exist.
+
+        Args:
+            collection_name: Name of the collection to ensure exists
+
+        Returns:
+            Initialized async Qdrant client
+        """
+        if cls._async_client is None:
+            cls._async_client = AsyncQdrantClient(
+                url=cls._get_qdrant_url(),
                 check_compatibility=False,
-                timeout=cls.CONNECTION_TIMEOUT,
+                timeout=cls._CONNECTION_TIMEOUT,
             )
-        if not cls._collection_exists(cls.sync_client, connection_name):
-            config = cls.get_qdrant_config(connection_name)
-            cls.sync_client.create_collection(**config)
-        return cls.sync_client
+
+        if not await cls._async_collection_exists(cls._async_client, collection_name):
+            config = cls.get_qdrant_config(collection_name)
+            await cls._async_client.create_collection(**config)
+        return cls._async_client
 
     @classmethod
-    def get_qdrant_config(cls, connection_name: str) -> dict:
+    def get_sync_client(cls, collection_name: str) -> QdrantClient:
+        """
+        Get or create sync Qdrant client singleton.
+        Creates collection if it doesn't exist.
+
+        Args:
+            collection_name: Name of the collection to ensure exists
+
+        Returns:
+            Initialized sync Qdrant client
+        """
+        if cls._sync_client is None:
+            cls._sync_client = QdrantClient(
+                url=cls._get_qdrant_url(),
+                check_compatibility=False,
+                timeout=cls._CONNECTION_TIMEOUT,
+            )
+
+        if not cls._collection_exists(cls._sync_client, collection_name):
+            config = cls.get_qdrant_config(collection_name)
+            cls._sync_client.create_collection(**config)
+        return cls._sync_client
+
+    @classmethod
+    def get_qdrant_config(cls, collection_name: str) -> dict:
         return {
-            "collection_name": connection_name,
-            "vectors_config": models.VectorParams(
-                size=settings.DEFAULT_EMBEDDING_SIZE,
-                distance=models.Distance.COSINE,
-                on_disk=True,
-            ),
+            "collection_name": collection_name,
+            "vectors_config": {
+                "dense": models.VectorParams(
+                    size=settings.DEFAULT_EMBEDDING_SIZE,
+                    distance=models.Distance.COSINE,
+                    on_disk=True,
+                ),
+            },
+            "sparse_vectors_config": {
+                "sparse": models.SparseVectorParams(
+                    index=models.SparseIndexParams(
+                        on_disk=False,
+                    ),
+                ),
+            },
             "hnsw_config": models.HnswConfigDiff(
                 m=16,
                 ef_construct=100,
@@ -90,22 +129,20 @@ class QdrantSetup:
     @classmethod
     def _collection_exists(cls, client: QdrantClient, collection_name: str) -> bool:
         collections = client.get_collections().collections
-        collection_names = [collection.name for collection in collections]
-        return collection_name in collection_names
+        return any(col.name == collection_name for col in collections)
 
     @classmethod
     async def _async_collection_exists(
         cls, client: AsyncQdrantClient, collection_name: str
     ) -> bool:
         collections = (await client.get_collections()).collections
-        collection_names = [collection.name for collection in collections]
-        return collection_name in collection_names
+        return any(col.name == collection_name for col in collections)
 
     @classmethod
     async def close_clients(cls) -> None:
-        if cls.sync_client:
-            cls.sync_client.close()
-            cls.sync_client = None
-        if cls.async_client:
-            await cls.async_client.close()
-            cls.async_client = None
+        if cls._sync_client:
+            cls._sync_client.close()
+            cls._sync_client = None
+        if cls._async_client:
+            await cls._async_client.close()
+            cls._async_client = None

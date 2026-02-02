@@ -1,7 +1,7 @@
 import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, Header, HTTPException, status
 
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
@@ -32,7 +32,9 @@ async def upload_schema(
         project_id = payload.project_id
         dataset_id = payload.dataset_id
         dataset_details, project_details = await asyncio.gather(
-            get_dataset_info(dataset_id, project_id, org_id=x_organization_id),
+            get_dataset_info(
+                dataset_id, project_id, org_id=x_organization_id, is_view=payload.is_view
+            ),
             get_project_info(project_id, org_id=x_organization_id),
         )
         dataset_summary, sample_data = await generate_summary(

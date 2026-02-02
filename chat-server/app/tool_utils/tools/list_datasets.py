@@ -107,7 +107,7 @@ async def get_all_datasets(
     # Extract org_id from config
     org_id = None
     if config:
-        org_id = config.get("configurable", {}).get("org_id", None)
+        org_id = config.get("metadata", {}).get("org_id", None)
 
     all_datasets: list[str] = [""]
 

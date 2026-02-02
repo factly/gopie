@@ -18,6 +18,11 @@ async def execute_sql(state: State, config: RunnableConfig) -> dict:
     Returns:
         dict: Updated state with SQL execution results
     """
+    # Extract org_id from config for SQL execution
+    org_id = None
+    if config:
+        org_id = config.get("metadata", {}).get("org_id", None)
+
     query_result = state.get("query_result", None)
     last_message = state.get("messages", [])
 
@@ -46,8 +51,9 @@ async def execute_sql(state: State, config: RunnableConfig) -> dict:
 
         for sql_info in query_result.single_dataset_query_result.sql_queries:
             try:
+                org_id = config.get("metadata", {}).get("org_id")
                 result_data, truncated_result_data = await execute_sql_with_full_and_truncated(
-                    query=sql_info.sql_query
+                    query=sql_info.sql_query, org_id=org_id
                 )
                 sql_info.sql_query_result = truncated_result_data
                 sql_info.full_sql_result = result_data

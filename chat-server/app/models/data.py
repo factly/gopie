@@ -25,15 +25,16 @@ class DatasetDetails(BaseModel):
     name: str
     alias: str
     description: str
-    row_count: int
-    columns: list[ColumnDetails]
-    size: int
-    file_path: str
-    created_at: str
-    updated_at: str
-    created_by: str
-    updated_by: str
+    row_count: Optional[int] = None
+    columns: Optional[list[ColumnDetails]] = None
+    size: Optional[int] = None
+    file_path: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
     custom_prompt: Optional[str] = None
+    sql_query: Optional[str] = None
 
     model_config = ConfigDict(extra="ignore")
 

@@ -5,8 +5,10 @@ from app.services.qdrant.get_schema import get_schema_from_qdrant
 from app.workflow.graph.nl_to_sql_graph.types import SqlQuery, State
 from app.workflow.graph.sql_planner_graph.graph import sql_planning_agent
 from app.workflow.graph.sql_planner_graph.types import (
+    DatasetsInfo,
     InputState as SqlPlannerInputState,
 )
+from app.workflow.graph.single_dataset_graph.types import SingleDatasetInfo
 
 
 async def sql_agent(state: State, config: RunnableConfig) -> dict:
@@ -21,29 +23,33 @@ async def sql_agent(state: State, config: RunnableConfig) -> dict:
     dataset_ids = state.get("dataset_ids") or []
     semantic_search_results = state.get("semantic_search_results")
 
+    # Extract org_id from config
+    org_id = None
+    if config:
+        org_id = config.get("metadata", {}).get("org_id", None)
+
     try:
-        single_dataset_info = None
-        multi_datasets_info = None
+        single_dataset_info: SingleDatasetInfo | None = None
+        multi_datasets_info: DatasetsInfo | None = None
 
         if semantic_search_results:
-            multi_datasets_info = {
-                "schemas": semantic_search_results,
-                "column_assumptions": None,
-                "correct_column_requirements": None,
-            }
+            multi_datasets_info = DatasetsInfo(
+                schemas=semantic_search_results,
+                column_assumptions=None,
+                correct_column_requirements=None,
+            )
         elif dataset_ids:
             dataset_id = dataset_ids[0]
-            schema = await get_schema_from_qdrant(dataset_id=dataset_id)
+            schema = await get_schema_from_qdrant(dataset_id=dataset_id, org_id=org_id)
             if schema is None:
                 return {"sql_queries": [], "message": None}
 
-            single_dataset_info = {
-                "dataset_id": dataset_id,
-                "dataset_name": schema.dataset_name,
-                "user_friendly_dataset_name": schema.name,
-                "dataset_schema": schema,
-                "sample_data_csv": "",
-            }
+            single_dataset_info = SingleDatasetInfo(
+                dataset_schema=schema,
+                sample_data_csv="",
+                column_assumptions=None,
+                correct_column_requirements=None,
+            )
         else:
             return {"sql_queries": [], "message": None}
 

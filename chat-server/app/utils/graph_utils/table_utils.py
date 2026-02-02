@@ -3,10 +3,11 @@ from typing import Optional
 from app.core.config import settings
 from app.core.log import custom_logger as logger
 from app.services.gopie.sql_executor import execute_sql
+from app.utils.olap import get_query_builder
 
 
 async def get_table_estimated_size(table_name: str, org_id: Optional[str] = None) -> int:
-    """Get estimated table size from DuckDB metadata.
+    """Get estimated table size from OLAP backend metadata.
 
     Args:
         table_name: Name of the table
@@ -15,11 +16,8 @@ async def get_table_estimated_size(table_name: str, org_id: Optional[str] = None
     Returns:
         Estimated row count, or 0 if table not found or error occurs
     """
-    size_query = f"""
-        SELECT estimated_size
-        FROM duckdb_tables()
-        WHERE table_name = '{table_name}'
-    """
+    builder = get_query_builder()
+    size_query = builder.get_estimated_size_query(table_name)
     try:
         result = await execute_sql(query=size_query, org_id=org_id)
         if result and len(result) > 0:

@@ -92,11 +92,12 @@ async def validate_result(state: State, config: RunnableConfig) -> dict:
         }
 
     except Exception as e:
-        error_msg = f"Validation error: {str(e)}. Proceeding with response."
-        logger.exception(error_msg)
+        error_msg = f"Validation error: {e!s}. Proceeding with response."
+        logger.exception(f"Result validation failed - Error: {e!s}")
 
         return {
             "messages": [ErrorMessage(content=error_msg)],
+            "recommendation": "pass_on_results",
         }
 
 

@@ -3,7 +3,6 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
-from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.multi_dataset_graph.types import State
 from app.workflow.graph.sql_planner_graph.graph import sql_planning_agent
 from app.workflow.graph.sql_planner_graph.types import (
@@ -11,10 +10,6 @@ from app.workflow.graph.sql_planner_graph.types import (
 )
 
 
-@configure_node(
-    role="intermediate",
-    progress_message="Planning query...",
-)
 async def sql_agent(state: State, config: RunnableConfig) -> dict:
     identified_datasets = state.get("identified_datasets", [])
     query_index = state.get("subquery_index", 0)
@@ -48,6 +43,7 @@ async def sql_agent(state: State, config: RunnableConfig) -> dict:
         non_sql_response = agent_output.get("non_sql_response", "")
         limitations = agent_output.get("limitations", [])
         tables_used = agent_output.get("tables_used", [])
+        updated_datasets_info = agent_output.get("multi_datasets_info")
 
         query_result.subqueries[query_index].sql_queries = sql_queries
         query_result.subqueries[query_index].non_sql_response = non_sql_response
@@ -81,6 +77,7 @@ async def sql_agent(state: State, config: RunnableConfig) -> dict:
 
         return {
             "query_result": query_result,
+            "datasets_info": updated_datasets_info or datasets_info,
             "messages": [
                 IntermediateStep(
                     content="Succesfully Completed query planning step in multidataset workflow."

@@ -3,7 +3,6 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 
 from app.core.log import custom_logger as logger
-from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import State
 from app.workflow.graph.sql_planner_graph.graph import sql_planning_agent
 from app.workflow.graph.sql_planner_graph.types import (
@@ -11,10 +10,6 @@ from app.workflow.graph.sql_planner_graph.types import (
 )
 
 
-@configure_node(
-    role="intermediate",
-    progress_message="Planning SQL queries...",
-)
 async def sql_agent(state: State, config: RunnableConfig) -> dict:
     user_query = state.get("user_query", "") or ""
     dataset_info = state.get("dataset_info", None)
@@ -42,6 +37,9 @@ async def sql_agent(state: State, config: RunnableConfig) -> dict:
         single_dataset_result.sql_queries = agent_output.get("sql_queries")
         single_dataset_result.non_sql_response = agent_output.get("non_sql_response", "")
 
+        # Get updated dataset info from planner (may have updated column requirements from matching)
+        updated_dataset_info = agent_output.get("single_dataset_info")
+
         return {
             "messages": [
                 AIMessage(
@@ -53,6 +51,7 @@ async def sql_agent(state: State, config: RunnableConfig) -> dict:
                 )
             ],
             "query_result": query_result,
+            "dataset_info": updated_dataset_info or dataset_info,
         }
 
     except Exception as e:

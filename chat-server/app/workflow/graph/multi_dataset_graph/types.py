@@ -3,26 +3,9 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.models.data import ColumnValueMatching
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-
-
-class FuzzyValue(TypedDict):
-    name: str
-    exact_values: list[str]
-    fuzzy_values: list[str]
-
-
-class ColumnAssumptions(TypedDict):
-    dataset: str
-    columns: list[FuzzyValue]
-
-
-class DatasetsInfo(TypedDict):
-    schemas: list[DatasetSchema]
-    column_assumptions: list[ColumnAssumptions] | None
-    correct_column_requirements: ColumnValueMatching | None
+from app.workflow.graph.sql_planner_graph.types import DatasetsInfo
 
 
 class InputState(TypedDict):
@@ -59,7 +42,6 @@ class State(TypedDict):
     semantic_search_results: list[DatasetSchema]
     semantic_search_retry_count: int
     missing_dataset_context: str | None
-    analyze_dataset_retry_count: int
 
 
 class ConfigSchema(TypedDict):

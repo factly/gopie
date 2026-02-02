@@ -78,12 +78,12 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
 
         final_result_data = []
         for result in result_data:
-            result = json.loads(result)
-            result.pop("config")
-            result["width"] = "container"
-            result["height"] = "container"
-            result = json.dumps(result)
-            final_result_data.append(result)
+            result_dict = json.loads(result)
+            # Remove config if present, add responsive dimensions
+            result_dict.pop("config", None)
+            result_dict["width"] = "container"
+            result_dict["height"] = "container"
+            final_result_data.append(json.dumps(result_dict))
 
         s3_paths = await upload_visualization_result_data(
             data=final_result_data, python_code=python_code_with_context
@@ -108,8 +108,8 @@ async def process_visualization_result(state: State, config: RunnableConfig) -> 
                 for img in png_bytes_list:
                     if isinstance(img, (bytes, bytearray)) and len(img) > 0:
                         png_images_b64.append(base64.b64encode(img).decode("utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to generate PNG images for visualization: {e!s}")
 
         await adispatch_custom_event(
             "gopie-agent",

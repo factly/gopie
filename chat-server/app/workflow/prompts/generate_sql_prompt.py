@@ -5,8 +5,13 @@ from langchain_core.prompts import (
 )
 
 from app.utils.prompts import escape_value
-from app.workflow.graph.multi_dataset_graph.types import DatasetsInfo
 from app.workflow.graph.single_dataset_graph.types import SingleDatasetInfo
+from app.workflow.graph.sql_planner_graph.types import DatasetsInfo
+from app.workflow.prompts.db_prompts import (
+    get_db_name,
+    get_expert_role,
+    get_sql_compatibility_instructions,
+)
 from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
     langsmith_compatible,
 )
@@ -16,26 +21,12 @@ def generate_sql_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
-    system_content = """
-You are a DuckDB and data expert. Analyze the user's question and available datasets to determine if valid SQL queries can be generated.
+    db_name = get_db_name()
+    expert_role = get_expert_role()
+    db_compatibility = get_sql_compatibility_instructions()
 
-## OUTPUT FORMAT RULES (CRITICAL — FOLLOW EXACTLY)
-
-You must choose ONE path. The fields you fill depend on which path you choose.
-
-**Path A — You ARE generating SQL** (datasets can answer the question):
-- `sql_queries`: Put your SQL query or queries here. Each item needs: sql_query, explanation, tables_used.
-- `non_sql_response`: MUST be empty string "".
-- `user_friendly_response`: MUST be empty string "".
-- `limitations`: REQUIRED. One or two short sentences: assumptions (e.g., join keys, same-ID across tables), missing data, units, or exclusions.
-
-**Path B — You are NOT generating SQL** (data is insufficient, or answer is from context/sample only):
-- `sql_queries`: MUST be empty list [].
-- `non_sql_response`: REQUIRED. Clear, technical explanation of why no SQL (missing columns, incompatible data, answer from context, etc.).
-- `user_friendly_response`: REQUIRED. Short (under 200 chars), non-technical message for the user (e.g., "I couldn't find the right data to run a query").
-- `limitations`: REQUIRED. Brief note on what is missing or why SQL was not used.
-
-Rule: If `sql_queries` has any items, then `non_sql_response` and `user_friendly_response` must both be "". Do NOT put intro text like "Here are the results" in `non_sql_response` when you generate SQL.
+    system_content = f"""
+{expert_role} Analyze the user's question and available datasets to determine if valid SQL queries can be generated.
 
 ## SQL MODIFICATION REQUESTS
 If the user query starts with [SQL_MODIFICATION: <type>], modify the PREVIOUS SQL QUERY/QUERIES to fulfill the user's request.
@@ -48,46 +39,68 @@ If the user query starts with [SQL_MODIFICATION: <type>], modify the PREVIOUS SQ
 ## DECISION FRAMEWORK
 
 ### Step 1: Internal Validation (Do Not Expose)
-Before responding, decide:
-1. Can the dataset(s) answer the user's question?
-2. Are the required columns in the schema(s)?
-3. If multiple datasets, can they be joined correctly?
-4. Can the question be answered from sample data or previous results alone?
+Before responding, internally validate:
+1. **Data Compatibility**: Can the available dataset(s) answer the user's question?
+2. **Column Availability**: Are required columns present in the dataset schema(s)?
+3. **Join Feasibility**: If multiple datasets, can they be properly joined?
+4. **Context Sufficiency**: Can the question be answered from sample data or previous results?
 
-### Step 2: Choose ONE Path
-- **Path A**: Datasets can fulfill the query → generate SQL. Use Path A output rules above.
-- **Path B**: Data insufficient, or answer from context/sample only → no SQL. Use Path B output rules above.
+### Step 2: Choose Response Path
+Based on validation, select ONE path:
+
+**Path A - Generate SQL Queries**: If datasets can fulfill the query
+**Path B - No-SQL Response**: If:
+- Datasets are insufficient or incompatible
+- Query can be answered from existing context (sample data, previous results)
+- Required columns or data are missing
 
 ## DATABASE & QUERY RULES
 
-### DuckDB Compatibility
-- SQL must be valid DuckDB. Use exact table names from schema (dataset_name). No semicolon at end.
-- Double quotes for identifiers; single quotes for string values. Only SELECT (read-only).
+### {db_name} Compatibility
+{db_compatibility}
+- Generate **only read queries** (SELECT statements)
 
 ### Column & Table Usage
-- Use EXACT column names from the schema (case-sensitive). Use the TABLE NAME from the schema.
-- Include unit columns when showing value columns. Do NOT use project_id, dataset_id, or internal IDs in WHERE.
+- Use **EXACT column names** from dataset schema (case-sensitive)
+- Pay careful attention to provided TABLE NAME for forming SQL queries
+- Include units/unit columns when displaying value columns
+- **NEVER use** project_id, dataset_id, or internal system identifiers in WHERE clauses
 
 ### Text Matching & Filtering
-- Case-insensitive: `LOWER(column) = LOWER('value')`. No ILIKE or LIKE. Regex: `REGEXP_MATCHES(column, 'pattern')`.
+- **Case-insensitive matching**: Use `LOWER(column) = LOWER('value')`
+- **No ILIKE or LIKE operators**
 
 ### Calculations & Aggregations
-- Share/percentage: `(value/total)*100`. Use summarize only for explicit summary requests.
+- For **share/percentage** calculations: `(value/total)*100`
+- When using **summarize** command: Only for explicit statistical/summary requests
+
+### Database-Specific Syntax
+- Use {db_name} documentation to plan and generate the sql queries
 
 ### Multiple Datasets
-- Related datasets: one query with JOINs. Unrelated: multiple separate queries.
+**Related Datasets**: Create a **SINGLE query with JOINs**
+**Unrelated Datasets**: Create **MULTIPLE independent queries**
 
 ## CONTEXT HANDLING
 
-- Validation results: fix previous queries using the issues mentioned.
-- Previous results: use as context; avoid re-running if they already answer the question.
-- Error messages (retries): fix the mistakes and try again.
+### Validation Results
+- If validation results are provided, **improve** previous queries based on issues mentioned
+- Address specific problems identified in validation
+
+### Previous Query Results
+- Consider previous results as **context** for answering questions
+- Avoid regenerating queries if existing results are sufficient
+
+### Error Messages (Retries)
+- If error messages are provided, **learn from mistakes**
+- Adjust queries to avoid previous errors
 
 ## SPECIAL INSTRUCTIONS
-- Ignore visualization in the user query.
-- Always set `limitations` (1–2 sentences on assumptions, missing data, or exclusions).
-- In `sql_queries`, each `explanation` must be concise and technical.
-- Focus on business data columns, not technical metadata.
+- **Ignore** visualization requirements in user queries
+- **Always** include `limitations` field
+- Keep explanations **concise** and **technical**
+- Keep user_friendly_response **short** and **non-technical**
+- Focus on **business data** columns, not technical metadata
 """
 
     human_template_str = "{input}"
@@ -134,9 +147,7 @@ def format_generate_sql_input(
         if "dataset_schema" in datasets_info:
             schema = datasets_info.get("dataset_schema")
             sample_csv = datasets_info.get("sample_data_csv")
-            ds_name = datasets_info.get("user_friendly_dataset_name") or datasets_info.get(
-                "dataset_name", "dataset"
-            )
+            ds_name = schema.name if schema else "dataset"
 
             if schema:
                 formatted_schema = schema.format_for_prompt()
@@ -144,6 +155,44 @@ def format_generate_sql_input(
 
             if sample_csv:
                 input_str += f"\n\nSAMPLE DATA ({ds_name}):\n{sample_csv}"
+
+            column_requirements = datasets_info.get("correct_column_requirements")
+            if column_requirements:
+                input_str += "\n\nVERIFIED COLUMN VALUES:\n"
+                datasets_analysis = column_requirements.datasets
+                for ds_name, analysis in datasets_analysis.items():
+                    input_str += f"\nDataset: {ds_name}\n"
+                    for col_analysis in analysis.columns_analyzed:
+                        col_name = col_analysis.column_name
+                        verified_values = col_analysis.verified_values
+                        suggested_alternatives = col_analysis.suggested_alternatives
+
+                        if verified_values:
+                            exact_vals = [v.value for v in verified_values if v.found_in_database]
+                            not_found_vals = [
+                                v.value for v in verified_values if not v.found_in_database
+                            ]
+
+                            if exact_vals:
+                                escaped_vals = [escape_value(val) for val in exact_vals]
+                                input_str += (
+                                    f"- {col_name} (exact matches): {', '.join(escaped_vals)}\n"
+                                )
+                            if not_found_vals:
+                                escaped_vals = [escape_value(val) for val in not_found_vals]
+                                input_str += (
+                                    f"- {col_name} (not found): {', '.join(escaped_vals)}\n"
+                                )
+
+                        if suggested_alternatives:
+                            for suggestion in suggested_alternatives:
+                                if suggestion.found_similar_values and suggestion.similar_values:
+                                    escaped_vals = [
+                                        escape_value(val) for val in suggestion.similar_values
+                                    ]
+                                    input_str += f"- {col_name} (alternatives for '{suggestion.requested_value}'): {', '.join(escaped_vals)}\n"
+                                else:
+                                    input_str += f"- {col_name} (no alternatives found for '{suggestion.requested_value}')\n"
 
         elif "schemas" in datasets_info:
             schemas = datasets_info.get("schemas", [])

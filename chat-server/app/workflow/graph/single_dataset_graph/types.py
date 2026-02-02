@@ -3,16 +3,17 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
+from app.models.data import ColumnValueMatching
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
+from app.workflow.types import ColumnAssumptions
 
 
 class SingleDatasetInfo(TypedDict):
-    dataset_id: str
-    dataset_name: str
-    user_friendly_dataset_name: str
     dataset_schema: DatasetSchema
     sample_data_csv: str
+    column_assumptions: list[ColumnAssumptions] | None
+    correct_column_requirements: ColumnValueMatching | None
 
 
 class InputState(TypedDict):

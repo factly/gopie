@@ -1,8 +1,6 @@
 from http import HTTPStatus
 from typing import Optional, Union
 
-from langsmith import traceable
-
 from app.core.log import custom_logger as logger
 from app.services.gopie.client import GopieClient
 from app.utils.graph_utils.result_validation import (
@@ -13,7 +11,6 @@ from app.utils.graph_utils.result_validation import (
 SQL_RESPONSE_TYPE = list[dict[str, Union[str, int, float, None]]] | None
 
 
-@traceable(run_type="tool", name="execute_sql")
 async def execute_sql(query: str, org_id: Optional[str] = None) -> SQL_RESPONSE_TYPE:
     """
     Execute a SQL query against the SQL API

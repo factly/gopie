@@ -11,7 +11,8 @@ from app.utils.graph_utils.table_utils import (
     get_table_estimated_size,
     should_use_sampling,
 )
-from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
+from app.utils.olap import get_query_builder
+from app.workflow.graph.sql_planner_graph.types import ColumnAssumptions
 
 
 def _is_valid_fuzzy_value(value) -> bool:
@@ -27,6 +28,8 @@ def _build_ilike_query(
 ) -> str:
     """Build optimized ILIKE query based on table size.
 
+    Uses the query builder to generate database-specific SQL syntax.
+
     Args:
         table_name: Name of the table
         column_name: Name of the column to search
@@ -37,32 +40,21 @@ def _build_ilike_query(
     Returns:
         SQL query string
     """
-    where_clause = f"WHERE LOWER(CAST({column_name} AS VARCHAR)) LIKE '%' || LOWER('{escaped_value}') || '%'"
+    builder = get_query_builder()
 
     if not should_use_sampling(estimated_size):
-        return f"""
-        SELECT DISTINCT {column_name}
-        FROM (SELECT * FROM {table_name} LIMIT 200000)
-        {where_clause}
-        LIMIT {limit}
-        """
+        return builder.build_ilike_query(table_name, column_name, escaped_value, limit)
     else:
         pct_str = calculate_sampling_percentage(estimated_size)
 
         logger.debug(
             f"[{table_name}] Large dataset detected ({estimated_size} rows) for ILIKE search. "
-            f"Sampling {pct_str}% (system)."
+            f"Sampling {pct_str}%."
         )
 
-        return f"""
-        SELECT DISTINCT {column_name}
-        FROM (
-            SELECT * FROM {table_name}
-            USING SAMPLE {pct_str}% (system)
+        return builder.build_large_table_ilike_query(
+            table_name, column_name, escaped_value, pct_str, limit
         )
-        {where_clause}
-        LIMIT {limit}
-        """
 
 
 def _build_levenshtein_query(
@@ -74,6 +66,8 @@ def _build_levenshtein_query(
 ) -> str:
     """Build optimized Levenshtein query based on table size.
 
+    Uses the query builder to generate database-specific SQL syntax.
+
     Args:
         table_name: Name of the table
         column_name: Name of the column to search
@@ -84,31 +78,21 @@ def _build_levenshtein_query(
     Returns:
         SQL query string
     """
-    cast_col = f"CAST({column_name} AS VARCHAR)"
+    builder = get_query_builder()
+
     if not should_use_sampling(estimated_size):
-        return f"""
-        SELECT DISTINCT {column_name},
-            levenshtein(lower({cast_col}), lower('{escaped_value}')) AS distance
-        FROM (SELECT * FROM {table_name} LIMIT 200000)
-        ORDER BY distance ASC
-        LIMIT {limit}
-        """
+        return builder.build_levenshtein_query(table_name, column_name, escaped_value, limit)
     else:
         pct_str = calculate_sampling_percentage(estimated_size)
 
         logger.debug(
             f"[{table_name}] Large dataset detected ({estimated_size} rows) for Levenshtein search. "
-            f"Sampling {pct_str}% (system)."
+            f"Sampling {pct_str}%."
         )
 
-        return f"""
-        SELECT DISTINCT {column_name},
-            levenshtein(lower({cast_col}), lower('{escaped_value}')) AS distance
-        FROM {table_name}
-        USING SAMPLE {pct_str}% (system)
-        ORDER BY distance ASC
-        LIMIT {limit}
-        """
+        return builder.build_large_table_levenshtein_query(
+            table_name, column_name, escaped_value, pct_str, limit
+        )
 
 
 @traceable(run_type="tool", name="match_column_values")

@@ -10,7 +10,6 @@ from .multi_dataset_prompts.analyze_query_prompt import (
     format_analyze_query_input,
 )
 from .multi_dataset_prompts.generate_subqueries_prompt import (
-    assess_query_complexity_prompt,
     generate_subqueries_prompt,
 )
 from .multi_dataset_prompts.identify_datasets_prompt import (
@@ -36,6 +35,10 @@ from .result_generation_prompt import (
     format_result_generation_input,
     result_generation_prompt,
 )
+from .single_dataset_prompts.extract_column_assumptions_prompt import (
+    extract_column_assumptions_prompt,
+    format_extract_column_assumptions_input,
+)
 from .single_dataset_prompts.validate_result_prompt import (
     format_validate_result_input,
     validate_result_prompt,
@@ -55,7 +58,6 @@ NodeName = Literal[
     "identify_datasets",
     "analyze_query",
     "generate_subqueries",
-    "assess_query_complexity",
     "generate_result",
     "stream_updates",
     "process_context",
@@ -65,6 +67,7 @@ NodeName = Literal[
     "regenerate_fuzzy_values",
     "validate_match_relevance",
     "feedback",
+    "extract_column_assumptions",
 ]
 
 
@@ -78,7 +81,6 @@ class PromptSelector:
             "identify_datasets": identify_datasets_prompt,
             "analyze_query": analyze_query_prompt,
             "generate_subqueries": generate_subqueries_prompt,
-            "assess_query_complexity": assess_query_complexity_prompt,
             "stream_updates": stream_update_prompt,
             "generate_result": result_generation_prompt,
             "process_context": process_context_prompt,
@@ -89,6 +91,7 @@ class PromptSelector:
             "regenerate_fuzzy_values": regenerate_fuzzy_values_prompt,
             "validate_match_relevance": validate_match_relevance_prompt,
             "feedback": create_feedback_prompt,
+            "extract_column_assumptions": extract_column_assumptions_prompt,
         }
 
         self.format_prompt_input_map = {
@@ -102,6 +105,7 @@ class PromptSelector:
             "process_context": format_process_context_input,
             "regenerate_fuzzy_values": format_regenerate_fuzzy_values_input,
             "feedback": format_feedback_input,
+            "extract_column_assumptions": format_extract_column_assumptions_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

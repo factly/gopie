@@ -12,6 +12,7 @@ class UploadResponse(BaseModel):
 class UploadSchemaRequest(BaseModel):
     project_id: str
     dataset_id: str
+    is_view: bool = False
 
 
 class QueryRequest(BaseModel):

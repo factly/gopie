@@ -10,10 +10,13 @@ from app.utils.graph_utils.table_utils import (
     get_table_estimated_size,
     should_use_sampling,
 )
+from app.utils.olap import get_query_builder
 
 
 def _build_sample_query(dataset_name: str, estimated_size: int, limit: int = 5) -> str:
     """Build optimized sample query based on table size.
+
+    Uses the query builder to generate database-specific SQL syntax.
 
     Args:
         dataset_name: Name of the dataset/table
@@ -23,30 +26,23 @@ def _build_sample_query(dataset_name: str, estimated_size: int, limit: int = 5) 
     Returns:
         SQL query string
     """
+    builder = get_query_builder()
+
     if not should_use_sampling(estimated_size):
         logger.debug(
             f"[{dataset_name}] Small dataset detected ({estimated_size} rows). "
             "Using standard nested query logic."
         )
-        return f"""
-        SELECT DISTINCT * FROM (
-            SELECT * FROM {dataset_name} LIMIT 200000
-        )
-        LIMIT {limit}
-        """
+        return builder.build_small_table_query(dataset_name, limit)
     else:
         pct_str = calculate_sampling_percentage(estimated_size)
 
         logger.debug(
             f"[{dataset_name}] Large dataset detected ({estimated_size} rows). "
-            f"Sampling {pct_str}% (system) to retrieve approx {settings.TARGET_ROWS} rows."
+            f"Sampling {pct_str}% to retrieve approx {settings.TARGET_ROWS} rows."
         )
 
-        return f"""
-        SELECT DISTINCT * FROM {dataset_name}
-        USING SAMPLE {pct_str}% (system)
-        LIMIT {limit}
-        """
+        return builder.build_sample_query(dataset_name, pct_str, limit)
 
 
 async def generate_summary(

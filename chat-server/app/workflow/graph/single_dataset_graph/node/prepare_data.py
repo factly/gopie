@@ -4,17 +4,27 @@ from datetime import datetime
 
 from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
 from app.core.log import custom_logger as logger
 from app.models.message import IntermediateStep
 from app.models.query import QueryResult, SingleDatasetQueryResult
 from app.services.gopie.sql_executor import execute_sql_with_limit
 from app.services.qdrant.get_schema import get_schema_from_qdrant
+from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import configure_node
 from app.workflow.graph.single_dataset_graph.types import (
     SingleDatasetInfo,
     State,
 )
+from app.workflow.graph.sql_planner_graph.types import ColumnAssumptions
+
+
+class ExtractColumnAssumptionsOutput(BaseModel):
+    column_assumptions: list[ColumnAssumptions] = Field(
+        description="Column assumptions for the dataset with fuzzy values for matching",
+        default=[],
+    )
 
 
 def convert_rows_to_csv(rows: list[dict]) -> str:
@@ -72,6 +82,11 @@ async def prepare_data(state: State, config: RunnableConfig):
     user_query = state.get("user_query", "") or ""
     dataset_id = state.get("dataset_id", None)
 
+    # Extract org_id from config for SQL execution
+    org_id = None
+    if config:
+        org_id = config.get("metadata", {}).get("org_id", None)
+
     query_result = QueryResult(
         original_user_query=user_query,
         execution_time=0,
@@ -104,16 +119,36 @@ async def prepare_data(state: State, config: RunnableConfig):
         query_result.single_dataset_query_result.dataset_name = dataset_name
 
         sample_data_query = f"SELECT * FROM {dataset_name} LIMIT 50"
-        sample_data = await execute_sql_with_limit(query=sample_data_query)
+        sample_data = await execute_sql_with_limit(query=sample_data_query, org_id=org_id)
 
         rows_csv = convert_rows_to_csv(sample_data)  # type: ignore
 
+        column_assumptions = []
+        try:
+            chain = get_prompt_llm_chain(
+                "extract_column_assumptions",
+                config,
+                schema=ExtractColumnAssumptionsOutput,
+            )
+
+            response = await chain.ainvoke(
+                {
+                    "user_query": user_query,
+                    "dataset_schema": dataset_schema,
+                }
+            )
+            column_assumptions = response.column_assumptions or []
+
+            logger.debug(f"Extracted column assumptions: {column_assumptions}")
+        except Exception as e:
+            logger.warning(f"Failed to extract column assumptions: {e!s}")
+            column_assumptions = []
+
         dataset_info = SingleDatasetInfo(
-            dataset_id=dataset_id,
-            dataset_name=dataset_name,
-            user_friendly_dataset_name=user_provided_dataset_name,
             dataset_schema=dataset_schema,
             sample_data_csv=rows_csv,
+            column_assumptions=column_assumptions if column_assumptions else None,
+            correct_column_requirements=None,
         )
 
         return {

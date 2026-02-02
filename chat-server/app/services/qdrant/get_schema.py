@@ -1,4 +1,3 @@
-import json
 from typing import Optional
 
 from langsmith import traceable
@@ -120,8 +119,8 @@ async def get_schema_by_dataset_ids(
                         metadata = payload.get("metadata", {})
                         dataset_schema = DatasetSchema(**metadata)
                         schemas.append(dataset_schema)
-                    except json.JSONDecodeError as e:
-                        logger.exception(f"Error parsing schema JSON: {e}")
+                    except Exception as e:
+                        logger.exception(f"Error creating schema from metadata: {e}")
                         continue
 
         return schemas
@@ -178,8 +177,8 @@ async def get_project_schemas(
                     metadata = payload.get("metadata", {})
                     dataset_schema = DatasetSchema(**metadata)
                     schemas.append(dataset_schema)
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Error parsing schema JSON: {e}")
+                except Exception as e:
+                    logger.warning(f"Error creating schema from metadata: {e}")
                     continue
 
         return schemas

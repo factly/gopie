@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_EMBEDDING_SIZE: int = 3072
     EMBEDDINGS_MAX_TOKEN: int | None = None
+    DEFAULT_SPARSE_MODEL: str = "prithivida/Splade_PP_en_v1"
 
     E2B_API_KEY: str = ""
     E2B_TIMEOUT: int = 120
@@ -113,6 +114,9 @@ class Settings(BaseSettings):
     # Dataset Sampling Constants
     TARGET_ROWS: int = 150000
     SAMPLING_THRESHOLD: int = 150000
+
+    # OLAP Backend Configuration
+    OLAP_DB_TYPE: str = "duckdb"  # duckdb, motherduck, clickhouse, etc.
 
     model_config = SettingsConfigDict(
         env_file=".env", extra="ignore", case_sensitive=True, env_prefix="CHAT_"
