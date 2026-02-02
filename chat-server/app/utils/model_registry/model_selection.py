@@ -67,6 +67,12 @@ NODE_CONFIGS = {
         ModelCategory.FAST, TemperatureCategory.DETERMINISTIC, json_mode=True
     ),
     "feedback": NodeConfig(ModelCategory.BALANCED, TemperatureCategory.BALANCED),
+    "extract_column_assumptions": NodeConfig(
+        ModelCategory.BALANCED, TemperatureCategory.DETERMINISTIC, json_mode=True
+    ),
+    "generate_sql": NodeConfig(
+        ModelCategory.ADVANCED, TemperatureCategory.LOW_VARIATION, json_mode=True
+    ),
 }
 
 EXTERNAL_FUNCTION_CONFIGS = {

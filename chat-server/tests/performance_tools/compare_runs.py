@@ -51,14 +51,14 @@ def show_run(tracker: PerformanceTracker, run_id: str):
     print(f"\nTimestamp: {run['timestamp']}")
     print(f"Notes: {run.get('notes', 'N/A')}")
 
-    print(f"\nModel Configuration:")
+    print("\nModel Configuration:")
     config = run["model_config"]
     print(f"  FAST:     {config['fast_model']}")
     print(f"  BALANCED: {config['balanced_model']}")
     print(f"  ADVANCED: {config['advanced_model']}")
     print(f"  EVALUATOR: {config['evaluator_type'].upper()}")
 
-    print(f"\nPerformance Metrics:")
+    print("\nPerformance Metrics:")
     summary = run["summary"]
     print(f"  Total Time:       {summary['total_time']:.2f}s")
     print(f"  Average per Test: {summary['avg_request_time']:.2f}s")
@@ -66,7 +66,7 @@ def show_run(tracker: PerformanceTracker, run_id: str):
     print(f"  Min Time:         {summary['min_request_time']:.2f}s")
     print(f"  Max Time:         {summary['max_request_time']:.2f}s")
 
-    print(f"\nTest Results:")
+    print("\nTest Results:")
     print(f"  Total Tests:      {summary['total_tests']}")
     print(f"  Average Score:    {summary.get('avg_score', 0):.2f}/10")
     print(f"  Median Score:     {summary.get('median_score', 0):.2f}/10")

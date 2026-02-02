@@ -21,7 +21,7 @@ class ResultPathsSchema(BaseModel):
 
 
 @tool
-def result_paths(
+def return_result_paths(
     visualization_json_paths: list[JsonPath],
     visualization_png_paths: list[str],
     status_message: str = "",
@@ -42,7 +42,7 @@ def get_dynamic_tool_text(args: dict) -> str:
     return args.get("status_message") or "Finalizing visualization results"
 
 
-__tool__ = result_paths
+__tool__ = return_result_paths
 __tool_category__ = "Data Visualization"
 __should_display_tool__ = True
 __get_dynamic_tool_text__ = get_dynamic_tool_text

@@ -1,36 +1,68 @@
+from typing import Optional
+
 from app.core.config import settings
 from app.core.log import custom_logger as logger
-from app.core.session import SingletonAiohttp
 from app.models.data import DatasetDetails, ProjectDetails
 from app.models.schema import ColumnSchema, DatasetSchema, DatasetSummary
+from app.services.gopie.client import GopieClient
 from app.services.gopie.sql_executor import SQL_RESPONSE_TYPE
 
 
-async def get_dataset_info(dataset_id, project_id) -> DatasetDetails:
-    http_session = SingletonAiohttp.get_aiohttp_client()
+async def get_dataset_info(
+    dataset_id: str,
+    project_id: str,
+    org_id: Optional[str] = None,
+    is_view: bool = False,
+) -> DatasetDetails:
+    """Get dataset information from Gopie API.
 
-    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}/datasets/{dataset_id}"
-    headers = {"accept": "application/json"}
+    Args:
+        dataset_id: The dataset ID (or view ID if is_view is True)
+        project_id: The project ID
+        org_id: Optional organization ID for multi-tenant support
+        is_view: Whether the dataset_id refers to a view
+
+    Returns:
+        DatasetDetails object
+    """
+    client = GopieClient(org_id=org_id)
+    if is_view:
+        path = f"/v1/api/projects/{project_id}/views/{dataset_id}"
+    else:
+        path = f"/v1/api/projects/{project_id}/datasets/{dataset_id}"
 
     try:
-        async with http_session.get(url, headers=headers) as response:
-            data = await response.json()
-            return DatasetDetails(**data)
+        async with await client.get(path) as response:
+            response_data = await response.json()
+        data = response_data["data"] if is_view else response_data
+        if is_view and data.get("sql_query"):
+            data["description"] = f"{data['description']}\n\nSQL Query:\n{data['sql_query']}"
+        return DatasetDetails(**data)
     except Exception as e:
         logger.exception(f"Error getting dataset info: {e!s}")
         raise e
 
 
-async def get_project_info(project_id) -> ProjectDetails:
-    http_session = SingletonAiohttp.get_aiohttp_client()
+async def get_project_info(
+    project_id: str,
+    org_id: Optional[str] = None,
+) -> ProjectDetails:
+    """Get project information from Gopie API.
 
-    url = f"{settings.GOPIE_API_ENDPOINT}/v1/api/projects/{project_id}"
-    headers = {"accept": "application/json"}
+    Args:
+        project_id: The project ID
+        org_id: Optional organization ID for multi-tenant support
+
+    Returns:
+        ProjectDetails object
+    """
+    client = GopieClient(org_id=org_id)
+    path = f"/v1/api/projects/{project_id}"
 
     try:
-        async with http_session.get(url, headers=headers) as response:
+        async with await client.get(path) as response:
             data = await response.json()
-            return ProjectDetails(**data)
+        return ProjectDetails(**data)
     except Exception as e:
         logger.exception(f"Error getting project info: {e!s}")
         raise e
@@ -41,6 +73,7 @@ def create_dataset_schema(
     sample_data: SQL_RESPONSE_TYPE,
     dataset_details: DatasetDetails,
     project_details: ProjectDetails,
+    org_id: str,
 ) -> DatasetSchema:
     """
     Create a dataset schema from the given schema data.
@@ -78,6 +111,7 @@ def create_dataset_schema(
         dataset_custom_prompt=dataset_details.custom_prompt,
         project_id=project_details.id,
         dataset_id=dataset_details.id,
+        org_id=org_id,
         columns=columns,
     )
 
@@ -85,7 +119,7 @@ def create_dataset_schema(
 
 
 def _estimate_tokens(text: str) -> int:
-    """Estimate token count using 1 token ≈ 4 characters approximation."""
+    """Estimate token count using 1 token ≈ 4 chars approximation."""
     return len(text) // 4
 
 

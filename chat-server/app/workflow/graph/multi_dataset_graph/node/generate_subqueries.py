@@ -2,7 +2,11 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.core.log import custom_logger as logger
+from app.models.data import ProjectDetails
 from app.models.message import ErrorMessage, IntermediateStep
+from app.models.schema import DatasetSchema
+from app.services.gopie.dataset_info import get_project_info
+from app.services.qdrant.get_schema import get_project_schemas
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import (
     configure_node,
@@ -11,22 +15,69 @@ from app.workflow.events.event_utils import (
 from app.workflow.graph.multi_dataset_graph.types import State
 
 
-class AssessQueryComplexityOutput(BaseModel):
+async def _format_context_info(
+    project_ids: list[str] | None,
+    org_id: str | None = None,
+    max_datasets: int = 30,
+) -> str:
+    """
+    Fetch and format project context and available datasets information.
+
+    Args:
+        project_ids: List of project IDs (or None)
+        org_id: Optional organization ID
+        max_datasets: Maximum number of datasets to include in the context
+
+    Returns:
+        Formatted string containing project context and available datasets
+    """
+    if not project_ids:
+        return ""
+
+    context_info = ""
+
+    try:
+        # Get project description and custom prompt
+        project_info: ProjectDetails = await get_project_info(project_ids[0], org_id=org_id)
+
+        context_info = "PROJECT CONTEXT:\n"
+        context_info += f"Name: {project_info.name}\n"
+        context_info += f"Description: {project_info.description}\n"
+        if project_info.custom_prompt:
+            context_info += f"Custom Instructions: {project_info.custom_prompt}\n"
+
+        # Get list of available datasets (limited to avoid token overflow)
+        dataset_schemas: list[DatasetSchema] = await get_project_schemas(
+            project_ids[0], limit=50, org_id=org_id
+        )
+
+        if dataset_schemas:
+            context_info += "\nAVAILABLE DATASETS:\n"
+            for ds in dataset_schemas[:max_datasets]:
+                context_info += f"  - {ds.name}"
+                if ds.dataset_name and ds.dataset_name != ds.name:
+                    context_info += f" (Table: {ds.dataset_name})"
+                if ds.dataset_description:
+                    desc = ds.dataset_description[:100]
+                    context_info += f": {desc}..."
+                context_info += "\n"
+    except Exception as e:
+        logger.warning(f"Could not fetch project context: {e}. Proceeding without context.")
+
+    return context_info
+
+
+class GenerateSubqueriesOutput(BaseModel):
     needs_breakdown: bool = Field(
         description="Whether the query needs to be broken down into subqueries"
     )
     explanation: str = Field(description="Brief explanation of the decision about query complexity")
-    status_message: str = Field(
-        description="Status message about the progress of the generate_subqueries node"
-    )
-
-
-class GenerateSubqueriesOutput(BaseModel):
     subqueries: list[str] = Field(
-        description="List of generated subqueries in natural language", min_length=2, max_length=2
+        description="List of generated subqueries in natural language. Empty if needs_breakdown is false, exactly 2 if needs_breakdown is true",
+        default=[],
     )
     status_message: str = Field(
-        description="Status message about the progress of the generate_subqueries node. Please include the subqueries that are generated in the status message."
+        description="Status message about the progress. If breakdown needed, include the subqueries. Otherwise, explain why no breakdown is needed."
     )
 
 
@@ -37,40 +88,40 @@ class GenerateSubqueriesOutput(BaseModel):
 async def generate_subqueries(state: State, config: RunnableConfig):
     user_input = state.get("user_query", "")
     query_result = state.get("query_result")
+    project_ids = state.get("project_ids", [])
+    org_id = config.get("metadata", {}).get("org_id", None)
+
+    # Fetch and format project context and available datasets
+    context_info = await _format_context_info(project_ids, org_id)
 
     try:
-        assessment_llm = get_prompt_llm_chain(
-            "assess_query_complexity", config, schema=AssessQueryComplexityOutput
+        # Single LLM call to assess and generate subqueries if needed
+        subqueries_llm = get_prompt_llm_chain(
+            "generate_subqueries", config, schema=GenerateSubqueriesOutput
         )
-        assessment_response = await assessment_llm.ainvoke({"user_input": user_input})
+        response = await subqueries_llm.ainvoke(
+            {
+                "user_input": user_input,
+                "context_info": context_info,
+            }
+        )
 
-        needs_breakdown = assessment_response.needs_breakdown
-        explanation = assessment_response.explanation
+        needs_breakdown = response.needs_breakdown
+        explanation = response.explanation
+        status_message = response.status_message
 
-        subqueries = []
+        if status_message:
+            await fake_streaming_response(status_message, config)
 
+        # Handle subqueries based on breakdown decision
         if needs_breakdown:
-            subqueries_llm = get_prompt_llm_chain(
-                "generate_subqueries", config, schema=GenerateSubqueriesOutput
-            )
-            subqueries_response = await subqueries_llm.ainvoke({"user_input": user_input})
-
-            subqueries = subqueries_response.subqueries
-            status_message = subqueries_response.status_message
-
-            if status_message:
-                await fake_streaming_response(status_message, config)
-
+            subqueries = response.subqueries
             if len(subqueries) > 2:
                 subqueries = subqueries[:2]
-
-            if not subqueries:
+            if not subqueries or len(subqueries) < 2:
+                # Fallback if LLM didn't provide proper subqueries
                 subqueries = [user_input]
         else:
-            status_message = assessment_response.status_message
-            if status_message:
-                await fake_streaming_response(status_message, config)
-
             subqueries = [user_input]
 
         for subquery_text in subqueries:

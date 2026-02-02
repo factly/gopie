@@ -4,80 +4,70 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langsmith import traceable
 
+from .generate_sql_prompt import format_generate_sql_input, generate_sql_prompt
 from .multi_dataset_prompts.analyze_query_prompt import (
-    create_analyze_query_prompt,
+    analyze_query_prompt,
     format_analyze_query_input,
 )
 from .multi_dataset_prompts.generate_subqueries_prompt import (
-    create_assess_query_complexity_prompt,
-    create_generate_subqueries_prompt,
+    generate_subqueries_prompt,
 )
 from .multi_dataset_prompts.identify_datasets_prompt import (
-    create_identify_datasets_prompt,
     format_identify_datasets_input,
-)
-from .multi_dataset_prompts.plan_query_prompt import (
-    create_plan_query_prompt,
-    format_plan_query_input,
+    identify_datasets_prompt,
 )
 from .multi_dataset_prompts.regenerate_fuzzy_values_prompt import (
-    create_regenerate_fuzzy_values_prompt,
     format_regenerate_fuzzy_values_input,
+    regenerate_fuzzy_values_prompt,
 )
 from .multi_dataset_prompts.stream_updates_prompt import (
-    create_stream_update_prompt,
     format_stream_update_input,
+    stream_update_prompt,
 )
 from .multi_dataset_prompts.validate_match_relevance_prompt import (
-    create_validate_match_relevance_prompt,
-)
-from .plan_sql_query_tool import (
-    create_sql_planning_prompt,
-    format_sql_planning_input,
+    validate_match_relevance_prompt,
 )
 from .process_context_prompt import (
-    create_process_context_prompt,
     format_process_context_input,
+    process_context_prompt,
 )
 from .result_generation_prompt import (
-    create_result_generation_prompt,
     format_result_generation_input,
+    result_generation_prompt,
 )
-from .single_dataset_prompts.process_query_prompt import (
-    create_process_query_prompt,
-    format_process_query_input,
+from .single_dataset_prompts.extract_column_assumptions_prompt import (
+    extract_column_assumptions_prompt,
+    format_extract_column_assumptions_input,
 )
 from .single_dataset_prompts.validate_result_prompt import (
-    create_validate_result_prompt,
     format_validate_result_input,
+    validate_result_prompt,
 )
-from .validate_input_prompt import create_validate_input_prompt
+from .validate_input_prompt import validate_input_prompt
 from .visualiser_agent_prompts.feedback_prompt import (
     create_feedback_prompt,
     format_feedback_input,
 )
 from .visualiser_agent_prompts.visualize_data_prompt import (
-    create_visualize_data_prompt,
     format_visualization_input,
+    visualize_data_prompt,
 )
 
 NodeName = Literal[
-    "plan_query",
+    "generate_sql",
     "identify_datasets",
     "analyze_query",
     "generate_subqueries",
-    "assess_query_complexity",
     "generate_result",
     "stream_updates",
-    "process_query",
     "process_context",
-    "plan_sql_query_tool",
     "validate_input",
     "validate_result",
     "visualize_data",
     "regenerate_fuzzy_values",
     "validate_match_relevance",
     "feedback",
+    "extract_column_assumptions",
 ]
 
 
@@ -88,37 +78,34 @@ class PromptSelector:
         """
 
         self.prompt_map = {
-            "plan_query": create_plan_query_prompt,
-            "identify_datasets": create_identify_datasets_prompt,
-            "analyze_query": create_analyze_query_prompt,
-            "generate_subqueries": create_generate_subqueries_prompt,
-            "assess_query_complexity": create_assess_query_complexity_prompt,
-            "stream_updates": create_stream_update_prompt,
-            "process_query": create_process_query_prompt,
-            "generate_result": create_result_generation_prompt,
-            "process_context": create_process_context_prompt,
-            "plan_sql_query_tool": create_sql_planning_prompt,
-            "validate_input": create_validate_input_prompt,
-            "validate_result": create_validate_result_prompt,
-            "visualize_data": create_visualize_data_prompt,
-            "regenerate_fuzzy_values": create_regenerate_fuzzy_values_prompt,
-            "validate_match_relevance": create_validate_match_relevance_prompt,
+            "identify_datasets": identify_datasets_prompt,
+            "analyze_query": analyze_query_prompt,
+            "generate_subqueries": generate_subqueries_prompt,
+            "stream_updates": stream_update_prompt,
+            "generate_result": result_generation_prompt,
+            "process_context": process_context_prompt,
+            "generate_sql": generate_sql_prompt,
+            "validate_input": validate_input_prompt,
+            "validate_result": validate_result_prompt,
+            "visualize_data": visualize_data_prompt,
+            "regenerate_fuzzy_values": regenerate_fuzzy_values_prompt,
+            "validate_match_relevance": validate_match_relevance_prompt,
             "feedback": create_feedback_prompt,
+            "extract_column_assumptions": extract_column_assumptions_prompt,
         }
 
         self.format_prompt_input_map = {
             "analyze_query": format_analyze_query_input,
             "generate_result": format_result_generation_input,
             "identify_datasets": format_identify_datasets_input,
-            "plan_query": format_plan_query_input,
-            "process_query": format_process_query_input,
-            "plan_sql_query_tool": format_sql_planning_input,
+            "generate_sql": format_generate_sql_input,
             "stream_updates": format_stream_update_input,
             "validate_result": format_validate_result_input,
             "visualize_data": format_visualization_input,
             "process_context": format_process_context_input,
             "regenerate_fuzzy_values": format_regenerate_fuzzy_values_input,
             "feedback": format_feedback_input,
+            "extract_column_assumptions": format_extract_column_assumptions_input,
         }
 
     def get_prompt_template(self, node_name: str) -> ChatPromptTemplate:

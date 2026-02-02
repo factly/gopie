@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 from app.models.query import SubQueryInfo
 
 
-def create_stream_update_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def stream_update_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Generate a prompt for analyzing subquery execution and determining next steps in JSON format.
 
@@ -124,8 +124,8 @@ def format_stream_update_input(
             if not sql_info.success and sql_info.error:
                 input_str += f"Error: {sql_info.error}\n"
 
-    if subquery.no_sql_response:
-        input_str += f"\n💬 No SQL Response: {subquery.no_sql_response}\n"
+    if subquery.non_sql_response:
+        input_str += f"\n💬 Non SQL Response: {subquery.non_sql_response}\n"
 
     if subquery.error_message:
         input_str += "\n⚠️ ERRORS ENCOUNTERED:\n"

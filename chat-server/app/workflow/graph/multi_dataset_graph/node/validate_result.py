@@ -47,9 +47,9 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
     retry_count = state.get("retry_count", 0)
     subquery_index = state.get("subquery_index", 0)
 
-    no_sql_response = query_result.subqueries[subquery_index].no_sql_response
+    non_sql_response = query_result.subqueries[subquery_index].non_sql_response
 
-    if no_sql_response:
+    if non_sql_response:
         return {
             "retry_count": retry_count,
             "messages": [
@@ -93,12 +93,15 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
         }
 
     except Exception as e:
-        error_msg = f"Validation error: {str(e)}. Proceeding with response."
-        logger.exception(error_msg)
+        error_msg = (
+            f"Validation error for subquery {subquery_index + 1}: {e!s}. Proceeding with response."
+        )
+        logger.exception(f"Result validation failed - Subquery: {subquery_index + 1}, Error: {e!s}")
 
         return {
             "retry_count": retry_count,
             "messages": [ErrorMessage(content=error_msg)],
+            "recommendation": "route_response",
         }
 
 

@@ -18,7 +18,7 @@ async def call_visualization_agent(state: AgentState, config: RunnableConfig) ->
         "user_query": state["user_query"],
         "datasets": state.get("datasets", []),
         "previous_visualization_json_paths": state.get("previous_json_paths", []),
-        "relevant_sql_queries": state.get("relevant_sql_queries", []),
+        "relevant_sql_queries": state.get("previous_sql_queries", []),
     }
     config["recursion_limit"] = 50
     _ = await visualize_data_graph.ainvoke(input_state, config=config)  # type: ignore

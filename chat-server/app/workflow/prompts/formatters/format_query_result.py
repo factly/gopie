@@ -136,8 +136,8 @@ def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[s
             sql_formatted = format_sql_query_info(sql_info, j)
             subquery_section.append(sql_formatted)
 
-    if subquery.no_sql_response:
-        subquery_section.append(f"No SQL Response: {subquery.no_sql_response}")
+    if subquery.non_sql_response:
+        subquery_section.append(f"Non SQL Response: {subquery.non_sql_response}")
 
     if subquery.error_message:
         subquery_section.append("Errors encountered:")
@@ -161,7 +161,7 @@ def format_query_result(query_result: QueryResult) -> str:
     1. Executed subqueries: Detailed with their query text, tables used, executed SQL queries (including their explanations and results), error messages, and any additional context messages.
     2. Pending subqueries: Listed with their query text and a note that they will be executed and processed further.
 
-    Only includes subqueries that have been executed (have SQL queries with results, have a no_sql_response, or have error messages) in the main results section.
+    Only includes subqueries that have been executed (have SQL queries with results, have a non_sql_response, or have error messages) in the main results section.
 
     Parameters:
         query_result (QueryResult): The query result object to format.
@@ -216,8 +216,8 @@ def format_query_result(query_result: QueryResult) -> str:
     else:
         has_single_dataset_sql = (
             query_result.single_dataset_query_result
-            and query_result.single_dataset_query_result.sql_results
-            and len(query_result.single_dataset_query_result.sql_results) > 0
+            and query_result.single_dataset_query_result.sql_queries
+            and len(query_result.single_dataset_query_result.sql_queries) > 0
         )
         if not has_single_dataset_sql:
             input_parts.append("No SQL queries were processed")
@@ -238,8 +238,8 @@ def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) 
     """
     user_friendly_dataset_name = single_result.user_friendly_dataset_name or "Unknown"
     dataset_name = single_result.dataset_name or "Unknown"
-    sql_results = single_result.sql_results
-    response_for_non_sql = single_result.response_for_non_sql
+    sql_queries = single_result.sql_queries
+    non_sql_response = single_result.non_sql_response
     error = single_result.error
 
     input_str = f"DATASET: {user_friendly_dataset_name} (table: {dataset_name})"
@@ -247,12 +247,12 @@ def format_single_dataset_query_result(single_result: SingleDatasetQueryResult) 
     if error:
         input_str += f"\n\nERROR: {error}"
 
-    if response_for_non_sql:
-        input_str += f"\n\nNON-SQL INFORMATION:\n{response_for_non_sql}"
+    if non_sql_response:
+        input_str += f"\n\nNON-SQL INFORMATION:\n{non_sql_response}"
 
-    if sql_results is not None:
-        successful_results = [r for r in sql_results if r.success]
-        failed_results = [r for r in sql_results if not r.success]
+    if sql_queries is not None:
+        successful_results = [r for r in sql_queries if r.success]
+        failed_results = [r for r in sql_queries if not r.success]
 
         if successful_results:
             input_str += format_successful_sql_results(successful_results)
@@ -273,5 +273,7 @@ def _is_subquery_executed(subquery: SubQueryInfo) -> bool:
         bool: True if the subquery has been executed, False otherwise
     """
     return (
-        bool(subquery.sql_queries) or bool(subquery.no_sql_response) or bool(subquery.error_message)
+        bool(subquery.sql_queries)
+        or bool(subquery.non_sql_response)
+        or bool(subquery.error_message)
     )

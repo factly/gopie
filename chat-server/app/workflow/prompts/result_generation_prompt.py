@@ -10,7 +10,7 @@ from app.workflow.prompts.formatters.format_query_result import (
 )
 
 
-def create_result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def result_generation_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Constructs a prompt for generating a final user-facing response to a query, embedding detailed guidelines for tone, structure, and handling of various query result scenarios.
 

@@ -17,6 +17,7 @@ from app.core.constants import (
     VISUALIZATION_RESULT_ARG,
 )
 from app.utils.model_registry.model_provider import get_llm_provider
+from tests.test_config import TestConfig
 
 from .terminal_formatter import TerminalFormatter
 
@@ -203,10 +204,16 @@ async def send_chat_request(test_case: Dict[str, Any], url: str) -> Dict[str, An
     query_copy.pop("expected_result", None)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            "X-organization-id": TestConfig.GOPIE_ORG_ID,
+            "X-user-id": TestConfig.GOPIE_USER_ID,
+        }
         response = requests.post(
             url,
             json={**query_copy, "chat_id": "", "trace_id": ""},
-            headers={"Content-Type": "application/json", "Accept": "text/event-stream"},
+            headers=headers,
             stream=True,
             timeout=REQUEST_TIMEOUT,
         )

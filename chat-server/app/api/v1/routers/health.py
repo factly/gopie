@@ -2,13 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Any, Dict
 
-import aiohttp
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
 from app.core.config import settings
-from app.core.session import SingletonAiohttp
+from app.core.log import logger
 
 router = APIRouter()
 
@@ -51,6 +50,7 @@ async def check_qdrant_health() -> Dict[str, Any]:
                 "collection_exists": False,
             }
     except Exception as e:
+        logger.exception("Error checking Qdrant health: %s", e)
         return {"status": "unhealthy", "error": str(e), "collection_exists": False}
 
 
@@ -87,6 +87,7 @@ async def check_llm_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking LLM provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.LLM_GATEWAY_PROVIDER,
@@ -103,18 +104,15 @@ async def check_gopie_server_health() -> Dict[str, Any]:
         return {"status": "not_configured", "error": "GOPIE_API_ENDPOINT not configured"}
 
     try:
-        http_session = SingletonAiohttp.get_aiohttp_client()
+        from app.services.gopie.client import GopieClient
 
+        client = GopieClient()
         # Test basic connectivity to Gopie server
-        url = settings.GOPIE_API_ENDPOINT.rstrip("/")
-        headers = {"accept": "application/json"}
-
-        async with http_session.get(
-            url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
-        ) as response:
+        async with await client.get("/") as response:
             # Any response (even 404) means the server is reachable
             return {"status": "healthy", "response_code": response.status, "server_reachable": True}
     except Exception as e:
+        logger.exception("Error checking Gopie server health: %s", e)
         return {"status": "unhealthy", "error": str(e), "server_reachable": False}
 
 
@@ -154,6 +152,7 @@ async def check_embedding_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking embedding provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.EMBEDDING_GATEWAY_PROVIDER,

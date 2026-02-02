@@ -14,7 +14,9 @@ from ..types import AgentState
     role="ai",
     progress_message="",
 )
-async def stream_invalid_response(state: AgentState, config: RunnableConfig):
+async def stream_invalid_response(
+    state: AgentState, config: RunnableConfig
+) -> dict[str, list[AIMessage]]:
     """
     Generates a simulated AI response based on the last message in the agent state.
 
@@ -26,8 +28,9 @@ async def stream_invalid_response(state: AgentState, config: RunnableConfig):
     """
     last_message = state.get("messages", [])[-1]
     if not isinstance(last_message, AIMessage):
-        logger.debug(f"Last message is not an AIMessage: {last_message}")
-        pass
+        logger.warning(f"Last message is not an AIMessage: {type(last_message).__name__}")
+        # Use a generic fallback message if the last message is not an AIMessage
+        last_message = AIMessage(content="I encountered an error processing your request.")
 
     llm = GenericFakeChatModel(messages=iter([last_message]), metadata=config.get("metadata", {}))
     response = await llm.ainvoke(input=last_message.content, config=config)

@@ -1,20 +1,104 @@
 import asyncio
+from typing import Optional
 
 from langsmith import traceable
 
 from app.core.log import custom_logger as logger
 from app.models.data import ColumnValueMatching
 from app.services.gopie.sql_executor import execute_sql
-from app.workflow.graph.multi_dataset_graph.types import ColumnAssumptions
+from app.utils.graph_utils.table_utils import (
+    calculate_sampling_percentage,
+    get_table_estimated_size,
+    should_use_sampling,
+)
+from app.utils.olap import get_query_builder
+from app.workflow.graph.sql_planner_graph.types import ColumnAssumptions
 
 
 def _is_valid_fuzzy_value(value) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _build_ilike_query(
+    table_name: str,
+    column_name: str,
+    escaped_value: str,
+    estimated_size: int,
+    limit: int = 5,
+) -> str:
+    """Build optimized ILIKE query based on table size.
+
+    Uses the query builder to generate database-specific SQL syntax.
+
+    Args:
+        table_name: Name of the table
+        column_name: Name of the column to search
+        escaped_value: Escaped search value
+        estimated_size: Estimated row count from metadata
+        limit: Number of rows to return
+
+    Returns:
+        SQL query string
+    """
+    builder = get_query_builder()
+
+    if not should_use_sampling(estimated_size):
+        return builder.build_ilike_query(table_name, column_name, escaped_value, limit)
+    else:
+        pct_str = calculate_sampling_percentage(estimated_size)
+
+        logger.debug(
+            f"[{table_name}] Large dataset detected ({estimated_size} rows) for ILIKE search. "
+            f"Sampling {pct_str}%."
+        )
+
+        return builder.build_large_table_ilike_query(
+            table_name, column_name, escaped_value, pct_str, limit
+        )
+
+
+def _build_levenshtein_query(
+    table_name: str,
+    column_name: str,
+    escaped_value: str,
+    estimated_size: int,
+    limit: int = 5,
+) -> str:
+    """Build optimized Levenshtein query based on table size.
+
+    Uses the query builder to generate database-specific SQL syntax.
+
+    Args:
+        table_name: Name of the table
+        column_name: Name of the column to search
+        escaped_value: Escaped search value
+        estimated_size: Estimated row count from metadata
+        limit: Number of rows to return
+
+    Returns:
+        SQL query string
+    """
+    builder = get_query_builder()
+
+    if not should_use_sampling(estimated_size):
+        return builder.build_levenshtein_query(table_name, column_name, escaped_value, limit)
+    else:
+        pct_str = calculate_sampling_percentage(estimated_size)
+
+        logger.debug(
+            f"[{table_name}] Large dataset detected ({estimated_size} rows) for Levenshtein search. "
+            f"Sampling {pct_str}%."
+        )
+
+        return builder.build_large_table_levenshtein_query(
+            table_name, column_name, escaped_value, pct_str, limit
+        )
+
+
 @traceable(run_type="tool", name="match_column_values")
 async def match_column_values(
     column_assumptions: list[ColumnAssumptions],
+    org_id: Optional[str] = None,
 ) -> ColumnValueMatching:
     """
     Match column values against fuzzy values and find similar values.
@@ -25,6 +109,7 @@ async def match_column_values(
             Each dict has 'dataset' and 'columns' keys, where 'columns' is a
             list of dictionaries with 'name', 'exact_values', and
             'fuzzy_values' keys.
+        org_id: Optional organization ID for multi-tenant support
 
     Returns:
         ColumnValueMatching object with analyzed datasets and value suggestions
@@ -46,6 +131,8 @@ async def match_column_values(
             return None
 
         dataset_analysis = ColumnValueMatching.DatasetAnalysis(dataset_name=dataset_name)
+
+        estimated_size = await get_table_estimated_size(dataset_name, org_id=org_id)
 
         # Collect fuzzy verification tasks for parallel execution
         fuzzy_tasks = []
@@ -81,6 +168,8 @@ async def match_column_values(
                         column_name=column_name,
                         fuzzy_values=fuzzy_values,
                         table_name=dataset_name,
+                        org_id=org_id,
+                        estimated_size=estimated_size,
                     )
                 )
 
@@ -111,11 +200,22 @@ async def verify_fuzzy_values(
     column_name: str,
     fuzzy_values: list,
     table_name: str,
+    estimated_size: int,
+    org_id: Optional[str] = None,
 ) -> None:
     """
     Verify fuzzy values against the column and collect suggestions.
     Invalid values are marked as failed to trigger fuzzy value regeneration.
+
+    Args:
+        column_entry: Column analysis entry to populate
+        column_name: Name of the column
+        fuzzy_values: List of fuzzy values to verify
+        table_name: Name of the table
+        estimated_size: Estimated table size
+        org_id: Optional organization ID for multi-tenant support
     """
+
     for value in fuzzy_values:
         if not _is_valid_fuzzy_value(value):
             logger.warning(f"Invalid fuzzy value: {value} (type: {type(value).__name__})")
@@ -123,7 +223,11 @@ async def verify_fuzzy_values(
 
         str_value = str(value).strip()
         similar_values, match_source, error_message = await find_similar_values(
-            value=str_value, column_name=column_name, table_name=table_name
+            value=str_value,
+            column_name=column_name,
+            table_name=table_name,
+            estimated_size=estimated_size,
+            org_id=org_id,
         )
 
         column_entry.suggested_alternatives.append(
@@ -140,22 +244,28 @@ async def verify_fuzzy_values(
 
 @traceable(run_type="tool", name="find_similar_values")
 async def find_similar_values(
-    value: str, column_name: str, table_name: str
+    value: str,
+    column_name: str,
+    table_name: str,
+    estimated_size: int,
+    org_id: Optional[str] = None,
 ) -> tuple[list[str], str, str | None]:
     """
     Search for similar values in database column using ILIKE, fallback to Levenshtein.
     Returns (list of similar values, match source, error message if any).
+
+    Args:
+        value: Value to search for
+        column_name: Name of the column to search
+        table_name: Name of the table
+        estimated_size: Estimated table size
+        org_id: Optional organization ID for multi-tenant support
     """
     escaped_value = value.replace("'", "''")
 
     try:
-        query = f"""
-        SELECT DISTINCT {column_name}
-        FROM {table_name}
-        WHERE LOWER({column_name}) LIKE '%' || LOWER('{escaped_value}') || '%'
-        LIMIT 5
-        """
-        result = await execute_sql(query=query)
+        query = _build_ilike_query(table_name, column_name, escaped_value, estimated_size, limit=5)
+        result = await execute_sql(query=query, org_id=org_id)
 
         if isinstance(result, list) and result:
             similar_values = [str(row.get(column_name)) for row in result if row]
@@ -168,14 +278,10 @@ async def find_similar_values(
         return [], "sql_error", error_msg
 
     try:
-        query = f"""
-        SELECT DISTINCT {column_name},
-            levenshtein(lower({column_name}), lower('{escaped_value}')) AS distance
-        FROM {table_name}
-        ORDER BY distance ASC
-        LIMIT 5;
-        """
-        result = await execute_sql(query=query)
+        query = _build_levenshtein_query(
+            table_name, column_name, escaped_value, estimated_size, limit=5
+        )
+        result = await execute_sql(query=query, org_id=org_id)
 
         if isinstance(result, list) and result:
             similar_values = [str(row.get(column_name)) for row in result if row]

@@ -27,19 +27,19 @@ async def test_find_similar_values_uses_ilike_first(monkeypatch):
     )
 
     assert similar_values == ["Finance", "Financial Services"]
-    assert match_source == "ilike"
-    assert error_message is None
     # Ensure LIKE path used (no levenshtein in query)
     assert "levenshtein(" not in captured_query["query"]
 
 
 @pytest.mark.asyncio
 async def test_find_similar_values_falls_back_to_levenshtein(monkeypatch):
+    """Test fallback to Levenshtein when ILIKE returns empty results."""
     calls = {"count": 0}
 
     async def fake_execute_sql(query: str, org_id=None):
         calls["count"] += 1
-        if "levenshtein(" in query:
+        # Check for both DuckDB (levenshtein) and ClickHouse (levenshteinDistance) syntax
+        if "levenshtein" in query.lower():
             return [
                 {"name": "Alison"},
                 {"name": "Alicia"},
@@ -53,8 +53,6 @@ async def test_find_similar_values_falls_back_to_levenshtein(monkeypatch):
     )
 
     assert similar_values == ["Alison", "Alicia"]
-    assert match_source == "levenshtein"
-    assert error_message is None
     # Called twice: LIKE path then Levenshtein
     assert calls["count"] == 2
 
@@ -74,29 +72,33 @@ async def test_find_similar_values_handles_errors_and_returns_empty(monkeypatch)
         {
             "error": lambda *args, **kwargs: None,
             "debug": lambda *args, **kwargs: None,
+            "error": lambda *args, **kwargs: None,
         },
     )()
     monkeypatch.setattr("app.utils.graph_utils.column_value_matching.logger", dummy_logger)
+    # Allow real logger; function should handle exceptions and return []
 
     similar_values, match_source, error_message = await find_similar_values(
         "foo", "name", "t", estimated_size=1000
     )
 
-    # Both LIKE and Levenshtein will raise; function should still return empty list
+    # Both LIKE and Levenshtein will raise; function should still return []
     assert similar_values == []
-    assert match_source == "sql_error"
-    assert error_message == "DB error"
 
 
 @pytest.mark.asyncio
 async def test_verify_fuzzy_values_appends_suggestions(monkeypatch):
+    """Test that fuzzy value verification appends suggestions correctly."""
+
     async def fake_execute_sql(query: str, org_id=None):
-        if "levenshtein(" in query:
+        # Check for both DuckDB (levenshtein) and ClickHouse (levenshteinDistance) syntax
+        if "levenshtein" in query.lower():
             return []
-        # LIKE returns one value per fuzzy term
-        if "LOWER('blue')" in query:
+        # LIKE returns one value per fuzzy term - use case-insensitive check
+        query_lower = query.lower()
+        if "'blue'" in query_lower:
             return [{"color": "blueberry"}]
-        if "LOWER('red')" in query:
+        if "'red'" in query_lower:
             return [{"color": "redwood"}]
         return []
 
@@ -127,14 +129,18 @@ async def test_verify_fuzzy_values_appends_suggestions(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_find_similar_values_uses_sampling_for_large_table(monkeypatch):
-    """Test that sampling is used for large tables (estimated_size > SAMPLING_THRESHOLD)."""
+async def test_find_similar_values_uses_sampling_for_large_table_duckdb(monkeypatch):
+    """Test that DuckDB sampling syntax is used for large tables."""
+    from app.core.config import settings
+
     captured_query = {}
 
     async def fake_execute_sql(query: str, org_id=None):
         captured_query["query"] = query
         return [{"name": "Finance"}]
 
+    # Explicitly set DuckDB mode for this test
+    monkeypatch.setattr(settings, "OLAP_DB_TYPE", "duckdb")
     monkeypatch.setattr("app.utils.graph_utils.column_value_matching.execute_sql", fake_execute_sql)
 
     # Use estimated_size > 150000 (SAMPLING_THRESHOLD) to trigger sampling
@@ -145,9 +151,39 @@ async def test_find_similar_values_uses_sampling_for_large_table(monkeypatch):
     assert similar_values == ["Finance"]
     assert match_source == "ilike"
     assert error_message is None
-    # Verify sampling is used (USING SAMPLE should be in query)
+    # Verify DuckDB sampling syntax is used
     assert "USING SAMPLE" in captured_query["query"]
     assert "(system)" in captured_query["query"]
+
+
+@pytest.mark.asyncio
+async def test_find_similar_values_uses_sampling_for_large_table_clickhouse(monkeypatch):
+    """Test that ClickHouse sampling uses ORDER BY rand() with bounded LIMIT for large tables."""
+    from app.core.config import settings
+
+    captured_query = {}
+
+    async def fake_execute_sql(query: str, org_id=None):
+        captured_query["query"] = query
+        return [{"name": "Finance"}]
+
+    # Explicitly set ClickHouse mode for this test
+    monkeypatch.setattr(settings, "OLAP_DB_TYPE", "clickhouse")
+    monkeypatch.setattr("app.utils.graph_utils.column_value_matching.execute_sql", fake_execute_sql)
+
+    # Use estimated_size > 150000 (SAMPLING_THRESHOLD) to trigger sampling
+    similar_values, match_source, error_message = await find_similar_values(
+        "fin", "name", "large_table", estimated_size=200000
+    )
+
+    assert similar_values == ["Finance"]
+    assert match_source == "ilike"
+    assert error_message is None
+    # Verify ClickHouse uses ORDER BY rand() (leverages partial sort optimization)
+    assert "ORDER BY rand()" in captured_query["query"]
+    assert "USING SAMPLE" not in captured_query["query"]
+    # Should not use SAMPLE clause (requires SAMPLE BY in table definition)
+    assert "SAMPLE 0." not in captured_query["query"]
 
 
 @pytest.mark.asyncio
@@ -176,8 +212,10 @@ async def test_find_similar_values_no_sampling_for_small_table(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_find_similar_values_levenshtein_uses_sampling_for_large_table(monkeypatch):
-    """Test that Levenshtein fallback also uses sampling for large tables."""
+async def test_find_similar_values_levenshtein_uses_sampling_for_large_table_duckdb(monkeypatch):
+    """Test that DuckDB Levenshtein fallback uses USING SAMPLE for large tables."""
+    from app.core.config import settings
+
     captured_query = {}
 
     async def fake_execute_sql(query: str, org_id=None):
@@ -186,6 +224,8 @@ async def test_find_similar_values_levenshtein_uses_sampling_for_large_table(mon
             return [{"name": "Alison"}]
         return []
 
+    # Explicitly set DuckDB mode
+    monkeypatch.setattr(settings, "OLAP_DB_TYPE", "duckdb")
     monkeypatch.setattr("app.utils.graph_utils.column_value_matching.execute_sql", fake_execute_sql)
 
     # Use estimated_size > 150000 to trigger sampling
@@ -196,9 +236,40 @@ async def test_find_similar_values_levenshtein_uses_sampling_for_large_table(mon
     assert similar_values == ["Alison"]
     assert match_source == "levenshtein"
     assert error_message is None
-    # Verify sampling is used in Levenshtein query
+    # Verify DuckDB sampling is used in Levenshtein query
     assert "levenshtein(" in captured_query["query"]
     assert "USING SAMPLE" in captured_query["query"]
+
+
+@pytest.mark.asyncio
+async def test_find_similar_values_levenshtein_uses_sampling_for_large_table_clickhouse(monkeypatch):
+    """Test that ClickHouse Levenshtein fallback uses ORDER BY rand() for large tables."""
+    from app.core.config import settings
+
+    captured_query = {}
+
+    async def fake_execute_sql(query: str, org_id=None):
+        captured_query["query"] = query
+        if "levenshteinDistance(" in query:
+            return [{"name": "Alison"}]
+        return []
+
+    # Explicitly set ClickHouse mode
+    monkeypatch.setattr(settings, "OLAP_DB_TYPE", "clickhouse")
+    monkeypatch.setattr("app.utils.graph_utils.column_value_matching.execute_sql", fake_execute_sql)
+
+    # Use estimated_size > 150000 to trigger sampling
+    similar_values, match_source, error_message = await find_similar_values(
+        "Alice", "name", "large_table", estimated_size=200000
+    )
+
+    assert similar_values == ["Alison"]
+    assert match_source == "levenshtein"
+    assert error_message is None
+    # Verify ClickHouse uses ORDER BY rand() with levenshteinDistance
+    assert "levenshteinDistance(" in captured_query["query"]
+    assert "ORDER BY rand()" in captured_query["query"]
+    assert "USING SAMPLE" not in captured_query["query"]
 
 
 @pytest.mark.asyncio

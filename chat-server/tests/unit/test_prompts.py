@@ -121,8 +121,51 @@ class TestPromptSelector:
             "tool_call_count": 2,
             "dataset_ids": [1, 2],
             "project_ids": [3, 4],
+            "previous_sql_queries": "None",
         }
         assert result == expected
+
+    def test_format_extract_column_assumptions_input(self, prompt_selector):
+        """Test formatting input for extract_column_assumptions prompt."""
+        from unittest.mock import MagicMock
+
+        mock_schema = MagicMock()
+        mock_schema.format_for_prompt.return_value = "Column: name (VARCHAR)\nColumn: age (INT)"
+
+        result = prompt_selector.format_prompt_input(
+            node_name="extract_column_assumptions",
+            user_query="Show employees in finance",
+            dataset_schema=mock_schema,
+        )
+
+        assert result is not None
+        assert "input" in result
+        assert "Show employees in finance" in result["input"]
+        assert "Column: name (VARCHAR)" in result["input"]
+
+    def test_extract_column_assumptions_prompt_returns_messages(self, prompt_selector):
+        """Test that extract_column_assumptions prompt returns valid messages."""
+        from unittest.mock import MagicMock
+
+        mock_schema = MagicMock()
+        mock_schema.format_for_prompt.return_value = "Column: department (VARCHAR)"
+
+        result = prompt_selector.get_prompt(
+            "extract_column_assumptions",
+            user_query="Find finance employees",
+            dataset_schema=mock_schema,
+        )
+
+        assert isinstance(result, list)
+        assert len(result) == 2  # System + Human messages
+
+    def test_extract_column_assumptions_prompt_template(self, prompt_selector):
+        """Test that extract_column_assumptions returns a ChatPromptTemplate."""
+        from langchain_core.prompts import ChatPromptTemplate
+
+        result = prompt_selector.get_prompt_template("extract_column_assumptions")
+
+        assert isinstance(result, ChatPromptTemplate)
 
 
 class TestPromptManager:

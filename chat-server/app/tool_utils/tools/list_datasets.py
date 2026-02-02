@@ -1,22 +1,24 @@
+from typing import Optional
+
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.core.config import settings
 from app.core.log import custom_logger as logger
-from app.core.session import SingletonAiohttp
-
-BASE_URL = settings.GOPIE_API_ENDPOINT
+from app.services.gopie.client import GopieClient
 
 
-async def get_dataset_names_from_project_ids(project_ids: list[str]) -> str:
+async def get_dataset_names_from_project_ids(
+    project_ids: list[str],
+    org_id: Optional[str] = None,
+) -> str:
     project_dataset_map = {}
-    session = SingletonAiohttp.get_aiohttp_client()
+    client = GopieClient(org_id=org_id)
 
     for project_id in project_ids:
         try:
-            url = f"{BASE_URL}/v1/api/projects/{project_id}/datasets"
-            headers = {"accept": "application/json"}
+            path = f"/v1/api/projects/{project_id}/datasets"
 
-            async with session.get(url, headers=headers, ssl=False) as response:
+            async with await client.get(path, ssl=False) as response:
                 if response.status == 200:
                     dataset_data = await response.json()
                     project_dataset_map[project_id] = dataset_data
@@ -33,13 +35,15 @@ async def get_dataset_names_from_project_ids(project_ids: list[str]) -> str:
     return list_of_datasets_str
 
 
-async def get_project_ids_for_datasets_ids(dataset_ids: list[str]) -> dict[str, str]:
+async def get_project_ids_for_datasets_ids(
+    dataset_ids: list[str],
+    org_id: Optional[str] = None,
+) -> dict[str, str]:
     dataset_id_project_map = {}
-    session = SingletonAiohttp.get_aiohttp_client()
+    client = GopieClient(org_id=org_id)
     for dataset_id in dataset_ids:
-        url = f"{BASE_URL}/v1/api/datasets/{dataset_id}/project"
-        headers = {"accept": "application/json"}
-        async with session.get(url, headers=headers, ssl=False) as response:
+        path = f"/v1/api/datasets/{dataset_id}/project"
+        async with await client.get(path, ssl=False) as response:
             if response.status == 200:
                 dataset_data = await response.json()
                 dataset_id_project_map[dataset_id] = dataset_data.get("project_id", "")
@@ -48,15 +52,17 @@ async def get_project_ids_for_datasets_ids(dataset_ids: list[str]) -> dict[str, 
     return dataset_id_project_map
 
 
-async def get_dataset_names_for_dataset_ids(dataset_project_ids_map: dict[str, str]) -> str:
+async def get_dataset_names_for_dataset_ids(
+    dataset_project_ids_map: dict[str, str],
+    org_id: Optional[str] = None,
+) -> str:
     project_dataset_map = {}
-    session = SingletonAiohttp.get_aiohttp_client()
+    client = GopieClient(org_id=org_id)
 
     for dataset_id, project_id in dataset_project_ids_map.items():
-        url = f"{BASE_URL}/v1/api/projects/{project_id}/datasets/{dataset_id}"
-        headers = {"accept": "application/json"}
+        path = f"/v1/api/projects/{project_id}/datasets/{dataset_id}"
 
-        async with session.get(url, headers=headers, ssl=False) as response:
+        async with await client.get(path, ssl=False) as response:
             if response.status == 200:
                 dataset_data = await response.json()
                 project_dataset_map[project_id] = dataset_data.get("alias", "")
@@ -75,6 +81,7 @@ async def get_all_datasets(
     status_message: str = "",
     project_ids: list[str] = [],
     dataset_ids: list[str] = [],
+    config: RunnableConfig = None,
 ) -> str:
     """
     Get list of datasets names from provided project ids and dataset ids.
@@ -97,15 +104,24 @@ async def get_all_datasets(
         )
         return "No project IDs or dataset IDs provided. Cannot fetch datasets without specifying either."
 
+    # Extract org_id from config
+    org_id = None
+    if config:
+        org_id = config.get("metadata", {}).get("org_id", None)
+
     all_datasets: list[str] = [""]
 
     if project_ids:
-        dataset_names = await get_dataset_names_from_project_ids(project_ids)
+        dataset_names = await get_dataset_names_from_project_ids(project_ids, org_id=org_id)
         all_datasets.append(dataset_names)
 
     if dataset_ids:
-        dataset_project_ids_map = await get_project_ids_for_datasets_ids(dataset_ids=dataset_ids)
-        all_datasets.append(await get_dataset_names_for_dataset_ids(dataset_project_ids_map))
+        dataset_project_ids_map = await get_project_ids_for_datasets_ids(
+            dataset_ids=dataset_ids, org_id=org_id
+        )
+        all_datasets.append(
+            await get_dataset_names_for_dataset_ids(dataset_project_ids_map, org_id=org_id)
+        )
 
     return "\n".join(all_datasets)
 
