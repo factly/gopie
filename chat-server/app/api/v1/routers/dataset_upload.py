@@ -1,7 +1,7 @@
 import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
