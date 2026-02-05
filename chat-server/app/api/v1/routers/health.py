@@ -160,6 +160,39 @@ async def check_embedding_provider_health() -> Dict[str, Any]:
         }
 
 
+async def check_sparse_model_health() -> Dict[str, Any]:
+    """
+    Check if sparse model can be properly instantiated and generate vectors.
+    """
+    try:
+        from app.services.qdrant.vector_store import generate_sparse_vector
+
+        # Test vector generation
+        # Run in executor to avoid blocking event loop since it is CPU intensive
+        loop = asyncio.get_running_loop()
+        vector = await loop.run_in_executor(None, generate_sparse_vector, "test")
+
+        if vector and vector.indices:
+            return {
+                "status": "healthy",
+                "model_loaded": True,
+                "vector_generated": True,
+            }
+        else:
+            return {
+                "status": "unhealthy",
+                "error": "Generated vector is empty",
+                "model_loaded": True,
+            }
+
+    except Exception as e:
+        logger.exception("Error checking sparse model health: %s", e)
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+        }
+
+
 @router.get("/health")
 async def health_check():
     """
@@ -170,6 +203,7 @@ async def health_check():
     - LLM provider instantiation
     - Gopie server
     - Embedding provider instantiation
+    - Sparse model instantiation
     """
     start_time = datetime.now()
 
@@ -177,9 +211,21 @@ async def health_check():
     llm_task = asyncio.create_task(check_llm_provider_health())
     gopie_task = asyncio.create_task(check_gopie_server_health())
     embedding_task = asyncio.create_task(check_embedding_provider_health())
+    sparse_model_task = asyncio.create_task(check_sparse_model_health())
 
-    qdrant_health, llm_health, gopie_health, embedding_health = await asyncio.gather(
-        qdrant_task, llm_task, gopie_task, embedding_task, return_exceptions=True
+    (
+        qdrant_health,
+        llm_health,
+        gopie_health,
+        embedding_health,
+        sparse_model_health,
+    ) = await asyncio.gather(
+        qdrant_task,
+        llm_task,
+        gopie_task,
+        embedding_task,
+        sparse_model_task,
+        return_exceptions=True,
     )
 
     def safe_result(result, service_name):
@@ -194,8 +240,15 @@ async def health_check():
     llm_health = safe_result(llm_health, "llm")
     gopie_health = safe_result(gopie_health, "gopie")
     embedding_health = safe_result(embedding_health, "embedding")
+    sparse_model_health = safe_result(sparse_model_health, "sparse_model")
 
-    all_services = [qdrant_health, llm_health, gopie_health, embedding_health]
+    all_services = [
+        qdrant_health,
+        llm_health,
+        gopie_health,
+        embedding_health,
+        sparse_model_health,
+    ]
     unhealthy_services = [
         service
         for service in all_services
@@ -217,6 +270,7 @@ async def health_check():
             "llm_provider": llm_health,
             "gopie_server": gopie_health,
             "embedding_provider": embedding_health,
+            "sparse_model": sparse_model_health,
         },
     }
 
