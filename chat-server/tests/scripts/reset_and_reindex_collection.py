@@ -254,6 +254,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--port",
         required=True,
+        type=int,
         help="GRPC Port of the Qdrant instance",
     )
     parser.add_argument(
