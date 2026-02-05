@@ -24,6 +24,7 @@ from app.core.config import settings  # noqa: E402
 from app.core.log import custom_logger as logger  # noqa: E402
 from app.services.qdrant.qdrant_setup import QdrantSetup  # noqa: E402
 from app.services.qdrant.vector_store import (  # noqa: E402
+    SparseModelManager,
     generate_sparse_vector,
 )
 
@@ -154,12 +155,18 @@ async def migrate_collection(
     dest_collection: str,
     batch_size: int,
     dry_run: bool,
+    host: str,
+    port: int,
 ) -> MigrationStats:
     """Main migration logic."""
 
-    # Initialize client
-    url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
-    client = AsyncQdrantClient(url=url, timeout=CLIENT_TIMEOUT)
+    # Initialize client with gRPC for better performance
+    client = AsyncQdrantClient(
+        host=host,
+        grpc_port=port,  # Standard Qdrant gRPC port (6333 is HTTP)
+        prefer_grpc=True,
+        timeout=CLIENT_TIMEOUT,
+    )
 
     stats = MigrationStats(dry_run=dry_run)
 
@@ -240,6 +247,16 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--host",
+        required=True,
+        help="Host of the Qdrant instance",
+    )
+    parser.add_argument(
+        "--port",
+        required=True,
+        help="GRPC Port of the Qdrant instance",
+    )
+    parser.add_argument(
         "--destination",
         required=True,
         help="Name of the destination collection",
@@ -271,11 +288,23 @@ async def main() -> None:
     logger.info(f"Dry Run     : {args.dry_run}")
     logger.info(SEPARATOR)
 
+    # Initialize sparse model SYNCHRONOUSLY before any async operations
+    # This prevents race conditions when multiple threads try to download the model
+    logger.info("Initializing sparse vector model...")
+    try:
+        SparseModelManager.get_model()
+        logger.info("Sparse vector model initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize sparse model: {e}")
+        raise
+
     stats = await migrate_collection(
         source_collection=args.source,
         dest_collection=args.destination,
         batch_size=args.batch_size,
         dry_run=args.dry_run,
+        host=args.host,
+        port=args.port,
     )
 
     print_summary(stats)
