@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 from app.models.schema import DatasetSchema
 
 
-def create_regenerate_fuzzy_values_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def regenerate_fuzzy_values_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
@@ -39,14 +39,16 @@ INSTRUCTIONS:
 
 3. VALUE GUIDELINES:
    * Only generate fuzzy values for TEXT/STRING/VARCHAR columns
+   * Do NOT generate fuzzy values for INTEGER, BIGINT, FLOAT, BOOLEAN, DATE, TIMESTAMP or other non-string columns—omit those columns from your output
    * Provide REAL searchable terms, NOT placeholders
    * Focus on meaningful text values that can be used for substring matching
    * Avoid numeric or nonsensical values
    * DO NOT include system identifiers like project_id or dataset_id
 
 4. OUTPUT FORMAT:
-   * Return ONLY the datasets and columns that had failures
-   * For each failed column, provide NEW fuzzy values to try
+   * Return ONLY the datasets and columns that had failures (and are TEXT/STRING/VARCHAR)
+   * Omit failed columns that are INTEGER, BIGINT, FLOAT, BOOLEAN, DATE, TIMESTAMP or other non-string types—do not include them in your output
+   * For each remaining failed column, provide NEW fuzzy values to try
    * Include a reasoning field explaining your alternative approach
 
 IMPORTANT:
@@ -107,7 +109,12 @@ def format_regenerate_fuzzy_values_input(
             input_str += f"\nColumns available: {', '.join([col.column_name for col in matching_schema.columns])}"
 
         for column_name, failed_values in columns_data.items():
-            input_str += f"\n\n  Column: {column_name}"
+            col = next(
+                (c for c in matching_schema.columns if c.column_name == column_name),
+                None,
+            ) if matching_schema else None
+            col_type = f" ({col.column_type})" if col else ""
+            input_str += f"\n\n  Column: {column_name}{col_type}"
 
             failed_items = []
             for item in failed_values:

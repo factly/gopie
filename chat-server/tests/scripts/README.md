@@ -61,6 +61,29 @@ python -m tests.scripts.schema_uploader \
 
 ---
 
+### reset_and_reindex_collection.py
+
+Migrate Qdrant collection to support hybrid search (adds sparse vectors to existing dense vectors).
+
+```bash
+# Preview changes first (recommended)
+python -m tests.scripts.reset_and_reindex_collection --dry-run
+
+# Run the migration
+python -m tests.scripts.reset_and_reindex_collection
+```
+
+**⚠️ Warning:** This deletes and recreates your collection. Run `--dry-run` first to preview.
+
+**Options:**
+
+| Option         | Description                    | Default |
+| -------------- | ------------------------------ | ------- |
+| `--dry-run`    | Preview without making changes | False   |
+| `--batch-size` | Points per batch               | 100     |
+
+---
+
 ### replicate_prod_to_local.py
 
 Replicate entire projects with datasets from a production Gopie instance to your local instance, or upload CSV files from a local folder.

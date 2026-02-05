@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routers.dataset_upload import (
     dataset_router as schema_upload_router,
 )
+from app.api.v1.routers.fetch_sql import fetch_sql_router
 from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.query import router as query_router
 from app.core.config import settings
@@ -19,9 +20,9 @@ from app.utils.model_registry.model_provider import get_embedding_provider
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await QdrantSetup.get_async_client()
+    await QdrantSetup.get_async_client(settings.QDRANT_COLLECTION)
+    QdrantSetup.get_sync_client(settings.QDRANT_COLLECTION)
     SingletonAiohttp.get_aiohttp_client()
-    QdrantSetup.get_sync_client()
     get_embedding_provider().get_embeddings_model(settings.DEFAULT_EMBEDDING_MODEL)
     visualize_graph()
 
@@ -59,6 +60,7 @@ app.add_middleware(
 app.include_router(health_router, prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["query"])
 app.include_router(schema_upload_router, prefix=settings.API_V1_STR, tags=["upload_schema"])
+app.include_router(fetch_sql_router, prefix=settings.API_V1_STR, tags=["fetch_sql"])
 
 
 def start():

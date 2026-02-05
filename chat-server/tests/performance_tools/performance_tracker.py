@@ -42,7 +42,7 @@ class PerformanceTracker:
         model_config: dict[str, str],
         summary: dict[str, Any],
         notes: str = "",
-        test_cases: list[dict[str, Any]] = None,
+        test_cases: list[dict[str, Any]] | None = None,
         results_file: str = "",
     ) -> str:
         history = self.load_history()

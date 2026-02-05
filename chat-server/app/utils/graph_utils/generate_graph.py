@@ -4,7 +4,9 @@ from langchain_core.runnables.graph import CurveStyle
 
 from app.workflow.agent.graph import agent_graph
 from app.workflow.graph.multi_dataset_graph.graph import multi_dataset_graph
+from app.workflow.graph.nl_to_sql_graph.graph import nl_to_sql_graph
 from app.workflow.graph.single_dataset_graph.graph import single_dataset_graph
+from app.workflow.graph.sql_planner_graph.graph import sql_planning_agent
 from app.workflow.graph.visualize_data_graph.graph import (
     graph as visualize_data_graph,
 )
@@ -29,6 +31,12 @@ def visualize_graph():
 
         with open(os.path.join(generated_graphs_dir, "agent_graph.mmd"), "w") as f:
             f.write(agent_graph.get_graph().draw_mermaid(curve_style=CurveStyle.BASIS))
+
+        with open(os.path.join(generated_graphs_dir, "sql_agent_graph.mmd"), "w") as f:
+            f.write(sql_planning_agent.get_graph().draw_mermaid(curve_style=CurveStyle.BASIS))
+
+        with open(os.path.join(generated_graphs_dir, "nl_to_sql_graph.mmd"), "w") as f:
+            f.write(nl_to_sql_graph.get_graph().draw_mermaid(curve_style=CurveStyle.BASIS))
 
         print(f"Graph visualizations generated successfully: " f"{generated_graphs_dir}")
 

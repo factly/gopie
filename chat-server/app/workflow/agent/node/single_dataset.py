@@ -31,9 +31,9 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
     result: SingleDatasetQueryResult | None = query_result.single_dataset_query_result
 
     if result is not None:
-        sql_results = result.sql_results
-        if sql_results is not None:
-            for sql_query_info in sql_results:
+        sql_queries = result.sql_queries
+        if sql_queries is not None:
+            for sql_query_info in sql_queries:
                 if not sql_query_info.full_sql_result:
                     continue
                 description = f"Dataset {dataset_count}\n\n"
@@ -71,7 +71,7 @@ async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -
         "messages": state["messages"],
         "dataset_id": dataset_id,
         "user_query": user_query,
-        "previous_sql_queries": state.get("previous_sql_queries", []),
+        "prev_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await single_dataset_graph.ainvoke(input_state, config=config)

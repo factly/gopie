@@ -12,7 +12,6 @@ from app.workflow.graph.visualize_data_graph.types import (
 from app.workflow.graph.visualize_data_graph.utils import (
     format_dataset_info,
     get_python_code_files,
-    get_sandbox,
     update_sandbox_timeout,
     upload_csv_files,
 )
@@ -31,12 +30,8 @@ async def pre_model_hook(state: State, config: RunnableConfig):
     result = state.get("result", VisualizationResult(data=[], errors=[]))
 
     try:
-        existing_sandbox = state.get("sandbox")
-        if existing_sandbox:
-            await update_sandbox_timeout(sandbox=existing_sandbox)
-            sandbox = existing_sandbox
-        else:
-            sandbox = await get_sandbox()
+        sandbox, created_new = await update_sandbox_timeout(state.get("sandbox"))
+        if created_new:
             await upload_csv_files(sandbox=sandbox, datasets=state.get("datasets", []))
 
         messages = []

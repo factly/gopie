@@ -23,7 +23,8 @@ class AgentState(TypedDict):
     generate_visualization: bool | None
     previous_json_paths: list[str] | None
     relevant_datasets_ids: list[str] | None
-    relevant_sql_queries: list[str] | None
+    previous_sql_queries: list[str] | None
+    sql_modification_type: str | None
     datasets: list[Dataset] | None
     invalid_input: bool | None
     query_result: QueryResult | None

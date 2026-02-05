@@ -17,7 +17,11 @@ from .node.process_results import process_visualization_result
 from .node.respond import respond
 from .types import InputState, OutputState, State
 
-tool_names = [ToolNames.RUN_PYTHON_CODE, ToolNames.RESULT_PATHS, ToolNames.GET_FEEDBACK_FOR_IMAGES]
+tool_names = [
+    ToolNames.RUN_PYTHON_CODE,
+    ToolNames.RETURN_RESULT_PATHS,
+    ToolNames.GET_FEEDBACK_FOR_IMAGES,
+]
 
 workflow = StateGraph(
     state_schema=State,

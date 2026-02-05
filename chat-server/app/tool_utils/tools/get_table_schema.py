@@ -1,7 +1,13 @@
 import json
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
-from qdrant_client.http.models import FieldCondition, Filter, MatchAny
+from qdrant_client.http.models import (
+    FieldCondition,
+    Filter,
+    MatchAny,
+    MatchValue,
+)
 
 from app.core.config import settings
 from app.core.log import custom_logger as logger
@@ -13,6 +19,7 @@ from app.services.qdrant.qdrant_setup import QdrantSetup
 async def get_datasets_schemas(
     dataset_ids: list[str] = [],
     status_message: str = "",
+    config: RunnableConfig = None,
 ) -> str:
     """
     Get the schema of a specific tables from Qdrant database.
@@ -35,7 +42,11 @@ async def get_datasets_schemas(
             - If the number of schemas returned is more than 10, then it will truncate the result to show only 10 schemas.
     """
     try:
-        client = await QdrantSetup.get_async_client()
+        client = await QdrantSetup.get_async_client(settings.QDRANT_COLLECTION)
+
+        org_id = None
+        if config:
+            org_id = config.get("metadata", {}).get("org_id", None)
 
         filter_conditions = []
 
@@ -44,6 +55,14 @@ async def get_datasets_schemas(
                 FieldCondition(
                     key="metadata.dataset_id",
                     match=MatchAny(any=dataset_ids),
+                )
+            )
+
+        if org_id:
+            filter_conditions.append(
+                FieldCondition(
+                    key="metadata.org_id",
+                    match=MatchValue(value=org_id),
                 )
             )
 

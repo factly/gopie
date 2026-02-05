@@ -251,11 +251,9 @@ Pulumi.*.yaml
 chat-server/tests/chat_server_tests/*.json
 chat-server/tests/chat_server_tests/output
 
-# Chat-server Test datasets
-chat-server/tests/e2e/datasets
+chat-server/tests/e2e/datasets/*.csv
 
 # Visualization test artifacts
 chat-server/tests/e2e/viz_utils/examples_arguments_syntax
-chat-server/tests/e2e/datasets
 chat-server/tests/e2e/output
 chat-server/tests/dspy/output

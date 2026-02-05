@@ -89,6 +89,7 @@ def get_prompt_llm_chain(
     *,
     schema=None,
     tool_names=None,
+    force_tool_calls: bool = False,
 ) -> Runnable:
     """
     Build a runnable chain that:
@@ -122,6 +123,7 @@ def get_prompt_llm_chain(
         config,
         tool_names=tool_names,
         schema=schema,
+        force_tool_calls=force_tool_calls,
     )
 
     return formatter | llm

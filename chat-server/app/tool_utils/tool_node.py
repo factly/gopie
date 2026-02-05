@@ -1,9 +1,9 @@
-from typing import Literal
+from typing import Literal, Union
 
 from langchain_core.messages import AIMessage, ToolCall, ToolMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.runnables.config import merge_configs
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.prebuilt import ToolNode
+from langgraph.types import Command
 
 from app.tool_utils.tools import ToolNames
 
@@ -23,7 +23,7 @@ class ModifiedToolNode(ToolNode):
         self.tool_metadatas = tool_metadatas
         super().__init__(*args, tools=tool_functions, **kwargs)
 
-    def get_tool_config(self, call: ToolCall) -> RunnableConfig:
+    def _apply_tool_metadata(self, call: ToolCall, config: RunnableConfig) -> RunnableConfig:
         tool_name = call.get("name")
         tool_args = call.get("args")
         metadata = self.tool_metadatas.get(tool_name, {})
@@ -36,32 +36,50 @@ class ModifiedToolNode(ToolNode):
         tool_category = metadata.get("tool_category", tool_name)
         should_display_tool = metadata.get("should_display_tool", False)
 
-        return RunnableConfig(
-            tags=["chain_tool", "display"],
-            metadata={
+        tool_config: RunnableConfig = {
+            "tags": ["chain_tool", "display"],
+            "metadata": {
                 "tool_text": tool_text,
                 "tool_category": tool_category,
                 "should_display_tool": should_display_tool,
             },
-        )
+        }
+
+        if isinstance(config, dict):
+            merged_config: RunnableConfig = config.copy()
+            if "tags" in tool_config:
+                existing_tags = merged_config.get("tags", [])
+                if not isinstance(existing_tags, list):
+                    existing_tags = [existing_tags] if existing_tags else []
+                merged_config["tags"] = existing_tags + tool_config["tags"]
+
+            if "metadata" in tool_config:
+                existing_metadata = merged_config.get("metadata", {})
+                if not isinstance(existing_metadata, dict):
+                    existing_metadata = {}
+                merged_config["metadata"] = {**existing_metadata, **tool_config["metadata"]}
+
+            return merged_config
+
+        return config
 
     def _run_one(
         self,
         call: ToolCall,
         input_type: Literal["list", "dict", "tool_calls"],
         config: RunnableConfig,
-    ) -> ToolMessage:
-        tool_config = self.get_tool_config(call)
-        return super()._run_one(call, input_type, merge_configs(config, tool_config))
+    ) -> Union[ToolMessage, Command]:
+        updated_config = self._apply_tool_metadata(call, config)
+        return super()._run_one(call, input_type, updated_config)
 
     async def _arun_one(
         self,
         call: ToolCall,
         input_type: Literal["list", "dict", "tool_calls"],
         config: RunnableConfig,
-    ) -> ToolMessage:
-        tool_config = self.get_tool_config(call)
-        return await super()._arun_one(call, input_type, merge_configs(config, tool_config))
+    ) -> Union[ToolMessage, Command]:
+        updated_config = self._apply_tool_metadata(call, config)
+        return await super()._arun_one(call, input_type, updated_config)
 
 
 def has_tool_calls(message):

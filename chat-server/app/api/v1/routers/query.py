@@ -1,6 +1,7 @@
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.utils.adapters.openai.input import (
@@ -22,6 +23,7 @@ async def root():
 @router.post("/chat/completions")
 async def create(
     openai_format_request: RequestNonStreaming | RequestStreaming,
+    x_organization_id: Annotated[str | None, Header()] = None,
 ):
     """
     Handle chat completion requests, supporting both streaming and non-streaming responses.
@@ -53,6 +55,7 @@ async def create(
                     chat_id=chat_id,
                     dataset_ids=request.dataset_ids,
                     project_ids=request.project_ids,
+                    org_id=x_organization_id,
                 )
             ),
             media_type="text/event-stream",
@@ -65,5 +68,6 @@ async def create(
             chat_id=chat_id,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
+            org_id=x_organization_id,
         )
     )

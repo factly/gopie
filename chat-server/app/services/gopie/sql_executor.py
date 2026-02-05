@@ -1,37 +1,32 @@
 from http import HTTPStatus
-from typing import Union
+from typing import Optional, Union
 
-from langsmith import traceable
-
-from app.core.config import settings
 from app.core.log import custom_logger as logger
-from app.core.session import SingletonAiohttp
+from app.services.gopie.client import GopieClient
 from app.utils.graph_utils.result_validation import (
     is_result_too_large,
     truncate_result_for_llm,
 )
 
-SQL_API_ENDPOINT = f"{settings.GOPIE_API_ENDPOINT}/v1/api/sql"
-
 SQL_RESPONSE_TYPE = list[dict[str, Union[str, int, float, None]]] | None
 
 
-@traceable(run_type="tool", name="execute_sql")
-async def execute_sql(query: str) -> SQL_RESPONSE_TYPE:
+async def execute_sql(query: str, org_id: Optional[str] = None) -> SQL_RESPONSE_TYPE:
     """
     Execute a SQL query against the SQL API
 
     Args:
         query: The SQL query to execute
+        org_id: Optional organization ID for multi-tenant support
 
     Returns:
         Query results or error information
     """
     payload = {"query": query}
+    client = GopieClient(org_id=org_id)
+    path = "/v1/api/sql"
 
-    http_session = SingletonAiohttp.get_aiohttp_client()
-
-    async with http_session.post(SQL_API_ENDPOINT, json=payload) as response:
+    async with await client.post(path, json=payload) as response:
         if response.status != HTTPStatus.OK:
             error_data = await response.json()
             raise Exception(error_data.get("error", "Unknown error"))
@@ -42,15 +37,16 @@ async def execute_sql(query: str) -> SQL_RESPONSE_TYPE:
     return result
 
 
-async def execute_sql_with_limit(query: str) -> SQL_RESPONSE_TYPE:
-    result = await execute_sql(query=query)
+async def execute_sql_with_limit(query: str, org_id: Optional[str] = None) -> SQL_RESPONSE_TYPE:
+    result = await execute_sql(query=query, org_id=org_id)
     return truncate_if_too_large(result)
 
 
 async def execute_sql_with_full_and_truncated(
     query: str,
+    org_id: Optional[str] = None,
 ) -> tuple[SQL_RESPONSE_TYPE, SQL_RESPONSE_TYPE]:
-    full_result = await execute_sql(query=query)
+    full_result = await execute_sql(query=query, org_id=org_id)
     truncated_result = truncate_if_too_large(full_result)
     return full_result, truncated_result
 
