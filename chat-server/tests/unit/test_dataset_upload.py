@@ -67,10 +67,18 @@ class TestDatasetUpload:
             assert result["success"] is True
             assert "successfully" in result["message"]
             mock_get_info.assert_called_once_with(
-                "test_dataset_456", "test_project_123", org_id=None
+                "test_dataset_456",
+                "test_project_123",
+                org_id="unknown_org",
+                user_id="unknown_user",
+                is_view=False,
             )
-            mock_get_project_info.assert_called_once_with("test_project_123", org_id=None)
-            mock_generate.assert_called_once_with(mock_dataset_details.name, org_id=None)
+            mock_get_project_info.assert_called_once_with(
+                "test_project_123", org_id="unknown_org", user_id="unknown_user"
+            )
+            mock_generate.assert_called_once_with(
+                mock_dataset_details.name, org_id="unknown_org", user_id="unknown_user"
+            )
             mock_store.assert_called_once()
 
     @pytest.mark.asyncio
@@ -233,10 +241,18 @@ class TestDatasetUpload:
             assert result["success"] is True
             assert "successfully" in result["message"]
             mock_get_info.assert_called_once_with(
-                "test_dataset_456", "test_project_123", org_id="test_org_123"
+                "test_dataset_456",
+                "test_project_123",
+                org_id="test_org_123",
+                user_id="unknown_user",
+                is_view=False,
             )
-            mock_get_project_info.assert_called_once_with("test_project_123", org_id="test_org_123")
-            mock_generate.assert_called_once_with(mock_dataset_details.name, org_id="test_org_123")
+            mock_get_project_info.assert_called_once_with(
+                "test_project_123", org_id="test_org_123", user_id="unknown_user"
+            )
+            mock_generate.assert_called_once_with(
+                mock_dataset_details.name, org_id="test_org_123", user_id="unknown_user"
+            )
             # Verify org_id is passed to store function
             call_args = mock_store.call_args
             assert call_args.kwargs["org_id"] == "test_org_123"

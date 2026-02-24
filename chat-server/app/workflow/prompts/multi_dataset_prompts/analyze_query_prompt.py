@@ -9,7 +9,7 @@ from app.workflow.prompts.formatters.format_prompt_for_langsmith import (
 )
 
 
-def create_analyze_query_prompt(
+def analyze_query_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """
@@ -60,26 +60,30 @@ Examples to handle HERE ("conversational"):
 - Complex analytical queries requiring multiple steps
 - Queries needing data aggregation, filtering, or calculations
 - Multi-dataset analysis or comparisons
-- Trend analysis, statistical computations, or insights generation
 - Queries requiring SQL generation and execution
-- Any query needing actual data processing beyond simple metadata
+- SQL modifications requiring schema info (columns, tables, data values)
+- Any query involving data visualization (charts, graphs, plots)
 - Default choice when unsure between classifications
 
 Examples to HAND OFF ("data_query"):
 ✓ "Show sales trends over the last 3 years"
 ✓ "Compare voter turnout between different states"
 ✓ "What are the top performing products by revenue?"
-✓ "Analyze customer demographics and purchasing patterns"
-✓ "Find correlations between marketing spend and sales"
+✓ "Add a column to the previous query"
+✓ "Filter by state" / "Change the date range"
+✓ "Show me a chart of monthly revenue"
+✓ "Visualize the sales data"
+✓ "Create a bar graph of top 10 products"
 
 ## DECISION FRAMEWORK:
 
 Primary Rules:
 1. Can available tools completely answer the query? → "conversational"
-2. Needs SQL generation or data processing? → "data_query"
+2. Needs new SQL generation or data processing? → "data_query"
 3. Simple metadata/schema lookup? → "conversational"
 4. Complex analysis or calculations? → "data_query"
-5. When uncertain → "data_query"
+5. User wants visualization, chart, graph, or plot? → "data_query"
+6. When uncertain → "data_query"
 
 Tool Usage:
 - You can call tools directly within conversational queries
@@ -89,33 +93,61 @@ Tool Usage:
 
 Special Cases:
 - Truncated SQL results are acceptable (due to large result sizes)
-- If more than two tool calls fails route to "data_query"
+- If more than two tool calls fail, route to "data_query"
 - Extremely vague queries get clarification in "conversational" mode
+
+Using Previous SQL Queries:
+- Previous queries show what data was already requested (not results)
+- Helps understand conversation flow and context
+
+SQL Modification Rules:
+- Modifications needing column names, table info, or data values → "data_query"
+- Simple changes (LIMIT, sort direction) can be handled here if trivial
+- When in doubt about schema requirements → "data_query"
 
 CONFIDENCE SCORING (1-10):
 - 8-10 (High): Clear simple metadata queries or obvious complex analytical queries
 - 4-7 (Medium): Ambiguous queries that could benefit from tool exploration
 - 1-3 (Low): Uncertain queries needing more context or dataset verification
 
-RESPONSE FORMAT:
+## RESPONSE FORMAT:
 
-If tool call required:
-- Call the tool directly (no JSON response)
-- Include a user-friendly message along with the tool call (<= 120 characters)
+For conversational queries:
+1. Call necessary tools to gather information (if needed)
+2. Call respond_to_user tool with final response:
 
-If no tool call required:
-{
-    "query_type": "data_query" OR "conversational",
+respond_to_user({
+    "query_type": "conversational",
     "confidence_score": <integer from 1 to 10>,
     "reasoning": "Brief explanation including complexity assessment",
-    "clarification_needed": "If vague, specify what you need",
-    "status_message": "User-friendly next steps (<= 120 characters)"
-}
+    "clarification_needed": "If vague, specify what you need (or null)",
+    "status_message": "User-friendly response or next steps (<= 120 characters)",
+    "response_data": <any data collected from tool calls or context>
+})
+
+For data_query handoffs:
+Call respond_to_user tool immediately:
+
+respond_to_user({
+    "query_type": "data_query",
+    "confidence_score": <integer from 1 to 10>,
+    "reasoning": "Brief explanation including complexity assessment",
+    "clarification_needed": null,
+    "status_message": "User-friendly next steps (<= 120 characters)",
+    "response_data": null
+})
 
 Reasoning Examples:
 - "Simple metadata query - can be handled with available tools"
 - "Complex analytical query requiring SQL - needs full workflow"
 - "Basic dataset exploration that tools can handle completely"
+
+## WORKFLOW:
+
+1. Analyze the query complexity
+2. If conversational: Call other tools as needed to gather information
+3. **Always finish by calling respond_to_user tool** (replaces JSON response)
+4. Include tool results in response_data field when applicable
 """
 
     human_template_str = """
@@ -124,6 +156,7 @@ PREVIOUS TOOL RESULTS: {tool_results}
 NUMBER OF PREVIOUS TOOL CALLS: {tool_call_count}/5 (max 5 allowed)
 DATASET IDS: {dataset_ids}
 PROJECT IDS: {project_ids}
+PREVIOUS SQL QUERIES: {previous_sql_queries}
 """
 
     if prompt_template:
@@ -134,12 +167,15 @@ PROJECT IDS: {project_ids}
             ]
         )
 
+    previous_sql_queries = kwargs.get("previous_sql_queries", [])
+
     human_content = human_template_str.format(
         user_query=user_query,
         tool_results=tool_results,
         tool_call_count=tool_call_count,
         dataset_ids=dataset_ids,
         project_ids=project_ids,
+        previous_sql_queries=previous_sql_queries if previous_sql_queries else "None",
     )
 
     return [
@@ -154,6 +190,7 @@ def format_analyze_query_input(
     tool_call_count: int = 0,
     dataset_ids: list | None = None,
     project_ids: list | None = None,
+    previous_sql_queries: list | None = None,
     **kwargs,
 ) -> dict:
     """
@@ -168,6 +205,7 @@ def format_analyze_query_input(
         tool_call_count (int, optional): Number of tool calls made so far. Defaults to 0.
         dataset_ids (list | None, optional): List of dataset identifiers. Defaults to None.
         project_ids (list | None, optional): List of project identifiers. Defaults to None.
+        previous_sql_queries (list | None, optional): Previously executed SQL queries. Defaults to None.
         **kwargs: Additional keyword arguments
 
     Returns:
@@ -194,10 +232,18 @@ def format_analyze_query_input(
     if project_ids is None:
         project_ids = []
 
+    if previous_sql_queries:
+        formatted_sql = "\n".join(
+            f"[id:{i+1}] {query}" for i, query in enumerate(previous_sql_queries)
+        )
+    else:
+        formatted_sql = "None"
+
     return {
         "user_query": user_query,
         "tool_results": formatted_tool_results,
         "tool_call_count": tool_call_count,
         "dataset_ids": dataset_ids,
         "project_ids": project_ids,
+        "previous_sql_queries": formatted_sql,
     }

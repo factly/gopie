@@ -240,7 +240,7 @@ class ProdToLocalReplicator:
         filename: str,
         project_id: str,
         alias: str,
-        description: str = None,
+        description: str | None = None,
     ) -> str | None:
         """Upload CSV to S3 and ingest into local Gopie instance."""
         safe_filename = filename.replace(" ", "_").replace("/", "_") + ".csv"
@@ -254,7 +254,7 @@ class ProdToLocalReplicator:
         )
 
         if not s3_path:
-            print(f"   ✗ S3 upload failed")
+            print("   ✗ S3 upload failed")
             return None
 
         try:
@@ -290,12 +290,12 @@ class ProdToLocalReplicator:
 
         table_name, _ = await self.get_dataset_table_name(prod_project_id, dataset_id)
         if not table_name:
-            print(f"   ✗ Could not fetch table name")
+            print("   ✗ Could not fetch table name")
             return False
 
         columns, rows = await self.download_dataset_data(table_name)
         if not columns or not rows:
-            print(f"   ✗ Could not download data")
+            print("   ✗ Could not download data")
             return False
 
         print(f"   📊 Downloaded: {len(rows)} rows, {len(columns)} columns")
@@ -312,13 +312,13 @@ class ProdToLocalReplicator:
         self.dataset_mapping[dataset_id] = local_dataset_id
         self.cloned_datasets.add(dataset_id)
 
-        print(f"   ✅ Replicated successfully")
+        print("   ✅ Replicated successfully")
         return True
 
     async def replicate_project(self, prod_project_id: str) -> str | None:
         """Replicate an entire project with all datasets from prod to local."""
         if prod_project_id in self.project_mapping:
-            print(f"   ⏭️  Project already replicated")
+            print("   ⏭️  Project already replicated")
             return self.project_mapping[prod_project_id]
 
         print(f"\n{'='*70}")
@@ -327,7 +327,7 @@ class ProdToLocalReplicator:
 
         project_details = await self.get_project_details(prod_project_id, from_prod=True)
         if not project_details:
-            print(f"   ✗ Could not fetch production project details")
+            print("   ✗ Could not fetch production project details")
             return None
 
         project_name = project_details.get("name", "Unnamed Project")
@@ -342,14 +342,14 @@ class ProdToLocalReplicator:
                 description=project_description or f"Replicated from production: {project_name}",
             )
         except SystemExit:
-            print(f"   ✗ Could not create local project")
+            print("   ✗ Could not create local project")
             return None
 
         self.project_mapping[prod_project_id] = local_project_id
 
         datasets = await self.fetch_datasets(prod_project_id)
         if not datasets:
-            print(f"   ⚠️  No datasets found")
+            print("   ⚠️  No datasets found")
             return local_project_id
 
         print(f"   📊 Found {len(datasets)} datasets to replicate\n")
@@ -370,7 +370,7 @@ class ProdToLocalReplicator:
             await asyncio.sleep(0.5)
 
         print(f"\n{'='*70}")
-        print(f"📊 Replication Summary")
+        print("📊 Replication Summary")
         print(f"{'='*70}")
         print(f"Project: {project_name}")
         print(f"Production ID: {prod_project_id}")
@@ -403,7 +403,7 @@ class ProdToLocalReplicator:
             return {"error": str(e)}
 
         if not isinstance(data, list):
-            print(f"✗ JSON must contain a list of dictionaries")
+            print("✗ JSON must contain a list of dictionaries")
             return {"error": "Invalid JSON structure: expected list"}
 
         print(f"✓ Loaded {len(data)} entries\n")
@@ -420,7 +420,7 @@ class ProdToLocalReplicator:
         project_ids = list(project_ids)
 
         if not project_ids:
-            print(f"✗ No project_id fields found in JSON")
+            print("✗ No project_id fields found in JSON")
             return {"error": "No project IDs found"}
 
         print(f"📊 Found {len(project_ids)} unique projects to replicate\n")
@@ -457,8 +457,8 @@ class ProdToLocalReplicator:
     async def upload_csv_folder(
         self,
         csv_folder: str,
-        project_name: str = None,
-        project_description: str = None,
+        project_name: str | None = None,
+        project_description: str | None = None,
     ) -> dict[str, Any]:
         """
         Upload all CSV files from a local folder to a new project in local Gopie instance.
@@ -508,7 +508,7 @@ class ProdToLocalReplicator:
                 description=project_description,
             )
         except SystemExit:
-            print(f"✗ Failed to create project")
+            print("✗ Failed to create project")
             return {"error": "Project creation failed"}
 
         dataset_mappings = upload_and_ingest_datasets(
@@ -522,7 +522,7 @@ class ProdToLocalReplicator:
         failed_uploads = len(csv_files) - successful_uploads
 
         print(f"\n{'='*70}")
-        print(f"📊 Upload Summary")
+        print("📊 Upload Summary")
         print(f"{'='*70}")
         print(f"Project: {project_name}")
         print(f"Project ID: {local_project_id}")
@@ -543,19 +543,19 @@ class ProdToLocalReplicator:
     def print_summary(self, stats: dict[str, Any]) -> None:
         """Print final replication summary."""
         print(f"\n{'='*70}")
-        print(f"🎉 REPLICATION COMPLETE")
+        print("🎉 REPLICATION COMPLETE")
         print(f"{'='*70}\n")
 
         if "error" in stats:
             print(f"✗ Error: {stats['error']}")
             return
 
-        print(f"Projects:")
+        print("Projects:")
         print(f"  Total:      {stats['total_projects']}")
         print(f"  ✓ Success:  {stats['successful_projects']}")
         print(f"  ✗ Failed:   {stats['failed_projects']}")
 
-        print(f"\nDatasets:")
+        print("\nDatasets:")
         print(f"  Total:      {stats['total_datasets']}")
         print(f"  ✓ Success:  {stats['successful_datasets']}")
 
@@ -579,7 +579,7 @@ Examples:
   python -m tests.scripts.replicate_prod_to_local \\
     --prod-url http://localhost:8000 \\
     --local-url http://localhost:8001 \\
-    --json-file tests/chat_server_tests/golden_dataset.json
+    --json-file tests/chat_server_tests/output/golden_dataset.json
 
   # Replicate a specific project
   python -m tests.scripts.replicate_prod_to_local \\

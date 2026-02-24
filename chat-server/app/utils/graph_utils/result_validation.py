@@ -19,12 +19,10 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
         if len(result) > settings.ROW_TRUNCATION_LIMIT:
             return True, f"Query returned too many records: {len(result)}"
 
-        result_json = json.dumps(result)
-        # ~25k tokens approximation
+        result_json = json.dumps(result, default=str)
         if len(result_json) > settings.DATASET_TOKEN_TRUNCATION_LIMIT:
             return True, f"Query result is too large: {len(result_json)}"
 
-        # Check number of columns in first record
         if (
             result
             and isinstance(result[0], dict)
@@ -37,7 +35,7 @@ def is_result_too_large(result: list[dict]) -> tuple[bool, str]:
 
         return False, ""
     except Exception as e:
-        logger.exception(e)
+        logger.exception(f"Error validating result size: {e!s}")
         return False, ""
 
 
@@ -64,7 +62,7 @@ def truncate_result_for_llm(result: list[dict] | None) -> list[dict] | None:
             {
                 "__note__": (
                     f"This result was large ({len(result)} rows) and has been "
-                    f"truncated. User can see . "
+                    f"truncated to {settings.DISPLAY_ROWS_AFTER_TRUNCATION_LIMIT} rows. "
                     f"Please let the user know that the result is truncated but "
                     f"the complete result is available with you."
                 )

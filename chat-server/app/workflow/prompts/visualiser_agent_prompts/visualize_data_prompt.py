@@ -5,7 +5,7 @@ from langchain_core.prompts import (
 )
 
 
-def create_visualize_data_prompt(
+def visualize_data_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)

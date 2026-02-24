@@ -3,26 +3,9 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.models.data import ColumnValueMatching
 from app.models.query import QueryResult
 from app.models.schema import DatasetSchema
-
-
-class FuzzyValue(TypedDict):
-    name: str
-    exact_values: list[str]
-    fuzzy_values: list[str]
-
-
-class ColumnAssumptions(TypedDict):
-    dataset: str
-    columns: list[FuzzyValue]
-
-
-class DatasetsInfo(TypedDict):
-    schemas: list[DatasetSchema]
-    column_assumptions: list[ColumnAssumptions] | None
-    correct_column_requirements: ColumnValueMatching | None
+from app.workflow.graph.sql_planner_graph.types import DatasetsInfo
 
 
 class InputState(TypedDict):
@@ -31,7 +14,7 @@ class InputState(TypedDict):
     messages: list[BaseMessage]
     user_query: str
     relevant_datasets_ids: list[str] | None
-    previous_sql_queries: list[str] | None
+    prev_sql_queries: list[str] | None
 
 
 class OutputState(TypedDict):
@@ -51,15 +34,15 @@ class State(TypedDict):
     query_result: QueryResult
     tool_call_count: int
     relevant_datasets_ids: list[str] | None
-    previous_sql_queries: list[str] | None
+    prev_sql_queries: list[str] | None
     retry_count: int
     recommendation: str
     continue_execution: bool | None
+    previous_subquery_context: str | None
     validation_result: str | None
     semantic_search_results: list[DatasetSchema]
     semantic_search_retry_count: int
     missing_dataset_context: str | None
-    analyze_dataset_retry_count: int
 
 
 class ConfigSchema(TypedDict):
@@ -67,11 +50,3 @@ class ConfigSchema(TypedDict):
     trace_id: str
     chat_history: list[BaseMessage]
     user: str
-
-
-class ValidationResult(TypedDict):
-    is_valid: bool
-    reasoning: str
-    recommendation: str
-    confidence: float
-    missing_elements: list[str]

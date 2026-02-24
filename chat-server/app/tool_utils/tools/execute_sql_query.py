@@ -1,4 +1,5 @@
 from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from app.core.constants import SQL_QUERIES_GENERATED, SQL_QUERIES_GENERATED_ARG
@@ -9,6 +10,7 @@ from app.services.gopie.sql_executor import execute_sql_with_limit
 async def execute_sql_query(
     queries: list[str],
     status_message: str = "",
+    config: RunnableConfig | None = None,
 ) -> list[dict] | dict:
     """
     Execute a SQL query against the SQL API.
@@ -26,9 +28,12 @@ async def execute_sql_query(
         List of result rows as dicts, or a dict with error information.
     """
     try:
+        org_id = config.get("metadata", {}).get("org_id")
+        user_id = config.get("metadata", {}).get("user")
+
         results = []
         for query in queries:
-            result = await execute_sql_with_limit(query=query)
+            result = await execute_sql_with_limit(query=query, org_id=org_id, user_id=user_id)
 
             snippet = query.strip().replace("\n", " ")
             if len(snippet) > 140:

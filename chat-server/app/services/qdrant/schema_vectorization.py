@@ -18,6 +18,7 @@ async def store_schema_in_qdrant(
     sample_data: SQL_RESPONSE_TYPE,
     dataset_details: DatasetDetails,
     project_details: ProjectDetails,
+    org_id: str,
 ) -> bool:
     try:
         dataset_schema = create_dataset_schema(
@@ -25,6 +26,7 @@ async def store_schema_in_qdrant(
             sample_data=sample_data,
             dataset_details=dataset_details,
             project_details=project_details,
+            org_id=org_id,
         )
 
         document = Document(
@@ -59,7 +61,7 @@ async def delete_schema_from_qdrant(
         bool: True if deletion was successful, False otherwise.
     """
     try:
-        client = await QdrantSetup.get_async_client()
+        client = await QdrantSetup.get_async_client(collection_name=settings.QDRANT_COLLECTION)
         document_id = QdrantSetup.get_document_id(project_id, dataset_id)
         await client.delete(
             collection_name=settings.QDRANT_COLLECTION,

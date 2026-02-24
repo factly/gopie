@@ -4,6 +4,7 @@ from .litellm import LiteLLMEmbeddingProvider
 from .local import LocalEmbeddingProvider
 from .openai import OpenAIEmbeddingProvider
 from .portkey import PortkeyEmbeddingProvider
+from .vllm import VLLMEmbeddingProvider
 
 __all__ = [
     "CustomEmbeddingProvider",
@@ -12,4 +13,5 @@ __all__ = [
     "LiteLLMEmbeddingProvider",
     "BaseEmbeddingProvider",
     "LocalEmbeddingProvider",
+    "VLLMEmbeddingProvider",
 ]

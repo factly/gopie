@@ -16,6 +16,7 @@ async def stream_graph_updates(
     user: str,
     trace_id: str,
     chat_id: str,
+    org_id: str,
     dataset_ids: list[str] | None = None,
     project_ids: list[str] | None = None,
 ):
@@ -45,6 +46,7 @@ async def stream_graph_updates(
         "trace_id": trace_id,
         "chat_id": chat_id,
         "user": user,
+        "org_id": org_id,
     }
     config = RunnableConfig(
         metadata=metadata,

@@ -36,7 +36,8 @@ async def pre_model_hook(state: State, config: RunnableConfig):
             await update_sandbox_timeout(sandbox=existing_sandbox)
             sandbox = existing_sandbox
         else:
-            sandbox = await get_sandbox()
+            chat_id = config.get("metadata", {}).get("chat_id")
+            sandbox = await get_sandbox(chat_id=chat_id)
             await upload_csv_files(sandbox=sandbox, datasets=state.get("datasets", []))
 
         messages = []
@@ -89,10 +90,10 @@ def should_continue_from_pre_model_hook(state: State):
     Determines the next step after pre_model_hook.
 
     Returns:
-        str: "cleanup" if there was an error, otherwise "agent".
+        str: "respond" if there was an error, otherwise "agent".
     """
     if state.get("messages") and len(state["messages"]) > 0:
         last_message = state["messages"][-1]
         if isinstance(last_message, ErrorMessage):
-            return "cleanup"
+            return "respond"
     return "agent"

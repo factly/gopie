@@ -37,12 +37,9 @@ class EvaluatorModule(dspy.Module):
     For simpler/faster evaluation, you can use dspy.Predictor instead.
     """
 
-    def __init__(self, use_reasoning: bool = True) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        if use_reasoning:
-            self.evaluate = dspy.ChainOfThought(EvaluateQueryResponse)
-        else:
-            self.evaluate = dspy.Predictor(EvaluateQueryResponse)
+        self.evaluate = dspy.ChainOfThought(EvaluateQueryResponse)
 
     def forward(self, generated_answer: str, expected_result: str):
         """Evaluate a generated answer against expected result."""
@@ -94,37 +91,50 @@ def optimize_evaluator(
     print("🚀 Starting DSPy Evaluation Optimization\n")
 
     print(f"📦 Configuring DSPy with model: {TestConfig.DEFAULT_LLM_MODEL}")
-    lm = dspy.LM(
-        model=f"openai/{TestConfig.DEFAULT_LLM_MODEL}",
-        api_key=TestConfig.OPENAI_API_KEY,
-        max_tokens=1000,
-    )
+
+    reasoning_model_prefixes = ("openai/o1", "openai/o3", "openai/gpt-5", "o1", "o3", "gpt-5")
+    is_reasoning_model = TestConfig.DEFAULT_LLM_MODEL.lower().startswith(reasoning_model_prefixes)
+
+    if is_reasoning_model:
+        print("  ℹ️  Detected reasoning model - using temperature=1.0, max_tokens=16000")
+        lm = dspy.LM(
+            model=TestConfig.DEFAULT_LLM_MODEL,
+            api_key=TestConfig.OPENAI_API_KEY,
+            temperature=1.0,
+            max_tokens=16000,
+        )
+    else:
+        lm = dspy.LM(
+            model=TestConfig.DEFAULT_LLM_MODEL,
+            api_key=TestConfig.OPENAI_API_KEY,
+            max_tokens=1000,
+        )
     dspy.configure(lm=lm)
 
     print(f"\n📂 Loading dataset from: {dataset_path}")
     loader = GoldenDatasetLoader(dataset_path)
     train_examples, test_examples = loader.split_data(train_ratio=train_ratio, seed=seed)
 
-    print(f"\n📊 Dataset split:")
+    print("\n📊 Dataset split:")
     print(f"  Training: {len(train_examples)} examples")
     print(f"  Testing: {len(test_examples)} examples")
 
     stats = loader.get_statistics()
-    print(f"\n📈 Score Distribution (User Evaluation):")
+    print("\n📈 Score Distribution (User Evaluation):")
     for label, count in stats["score_distribution"].items():
         print(f"  {label}: {count} ({count/stats['total_examples']*100:.1f}%)")
-    print(f"\n📊 Score Statistics (User Evaluation):")
+    print("\n📊 Score Statistics (User Evaluation):")
     for stat_name, value in stats["score_stats"].items():
         print(f"  {stat_name}: {value:.2f}")
 
-    print(f"\n🔄 Converting to DSPy format...")
+    print("\n🔄 Converting to DSPy format...")
     train_set = prepare_dspy_examples(train_examples, verbose=True)
     test_set = prepare_dspy_examples(test_examples, verbose=False)
 
-    print(f"\n🏗️  Creating base evaluator...")
-    evaluator = EvaluatorModule(use_reasoning=use_reasoning)
+    print("\n🏗️  Creating base evaluator...")
+    evaluator = EvaluatorModule()
 
-    print(f"\n🎯 Optimizing with BootstrapFewShot...")
+    print("\n🎯 Optimizing with BootstrapFewShot...")
     print(f"  Max bootstrapped demos: {max_bootstrapped_demos}")
     print(f"  Max labeled demos: {max_labeled_demos}")
 
@@ -134,11 +144,10 @@ def optimize_evaluator(
         max_labeled_demos=max_labeled_demos,
     )
 
-    print(f"\n⚡ Running optimization (this may take a few minutes)...")
+    print("\n⚡ Running optimization (this may take a few minutes)...")
     optimized_evaluator = optimizer.compile(evaluator, trainset=train_set)
 
-    # 6. Evaluate on test set
-    print(f"\n🧪 Evaluating on test set...")
+    print("\n🧪 Evaluating on test set...")
     total_mae = 0.0
     total_metric_score = 0.0
     results = []
@@ -167,7 +176,6 @@ def optimize_evaluator(
     avg_mae = total_mae / len(test_set) if test_set else 0.0
     avg_metric_score = total_metric_score / len(test_set) if test_set else 0.0
 
-    # 7. Calculate detailed metrics
     print("\n✅ Optimization complete!")
     print("\n📊 Results:")
     print(f"  Average MAE: {avg_mae:.2f} points")
@@ -227,7 +235,7 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="tests/chat_server_tests/labeled_golden.json",
+        default="tests/chat_server_tests/output/labeled_golden.json",
         help="Path to labeled golden dataset JSON",
     )
     parser.add_argument(

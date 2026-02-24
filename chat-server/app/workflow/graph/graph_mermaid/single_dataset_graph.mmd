@@ -5,13 +5,18 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
-	process_query(process_query)
+	prepare_data(prepare_data)
+	sql_agent(sql_agent)
+	execute_sql(execute_sql)
 	validate_result(validate_result)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> process_query;
-	process_query --> validate_result;
+	__start__ --> prepare_data;
+	execute_sql --> validate_result;
+	prepare_data --> sql_agent;
+	sql_agent -.-> execute_sql;
+	sql_agent -. &nbsp;no_sql_queries&nbsp; .-> validate_result;
 	validate_result -. &nbsp;pass_on_results&nbsp; .-> __end__;
-	validate_result -. &nbsp;rerun_query&nbsp; .-> process_query;
+	validate_result -. &nbsp;rerun_query&nbsp; .-> sql_agent;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

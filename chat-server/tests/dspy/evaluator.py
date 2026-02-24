@@ -8,12 +8,9 @@ from tests.test_config import TestConfig
 
 
 class OptimizedEvaluator:
-    def __init__(self, evaluator_path: str | None = None) -> None:
-        if not TestConfig.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY environment variable is required for DSPy evaluation")
-
+    def __init__(self, evaluator_path: Path | None = None) -> None:
         lm = dspy.LM(
-            model=f"openai/{TestConfig.DEFAULT_LLM_MODEL}",
+            model=TestConfig.DEFAULT_LLM_MODEL,
             api_key=TestConfig.OPENAI_API_KEY,
             max_tokens=1000,
         )
@@ -72,13 +69,24 @@ class OptimizedEvaluator:
             else str(expected_result)
         )
 
-        result = self.evaluator(
-            generated_answer=generated_answer_str,
-            expected_result=expected_result_str,
-        )
-
-        return {
-            "evaluation_score": float(result.evaluation_score),
-            "reasoning": result.reasoning,
-            "summary": result.summary,
-        }
+        try:
+            result = self.evaluator(
+                generated_answer=generated_answer_str,
+                expected_result=expected_result_str,
+            )
+            return {
+                "evaluation_score": float(result.evaluation_score),
+                "reasoning": result.reasoning,
+                "summary": result.summary,
+            }
+        except Exception as e:
+            print("[DSPy Warning] Structured output failed, falling back to JSON mode.")
+            print(f"Raw generated_answer: {generated_answer_str}")
+            print(f"Raw expected_result: {expected_result_str}")
+            print(f"Error: {e}")
+            print("Tip: Use GPT-4o or GPT-4 for best structured output reliability.")
+            return {
+                "evaluation_score": 0.0,
+                "reasoning": f"Structured output failed: {e}",
+                "summary": "Evaluator fallback to JSON mode. Check model compatibility.",
+            }

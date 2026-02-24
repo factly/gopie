@@ -19,11 +19,17 @@ async def semantic_search(state: State, config: RunnableConfig):
     project_ids = state.get("project_ids", [])
     retry_count = state.get("semantic_search_retry_count", 0)
     missing_context = state.get("missing_dataset_context")
+    previous_subquery_context = state.get("previous_subquery_context")
 
     search_query = user_query
+    if previous_subquery_context:
+        search_query = (
+            f"{user_query}\n\nContext from previous queries:\n{previous_subquery_context}"
+        )
+
     if missing_context:
-        search_query = f"{user_query}\n\nAdditional context: {missing_context}"
-        logger.info(f"Semantic search retry with context: {missing_context}")
+        search_query = f"{search_query}\n\nAdditional context: {missing_context}"
+        logger.debug(f"Semantic search retry with context: {missing_context}")
 
     try:
         embeddings_model = get_model_provider(config).get_embeddings_model()

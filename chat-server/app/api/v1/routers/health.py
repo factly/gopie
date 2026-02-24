@@ -2,13 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Any, Dict
 
-import aiohttp
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
 from app.core.config import settings
-from app.core.session import SingletonAiohttp
+from app.core.log import logger
 
 router = APIRouter()
 
@@ -51,6 +50,7 @@ async def check_qdrant_health() -> Dict[str, Any]:
                 "collection_exists": False,
             }
     except Exception as e:
+        logger.exception("Error checking Qdrant health: %s", e)
         return {"status": "unhealthy", "error": str(e), "collection_exists": False}
 
 
@@ -87,6 +87,7 @@ async def check_llm_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking LLM provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.LLM_GATEWAY_PROVIDER,
@@ -103,18 +104,15 @@ async def check_gopie_server_health() -> Dict[str, Any]:
         return {"status": "not_configured", "error": "GOPIE_API_ENDPOINT not configured"}
 
     try:
-        http_session = SingletonAiohttp.get_aiohttp_client()
+        from app.services.gopie.client import GopieClient
 
+        client = GopieClient(org_id="health_check", user_id="system")
         # Test basic connectivity to Gopie server
-        url = settings.GOPIE_API_ENDPOINT.rstrip("/")
-        headers = {"accept": "application/json"}
-
-        async with http_session.get(
-            url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
-        ) as response:
+        async with await client.get("/") as response:
             # Any response (even 404) means the server is reachable
             return {"status": "healthy", "response_code": response.status, "server_reachable": True}
     except Exception as e:
+        logger.exception("Error checking Gopie server health: %s", e)
         return {"status": "unhealthy", "error": str(e), "server_reachable": False}
 
 
@@ -154,9 +152,43 @@ async def check_embedding_provider_health() -> Dict[str, Any]:
                 "note": "Provider instantiated but no default model configured",
             }
     except Exception as e:
+        logger.exception("Error checking embedding provider health: %s", e)
         return {
             "status": "unhealthy",
             "provider_type": settings.EMBEDDING_GATEWAY_PROVIDER,
+            "error": str(e),
+        }
+
+
+async def check_sparse_model_health() -> Dict[str, Any]:
+    """
+    Check if sparse model can be properly instantiated and generate vectors.
+    """
+    try:
+        from app.services.qdrant.vector_store import generate_sparse_vector
+
+        # Test vector generation
+        # Run in executor to avoid blocking event loop since it is CPU intensive
+        loop = asyncio.get_running_loop()
+        vector = await loop.run_in_executor(None, generate_sparse_vector, "test")
+
+        if vector and vector.indices:
+            return {
+                "status": "healthy",
+                "model_loaded": True,
+                "vector_generated": True,
+            }
+        else:
+            return {
+                "status": "unhealthy",
+                "error": "Generated vector is empty",
+                "model_loaded": True,
+            }
+
+    except Exception as e:
+        logger.exception("Error checking sparse model health: %s", e)
+        return {
+            "status": "unhealthy",
             "error": str(e),
         }
 
@@ -171,6 +203,7 @@ async def health_check():
     - LLM provider instantiation
     - Gopie server
     - Embedding provider instantiation
+    - Sparse model instantiation
     """
     start_time = datetime.now()
 
@@ -178,9 +211,21 @@ async def health_check():
     llm_task = asyncio.create_task(check_llm_provider_health())
     gopie_task = asyncio.create_task(check_gopie_server_health())
     embedding_task = asyncio.create_task(check_embedding_provider_health())
+    sparse_model_task = asyncio.create_task(check_sparse_model_health())
 
-    qdrant_health, llm_health, gopie_health, embedding_health = await asyncio.gather(
-        qdrant_task, llm_task, gopie_task, embedding_task, return_exceptions=True
+    (
+        qdrant_health,
+        llm_health,
+        gopie_health,
+        embedding_health,
+        sparse_model_health,
+    ) = await asyncio.gather(
+        qdrant_task,
+        llm_task,
+        gopie_task,
+        embedding_task,
+        sparse_model_task,
+        return_exceptions=True,
     )
 
     def safe_result(result, service_name):
@@ -195,8 +240,15 @@ async def health_check():
     llm_health = safe_result(llm_health, "llm")
     gopie_health = safe_result(gopie_health, "gopie")
     embedding_health = safe_result(embedding_health, "embedding")
+    sparse_model_health = safe_result(sparse_model_health, "sparse_model")
 
-    all_services = [qdrant_health, llm_health, gopie_health, embedding_health]
+    all_services = [
+        qdrant_health,
+        llm_health,
+        gopie_health,
+        embedding_health,
+        sparse_model_health,
+    ]
     unhealthy_services = [
         service
         for service in all_services
@@ -218,6 +270,7 @@ async def health_check():
             "llm_provider": llm_health,
             "gopie_server": gopie_health,
             "embedding_provider": embedding_health,
+            "sparse_model": sparse_model_health,
         },
     }
 

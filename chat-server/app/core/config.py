@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str = Field(default="", alias="OPENROUTER_API_KEY")
     OPENROUTER_BASE_URL: str = Field(
-        default="https://api.openrouter.ai", alias="OPENROUTER_BASE_URL"
+        default="https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL"
     )
 
     LANGSMITH_PROMPT: bool = False
@@ -53,8 +53,10 @@ class Settings(BaseSettings):
 
     QDRANT_HOST: str = "host.docker.local"
     QDRANT_COLLECTION: str = "dataset_collection"
+    QDRANT_DUCKDB_COLLECTION: str = "duckdb_docs_collection"
     QDRANT_PORT: int = 6333
-    QDRANT_TOP_K: int = 5
+    QDRANT_TOP_K: int = 10
+    QDRANT_DUCKDB_TOP_K: int = 5
 
     GOPIE_API_ENDPOINT: str = ""
 
@@ -72,9 +74,10 @@ class Settings(BaseSettings):
     DEFAULT_EMBEDDING_MODEL: str = ""
     DEFAULT_EMBEDDING_SIZE: int = 3072
     EMBEDDINGS_MAX_TOKEN: int | None = None
+    DEFAULT_SPARSE_MODEL: str = "prithivida/Splade_PP_en_v1"
 
     E2B_API_KEY: str = ""
-    E2B_TIMEOUT: int = 120
+    E2B_TIMEOUT: int = 300
 
     INTERNAL_S3_HOST: str = ""
     EXTERNAL_S3_HOST: str = ""
@@ -107,6 +110,13 @@ class Settings(BaseSettings):
     DATASET_TOKEN_TRUNCATION_LIMIT: int = 100000
     COLUMN_TRUNCATION_LIMIT: int = 200
     DISPLAY_ROWS_AFTER_TRUNCATION_LIMIT: int = 20
+
+    # Dataset Sampling Constants
+    TARGET_ROWS: int = 150000
+    SAMPLING_THRESHOLD: int = 150000
+
+    # OLAP Backend Configuration
+    OLAP_DB_TYPE: str = "duckdb"  # duckdb, motherduck, clickhouse, etc.
 
     model_config = SettingsConfigDict(
         env_file=".env", extra="ignore", case_sensitive=True, env_prefix="CHAT_"

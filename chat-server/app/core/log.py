@@ -12,7 +12,7 @@ class CustomLogger:
         self.dev_mode = dev_mode
 
     def exception(self, msg, *args, **kwargs):
-        self._logger.exception(msg, *args, stack_info=True, **kwargs)
+        self._logger.critical(msg, *args, stack_info=True, **kwargs)
         if self.dev_mode:
             raise
 

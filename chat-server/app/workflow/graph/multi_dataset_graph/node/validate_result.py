@@ -47,9 +47,9 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
     retry_count = state.get("retry_count", 0)
     subquery_index = state.get("subquery_index", 0)
 
-    no_sql_response = query_result.subqueries[subquery_index].no_sql_response
+    non_sql_response = query_result.subqueries[subquery_index].non_sql_response
 
-    if no_sql_response:
+    if non_sql_response:
         return {
             "retry_count": retry_count,
             "messages": [
@@ -59,6 +59,31 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
             ],
             "recommendation": "route_response",
         }
+
+    subqueries = state.get("subqueries", [])
+    if subqueries and subquery_index + 1 < len(subqueries):
+        # We have more subqueries to process
+        # Get the result from the current subquery
+        current_subquery_info = query_result.subqueries[subquery_index]
+        executed_sqls = current_subquery_info.sql_queries
+
+        context_parts = []
+        if executed_sqls:
+            for sql_info in executed_sqls:
+                if sql_info.success and sql_info.full_sql_result:
+                    context_parts.append(
+                        f"Executed SQL: {sql_info.sql_query}\nResult: {sql_info.full_sql_result}"
+                    )
+
+        if context_parts:
+            context_str = "\n\nContext from previous step:\n" + "\n---\n".join(context_parts)
+
+            # Update the next subquery text in the state list
+            subqueries[subquery_index + 1] += context_str
+
+            # Update the next subquery text in the query_result object if it exists
+            if subquery_index + 1 < len(query_result.subqueries):
+                query_result.subqueries[subquery_index + 1].query_text += context_str
 
     # Validate the result with the LLM
     try:
@@ -90,15 +115,20 @@ async def validate_result(state: State, config: RunnableConfig) -> dict[str, Any
             "messages": [AIMessage(content=response)],
             "recommendation": recommendation,
             "validation_result": response,
+            "subqueries": subqueries,
+            "query_result": query_result,
         }
 
     except Exception as e:
-        error_msg = f"Validation error: {str(e)}. Proceeding with response."
-        logger.exception(error_msg)
+        error_msg = (
+            f"Validation error for subquery {subquery_index + 1}: {e!s}. Proceeding with response."
+        )
+        logger.exception(f"Result validation failed - Subquery: {subquery_index + 1}, Error: {e!s}")
 
         return {
             "retry_count": retry_count,
             "messages": [ErrorMessage(content=error_msg)],
+            "recommendation": "route_response",
         }
 
 

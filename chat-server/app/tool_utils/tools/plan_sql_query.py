@@ -37,7 +37,7 @@ async def plan_sql_query(
             limitations: any assumptions or limitations
     """
     try:
-        chain = get_prompt_llm_chain("plan_sql_query_tool", config)
+        chain = get_prompt_llm_chain("generate_sql", config)
         response = await chain.ainvoke({"user_query": user_query, "dataset_info": dataset_info})
         return response
     except Exception as e:

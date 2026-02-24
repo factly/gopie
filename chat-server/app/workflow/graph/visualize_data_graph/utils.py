@@ -7,7 +7,7 @@ from io import StringIO
 from typing import Annotated
 
 import aioboto3
-from e2b_code_interpreter import AsyncSandbox
+from e2b_code_interpreter import AsyncSandbox, SandboxQuery
 from langchain_core.runnables import RunnableConfig
 from langgraph.prebuilt import InjectedState
 from langsmith import traceable
@@ -77,7 +77,7 @@ def format_dataset_info(datasets: list[Dataset] | None) -> str:
 
 
 @traceable(run_type="chain", name="get_sandbox")
-async def get_sandbox():
+async def get_sandbox(chat_id: str = None):
     """
     Asynchronously creates and returns a sandboxed Python environment preconfigured for data visualization.
 
@@ -89,7 +89,20 @@ async def get_sandbox():
     """
     if not settings.E2B_API_KEY:
         raise ValueError("E2B API key is not set. Please set up E2B to enable visualizations.")
-    sbx = await AsyncSandbox.create(timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY)
+
+    existing_sbx_paginator = AsyncSandbox.list(
+        SandboxQuery(metadata={"chat_id": chat_id}), api_key=settings.E2B_API_KEY
+    )
+    existing_sbx_info = await existing_sbx_paginator.next_items()
+    if existing_sbx_info:
+        sbx_id = existing_sbx_info[0].sandbox_id
+        sbx = await AsyncSandbox.connect(sbx_id, api_key=settings.E2B_API_KEY)
+        await update_sandbox_timeout(sbx)
+        return sbx
+
+    sbx = await AsyncSandbox.create(
+        timeout=settings.E2B_TIMEOUT, api_key=settings.E2B_API_KEY, metadata={"chat_id": chat_id}
+    )
     _ = await sbx.commands.run("pip install altair vl-convert-python")
     return sbx
 

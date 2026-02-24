@@ -50,10 +50,12 @@ def from_openai_format(
                 dataset_ids.extend(value.split(","))
     project_ids = [project_id.strip() for project_id in project_ids if project_id.strip()]
     dataset_ids = [dataset_id.strip() for dataset_id in dataset_ids if dataset_id.strip()]
+    chat_id = metadata.get("chat_id") if metadata else None
     return QueryRequest(
         messages=messages,
         model_id=request.get("model"),
         user=request.get("user"),
         dataset_ids=dataset_ids,
         project_ids=project_ids,
+        chat_id=chat_id,
     )
