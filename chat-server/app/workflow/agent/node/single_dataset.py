@@ -28,6 +28,10 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
     dataset_count = 0
     query_result: QueryResult = output_state.get("query_result")
 
+    dataset_info = output_state.get("dataset_info", {})
+    dataset_schema = dataset_info.get("dataset_schema") if dataset_info else None
+    dataset_schemas = [dataset_schema] if dataset_schema else []
+
     result: SingleDatasetQueryResult | None = query_result.single_dataset_query_result
 
     if result is not None:
@@ -46,6 +50,7 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
     return {
         "query_result": query_result,
         "datasets": datasets,
+        "dataset_schemas": dataset_schemas,
         "messages": [
             AIMessage(content="Successfully processed the user query with single dataset agent.")
         ],

@@ -20,6 +20,7 @@ class InputState(TypedDict):
 class OutputState(TypedDict):
     query_result: QueryResult
     continue_execution: bool | None
+    datasets_info: DatasetsInfo
 
 
 class State(TypedDict):

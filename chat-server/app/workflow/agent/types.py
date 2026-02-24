@@ -3,6 +3,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph.message import add_messages
 
 from app.models.query import QueryResult
+from app.models.schema import DatasetSchema
 from app.workflow.graph.visualize_data_graph.types import Dataset
 
 
@@ -29,3 +30,4 @@ class AgentState(TypedDict):
     invalid_input: bool | None
     query_result: QueryResult | None
     continue_execution: bool | None
+    dataset_schemas: list[DatasetSchema] | None

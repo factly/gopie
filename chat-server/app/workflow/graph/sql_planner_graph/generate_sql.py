@@ -110,6 +110,12 @@ async def generate_sql(state: State, config: RunnableConfig) -> dict:
             tables_used = []
 
             for sql_query in sql_queries:
+                await adispatch_custom_event(
+                    "gopie-agent",
+                    {
+                        "content": sql_query.explanation,
+                    },
+                )
                 sql_queries_info.append(
                     SqlQueryInfo(
                         sql_query=sql_query.sql_query,

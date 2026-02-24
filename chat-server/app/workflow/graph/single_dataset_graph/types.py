@@ -25,6 +25,7 @@ class InputState(TypedDict):
 
 class OutputState(TypedDict):
     query_result: QueryResult
+    dataset_info: SingleDatasetInfo
 
 
 class State(TypedDict):

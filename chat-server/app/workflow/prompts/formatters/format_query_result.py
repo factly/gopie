@@ -5,6 +5,7 @@ from app.models.query import (
     SqlQueryInfo,
     SubQueryInfo,
 )
+from app.models.schema import DatasetSchema
 
 
 def format_sql_query_info(sql_info: SqlQueryInfo, query_number: int) -> str:
@@ -153,7 +154,34 @@ def format_subquery_info(subquery: SubQueryInfo, subquery_number: int) -> list[s
     return subquery_section
 
 
-def format_query_result(query_result: QueryResult) -> str:
+def format_dataset_schemas(schemas: list[DatasetSchema]) -> str:
+    """
+    Format a list of dataset schemas into a readable string for the result generation prompt.
+
+    Args:
+        schemas: List of DatasetSchema objects
+
+    Returns:
+        str: Formatted dataset schemas section
+    """
+    if not schemas:
+        return ""
+
+    sections = ["\n=== DATASET SCHEMAS ==="]
+    for schema in schemas:
+        sections.append(
+            schema.format_for_prompt(
+                columns_fields_to_exclude=["sample_values", "stats", "avg", "std", "count"]
+            )
+        )
+    return "\n".join(sections)
+
+
+def format_query_result(
+    query_result: QueryResult,
+    *,
+    dataset_schemas: list[DatasetSchema] | None = None,
+) -> str:
     """
     Format a comprehensive query result into a detailed, human-readable multi-line string.
 
@@ -175,6 +203,9 @@ def format_query_result(query_result: QueryResult) -> str:
         f"USER QUERY: {user_query}",
         f"EXECUTION TIME: {query_result.execution_time:.2f}s",
     ]
+
+    if dataset_schemas:
+        input_parts.append(format_dataset_schemas(dataset_schemas))
 
     if query_result.analyze_query_result:
         input_parts.append("\n=== QUERY ANALYSIS ===")

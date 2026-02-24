@@ -58,6 +58,10 @@ Based on validation, select ONE path:
 - Include units/unit columns when displaying value columns
 - **NEVER use** project_id, dataset_id, or internal system identifiers in WHERE clauses
 
+### CRITICAL: Filtered Column Inclusion (MANDATORY)
+**Every column used in a WHERE clause filter MUST also appear in the SELECT clause.** This is a hard requirement — never omit filtered columns from the output.
+- When using GROUP BY, the filtered columns must also appear in the GROUP BY clause if they are not aggregated
+
 ### Text Matching & Filtering
 - **Case-insensitive matching**: Use `LOWER(column) = LOWER('value')`
 - **No ILIKE or LIKE operators**

@@ -5,6 +5,7 @@ from langchain_core.prompts import (
 )
 
 from app.models.query import QueryResult
+from app.models.schema import DatasetSchema
 from app.workflow.prompts.formatters.format_query_result import (
     format_query_result,
 )
@@ -48,6 +49,7 @@ RESPONSE APPROACH BY QUERY TYPE:
    - Present key insights and conclusions that directly address the user's question.
    - Highlight patterns and trends with their significance to the user's query.
    - Provide actionable recommendations when appropriate and relevant to the user's question.
+   - **CRITICAL: Dataset Limitations (MANDATORY)** — Every response MUST include a note about the limitations of the datasets used, derived from the dataset schemas. This includes but is not limited to: temporal coverage (e.g., "data available from 2015 to 2023"), geographic scope (e.g., "covers only India"), data granularity (e.g., "state-level only, no district-level data"), and any other constraints visible in the schema. Never present results without clearly stating these boundaries.
 
 3. TRUNCATED RESULTS:
    - When query results are truncated, DO NOT organize, summarize, or present the truncated data in structured format.
@@ -117,11 +119,12 @@ def format_result_generation_input(query_result: QueryResult | None, **kwargs) -
     Returns:
         dict: A dictionary with the key "input" containing the formatted input string.
     """
+    dataset_schemas: list[DatasetSchema] = kwargs.get("dataset_schemas", [])
     input_str = ""
 
     if not query_result:
         input_str = "No query result available for response generation."
     elif isinstance(query_result, QueryResult):
-        input_str = format_query_result(query_result)
+        input_str = format_query_result(query_result, dataset_schemas=dataset_schemas)
 
     return {"input": input_str}

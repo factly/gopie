@@ -53,6 +53,8 @@ def transform_output_state(
     """
     query_result = output_state.get("query_result", {})
     continue_execution = output_state.get("continue_execution", True)
+    datasets_info = output_state.get("datasets_info", {})
+    dataset_schemas = datasets_info.get("schemas", []) if datasets_info else []
     datasets = state.get("datasets", []) or []
     datasets.extend(query_result_to_datasets(query_result))
 
@@ -60,6 +62,7 @@ def transform_output_state(
         "query_result": query_result,
         "datasets": datasets,
         "continue_execution": continue_execution,
+        "dataset_schemas": dataset_schemas,
         "messages": [
             AIMessage(content="Successfully processed the user query with multi dataset agent.")
         ],
