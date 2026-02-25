@@ -28,12 +28,16 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
     dataset_count = 0
     query_result: QueryResult = output_state.get("query_result")
 
+    dataset_info = output_state.get("dataset_info", {})
+    dataset_schema = dataset_info.get("dataset_schema") if dataset_info else None
+    dataset_schemas = [dataset_schema] if dataset_schema else []
+
     result: SingleDatasetQueryResult | None = query_result.single_dataset_query_result
 
     if result is not None:
-        sql_results = result.sql_results
-        if sql_results is not None:
-            for sql_query_info in sql_results:
+        sql_queries = result.sql_queries
+        if sql_queries is not None:
+            for sql_query_info in sql_queries:
                 if not sql_query_info.full_sql_result:
                     continue
                 description = f"Dataset {dataset_count}\n\n"
@@ -46,6 +50,7 @@ def transform_output_state(output_state: SingleDatasetOutputState, state: AgentS
     return {
         "query_result": query_result,
         "datasets": datasets,
+        "dataset_schemas": dataset_schemas,
         "messages": [
             AIMessage(content="Successfully processed the user query with single dataset agent.")
         ],
@@ -71,7 +76,7 @@ async def call_single_dataset_agent(state: AgentState, config: RunnableConfig) -
         "messages": state["messages"],
         "dataset_id": dataset_id,
         "user_query": user_query,
-        "previous_sql_queries": state.get("previous_sql_queries", []),
+        "prev_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await single_dataset_graph.ainvoke(input_state, config=config)

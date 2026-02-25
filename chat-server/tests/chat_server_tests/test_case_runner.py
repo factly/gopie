@@ -7,12 +7,12 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.core.session import SingletonAiohttp
-from tests.e2e.utils.test_utils import (
+from tests.e2e.utils.e2e_test_utils import (
     create_evaluation_chain,
     send_chat_request,
 )
@@ -62,7 +62,6 @@ class TestCaseRunner:
         try:
             formatted_test_case = self._format_test_case(test_case)
 
-            # Track request time only (not evaluation time)
             request_start = time.time()
             response = await send_chat_request(formatted_test_case, TestConfig.CHAT_SERVER_URL)
             request_time = time.time() - request_start
@@ -83,15 +82,12 @@ class TestCaseRunner:
             comprehensive_response = self._build_comprehensive_response(response)
             expected_result = self._create_expected_result(test_case)
 
-            # Use appropriate evaluator based on flag
             if self.use_dspy:
-                # DSPy evaluator - no manual prompt formatting needed
                 evaluation = self.evaluator.evaluate(
                     generated_answer=comprehensive_response,
                     expected_result=expected_result,
                 )
             else:
-                # Manual evaluation chain with hardcoded prompt
                 formatted_generated_answer = self._format_generated_answer(comprehensive_response)
                 formatted_expected_result = self._format_expected_result(expected_result, test_case)
 
@@ -183,9 +179,9 @@ class TestCaseRunner:
                 "Note: Dataset identification in 'datasets_used' is NOT required for single-dataset queries."
             )
         elif query_type == "viz" and data_type == "multi":
-            expected["description"] = (
-                "Should create comparative or combined visualizations across datasets"
-            )
+            expected[
+                "description"
+            ] = "Should create comparative or combined visualizations across datasets"
         else:
             expected["description"] = "Should process the query appropriately"
 
@@ -202,33 +198,27 @@ class TestCaseRunner:
         """Format the comprehensive response into a readable string for evaluation."""
         parts = []
 
-        # AI Response
         if comprehensive_response.get("ai_response"):
             parts.append(f"AI Response: {comprehensive_response['ai_response']}")
 
-        # Datasets Used
         if comprehensive_response.get("datasets_used"):
             datasets = comprehensive_response["datasets_used"]
             parts.append(f"Datasets Used: {', '.join(datasets)} (Count: {len(datasets)})")
 
-        # SQL Queries
         if comprehensive_response.get("sql_queries_generated"):
             sql_queries = comprehensive_response["sql_queries_generated"]
             parts.append(f"SQL Queries Generated: {len(sql_queries)} queries")
             for i, query in enumerate(sql_queries, 1):
                 parts.append(f"  SQL Query {i}: {query}")
 
-        # Processing Steps
         if comprehensive_response.get("processing_steps"):
             steps = comprehensive_response["processing_steps"]
             parts.append(f"Processing Steps: {len(steps)} steps completed")
 
-        # Visualizations
         if comprehensive_response.get("visualization_results"):
             viz_results = comprehensive_response["visualization_results"]
             parts.append(f"Visualizations: {len(viz_results)} visualizations created")
 
-        # Metadata Summary
         metadata = comprehensive_response.get("metadata", {})
         parts.append(
             f"Summary: {metadata.get('dataset_count', 0)} datasets, "
@@ -245,20 +235,15 @@ class TestCaseRunner:
         """Format the expected result into a readable string for evaluation."""
         parts = []
 
-        # Query context
         parts.append(f"Original Query: {test_case.get('query', '')}")
         parts.append(f"Query Type: {expected_result.get('query_type', 'unknown')}")
         parts.append(f"Data Type: {expected_result.get('data_type', 'unknown')}")
-
-        # Expected behavior
         parts.append(f"Expected Behavior: {expected_result.get('description', '')}")
 
-        # Expected datasets (only for multi-dataset queries)
         if expected_result.get("expected_datasets"):
             datasets = expected_result["expected_datasets"]
             parts.append(f"Expected Datasets: {', '.join(datasets)}")
 
-        # Project context
         if test_case.get("project_id"):
             parts.append(f"Project ID: {test_case['project_id']}")
 
@@ -268,24 +253,13 @@ class TestCaseRunner:
         self,
         test_cases: list[dict[str, Any]],
         input_file: str = "",
-    ) -> list[dict[str, Any]]:
-        """
-        Run test cases with automatic performance tracking.
-
-        Args:
-            test_cases: List of test cases to run
-            input_file: Original input file path for naming output
-
-        Returns:
-            List of updated test cases with results
-        """
+    ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, float], dict[str, str]]:
+        """Run test cases with automatic performance tracking."""
         total = len(test_cases)
         print(f"Running {total} test cases...")
 
-        # Get model configuration
         model_config = self.get_model_configuration()
 
-        # Display configuration
         print("\nModel Configuration:")
         print(f"  FAST:     {model_config['fast_model']}")
         print(f"  BALANCED: {model_config['balanced_model']}")
@@ -304,9 +278,7 @@ class TestCaseRunner:
             updated_test_case = test_case.copy()
 
             if result["success"]:
-                # Save complete chat server response
                 updated_test_case["chat_server_response"] = result["chat_server_response"]
-                # Save AI evaluation (numeric score format)
                 score = result["evaluation"].get("evaluation_score", 0)
                 updated_test_case["ai_evaluation"] = {
                     "score": float(score),
@@ -334,18 +306,14 @@ class TestCaseRunner:
             if i < total:
                 await asyncio.sleep(0.5)
 
-        # Calculate statistics
         stats = self._calculate_stats(updated_test_cases)
         timing_stats = self._calculate_timing_stats(request_times)
 
-        # Save to performance history (always enabled)
         tracker = PerformanceTracker()
 
-        # Create output directory
         output_dir = Path(__file__).parent / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate results filename based on input file
         if input_file:
             base_name = Path(input_file).stem  # e.g., "golden_dataset_20250806_010759"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -380,7 +348,6 @@ class TestCaseRunner:
         response = result["chat_server_response"]
         evaluation = result["evaluation"]
 
-        # Handle both numeric score and legacy formats
         if "evaluation_score" in evaluation:
             parts = [f"EVALUATION SCORE: {evaluation['evaluation_score']}/10"]
         else:
@@ -410,14 +377,13 @@ class TestCaseRunner:
         if not result["success"]:
             return "✗"
 
-        # Use numeric score format (0-10)
         score = result["evaluation"].get("evaluation_score", 0)
         if score >= 8:
-            return "✓"  # Good score (8-10)
+            return "✓"
         elif score >= 5:
-            return "◐"  # Partial score (5-7)
+            return "◐"
         else:
-            return "✗"  # Poor score (0-4)
+            return "✗"
 
     def _is_passed(self, test_case: dict[str, Any]) -> bool:
         """Check if a test case passed (score >= 8)."""
@@ -458,9 +424,9 @@ class TestCaseRunner:
     def print_summary(
         self,
         test_cases: list[dict[str, Any]],
-        stats: dict[str, Any] = None,
-        timing_stats: dict[str, float] = None,
-        model_config: dict[str, str] = None,
+        stats: dict[str, Any] | None = None,
+        timing_stats: dict[str, float] | None = None,
+        model_config: dict[str, str] | None = None,
     ) -> None:
         """Print summary with optional timing and model configuration."""
         if not test_cases:
@@ -484,7 +450,6 @@ class TestCaseRunner:
                 score = tc["ai_evaluation"].get("score", 0)
                 scores.append(score)
 
-        # Calculate basic statistics
         score_stats = {}
         if scores:
             sorted_scores = sorted(scores)
@@ -505,8 +470,8 @@ class TestCaseRunner:
     def _display_summary(
         self,
         stats: dict[str, Any],
-        timing_stats: dict[str, float] = None,
-        model_config: dict[str, str] = None,
+        timing_stats: dict[str, float] | None = None,
+        model_config: dict[str, str] | None = None,
     ) -> None:
         """Display comprehensive summary with timing and model config."""
         total = stats["total"]
@@ -517,7 +482,6 @@ class TestCaseRunner:
         print("TEST EXECUTION SUMMARY")
         print("=" * 70)
 
-        # Model configuration
         if model_config:
             print("\nModel Configuration:")
             print(f"  FAST_MODEL:     {model_config['fast_model']}")
@@ -525,7 +489,6 @@ class TestCaseRunner:
             print(f"  ADVANCED_MODEL: {model_config['advanced_model']}")
             print(f"  EVALUATOR:      {model_config['evaluator_type'].upper()}")
 
-        # Timing metrics
         if timing_stats:
             print("\nPerformance Metrics:")
             print(f"  Total Time:       {timing_stats['total_time']:.2f}s")
@@ -534,8 +497,7 @@ class TestCaseRunner:
             print(f"  Min Time:         {timing_stats['min_request_time']:.2f}s")
             print(f"  Max Time:         {timing_stats['max_request_time']:.2f}s")
 
-        # Score statistics
-        print(f"\nTest Results:")
+        print("\nTest Results:")
         print(f"  Total Test Cases: {total}")
         if score_stats:
             print(f"  Average Score:    {score_stats['average']:.2f}/10")
@@ -548,7 +510,7 @@ class TestCaseRunner:
         print("=" * 70)
 
 
-def find_latest_json_dataset(directory: str = str(Path(__file__).parent)) -> Optional[str]:
+def find_latest_json_dataset(directory: str = str(Path(__file__).parent / "output")) -> str | None:
     pattern = "golden_dataset_*.json"
     files = [
         f
@@ -581,8 +543,8 @@ def load_test_cases(input_file: str) -> list[dict[str, Any]]:
 
 def filter_test_cases(
     test_cases: list[dict[str, Any]],
-    data_type: Optional[str] = None,
-    query_type: Optional[str] = None,
+    data_type: str | None = None,
+    query_type: str | None = None,
 ) -> list[dict[str, Any]]:
     """Filter test cases by data type and/or query type."""
     filtered = test_cases
@@ -616,8 +578,8 @@ Examples:
 
 Note:
   - Timing and performance tracking are ALWAYS enabled
-  - Results saved to: golden_dataset_*_results_run_TIMESTAMP.json
-  - Performance history saved to: performance_history.json
+  - Results saved to: output/golden_dataset_*_results_run_TIMESTAMP.json
+  - Performance history saved to: output/performance_history.json
         """,
     )
 
@@ -687,7 +649,6 @@ async def main() -> None:
             filtered_test_cases, input_file=input_file
         )
 
-        # Generate output filename with timestamp
         output_dir = Path(__file__).parent / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
         base_name = Path(input_file).stem

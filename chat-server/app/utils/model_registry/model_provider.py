@@ -20,6 +20,7 @@ from app.utils.providers.embedding_providers import (
     LocalEmbeddingProvider,
     OpenAIEmbeddingProvider,
     PortkeyEmbeddingProvider,
+    VLLMEmbeddingProvider,
 )
 from app.utils.providers.llm_providers import (
     BaseLLMProvider,
@@ -78,6 +79,8 @@ def get_embedding_provider(metadata: Optional[dict[str, str]] = {}) -> BaseEmbed
             return CustomEmbeddingProvider(metadata)
         case EmbeddingProvider.LOCAL:
             return LocalEmbeddingProvider(metadata)
+        case EmbeddingProvider.VLLM:
+            return VLLMEmbeddingProvider(metadata)
         case _:
             raise ValueError(f"Unsupported Embedding provider: {gateway_type}")
 
@@ -178,12 +181,12 @@ def get_configured_llm_for_node(
 
     if schema:
         structured_llm = llm.with_structured_output(schema=schema, method="json_schema")  # type: ignore
-        return structured_llm  # type: ignore
+        return structured_llm.with_retry()  # type: ignore
     elif json_mode:
         llm = llm.bind(response_format={"type": "json_object"})
     if force_tool_calls:
         llm = llm.bind(tool_choice="required")
-    return llm  # type: ignore
+    return llm.with_retry()  # type: ignore
 
 
 def get_llm_for_other_task(node_name: str, config: RunnableConfig):
@@ -197,4 +200,4 @@ def get_llm_for_other_task(node_name: str, config: RunnableConfig):
         llm = llm.bind(temperature=temperature)
     if json_mode:
         llm = llm.bind(response_format={"type": "json_object"})
-    return model_provider.get_llm(model_id)
+    return llm.with_retry()

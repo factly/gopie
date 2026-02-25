@@ -1,70 +1,3 @@
-import pytest
-
-from app.services.qdrant.vector_store import perform_similarity_search
-
-pytestmark = pytest.mark.unit
-
-
-class DummyVS:
-    def __init__(self):
-        self.calls = []
-
-    async def asimilarity_search(self, query, k, filter=None):
-        self.calls.append({"query": query, "k": k, "filter": filter})
-        return ["ok"]
-
-
-@pytest.mark.asyncio
-async def test_perform_similarity_search_success_with_filter():
-    vs = DummyVS()
-    results = await perform_similarity_search(vs, query="hello", top_k=3, query_filter={"x": 1})
-    assert results == ["ok"]
-    assert len(vs.calls) == 1
-    assert vs.calls[0]["filter"] == {"x": 1}
-
-
-@pytest.mark.asyncio
-async def test_perform_similarity_search_fallback_without_filter(monkeypatch):
-    """Test that when filtered search fails, it retries without filter."""
-    vs = DummyVS()
-
-    call_state = {"count": 0}
-
-    async def flaky_search(query, k, filter=None):
-        call_state["count"] += 1
-        if call_state["count"] == 1:
-            raise RuntimeError("fail with filter")
-        return ["unfiltered"]
-
-    monkeypatch.setattr(vs, "asimilarity_search", flaky_search)
-    dummy_logger = type(
-        "L",
-        (),
-        {
-            "exception": lambda *args, **kwargs: None,
-            "info": lambda *args, **kwargs: None,
-        },
-    )()
-    monkeypatch.setattr("app.services.qdrant.vector_store.logger", dummy_logger)
-
-    results = await perform_similarity_search(vs, query="q", top_k=2, query_filter={"y": 2})
-    assert results == ["unfiltered"]
-    assert call_state["count"] == 2
-
-
-@pytest.mark.asyncio
-async def test_perform_similarity_search_raises_without_filter_on_error(monkeypatch):
-    vs = DummyVS()
-
-    async def always_fail(query, k, filter=None):
-        raise RuntimeError("always fail")
-
-    monkeypatch.setattr(vs, "asimilarity_search", always_fail)
-
-    with pytest.raises(RuntimeError):
-        await perform_similarity_search(vs, query="q", top_k=2, query_filter=None)
-
-
 from typing import Union, cast
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -77,10 +10,9 @@ from app.services.qdrant.schema_vectorization import (
     delete_schema_from_qdrant,
     store_schema_in_qdrant,
 )
-from app.services.qdrant.vector_store import (
-    add_document_to_vector_store,
-    perform_similarity_search,
-)
+from app.services.qdrant.vector_store import add_document_to_vector_store
+
+pytestmark = pytest.mark.unit
 
 
 class TestVectorStore:
@@ -120,102 +52,36 @@ class TestVectorStore:
 
         Verifies that the vector store and document ID are obtained using the appropriate methods and that the document is added asynchronously with the correct parameters.
         """
-        mock_vector_store = AsyncMock()
+        mock_client = AsyncMock()
+        mock_client.upsert = AsyncMock()
 
         with (
             patch("app.services.qdrant.vector_store.QdrantSetup") as mock_qdrant_setup_class,
             patch("app.services.qdrant.vector_store.get_model_provider") as mock_get_model_provider,
         ):
+            mock_qdrant_setup_class.get_async_client = AsyncMock(return_value=mock_client)
+            mock_qdrant_setup_class.get_document_id.return_value = "doc_id_123"
+
             mock_model_provider = Mock()
             mock_embeddings = Mock()
+            mock_embeddings.embed_query.return_value = [0.1, 0.2]
             mock_model_provider.get_embeddings_model.return_value = mock_embeddings
             mock_get_model_provider.return_value = mock_model_provider
 
-            mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
-            mock_qdrant_setup_class.get_document_id.return_value = "doc_id_123"
-
             await add_document_to_vector_store(mock_document)
 
-            mock_qdrant_setup_class.get_vector_store.assert_called_once_with(mock_embeddings)
+            mock_qdrant_setup_class.get_async_client.assert_called_once_with("dataset_collection")
             mock_qdrant_setup_class.get_document_id.assert_called_once_with("proj1", "ds1")
-            mock_vector_store.aadd_documents.assert_called_once_with(
-                documents=[mock_document], ids=["doc_id_123"]
-            )
+            mock_client.upsert.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_perform_similarity_search_success(self):
-        """
-        Test that `perform_similarity_search` returns the expected results when the similarity search succeeds.
-
-        Asserts that the correct number of results is returned and that the vector store's async similarity search method is called with the correct parameters.
-        """
-        mock_vector_store = AsyncMock()
-        mock_vector_store.asimilarity_search.return_value = [
-            Document(page_content="result 1"),
-            Document(page_content="result 2"),
-        ]
-
-        results = await perform_similarity_search(mock_vector_store, "test query", top_k=5)
-
-        assert len(results) == 2
-        mock_vector_store.asimilarity_search.assert_called_once_with("test query", k=5, filter=None)
-
-    @pytest.mark.asyncio
-    async def test_perform_similarity_search_with_filter(self):
-        """
-        Test that `perform_similarity_search` returns filtered results and calls the vector store with the correct filter and parameters.
-        """
-        mock_vector_store = AsyncMock()
-        mock_vector_store.asimilarity_search.return_value = [
-            Document(page_content="filtered result")
-        ]
-
-        query_filter = Mock()
-        results = await perform_similarity_search(
-            mock_vector_store, "test query", query_filter=query_filter, top_k=3
-        )
-
-        assert len(results) == 1
-        mock_vector_store.asimilarity_search.assert_called_once_with(
-            "test query", k=3, filter=query_filter
-        )
-
-    @pytest.mark.asyncio
-    async def test_perform_similarity_search_fallback_on_error(self):
-        """
-        Test that similarity search falls back to an unfiltered search if the filtered search raises an exception.
-
-        Verifies that when the initial similarity search with a filter fails, the function retries without the filter and returns the successful results.
-        """
-        with patch("app.services.qdrant.vector_store.logger") as mock_logger:
-            mock_vector_store = AsyncMock()
-            # First call with filter raises exception, second without filter succeeds
-            mock_vector_store.asimilarity_search.side_effect = [
-                Exception("Filter error"),
-                [Document(page_content="fallback result")],
-            ]
-
-            query_filter = Mock()
-            results = await perform_similarity_search(
-                mock_vector_store, "test query", query_filter=query_filter, top_k=3
-            )
-
-            assert len(results) == 1
-            assert mock_vector_store.asimilarity_search.call_count == 2
-            # Verify that the logger was called to log the exception
-            mock_logger.exception.assert_called_once()
-            mock_logger.info.assert_called_once_with("Attempting unfiltered search as fallback...")
-
-    @pytest.mark.asyncio
-    async def test_perform_similarity_search_raises_on_unfiltered_error(self):
-        """
-        Test that an exception raised during an unfiltered similarity search is properly propagated.
-        """
-        mock_vector_store = AsyncMock()
-        mock_vector_store.asimilarity_search.side_effect = Exception("Database error")
-
-        with pytest.raises(Exception, match="Database error"):
-            await perform_similarity_search(mock_vector_store, "test query")
+            # Verify call args structure
+            call_args = mock_client.upsert.call_args
+            assert call_args.kwargs["collection_name"] == "dataset_collection"
+            assert len(call_args.kwargs["points"]) == 1
+            point = call_args.kwargs["points"][0]
+            assert point.id == "doc_id_123"
+            assert "dense" in point.vector
+            assert "sparse" in point.vector
 
 
 class TestSchemaSearch:
@@ -234,46 +100,46 @@ class TestSchemaSearch:
     @pytest.mark.asyncio
     async def test_search_schemas_success(self, mock_embeddings):
         """
-        Test that `search_schemas` returns a list of schema objects when similarity search finds matching documents.
+        Test that `search_schemas` returns a list of schema objects when hybrid search finds matching results.
 
-        Verifies that the function correctly processes multiple documents with required metadata fields and returns schema objects with expected names.
+        Verifies that the function correctly processes multiple results with required metadata fields and returns schema objects with expected names.
         """
-        mock_documents = [
-            Document(
-                page_content="schema1",
-                metadata={
+        with (
+            patch(
+                "app.services.qdrant.schema_search.QdrantSetup.get_async_client"
+            ) as mock_get_client,
+            patch("app.services.qdrant.schema_search.generate_sparse_vector") as mock_sparse,
+        ):
+            mock_client = AsyncMock()
+            mock_point1 = Mock()
+            mock_point1.payload = {
+                "metadata": {
                     "name": "test1",
-                    "dataset_name": "test1",  # Required field
+                    "dataset_name": "test1",
                     "dataset_description": "Test dataset 1",
                     "project_id": "proj1",
                     "org_id": "org1",
                     "dataset_id": "ds1",
                     "columns": [],
-                },
-            ),
-            Document(
-                page_content="schema2",
-                metadata={
+                }
+            }
+            mock_point2 = Mock()
+            mock_point2.payload = {
+                "metadata": {
                     "name": "test2",
-                    "dataset_name": "test2",  # Required field
+                    "dataset_name": "test2",
                     "dataset_description": "Test dataset 2",
                     "project_id": "proj2",
                     "org_id": "org2",
                     "dataset_id": "ds2",
                     "columns": [],
-                },
-            ),
-        ]
+                }
+            }
+            mock_client.query_points.return_value = Mock(points=[mock_point1, mock_point2])
+            mock_get_client.return_value = mock_client
+            from qdrant_client import models
 
-        with (
-            patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
-            patch(
-                "app.services.qdrant.schema_search.perform_similarity_search"
-            ) as mock_perform_search,
-        ):
-            mock_vector_store = AsyncMock()
-            mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
-            mock_perform_search.return_value = mock_documents
+            mock_sparse.return_value = models.SparseVector(indices=[1, 2], values=[0.5, 0.5])
 
             schemas = await search_schemas(user_query="test query", embeddings=mock_embeddings)
 
@@ -288,28 +154,30 @@ class TestSchemaSearch:
 
         Verifies that the function returns only schemas matching the specified filters and that the schema's name matches the expected value.
         """
-        mock_document = Document(
-            page_content="filtered schema",
-            metadata={
-                "name": "filtered_test",
-                "dataset_name": "filtered_test",  # Required field
-                "dataset_description": "Filtered test dataset",
-                "project_id": "proj1",
-                "org_id": "org1",
-                "dataset_id": "ds1",
-                "columns": [],
-            },
-        )
-
         with (
-            patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
             patch(
-                "app.services.qdrant.schema_search.perform_similarity_search"
-            ) as mock_perform_search,
+                "app.services.qdrant.schema_search.QdrantSetup.get_async_client"
+            ) as mock_get_client,
+            patch("app.services.qdrant.schema_search.generate_sparse_vector") as mock_sparse,
         ):
-            mock_vector_store = AsyncMock()
-            mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
-            mock_perform_search.return_value = [mock_document]
+            mock_client = AsyncMock()
+            mock_point = Mock()
+            mock_point.payload = {
+                "metadata": {
+                    "name": "filtered_test",
+                    "dataset_name": "filtered_test",
+                    "dataset_description": "Filtered test dataset",
+                    "project_id": "proj1",
+                    "org_id": "org1",
+                    "dataset_id": "ds1",
+                    "columns": [],
+                }
+            }
+            mock_client.query_points.return_value = Mock(points=[mock_point])
+            mock_get_client.return_value = mock_client
+            from qdrant_client import models
+
+            mock_sparse.return_value = models.SparseVector(indices=[1, 2], values=[0.5, 0.5])
 
             schemas = await search_schemas(
                 user_query="test query",
@@ -324,18 +192,17 @@ class TestSchemaSearch:
     @pytest.mark.asyncio
     async def test_search_schemas_handles_exceptions(self, mock_embeddings):
         """
-        Test that search_schemas returns an empty list when an exception occurs during similarity search.
+        Test that search_schemas returns an empty list when an exception occurs during hybrid search.
         """
         with (
-            patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
             patch(
-                "app.services.qdrant.schema_search.perform_similarity_search"
-            ) as mock_perform_search,
+                "app.services.qdrant.schema_search.QdrantSetup.get_async_client"
+            ) as mock_get_client,
             patch("app.services.qdrant.schema_search.logger") as mock_logger,
         ):
-            mock_vector_store = AsyncMock()
-            mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
-            mock_perform_search.side_effect = Exception("Search error")
+            mock_client = AsyncMock()
+            mock_client.query_points.side_effect = Exception("Search error")
+            mock_get_client.return_value = mock_client
 
             schemas = await search_schemas(user_query="test query", embeddings=mock_embeddings)
             assert schemas == []
@@ -345,17 +212,20 @@ class TestSchemaSearch:
     @pytest.mark.asyncio
     async def test_search_schemas_empty_results(self, mock_embeddings):
         """
-        Test that `search_schemas` returns an empty list when the similarity search yields no results.
+        Test that `search_schemas` returns an empty list when the hybrid search yields no results.
         """
         with (
-            patch("app.services.qdrant.schema_search.QdrantSetup") as mock_qdrant_setup_class,
             patch(
-                "app.services.qdrant.schema_search.perform_similarity_search"
-            ) as mock_perform_search,
+                "app.services.qdrant.schema_search.QdrantSetup.get_async_client"
+            ) as mock_get_client,
+            patch("app.services.qdrant.schema_search.generate_sparse_vector") as mock_sparse,
         ):
-            mock_vector_store = AsyncMock()
-            mock_qdrant_setup_class.get_vector_store.return_value = mock_vector_store
-            mock_perform_search.return_value = []
+            mock_client = AsyncMock()
+            mock_client.query_points.return_value = Mock(points=[])
+            mock_get_client.return_value = mock_client
+            from qdrant_client import models
+
+            mock_sparse.return_value = models.SparseVector(indices=[1, 2], values=[0.5, 0.5])
 
             schemas = await search_schemas(user_query="test query", embeddings=mock_embeddings)
             assert schemas == []

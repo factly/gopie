@@ -22,9 +22,13 @@ async def execute_query(state: State, config: RunnableConfig) -> dict:
     last_message = state.get("messages", [])[-1]
     query_result = state.get("query_result", None)
     query_index = state.get("subquery_index", 0)
+    org_id = config.get("metadata", {}).get("org_id", "")
+    user_id = config.get("metadata", {}).get("user", "")
 
     if isinstance(last_message, ErrorMessage):
-        pass
+        return {
+            "messages": [IntermediateStep(content="Skipping SQL execution due to previous error.")],
+        }
 
     try:
         sql_queries = query_result.subqueries[query_index].sql_queries
@@ -45,7 +49,9 @@ async def execute_query(state: State, config: RunnableConfig) -> dict:
 
         for query_info in sql_queries:
             try:
-                full_result_data = await execute_sql(query=query_info.sql_query)
+                full_result_data = await execute_sql(
+                    query=query_info.sql_query, org_id=org_id, user_id=user_id
+                )
                 result_data = truncate_if_too_large(full_result_data)
                 sql_results.append(
                     SqlQueryInfo(

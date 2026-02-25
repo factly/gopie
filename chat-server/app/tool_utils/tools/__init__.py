@@ -19,8 +19,9 @@ class ToolNames(Enum):
     LIST_DATASETS = "list_datasets"
     PLAN_SQL_QUERY = "plan_sql_query"
     RUN_PYTHON_CODE = "run_python_code"
-    RESULT_PATHS = "result_paths"
+    RETURN_RESULT_PATHS = "return_result_paths"
     GET_FEEDBACK_FOR_IMAGES = "get_feedback_for_images"
+    RESPOND_TO_USER = "respond_to_user"
 
 
 def get_tool(

@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 from app.models.schema import DatasetSchema
 
 
-def create_identify_datasets_prompt(
+def identify_datasets_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     """
@@ -56,24 +56,22 @@ DATASET SELECTION:
 * Always prioritize relevance and usefulness over the source of the dataset
 
 COLUMN ASSUMPTIONS:
-* Provide column assumptions for ALL datasets that you select for use
-* List ONLY the columns needed for the query
-* IMPORTANT: Only provide value assumptions (exact_values/fuzzy_values) for TEXT/STRING/VARCHAR columns that support fuzzy matching
-* For NON-STRING columns (BIGINT, INTEGER, FLOAT, DATE, TIMESTAMP, BOOLEAN, etc.), include the column in the list but DO NOT provide exact_values or fuzzy_values
-* For string columns ONLY, provide:
-    - "exact_values": actual values seen in sample_data that match the query terms
-    - "fuzzy_values": search terms or substrings to help match the column values; provide meaningful text values that can be used to match the column values in that dataset, avoiding numeric or unprocessable values
+* Provide column assumptions ONLY for columns where you have values to validate
+* DO NOT include columns where both exact_values AND fuzzy_values are empty
+* Focus ONLY on TEXT/STRING/VARCHAR columns that need fuzzy matching
+* DO NOT include numeric, date, boolean, or other non-string columns
+* For string columns:
+    - "exact_values": actual values seen in sample_data that EXACTLY match query terms
+    - "fuzzy_values": ONLY for terms that are NOT in exact_values - used for fuzzy search
+    - If a value is in exact_values, DO NOT add variations of it to fuzzy_values
 
 VALUE GUIDELINES:
 * Provide REAL values (e.g., "finance", "Alice") NOT placeholders
-* Both exact_values and fuzzy_values refer to actual data values, not column names
-* Include ONLY string/text/varchar columns in the values list
-* DO NOT provide exact_values or fuzzy_values for numeric columns (BIGINT, INTEGER, FLOAT), date columns (DATE, TIMESTAMP), or boolean columns
-* DO NOT include numerical or nonsensical values in fuzzy_values that cannot be used to effectively match data
-* Only use exact_values when completely confident the value exists in sample_data
-* For non-string columns, simply include the column name without any value assumptions to avoid type errors in SQL operations
-* NEVER include project_id, dataset_id, or any internal system identifiers in exact_values or fuzzy_values - these are not user data
-* Focus on actual business data values that users would search for, not technical metadata
+* Only use exact_values when the value exists in sample_data
+* Use fuzzy_values ONLY for terms that don't have exact matches
+* DO NOT include numerical or nonsensical values
+* NEVER include project_id, dataset_id, or system identifiers
+* If exact match exists, DO NOT add fuzzy variations of the same value
 
 NODE MESSAGE:
 * Include a brief informative message to pass to subsequent nodes
@@ -103,6 +101,14 @@ After selecting datasets, check if they fully answer the user's query. Consider:
 
 * Leave missing_requirements EMPTY if selected datasets can fully answer the query
 * Leave other fields EMPTY except missing_requirements if provided datasets are not sufficient.
+
+PREVIOUS SUBQUERY RESULTS (Sequential Processing):
+When previous subquery results are provided, they contain data from earlier steps in a multi-step query.
+* Use these results to understand what data has already been retrieved
+* The current subquery may need to use values/identifiers from previous results
+* Consider which datasets can work with the previously retrieved data
+* Select datasets that can JOIN with or filter by values from previous results
+* Example: If previous query found state names ["California", "Texas"], select datasets that have state-related columns
 """
 
     human_template_str = """
@@ -130,8 +136,12 @@ def format_identify_datasets_input(
     relevant_dataset_schemas: list[DatasetSchema] = [],
     semantic_searched_datasets: list[DatasetSchema] = [],
     validation_result: str | None = None,
+    previous_subquery_results: str | None = None,
 ) -> dict:
     input_str = f"USER QUERY: {user_query}"
+
+    if previous_subquery_results:
+        input_str += f"\n\n{previous_subquery_results}"
 
     input_str += (
         f"\n\n=== RELEVANT DATASETS (From Chat History): {len(relevant_dataset_schemas)} ==="

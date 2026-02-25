@@ -30,9 +30,15 @@ async def generate_result(state: AgentState, config: RunnableConfig) -> dict:
         }
 
     query_result = state["query_result"]
+    dataset_schemas = state.get("dataset_schemas") or []
 
     chain = get_prompt_llm_chain("generate_result", config)
-    response = await chain.ainvoke({"query_result": query_result})
+    response = await chain.ainvoke(
+        {
+            "query_result": query_result,
+            "dataset_schemas": dataset_schemas,
+        }
+    )
 
     return {
         "messages": [AIMessage(content=str(response.content))],

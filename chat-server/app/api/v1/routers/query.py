@@ -1,6 +1,7 @@
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.utils.adapters.openai.input import (
@@ -22,6 +23,8 @@ async def root():
 @router.post("/chat/completions")
 async def create(
     openai_format_request: RequestNonStreaming | RequestStreaming,
+    x_organization_id: Annotated[str | None, Header()] = None,
+    x_user_id: Annotated[str | None, Header()] = None,
 ):
     """
     Handle chat completion requests, supporting both streaming and non-streaming responses.
@@ -34,8 +37,16 @@ async def create(
     request = from_openai_format(openai_format_request)
     trace_id = request.trace_id or uuid.uuid4().hex
     chat_id = request.chat_id or uuid.uuid4().hex
-    user = request.user or "gopie.chat.server"
     adapter = OpenAIOutputAdapter(chat_id, trace_id)
+
+    # if not x_organization_id or not x_user_id:
+    #     return JSONResponse(
+    #         status_code=400,
+    #         content={"error": "Missing required headers: x-organization-id or x-user-id"},
+    #     )
+
+    x_user_id = x_user_id or "unknown_user"
+    x_organization_id = x_organization_id or "unknown_org"
 
     if request.project_ids is None and request.dataset_ids is None:
         return JSONResponse(
@@ -48,11 +59,12 @@ async def create(
             adapter.create_chat_completion_stream(
                 stream_graph_updates(
                     messages=request.messages,
-                    user=user,
+                    user=x_user_id,
                     trace_id=trace_id,
                     chat_id=chat_id,
                     dataset_ids=request.dataset_ids,
                     project_ids=request.project_ids,
+                    org_id=x_organization_id,
                 )
             ),
             media_type="text/event-stream",
@@ -60,10 +72,11 @@ async def create(
     return await adapter.create_chat_completion(
         stream_graph_updates(
             messages=request.messages,
-            user=user,
+            user=x_user_id,
             trace_id=trace_id,
             chat_id=chat_id,
             dataset_ids=request.dataset_ids,
             project_ids=request.project_ids,
+            org_id=x_organization_id,
         )
     )

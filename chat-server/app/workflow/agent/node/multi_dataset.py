@@ -53,6 +53,8 @@ def transform_output_state(
     """
     query_result = output_state.get("query_result", {})
     continue_execution = output_state.get("continue_execution", True)
+    datasets_info = output_state.get("datasets_info", {})
+    dataset_schemas = datasets_info.get("schemas", []) if datasets_info else []
     datasets = state.get("datasets", []) or []
     datasets.extend(query_result_to_datasets(query_result))
 
@@ -60,6 +62,7 @@ def transform_output_state(
         "query_result": query_result,
         "datasets": datasets,
         "continue_execution": continue_execution,
+        "dataset_schemas": dataset_schemas,
         "messages": [
             AIMessage(content="Successfully processed the user query with multi dataset agent.")
         ],
@@ -83,7 +86,7 @@ async def call_multi_dataset_agent(state: AgentState, config: RunnableConfig) ->
         "project_ids": state["project_ids"],
         "user_query": state["user_query"] or "",
         "relevant_datasets_ids": state.get("relevant_datasets_ids", []),
-        "previous_sql_queries": state.get("previous_sql_queries", []),
+        "prev_sql_queries": state.get("previous_sql_queries", []),
     }
 
     output_state = await multi_dataset_graph.ainvoke(input_state, config=config)

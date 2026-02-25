@@ -63,7 +63,7 @@ class SubQueryInfo:
     sql_queries: list[SqlQueryInfo]
     tables_used: list[str] | None = None
     error_message: list[dict] | None = None
-    no_sql_response: str | None = None
+    non_sql_response: str | None = None
     retry_count: int = 0
     node_messages: dict = field(default_factory=dict)
 
@@ -85,7 +85,7 @@ class SubQueryInfo:
             "sql_queries": [query.to_dict() for query in self.sql_queries],
             "tables_used": self.tables_used,
             "error_message": self.error_message,
-            "no_sql_response": self.no_sql_response,
+            "non_sql_response": self.non_sql_response,
             "retry_count": self.retry_count,
             "node_messages": self.node_messages,
         }
@@ -95,19 +95,21 @@ class SubQueryInfo:
 class SingleDatasetQueryResult:
     user_friendly_dataset_name: str | None
     dataset_name: str | None
-    sql_results: list[SqlQueryInfo] | None
-    response_for_non_sql: str | None
+    sql_queries: list[SqlQueryInfo] | None
+    non_sql_response: str | None
     error: str | None
+    retry_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "user_friendly_dataset_name": self.user_friendly_dataset_name,
             "dataset_name": self.dataset_name,
-            "sql_results": (
-                [result.to_dict() for result in self.sql_results] if self.sql_results else None
+            "sql_queries": (
+                [result.to_dict() for result in self.sql_queries] if self.sql_queries else None
             ),
-            "response_for_non_sql": self.response_for_non_sql,
+            "non_sql_response": self.non_sql_response,
             "error": self.error,
+            "retry_count": self.retry_count,
         }
 
 

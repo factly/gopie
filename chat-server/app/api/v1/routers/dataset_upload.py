@@ -1,6 +1,7 @@
 import asyncio
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
 from app.core.session import SingletonAiohttp
 from app.models.router import UploadResponse, UploadSchemaRequest
@@ -17,7 +18,11 @@ http_session = SingletonAiohttp.get_aiohttp_client()
 
 
 @dataset_router.post("/upload_schema", response_model=UploadResponse)
-async def upload_schema(payload: UploadSchemaRequest):
+async def upload_schema(
+    payload: UploadSchemaRequest,
+    x_organization_id: Annotated[str | None, Header()] = None,
+    x_user_id: Annotated[str | None, Header()] = None,
+):
     """
     Processes and index dataset schema.
 
@@ -25,19 +30,37 @@ async def upload_schema(payload: UploadSchemaRequest):
     - `dataset_id`: The ID of the dataset.
     """
     try:
+        # if not resolved_org_id or not x_user:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         detail="Missing required identifiers: X-Organization-Id or X-User-Id",
+        #     )
+
+        x_user_id = x_user_id or "unknown_user"
+        x_organization_id = x_organization_id or "unknown_org"
+
         project_id = payload.project_id
         dataset_id = payload.dataset_id
         dataset_details, project_details = await asyncio.gather(
-            get_dataset_info(dataset_id, project_id),
-            get_project_info(project_id),
+            get_dataset_info(
+                dataset_id,
+                project_id,
+                org_id=x_organization_id,
+                user_id=x_user_id,
+                is_view=payload.is_view,
+            ),
+            get_project_info(project_id, org_id=x_organization_id, user_id=x_user_id),
         )
-        dataset_summary, sample_data = await generate_summary(dataset_details.name)
+        dataset_summary, sample_data = await generate_summary(
+            dataset_details.name, org_id=x_organization_id, user_id=x_user_id
+        )
 
         success = await store_schema_in_qdrant(
             dataset_summary=dataset_summary,
             sample_data=sample_data,
             dataset_details=dataset_details,
             project_details=project_details,
+            org_id=x_organization_id,
         )
         if not success:
             raise HTTPException(

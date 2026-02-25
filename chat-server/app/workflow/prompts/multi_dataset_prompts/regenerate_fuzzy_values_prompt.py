@@ -7,7 +7,7 @@ from langchain_core.prompts import (
 from app.models.schema import DatasetSchema
 
 
-def create_regenerate_fuzzy_values_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def regenerate_fuzzy_values_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 

@@ -18,7 +18,7 @@ class TestGopieClient:
             mock_session = Mock()
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient()
+            client = GopieClient(org_id=None, user_id="test_user")
 
             assert client.org_id is None
             assert client.base_url == "http://localhost:8000"
@@ -31,7 +31,7 @@ class TestGopieClient:
             mock_session = Mock()
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
 
             assert client.org_id == "test_org_123"
             assert client._session == mock_session
@@ -39,29 +39,38 @@ class TestGopieClient:
     def test_get_headers_without_org_id(self):
         """Test _get_headers method without org_id."""
         with patch("app.services.gopie.client.SingletonAiohttp"):
-            client = GopieClient()
+            client = GopieClient(org_id=None, user_id="test_user")
             headers = client._get_headers()
 
-            assert headers == {"accept": "application/json"}
+            assert headers == {
+                "accept": "application/json",
+                "X-Organization-id": None,
+                "X-User": "test_user",
+            }
 
     def test_get_headers_with_org_id(self):
         """Test _get_headers method with org_id."""
         with patch("app.services.gopie.client.SingletonAiohttp"):
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
             headers = client._get_headers()
 
-            assert headers == {"accept": "application/json", "X-Organization-id": "test_org_123"}
+            assert headers == {
+                "accept": "application/json",
+                "X-Organization-id": "test_org_123",
+                "X-User": "test_user",
+            }
 
     def test_get_headers_with_additional_headers(self):
         """Test _get_headers method with additional headers."""
         with patch("app.services.gopie.client.SingletonAiohttp"):
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
             additional = {"Authorization": "Bearer token123"}
             headers = client._get_headers(additional_headers=additional)
 
             assert headers == {
                 "accept": "application/json",
                 "X-Organization-id": "test_org_123",
+                "X-User": "test_user",
                 "Authorization": "Bearer token123",
             }
 
@@ -80,7 +89,7 @@ class TestGopieClient:
         with patch("app.services.gopie.client.SingletonAiohttp") as mock_singleton:
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
             response = await client.get("/test/path")
 
             # Verify the session.get was called with correct arguments
@@ -104,7 +113,7 @@ class TestGopieClient:
         with patch("app.services.gopie.client.SingletonAiohttp") as mock_singleton:
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
             payload = {"query": "SELECT * FROM users"}
             response = await client.post("/test/path", json=payload)
 
@@ -128,7 +137,7 @@ class TestGopieClient:
         with patch("app.services.gopie.client.SingletonAiohttp") as mock_singleton:
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient()
+            client = GopieClient(org_id=None, user_id="test_user")
             await client.get("/test/path")
 
             # Verify org-id is not in headers
@@ -149,7 +158,7 @@ class TestGopieClient:
         with patch("app.services.gopie.client.SingletonAiohttp") as mock_singleton:
             mock_singleton.get_aiohttp_client.return_value = mock_session
 
-            client = GopieClient(org_id="test_org_123")
+            client = GopieClient(org_id="test_org_123", user_id="test_user")
             custom_headers = {"X-Custom-Header": "custom_value"}
             await client.post("/test/path", json={}, headers=custom_headers)
 

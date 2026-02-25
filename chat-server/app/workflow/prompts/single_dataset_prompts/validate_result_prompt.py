@@ -10,7 +10,7 @@ from app.workflow.prompts.formatters.format_query_result import (
 )
 
 
-def create_validate_result_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
+def validate_result_prompt(**kwargs) -> list[BaseMessage] | ChatPromptTemplate:
     """
     Create a prompt for validating query results against the user's original question.
 
@@ -41,33 +41,35 @@ You will receive:
 - Query results (successful SQL queries, failed queries, errors, non-SQL responses)
 - Dataset context
 
-IMPORTANT NOTES:
-- Visualization processing is handled by a separate agent - do not focus on missing visualizations
-- Only validate executed subqueries - ignore unprocessed subqueries
-- Focus on the portion of the user query that has been executed
+IMPORTANT NOTES FOR MULTI-DATASET QUERIES:
+- For multi-dataset queries, you are validating ONLY THE CURRENT SUBQUERY, not the entire user question
+- Each subquery is a step toward answering the full user query
+- Focus on whether THIS SPECIFIC SUBQUERY executed successfully and returned expected data
+- Do NOT recommend replan/reidentify if the current subquery completed its task, even if it doesn't fully answer the original question
+- Subsequent subqueries will build upon this result to answer the complete question
+- Only recommend replan/reidentify if THIS SUBQUERY itself failed or returned wrong/incomplete data for its specific task
 
 VALIDATION PROCESS:
-1. Compare user intent with actual results provided
-2. Assess data quality, completeness, and relevance
-3. Evaluate if failed queries prevent answering the question
-4. Consider if partial results still provide meaningful insights
-5. Identify improvements needed to enhance results or fix issues
-6. Include sufficient context from query results to make response helpful
+1. For SINGLE-DATASET: Compare user intent with actual results provided
+2. For MULTI-DATASET: Evaluate if the CURRENT SUBQUERY completed its specific task successfully
+3. Assess data quality, completeness, and relevance for the subquery's purpose
+4. Evaluate if failed queries prevent completing this subquery's specific goal
+5. Consider if partial results still provide meaningful insights for this step
+6. Identify improvements needed only if this specific subquery has issues
 
 VALIDATION CRITERIA:
 
 MARK AS VALID when:
-- Results directly answer the user's question (even if partial)
-- Data is relevant and provides meaningful insights
-- Any failures don't prevent a useful response
-- User can derive value from available information
+- Results directly answer the user's question (single-dataset) OR complete the subquery's task (multi-dataset)
+- Data is relevant and provides meaningful insights for the step
+- Any failures don't prevent a useful response for this subquery
 - Truncated SQL results are acceptable (due to large result sizes)
 
 MARK AS INVALID when:
-- Critical queries failed, preventing any useful answer
-- Results don't address the user's actual question
-- Data quality issues make results unreliable
-- Missing essential information specifically requested by user
+- Critical queries failed for THIS SUBQUERY, preventing its completion
+- Results don't address this subquery's specific task
+- Data quality issues make subquery results unreliable
+- Missing essential information specifically required by this subquery
 
 RECOMMENDATION OPTIONS:
 
@@ -76,13 +78,13 @@ For SINGLE_DATASET results:
 - "rerun_query": Minor issues detected; retrying the query may help
 
 For MULTI-DATASET results:
-- "replan": Query logic or approach needs to be changed (not just retried)
-- "reidentify_datasets": Selected datasets are wrong, insufficient, or don't match user intent
-- "route_response": Results are sufficient to answer the user's question
+- "route_response": This subquery completed successfully (even if more subqueries are needed for full answer)
+- "replan": THIS SUBQUERY's logic or approach needs to be changed
+- "reidentify_datasets": Datasets selected for THIS SUBQUERY are wrong or insufficient
 
 CORE PRINCIPLE:
-Focus on whether the user can get meaningful value from these results rather than
-seeking perfection. Provide actionable, concise reasoning and clear next steps.
+For multi-dataset queries, validate the SUBQUERY execution, not the full user question.
+If the subquery did its job, mark it as valid and route to response (allowing next subquery to continue).
 """
 
     human_template_str = "{input}"

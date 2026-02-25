@@ -32,6 +32,7 @@ class TestOpenAIInputAdapter:
         assert result.user == "test_user_123"
         assert result.dataset_ids == []
         assert result.project_ids == []
+        assert result.chat_id is None
 
     def test_from_openai_format_with_metadata(self):
         openai_request = {
@@ -49,6 +50,7 @@ class TestOpenAIInputAdapter:
 
         assert result.project_ids == ["proj1", "proj2", "proj3"]
         assert result.dataset_ids == ["ds1", "ds2", "ds3", "ds4"]
+        assert result.chat_id is None
 
     def test_from_openai_format_empty_metadata(self):
         openai_request = {
@@ -61,6 +63,7 @@ class TestOpenAIInputAdapter:
 
         assert result.project_ids == []
         assert result.dataset_ids == []
+        assert result.chat_id is None
 
     def test_from_openai_format_no_metadata(self):
         openai_request = {
@@ -73,6 +76,22 @@ class TestOpenAIInputAdapter:
         assert result.project_ids == []
         assert result.dataset_ids == []
         assert result.user is None
+        assert result.chat_id is None
+
+    def test_from_openai_format_with_chat_id(self):
+        openai_request = {
+            "messages": [{"role": "user", "content": "Test message"}],
+            "model": "gpt-4",
+            "metadata": {
+                "chat_id": "test_chat_123",
+                "project_id_1": "proj1",
+            },
+        }
+
+        result = from_openai_format(openai_request)  # type: ignore
+
+        assert result.chat_id == "test_chat_123"
+        assert result.project_ids == ["proj1"]
 
     def test_from_openai_format_with_empty_content(self):
         openai_request = {

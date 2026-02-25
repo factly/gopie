@@ -5,66 +5,45 @@ from langchain_core.prompts import (
 )
 
 
-def create_process_context_prompt(
+def process_context_prompt(
     **kwargs,
 ) -> list[BaseMessage] | ChatPromptTemplate:
     prompt_template = kwargs.get("prompt_template", False)
     input_content = kwargs.get("input", "")
 
     system_content = """
-You are a context analyzer responsible for analyzing conversation history and current queries
-to determine appropriate context and data requirements for processing user requests.
+You are a query understanding assistant. Your ONLY job is to understand what the user
+is asking by analyzing their current query in the context of conversation history.
 
 ANALYSIS CRITERIA:
 
 1. FOLLOW-UP DETECTION (`is_follow_up`):
    • Determine if the user's query is a follow-up from conversation history
    • TRUE: Query builds upon or references previous conversation context
-   • FALSE: Query is independent and unrelated to conversation history
+   • FALSE: Query is independent or user switches to a different topic
+   • If unsure, prefer treating as a new query (FALSE)
 
-2. NEW DATA REQUIREMENTS (`is_new_data_needed`):
-   • Assess if previously executed SQL queries contain sufficient data to answer the current query
-   • TRUE: Previous SQL queries lack sufficient data for the current query
-   • FALSE: Previous SQL queries contain adequate data to answer the query
+2. ENHANCED QUERY (`enhanced_query`):
+   • Keep the user's original query with minimal changes
+   • Only resolve ambiguous pronouns (it, that, those, this data) with what they refer to
+   • DO NOT add dataset names, project IDs, or technical terms
+   • DO NOT suggest specific technical approaches or how data should be retrieved
+   • Preserve user's intent and exact wording where possible
 
-3. VISUALIZATION REQUIREMENTS (`generate_visualization`):
-   • Determine whether the query requires visualization based on:
-     - Explicit requests: chart types (pie, bar, line, scatter, histogram, etc.)
-     - Keywords: "visualize", "plot", "graph", "chart".
-     - Consider special instructions when evaluating visualization needs
-
-4. RELEVANT SQL QUERIES (`relevant_sql_queries`):
-   • Select the most relevant SQL queries from previously executed queries
-   • Be comprehensive in selecting relevant queries
-   • ONLY select from previously used SQL queries - do not invent new ones
-   • Do not modify existing queries - only select by ID
-   • Output the IDs of selected SQL queries
-
-5. ENHANCED QUERY (`enhanced_query`):
-   • Rewrite the user query as a NATURAL LANGUAGE QUESTION (never SQL)
-   • Make it self-contained and unambiguous by injecting critical context
-   • Include: dates, filters, dataset names, and other relevant context from conversation history
-   • Preserve user's intent and wording where possible
-   • DO NOT suggest specific technical approaches, methods, or how data should be retrieved
-   • DO NOT guide whether to use fuzzy matching, SQL operations, or specific dataset selection strategies
-   • Focus purely on clarifying WHAT the user wants, not HOW it should be obtained
-   • If chat history is empty: combine user query with special instructions
-   • Maintain user perspective in the enhanced query
-
-6. CONTEXT SUMMARY (`context_summary`):
-   • Summarize how the current query relates to previous conversation history
-   • If chat history is empty: leave context summary empty
+3. CONTEXT SUMMARY (`context_summary`):
+   • Briefly describe what previous query/result the user is referring to
+   • If chat history is empty or not a follow-up: leave empty
    • Focus on relevant connections and dependencies
 
+4. STATUS MESSAGE (`status_message`):
+   • Short user-friendly message acknowledging the request (1-2 sentences)
+
 IMPORTANT GUIDELINES:
-- Always incorporate special instructions into the enhanced query
+- Preserve the user's exact words and intent
 - The enhanced_query field MUST be natural language, never SQL or code
-- Maintain consistency with previous analysis patterns
-- Ensure all analysis fields are properly populated
-- Consider both explicit and implicit user requirements
 - DO NOT provide workflow suggestions or technical implementation guidance
 - Focus on understanding user intent, not prescribing technical solutions
-- Let downstream nodes determine the appropriate technical approach
+- Do NOT decide what data operations are needed - that is handled separately
 """
     human_template_str = "{input}"
 
@@ -86,9 +65,8 @@ IMPORTANT GUIDELINES:
 
 def format_process_context_input(
     current_query: str,
-    formatted_chat_history: list[str],
+    formatted_chat_history: str,
     project_custom_prompts: dict,
-    schemas: list[str],
 ) -> dict:
     formatted_custom_prompts = (
         "\n\n".join(
@@ -105,13 +83,10 @@ def format_process_context_input(
 CURRENT USER QUERY: {current_query}
 
 PREVIOUS CONVERSATION HISTORY:
-{formatted_chat_history}
+{formatted_chat_history if formatted_chat_history else "(No previous conversation)"}
 
 SPECIAL INSTRUCTIONS:
-{formatted_custom_prompts}
-
-DATASET SCHEMAS PROVIDED FOR CURRENT QUERY (Note: Only first 5 datasets are shown here in the context):
-{schemas}
+{formatted_custom_prompts if formatted_custom_prompts else "(None)"}
 
 TASK: Analyze the above information and return ONLY a single JSON response with the specified fields.
 """

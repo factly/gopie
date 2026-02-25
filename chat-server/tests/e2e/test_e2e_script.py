@@ -10,8 +10,7 @@ from tests.e2e.utils.dataset_manager import (
 from tests.e2e.utils.generate_app_cases import generate_app_cases
 from tests.test_config import TestConfig
 
-from .utils.terminal_formatter import TerminalFormatter
-from .utils.test_utils import (
+from .utils.e2e_test_utils import (
     create_evaluation_chain,
     get_user_query,
     handle_expected_error,
@@ -19,6 +18,7 @@ from .utils.test_utils import (
     send_chat_request,
     update_results_with_evaluation,
 )
+from .utils.terminal_formatter import TerminalFormatter
 
 CHAT_SERVER_URL = TestConfig.CHAT_SERVER_URL
 GOPIE_API_URL = TestConfig.GOPIE_API_URL

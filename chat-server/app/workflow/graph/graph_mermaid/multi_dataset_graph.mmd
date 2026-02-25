@@ -11,7 +11,6 @@ graph TD;
 	analyze_query(analyze_query)
 	plan_query(plan_query)
 	execute_query(execute_query)
-	analyze_dataset(analyze_dataset)
 	stream_updates(stream_updates)
 	validate_result(validate_result)
 	tools(tools)
@@ -19,13 +18,12 @@ graph TD;
 	pass_on_results(pass_on_results)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> analyze_query;
-	analyze_dataset -.-> plan_query;
 	analyze_query -.-> generate_subqueries;
 	analyze_query -. &nbsp;basic_conversation&nbsp; .-> route_response;
 	analyze_query -.-> tools;
 	execute_query --> validate_result;
 	generate_subqueries --> semantic_search;
-	identify_datasets -.-> analyze_dataset;
+	identify_datasets -.-> plan_query;
 	identify_datasets -. &nbsp;no_datasets_found&nbsp; .-> route_response;
 	identify_datasets -. &nbsp;retry_semantic_search&nbsp; .-> semantic_search;
 	plan_query --> execute_query;
@@ -39,7 +37,6 @@ graph TD;
 	validate_result -.-> route_response;
 	validate_result -. &nbsp;reidentify_datasets&nbsp; .-> semantic_search;
 	pass_on_results --> __end__;
-	analyze_dataset -.-> analyze_dataset;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

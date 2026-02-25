@@ -16,6 +16,15 @@ class StreamUpdateResponse(BaseModel):
     continue_execution: bool = Field(
         description="Whether to continue execution with remaining subqueries", default=True
     )
+    subquery_summary: str = Field(
+        description=(
+            "A concise factual summary of the key data findings from this subquery. "
+            "Include all relevant values, counts, names, or identifiers returned. "
+            "Do NOT include SQL queries, table names, column names, or technical details. "
+            "This summary will be used as context for subsequent queries."
+        ),
+        default="",
+    )
 
 
 async def stream_updates(state: State, config: RunnableConfig) -> dict:
@@ -25,6 +34,7 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
     stream_message = ""
     continue_execution = False
+    subquery_summary = ""
 
     try:
         subquery_result = query_result.subqueries[query_index]
@@ -32,18 +42,16 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
         remaining_index = query_index + 1
         remaining_subqueries = [sq for sq in subqueries[remaining_index:]]
 
-        subquery_messages = f"""
-            This is subquery {query_index + 1} / {len(subqueries)}:\n
-            {subquery_result.query_text}\n\n
-
-            Remaining subqueries:
-            {remaining_subqueries}
-        """
+        subquery_message = (
+            f"This is subquery {query_index + 1} / {len(subqueries)}:\n"
+            f"{subquery_result.query_text}\n\n"
+            f"Remaining subqueries:\n{remaining_subqueries}"
+        )
 
         chain_input = {
             "subquery": subquery_result,
             "original_user_query": query_result.original_user_query,
-            "subquery_messages": subquery_messages,
+            "subquery_messages": subquery_message,
         }
 
         chain = get_prompt_llm_chain(
@@ -55,14 +63,26 @@ async def stream_updates(state: State, config: RunnableConfig) -> dict:
 
         stream_message = response.stream_update
         continue_execution = response.continue_execution
+        subquery_summary = response.subquery_summary
     except Exception as e:
         stream_message = "Something went wrong while generating the subquery response"
         logger.exception(f"Error in stream_updates: {e}")
+
+    # Accumulate summarized context for subsequent subqueries
+    existing_context = state.get("previous_subquery_context") or ""
+    if subquery_summary:
+        step_label = f"Step {query_index + 1}: {subquery_summary}"
+        updated_context = (
+            f"{existing_context}\n{step_label}".strip() if existing_context else step_label
+        )
+    else:
+        updated_context = existing_context
 
     return {
         "messages": [AIMessage(content=stream_message)],
         "subquery_index": query_index + 1,
         "continue_execution": continue_execution,
+        "previous_subquery_context": updated_context,
     }
 
 

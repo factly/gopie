@@ -93,24 +93,21 @@ async def get_feedback_for_images(
     low_rating_visualizations = [f for f in response.individual_feedback if f.rating < 7]
     feedback_text = "The visualizations are good. You can return the final result."
 
-    if response.final_rating < 7 or low_rating_visualizations:
-        feedback_text = ""
+    if low_rating_visualizations:
+        feedback_text = "Visualizations needing improvement:\n\n"
+        viz_paths_to_fix = []
 
-        if low_rating_visualizations:
-            feedback_text += "Visualizations needing improvement:\n\n"
-            viz_paths_to_fix = []
+        for fb in low_rating_visualizations:
+            viz_path = png_paths[fb.visualization_index - 1]
+            viz_paths_to_fix.append(viz_path)
 
-            for fb in low_rating_visualizations:
-                viz_path = png_paths[fb.visualization_index - 1]
-                viz_paths_to_fix.append(viz_path)
+            feedback_text += (
+                f"• Viz {fb.visualization_index} ({viz_path}) - Rating: {fb.rating}/10\n"
+            )
+            if fb.areas_for_improvement:
+                feedback_text += f"  Issues: {fb.areas_for_improvement}\n"
 
-                feedback_text += (
-                    f"• Viz {fb.visualization_index} ({viz_path}) - Rating: {fb.rating}/10\n"
-                )
-                if fb.areas_for_improvement:
-                    feedback_text += f"  Issues: {fb.areas_for_improvement}\n"
-
-            feedback_text += f"\nREGENERATE: {viz_paths_to_fix}\n\n"
+        feedback_text += f"\nREGENERATE: {viz_paths_to_fix}\n\n"
 
         if response.key_issues:
             feedback_text += f"Key issues: {response.key_issues}\n\n"

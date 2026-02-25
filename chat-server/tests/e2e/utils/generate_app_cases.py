@@ -292,21 +292,20 @@ APPLICATION LOGIC OVERVIEW (chat-server):
 - Multi Dataset Graph:
   • analyze_query → routes: generate_subqueries | basic_conversation | tools
   • generate_subqueries → identify_datasets
-  • identify_datasets → routes: analyze_dataset | route_response (no_datasets_found)
-  • analyze_dataset → plan_query
+  • identify_datasets → routes: plan_query | route_response (no_datasets_found)
   • plan_query → Path A (Generate SQL) | Path B (No-SQL Response)
   • execute_query → validate_result
   • validate_result → routes: route_response | replan | reidentify_datasets
   • route_response → routes: pass_on_results | stream_updates
   • stream_updates → end_execution | next_sub_query → identify_datasets
-- Tools available: execute_sql_query, get_table_schema, plan_sql_query, run_python_code, result_paths, get_feedback_for_image
+- Tools available: execute_sql_query, plan_sql_query, run_python_code, result_paths, get_feedback_for_image
 - Visualization pairing: For visualization-intent questions, Visualization Agent runs after data processing, using run_python_code → get_feedback_for_image → result_paths to produce Altair JSON and PNG outputs and return file paths.
 
 Requirements:
  1. Generate exactly 22 multi-dataset test cases.
  2. Agent-path coverage must include:
     - analyze_query routes: at least 1 case each for generate_subqueries, basic_conversation, and tools
-    - identify_datasets: at least 1 case where no_datasets_found routes to route_response; multiple normal cases to analyze_dataset → plan_query
+    - identify_datasets: at least 1 case where no_datasets_found routes to route_response; multiple normal cases to plan_query
     - plan_query Path A (SQL):
       • Related datasets joined in a single query
       • Unrelated datasets requiring multiple independent queries

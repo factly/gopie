@@ -21,11 +21,11 @@ class TestExecuteSQL:
             mock_client = mock_client_class.return_value
             mock_client.post = AsyncMock(return_value=mock_response)
 
-            result = await execute_sql("SELECT * FROM users")
+            result = await execute_sql("SELECT * FROM users", org_id=None, user_id="test_user")
 
             # The function returns result_data["data"], not the full response
             assert result == [{"id": 1, "name": "test"}]
-            mock_client_class.assert_called_once_with(org_id=None)
+            mock_client_class.assert_called_once_with(org_id=None, user_id="test_user")
 
     @pytest.mark.asyncio
     async def test_execute_sql_empty_result(self):
@@ -40,7 +40,9 @@ class TestExecuteSQL:
             mock_client = mock_client_class.return_value
             mock_client.post = AsyncMock(return_value=mock_response)
 
-            result = await execute_sql("SELECT * FROM empty_table")
+            result = await execute_sql(
+                "SELECT * FROM empty_table", org_id=None, user_id="test_user"
+            )
 
             assert result == []
 
@@ -58,7 +60,7 @@ class TestExecuteSQL:
             mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Table 'nonexistent' doesn't exist"):
-                await execute_sql("SELECT * FROM nonexistent")
+                await execute_sql("SELECT * FROM nonexistent", org_id=None, user_id="test_user")
 
     @pytest.mark.asyncio
     async def test_execute_sql_http_error_without_error_message(self):
@@ -74,7 +76,7 @@ class TestExecuteSQL:
             mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Unknown error"):
-                await execute_sql("SELECT * FROM users")
+                await execute_sql("SELECT * FROM users", org_id=None, user_id="test_user")
 
     @pytest.mark.asyncio
     async def test_execute_sql_unauthorized_error(self):
@@ -90,7 +92,7 @@ class TestExecuteSQL:
             mock_client.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(Exception, match="Unauthorized access"):
-                await execute_sql("SELECT * FROM sensitive_table")
+                await execute_sql("SELECT * FROM sensitive_table", org_id=None, user_id="test_user")
 
     @pytest.mark.asyncio
     async def test_execute_sql_null_data(self):
@@ -105,7 +107,9 @@ class TestExecuteSQL:
             mock_client = mock_client_class.return_value
             mock_client.post = AsyncMock(return_value=mock_response)
 
-            result = await execute_sql("SELECT COUNT(*) FROM users WHERE false")
+            result = await execute_sql(
+                "SELECT COUNT(*) FROM users WHERE false", org_id=None, user_id="test_user"
+            )
 
             assert result is None
 
@@ -122,7 +126,9 @@ class TestExecuteSQL:
             mock_client = mock_client_class.return_value
             mock_client.post = AsyncMock(return_value=mock_response)
 
-            result = await execute_sql("SELECT * FROM users", org_id="test_org_123")
+            result = await execute_sql(
+                "SELECT * FROM users", org_id="test_org_123", user_id="test_user"
+            )
 
             assert result == [{"id": 1, "org": "test_org"}]
-            mock_client_class.assert_called_once_with(org_id="test_org_123")
+            mock_client_class.assert_called_once_with(org_id="test_org_123", user_id="test_user")
