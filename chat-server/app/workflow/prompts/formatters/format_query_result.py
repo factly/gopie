@@ -170,9 +170,7 @@ def format_dataset_schemas(schemas: list[DatasetSchema]) -> str:
     sections = ["\n=== DATASET SCHEMAS ==="]
     for schema in schemas:
         sections.append(
-            schema.format_for_prompt(
-                columns_fields_to_exclude=["sample_values", "stats", "avg", "std", "count"]
-            )
+            schema.format_for_prompt(columns_fields_to_exclude=["sample_values", "avg", "std"])
         )
     return "\n".join(sections)
 
