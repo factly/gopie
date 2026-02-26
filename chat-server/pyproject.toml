@@ -10,7 +10,7 @@ dependencies = [
   "beautifulsoup4>=4.14.2",
   "altair>=5.5.0",
   "dspy==3.1.0",
-  "e2b-code-interpreter>=1.5.1",
+  "e2b-code-interpreter>=2.4.1",
   "fastembed>=0.4.2",
   "fastapi[standard]>=0.115.12",
   "langchain>=0.3.21",
