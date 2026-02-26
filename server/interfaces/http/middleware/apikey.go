@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/factly/gopie/application/services"
+	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/domain/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -46,6 +47,7 @@ func WithApiKeyAuth(service *services.ApikeyService, logger *logger.Logger) fibe
 		// set apikey as user in context for further use
 		ctx.Locals(UserCtxKey, apiKey.ID)
 		ctx.Locals(OrganizationCtxKey, apiKey.OrgID)
+		ctx.Locals(RoleCtxKey, models.Admin)
 		return ctx.Next()
 	}
 }

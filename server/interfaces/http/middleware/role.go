@@ -35,6 +35,13 @@ func RoleAuthorization() fiber.Handler {
 			}
 		}
 
+		if orgsRole == "" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":   "forbidden",
+				"message": "user does not have a role in this organization",
+			})
+		}
+
 		c.Locals(RoleCtxKey, models.Role(orgsRole))
 		return c.Next()
 	}
