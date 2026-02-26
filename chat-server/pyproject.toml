@@ -7,20 +7,22 @@ requires-python = ">=3.11"
 
 dependencies = [
   "aioboto3>=14.3.0",
+  "beautifulsoup4>=4.14.2",
   "altair>=5.5.0",
-  "dspy-ai>=2.5.0",
+  "dspy==3.1.0",
   "e2b-code-interpreter>=1.5.1",
+  "fastembed>=0.4.2",
   "fastapi[standard]>=0.115.12",
   "langchain>=0.3.21",
   "langchain-community>=0.3.20",
   "langchain-openai>=0.3.9",
   "langchain-qdrant>=0.2.0",
-  "langgraph==0.5.2",
+  "langgraph>=0.6.0",
   "langgraph-cli[inmem]>=0.3.3",
   "langsmith>=0.3.42",
   "logging>=0.4.9.6",
   "model2vec>=0.7.0",
-  "pillow>=12.0.0",
+  "pillow>=11.0.0,<12.0.0",
   "portkey-ai>=1.11.1",
   "pre-commit>=4.2.0",
   "pydantic>=2.10.6",
@@ -73,6 +75,7 @@ cache_dir = "tests/.pytest_cache"
 
 [dependency-groups]
 dev = [
+  "pyright>=1.1.408",
   "pytest>=8.4.1",
   "pytest-asyncio>=0.24.0",
   "pytest-cache>=1.0",
