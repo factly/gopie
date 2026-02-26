@@ -1,0 +1,18 @@
+{{- if .Values.deployment.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "server.name" . }}-pdb
+  namespace: {{ include "gopie.namespace" . }}
+  labels:
+    {{ include "server.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.deployment.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.deployment.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.deployment.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.deployment.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{ include "server.selectorLabels" . | nindent 6 }}
+{{- end }}

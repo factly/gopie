@@ -1,0 +1,18 @@
+{{- if .Values.chatserver.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "chatserver.name" . }}-pdb
+  namespace: {{ include "chatserver.namespace" . }}
+  labels:
+    {{ include "chatserver.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.chatserver.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.chatserver.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.chatserver.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.chatserver.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{ include "chatserver.selectorLabels" . | nindent 6 }}
+{{- end }}
