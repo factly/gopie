@@ -26,12 +26,14 @@ interface ColumnDescriptionsModalProps {
   datasetId: string;
   datasetName?: string;
   trigger?: React.ReactNode;
+  canEdit?: boolean;
 }
 
 export function ColumnDescriptionsModal({
   datasetId,
   datasetName,
   trigger,
+  canEdit = false,
 }: ColumnDescriptionsModalProps) {
   const [open, setOpen] = React.useState(false);
   const [editingColumn, setEditingColumn] = React.useState<string | null>(null);
@@ -182,11 +184,11 @@ export function ColumnDescriptionsModal({
                         </div>
                       </div>
                       
-                      {editingColumn !== column.column_name && (
+                      {canEdit && editingColumn !== column.column_name && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={editingColumn !== null} 
+                          disabled={editingColumn !== null}
                           onClick={() => handleEditClick(column.column_name)}
                         >
                           <Edit2 className="h-4 w-4" />
@@ -194,7 +196,7 @@ export function ColumnDescriptionsModal({
                       )}
                     </div>
 
-                    {editingColumn === column.column_name ? (
+                    {canEdit && editingColumn === column.column_name ? (
                       <div className="space-y-2">
                         <Textarea
                           value={tempDescription}

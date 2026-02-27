@@ -13,6 +13,7 @@ import { deleteDataset } from "@/lib/mutations/dataset/delete-dataset";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { InlineProjectEditor } from "@/components/project/inline-project-editor";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import Link from "next/link";
 
 export default function ProjectPage({
@@ -23,6 +24,7 @@ export default function ProjectPage({
   const { projectId } = React.use(params);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { role, user } = useAuthStore();
   const [isMounted, setIsMounted] = React.useState(false);
   
   const {
@@ -111,9 +113,11 @@ export default function ProjectPage({
 
   if (!project) return null;
 
+  const canEdit = role === "admin" || project.created_by === user?.id;
+
   return (
     <div className="mx-auto py-4 px-4 sm:px-6 lg:px-8 space-y-8">
-      <InlineProjectEditor project={project} />
+      <InlineProjectEditor project={project} canEdit={canEdit} />
 
       <div className="pt-8">
         <div className="flex items-center justify-between mb-6">
@@ -123,12 +127,14 @@ export default function ProjectPage({
               {datasets?.total || 0}
             </Badge>
           </h2>
-          <Link href={`/projects/${projectId}/upload`}>
-            <Button size="sm" className="h-9">
-              <UploadIcon className="mr-2 size-4" />
-              Create Dataset
-            </Button>
-          </Link>
+          {canEdit && (
+            <Link href={`/projects/${projectId}/upload`}>
+              <Button size="sm" className="h-9">
+                <UploadIcon className="mr-2 size-4" />
+                Create Dataset
+              </Button>
+            </Link>
+          )}
         </div>
 
         {datasets?.total === 0 ? (
@@ -141,12 +147,14 @@ export default function ProjectPage({
             <p className="text-base text-muted-foreground">
               No datasets added yet
             </p>
-            <Link href={`/projects/${projectId}/upload`}>
-              <Button size="sm" className="h-9">
-                <UploadIcon className="mr-2 size-4" />
-                Create Dataset
-              </Button>
-            </Link>
+            {canEdit && (
+              <Link href={`/projects/${projectId}/upload`}>
+                <Button size="sm" className="h-9">
+                  <UploadIcon className="mr-2 size-4" />
+                  Create Dataset
+                </Button>
+              </Link>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -164,7 +172,7 @@ export default function ProjectPage({
                 <DatasetCard
                   dataset={dataset}
                   projectId={projectId}
-                  onDelete={handleDeleteDataset}
+                  onDelete={canEdit ? handleDeleteDataset : undefined}
                 />
               </motion.div>
             ))}

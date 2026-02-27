@@ -86,7 +86,6 @@ func (h *httpHandler) cleanupResources(rc resourceCleanup) {
 func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
-	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 	if orgID == "" {
 		h.logger.Error("Organization ID header is missing")
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -118,7 +117,7 @@ func (h *httpHandler) upload(ctx *fiber.Ctx) error {
 	}
 
 	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID, orgID, userID, role)
+	project, err := h.projectSvc.Details(body.ProjectID, orgID, userID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))

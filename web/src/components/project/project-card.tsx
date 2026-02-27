@@ -241,53 +241,57 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
                   )}
                 </div>
 
-                <div
-                  className={cn(
-                    "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
-                    "transition-all duration-300 ease-in-out",
-                    isHovered ? "opacity-100 translate-x-0" : ""
-                  )}
-                >
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 "
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setIsEditing(true);
-                        }}
-                      >
-                        <PencilIcon className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {/* <span>View Project</span>
-                  <ChevronRight className="h-3 w-3" /> */}
-                </div>
+                {(onUpdate || onDelete) && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1 text-xs font-medium text-primary opacity-0 transform translate-x-2",
+                      "transition-all duration-300 ease-in-out",
+                      isHovered ? "opacity-100 translate-x-0" : ""
+                    )}
+                  >
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 "
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onUpdate && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsEditing(true);
+                            }}
+                          >
+                            <PencilIcon className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {onUpdate && onDelete && <DropdownMenuSeparator />}
+                        {onDelete && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

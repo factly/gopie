@@ -23,9 +23,10 @@ import { UserDisplayName } from "@/components/user/user-display-name";
 
 interface InlineProjectEditorProps {
   project: Project;
+  canEdit?: boolean;
 }
 
-export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
+export function InlineProjectEditor({ project, canEdit = false }: InlineProjectEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [name, setName] = useState(project.name);
@@ -196,15 +197,17 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {project.name}
             </h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-muted"
-              title="Edit Project"
-              onClick={() => setIsEditing(true)}
-            >
-              <PencilIcon className="size-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-muted"
+                title="Edit Project"
+                onClick={() => setIsEditing(true)}
+              >
+                <PencilIcon className="size-4" />
+              </Button>
+            )}
           </div>
 
           <div className="min-h-[40px]">

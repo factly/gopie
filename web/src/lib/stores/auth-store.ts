@@ -13,6 +13,7 @@ interface AuthState {
   error: string | null;
   accessToken: string | null;
   organizationId: string | null;
+  role: string | null;
 
   // Actions
   login: (loginName: string, password: string) => Promise<{ success: boolean; userId: string; isMFAEnabled: boolean; error?: string; callbackUrl: string }>;
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       accessToken: null,
       organizationId: null,
+      role: null,
 
       login: async (loginName, password) => {
         set({ isLoading: true, error: null });
@@ -82,9 +84,8 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const baseUrl = window.location.origin;
-          const successUrl = `${baseUrl}/api/oauth/callback/google${
-            returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
-          }`;
+          const successUrl = `${baseUrl}/api/oauth/callback/google${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
+            }`;
           const failureUrl = `${baseUrl}/auth/login?error=oauth_failed`;
 
           const response = await fetch("/api/oauth/initiate", {
@@ -162,6 +163,7 @@ export const useAuthStore = create<AuthState>()(
             organizationId: null,
             isLoading: false,
             error: null,
+            role: null,
           });
           setGlobalAccessToken(null);
           setGlobalOrganizationId(null);
@@ -174,20 +176,25 @@ export const useAuthStore = create<AuthState>()(
 
           if (response.ok) {
             const data = await response.json();
+            const orgId = data.user.organisationId;
+            const orgRoles: string[] = data.user.roles?.[orgId] ?? [];
+            const role = orgRoles.includes("admin") ? "admin" : "member";
             set({
               user: data.user,
               isAuthenticated: true,
               accessToken: data.accessToken,
-              organizationId: data.user.organizationId,
+              organizationId: orgId,
+              role,
             });
             setGlobalAccessToken(data.accessToken);
-            setGlobalOrganizationId(data.user.organisationId);
+            setGlobalOrganizationId(orgId);
           } else {
             set({
               user: null,
               isAuthenticated: false,
               accessToken: null,
               organizationId: null,
+              role: null,
             });
             setGlobalAccessToken(null);
             setGlobalOrganizationId(null);

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatasetHeader } from "@/components/dataset/dataset-header";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export default function DatasetPage({
@@ -18,6 +19,7 @@ export default function DatasetPage({
 }) {
   const { datasetId, projectId } = React.use(params);
   const queryClient = useQueryClient();
+  const { role, user } = useAuthStore();
   const { setOpen } = useSidebar();
 
   const { data: dataset, isLoading } = useDataset({
@@ -123,6 +125,7 @@ export default function DatasetPage({
             dataset={dataset}
             projectId={projectId}
             onUpdate={handleUpdate}
+            canEdit={role === "admin" || dataset.created_by === user?.id}
           />
         </motion.div>
 
