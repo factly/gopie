@@ -50,7 +50,7 @@ func TestAST_QualifyUnqualifiedTables(t *testing.T) {
 			title:       "Multiple_Joins_Mixed_Qualification",
 			sql:         "SELECT * FROM users u JOIN public.roles r ON u.role_id = r.id JOIN permissions p ON r.id = p.role_id",
 			schemaName:  "app",
-			expectedSql: "SELECT * FROM \"app\".\"users\" AS u INNER JOIN public.roles AS r ON ((u.role_id = r.id)) INNER JOIN \"app\".\"permissions\" AS p ON ((r.id = p.role_id))",
+			expectedSql: "SELECT * FROM \"app\".\"users\" AS u INNER JOIN \"app\".public.roles AS r ON ((u.role_id = r.id)) INNER JOIN \"app\".\"permissions\" AS p ON ((r.id = p.role_id))",
 		},
 		{
 			title:       "CTE_And_Subquery_Mixed",
@@ -68,7 +68,13 @@ func TestAST_QualifyUnqualifiedTables(t *testing.T) {
 			title:       "CTE_Qualified_Table_Ref",
 			sql:         "WITH cte AS (SELECT * FROM public.orders) SELECT * FROM cte",
 			schemaName:  "main",
-			expectedSql: "WITH cte AS (SELECT * FROM public.orders) SELECT * FROM cte",
+			expectedSql: "WITH cte AS (SELECT * FROM \"main\".public.orders) SELECT * FROM cte",
+		},
+		{
+			title:       "Schema_Qualified_Table_Gets_Catalog_Prefix",
+			sql:         "SELECT * FROM analysis.sales",
+			schemaName:  "pg_ext_abc",
+			expectedSql: "SELECT * FROM \"pg_ext_abc\".analysis.sales",
 		},
 	}...)
 

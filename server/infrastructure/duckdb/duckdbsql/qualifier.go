@@ -1,8 +1,5 @@
 package duckdbsql
 
-import (
-	"strings"
-)
 
 // QualifyUnqualifiedTables sets the schema for all unqualified tables in the AST.
 // CTEs are ignored.
@@ -38,9 +35,6 @@ func (a *AST) QualifyUnqualifiedTables(schemaName string) error {
 	return nil
 }
 
-func isQualified(tableName string) bool {
-	return strings.Contains(tableName, ".")
-}
 
 // qualifyTablesInNode recursively sets schemaName for unqualified table references
 func qualifyTablesInNode(node astNode, schemaName string, cteNames map[string]struct{}) {
@@ -53,11 +47,18 @@ func qualifyTablesInNode(node astNode, schemaName string, cteNames map[string]st
 	case "BASE_TABLE", "TABLE_REF": // handle both common AST types
 		tableName := toString(node, "table_name")
 		tableSchema := toString(node, "schema_name")
+		catalogName := toString(node, "catalog_name")
 		if tableName != "" {
 			if _, isCTE := cteNames[tableName]; !isCTE {
-				if tableSchema == "" && !isQualified(tableName) {
-					// Proper DuckDB qualification: quoted schema and table
-					node["schema_name"] = schemaName // Correct field for DuckDB AST schema qualification
+				if catalogName == "" {
+					if tableSchema == "" {
+						// Unqualified table: set schema to the alias
+						node["schema_name"] = schemaName
+					} else {
+						// Schema-qualified but no catalog (e.g. intermediate.table):
+						// set catalog to the alias so DuckDB resolves it as alias.schema.table
+						node["catalog_name"] = schemaName
+					}
 				}
 			}
 		}
