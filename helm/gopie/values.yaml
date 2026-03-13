@@ -25,9 +25,15 @@ deployment:
   env: []
     
     # Environment variables for the container
-    # Example:
+    # Example with direct value:
     # - name: GOPIE_API_SERVER_HOST
     #   value: "localhost"
+    # Example with secret reference:
+    # - name: GOPIE_POSTGRES_PASSWORD
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: postgres-password
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
@@ -102,9 +108,15 @@ stateful:
   Podannotations: {}  # Annotations for pods
 
   env: []  # Environment variables for the container
-    # Example:
+    # Example with direct value:
     # - name: GOPIE_API_SERVER_HOST
     #   value: "localhost"
+    # Example with secret reference:
+    # - name: GOPIE_POSTGRES_PASSWORD
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: postgres-password
 
   initContainers:  # List of init containers to run before the app container
   - name: gopie-migrate  # Example init container for DB migration
@@ -236,12 +248,18 @@ web:
 
   env: []
     
-    # - name: NEXT_PUBLIC_GOPIE_API_URL
-    #   value: https://server.example.com # public_url
     # Define environment variables for the container
-    # Example:
+    # Example with direct value:
+    # - name: NEXT_PUBLIC_GOPIE_API_URL
+    #   value: https://server.example.com
     # - name: NEXT_PUBLIC_ENABLE_AUTH
     #   value: "false"
+    # Example with secret reference:
+    # - name: AUTH_SECRET
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: auth-secret
 
   serviceAccount:
     create: false  # Whether to create a new Kubernetes service account
@@ -362,11 +380,15 @@ chatserver:
 
   env: []
     # Environment variables for the chatserver
-    # Example:
+    # Example with direct value:
     # - name: GOPIE_API_ENDPOINT
     #   value: "GOPIE_URL"
+    # Example with secret reference:
     # - name: E2B_API_KEY
-    #   value: ""
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: my-secret
+    #       key: e2b-api-key
 
   serviceAccount:
     create: false  # Whether to create a new service account
@@ -439,6 +461,51 @@ chatserver:
     #     type: ""
   volumes: []
 
+
+extraDeployments: []
+  # Additional Deployments to render alongside the core components.
+  # Each entry supports the fields below.
+  # - name: my-extra-app                   # Required: unique name suffix (produces <fullname>-<name>)
+  #   replicaCount: 1
+  #   image:
+  #     repository: nginx
+  #     tag: latest
+  #     pullPolicy: IfNotPresent
+  #   annotations: {}                       # Deployment annotations
+  #   podAnnotations: {}                    # Pod annotations
+  #   labels: {}                            # Extra Deployment labels
+  #   podLabels: {}                         # Extra pod labels
+  #   podSecurityContext: {}
+  #   securityContext: {}
+  #   env: []
+  #     # - name: MY_VAR
+  #     #   value: "my-value"
+  #   ports: []
+  #     # - name: http
+  #     #   containerPort: 80
+  #     #   protocol: TCP
+  #   resources: {}
+  #   livenessProbe: {}
+  #   readinessProbe: {}
+  #   nodeSelector: {}
+  #   tolerations: []
+  #   affinity: {}
+  #   extraVolumes: []
+  #   extraVolumeMounts: []
+
+extraServices: []
+  # Additional Services to render alongside the core components.
+  # Each entry supports the fields below.
+  # - name: my-extra-svc                   # Required: unique name suffix (produces <fullname>-<name>)
+  #   type: ClusterIP                       # ClusterIP | NodePort | LoadBalancer
+  #   annotations: {}
+  #   labels: {}
+  #   ports:
+  #     - name: http
+  #       port: 80
+  #       targetPort: http
+  #       protocol: TCP
+  #   selector: {}                          # Optional: override/extend the default selector
 
 postgresql:
   enabled: true  # Enable or disable the bundled PostgreSQL chart

@@ -1,0 +1,29 @@
+{{- range .Values.extraServices }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gopie.fullname" $ }}-{{ .name }}
+  namespace: {{ include "gopie.namespace" $ }}
+  labels:
+    app.kubernetes.io/component: {{ .name }}
+    app.kubernetes.io/name: {{ include "gopie.fullname" $ }}-{{ .name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    helm.sh/chart: {{ $.Chart.Version }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .type | default "ClusterIP" }}
+  ports:
+    {{- toYaml .ports | nindent 4 }}
+  selector:
+    app.kubernetes.io/name: {{ include "gopie.fullname" $ }}-{{ .name }}
+    {{- with .selector }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
