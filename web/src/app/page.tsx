@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { useProjects } from "@/lib/queries/project/list-projects";
+import { useProjectsInfinite } from "@/lib/queries/project/list-projects"; // UPDATED IMPORT
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 import { ProjectCard } from "@/components/project/project-card";
@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { updateProject } from "@/lib/mutations/project/update-project";
 import { deleteProject } from "@/lib/mutations/project/delete-project";
 import { useToast } from "@/hooks/use-toast";
-import { FolderIcon, SettingsIcon } from "lucide-react";
+import { FolderIcon, SettingsIcon, AlertCircle, Loader2 } from "lucide-react"; // Added Loader2
 import { ProtectedPage } from "@/components/auth/protected-page";
 import { AuthStatus } from "@/components/auth/auth-status";
 import { MentionInput } from "@/components/chat/mention-input";
@@ -19,26 +19,35 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme/toggle";
 import { ContextSelectionHelper } from "@/components/chat/context-selection-helper";
-// import { UserInfo } from "@/components/dashboard/user-info";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer"; // NEW IMPORT
 
 export default function HomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
   const {
-    data: projects,
-    isLoading,
-    error,
-  } = useProjects({
-    variables: {
-      limit: 100,
-      page: 1,
-    },
+    data: projectsData,
+    isLoading: isProjectsLoading,
+    error: projectsError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProjectsInfinite(12); // Load 12 projects per page
+
+  // Infinite Scroll Trigger
+  const { ref: loadMoreRef, inView } = useIntersectionObserver({
+    threshold: 0.1,
+    enabled: hasNextPage && !isFetchingNextPage,
   });
+
+  React.useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   // Chat functionality
   const [inputValue, setInputValue] = useState("");
@@ -167,14 +176,14 @@ export default function HomePage() {
   };
 
   const renderContent = () => {
-    if (error) {
+    if (projectsError) {
       return (
         <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              Failed to load projects: {error.message}
+              Failed to load projects: {projectsError.message}
             </AlertDescription>
           </Alert>
           <CreateProjectDialog />
@@ -182,7 +191,7 @@ export default function HomePage() {
       );
     }
 
-    if (isLoading) {
+    if (isProjectsLoading) {
       return (
         <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
           <div className="flex items-center justify-between">
@@ -197,6 +206,9 @@ export default function HomePage() {
         </div>
       );
     }
+
+    // Flatten pages into single list
+    const allProjects = projectsData?.pages.flatMap((page) => page.results || []) || [];
 
     return (
       <div className="min-h-screen flex flex-col">
@@ -332,7 +344,7 @@ export default function HomePage() {
             </motion.div>
           </div>
 
-          {/* Projects section pushed to bottom */}
+          {/* Projects section */}
           <div className="mt-16 mb-20">
             <div className="flex items-center justify-between pb-8">
               <motion.h1
@@ -345,45 +357,57 @@ export default function HomePage() {
               <CreateProjectDialog />
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-              {projects && projects.results && projects.results.length > 0 ? (
-                projects.results.map((project, idx) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                  >
-                    <ProjectCard
-                      project={project}
-                      onUpdate={handleUpdateProject}
-                      onDelete={handleDeleteProject}
-                    />
-                  </motion.div>
-                ))
-              ) : (
+            {allProjects.length > 0 ? (
+              <div className="flex flex-col gap-6">
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="col-span-full flex flex-col items-center justify-center py-12"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
-                  <div className="bg-muted p-4 mb-4">
-                    <FolderIcon className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    No projects yet
-                  </h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    Start by creating your first project to organize your data
-                  </p>
-                  <CreateProjectDialog />
+                  {allProjects.map((project, idx) => (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                    >
+                      <ProjectCard
+                        project={project}
+                        onUpdate={handleUpdateProject}
+                        onDelete={handleDeleteProject}
+                      />
+                    </motion.div>
+                  ))}
                 </motion.div>
-              )}
-            </motion.div>
+
+                {/* Loading Trigger */}
+                <div 
+                  ref={loadMoreRef} 
+                  className="h-10 flex w-full justify-center p-4 min-h-[40px]"
+                >
+                  {isFetchingNextPage && (
+                    <Loader2 className="animate-spin h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="col-span-full flex flex-col items-center justify-center py-12"
+              >
+                <div className="bg-muted p-4 mb-4">
+                  <FolderIcon className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  No projects yet
+                </h3>
+                <p className="text-muted-foreground text-center mb-6 max-w-md">
+                  Start by creating your first project to organize your data
+                </p>
+                <CreateProjectDialog />
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

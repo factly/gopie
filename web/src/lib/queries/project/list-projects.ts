@@ -1,6 +1,7 @@
 import { Project, PaginatedResponse } from "@/lib/api-client";
 import { apiClient } from "@/lib/api-client";
 import { createQuery } from "react-query-kit";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 interface ListProjectsParams {
   limit?: number;
@@ -34,3 +35,24 @@ export const useProjects = createQuery({
   queryKey: ["projects"],
   fetcher: fetchProjects,
 });
+
+export const useProjectsInfinite = (limit = 12) => {
+  return useInfiniteQuery<PaginatedResponse<Project>, Error>({
+    queryKey: ["projects", "infinite"],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => 
+      fetchProjects({ 
+        limit, 
+        page: pageParam as number 
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      // Handle null results
+      const results = lastPage.results || [];
+      
+      if (results.length < limit) return undefined;
+      const totalPages = Math.ceil(lastPage.total / limit);
+      const nextPage = allPages.length + 1;
+      return nextPage <= totalPages ? nextPage : undefined;
+    },
+  });
+};
