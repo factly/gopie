@@ -17,99 +17,38 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { authClient } from "@/lib/auth/auth-client";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { useAuthRequest } from "@/hooks/use-auth-request";
-import TotpInput from "@/components/auth/TotpInput";
+import TotpInput from "@/components/auth/Totpinput";
+import { encryptPassword } from "@/lib/crypto/password-encryption";
 
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const {
-    login,
-    loginWithOAuth,
-    isLoading,
-    error,
-    isAuthenticated,
-    checkSession,
-    setError,
-  } = useAuthStore();
+  const { checkSession } = useAuthStore();
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
   const returnUrl = searchParams.get("returnUrl") || "/";
-  const [userId, setUserId] = useState<string | null>(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
-  const [isMfaRequired, setIsMfaRequired] = useState(false);
-  const [isMfaLoading, setIsMfaLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [errors, setErrors] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [formData, setFormData] = useState({
-    loginName: "",
+    email: "",
     password: "",
   });
 
-  // Use the auth request hook - only initialize after session check
-  const { isInitializing } = useAuthRequest(setError);
-
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkUserSession = async () => {
-      setSessionLoading(true);
-      await checkSession();
-      setSessionLoading(false);
-    };
-    checkUserSession();
-  }, [checkSession]);
-
-  useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated) {
+    if (!sessionLoading && session?.user) {
       router.push(returnUrl);
     }
-  }, [isAuthenticated, router, returnUrl]);
+  }, [session, sessionLoading, router, returnUrl]);
 
   useEffect(() => {
-    // Handle OAuth errors from URL params
     const oauthError = searchParams.get("error");
     if (oauthError) {
-      switch (oauthError) {
-        case "oauth_failed":
-          setError("Google OAuth login failed. Please try again.");
-          break;
-        case "oauth_callback_failed":
-          setError("OAuth callback failed. Please try again.");
-          break;
-        case "missing_oauth_params":
-          setError("OAuth parameters missing. Please try again.");
-          break;
-        default:
-          setError("An error occurred during login. Please try again.");
-      }
+      setError("An error occurred during login. Please try again.");
     }
+  }, [searchParams]);
 
-    // Check for MFA requirement from query params
-    const mfaParam = searchParams.get("mfa");
-    if (mfaParam === "enable") {
-      // Get userId from cookie
-      const getUserIdFromCookie = () => {
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "mfa_user_id") {
-            return decodeURIComponent(value);
-          }
-        }
-        return null;
-      };
-
-      const cookieUserId = getUserIdFromCookie();
-      if (cookieUserId) {
-        setUserId(cookieUserId);
-        setIsMfaRequired(true);
-      } else {
-        setError("MFA session expired. Please try logging in again.");
-      }
-    }
-  }, [searchParams, setError]);
-
-  // Show loading screen while checking session
   if (sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -118,31 +57,75 @@ function LoginPageInner() {
     );
   }
 
+  if (requiresTwoFactor) {
+    return (
+      <TotpInput
+        isLoading={isLoading}
+        error={error ?? undefined}
+        onSubmit={async (code) => {
+          setIsLoading(true);
+          setError(null);
+          try {
+            const { error: apiError } = await authClient.twoFactor.verifyTotp({ code });
+            if (apiError) {
+              setError(apiError.message || "Invalid verification code");
+              return;
+            }
+            await checkSession();
+            router.push(returnUrl);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Verification failed");
+          } finally {
+            setIsLoading(false);
+          }
+        }}
+      />
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!formData.loginName || !formData.password) {
+    if (!formData.email || !formData.password) {
       setError("Please fill in all fields");
       return;
     }
 
-    const response = await login(formData.loginName, formData.password);
-
-    if (response.success) {
-      if (response.isMFAEnabled) {
-        setUserId(response.userId);
-        setIsMfaRequired(true);
-      } else {
-        window.location.href = response.callbackUrl;
+    setIsLoading(true);
+    try {
+      const { data, error: apiError } = await authClient.signIn.email({
+        email: formData.email,
+        password: await encryptPassword(formData.password),
+      });
+      if (apiError) {
+        setError(apiError.message || "Login failed");
+        return;
       }
-    } else {
-      setError(response.error || "Login failed");
+      if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+        setRequiresTwoFactor(true);
+        return;
+      }
+      await checkSession();
+      router.push(returnUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    await loginWithOAuth(returnUrl);
+    setIsLoading(true);
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: returnUrl,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OAuth login failed");
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange =
@@ -152,66 +135,6 @@ function LoginPageInner() {
         [field]: e.target.value,
       }));
     };
-
-  const handleMfaSubmit = async (code: string) => {
-    setIsMfaLoading(true);
-    try {
-      // Use userId from state (which comes from cookie for MFA flow)
-      if (!userId) {
-        setErrors({
-          form: "User session not found. Please try logging in again.",
-        });
-        setIsMfaLoading(false);
-        return;
-      }
-
-      const response = await fetch("/api/auth/mfa/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, userId }),
-      });
-
-      if (response.ok) {
-        window.location.href = "/";
-      } else {
-        const errorData = await response.json();
-        setErrors({ form: errorData.error || "Invalid verification code." });
-      }
-    } catch (error) {
-      console.error("MFA validation error:", error);
-      setErrors({ form: "An unexpected error occurred." });
-    }
-    setIsMfaLoading(false);
-  };
-
-  // Show loading state while auth request is being initialized
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
-            <CardDescription className="text-center">
-              Initializing authentication...
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isMfaRequired) {
-    return (
-      <TotpInput
-        onSubmit={handleMfaSubmit}
-        isLoading={isMfaLoading}
-        error={errors.form}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -257,7 +180,6 @@ function LoginPageInner() {
             </Alert>
           )}
 
-          {/* Google OAuth Button */}
           <Button
             type="button"
             variant="outline"
@@ -299,16 +221,16 @@ function LoginPageInner() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="loginName">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="loginName"
-                type="text"
+                id="email"
+                type="email"
                 placeholder="Enter your email"
-                value={formData.loginName}
-                onChange={handleInputChange("loginName")}
+                value={formData.email}
+                onChange={handleInputChange("email")}
                 disabled={isLoading}
                 required
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
 

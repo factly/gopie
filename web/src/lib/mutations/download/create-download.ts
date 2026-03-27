@@ -1,6 +1,5 @@
 import { useDownloadStore } from "@/lib/stores/download-store";
-import { useAuth } from "@/hooks/use-auth";
-import { getGlobalOrganizationId } from "@/lib/api-client";
+import { getGlobalAccessToken, getGlobalOrganizationId } from "@/lib/api-client";
 
 export interface CreateDownloadRequest {
   dataset_id: string;
@@ -25,19 +24,19 @@ export const createDownloadWithSSE = async (
 ) => {
   const baseUrl = process.env.NEXT_PUBLIC_GOPIE_API_URL || 'http://localhost:8000';
   const url = `${baseUrl}/v1/api/downloads`;
-  
+
   const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
   const orgId = getGlobalOrganizationId();
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   // Add authentication headers
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  
+
   // Add organization header
   if (!isAuthEnabled) {
     headers['x-user-id'] = 'system';
@@ -45,10 +44,11 @@ export const createDownloadWithSSE = async (
   } else if (orgId) {
     headers['x-organization-id'] = orgId;
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     headers,
+    credentials: "include",
     body: JSON.stringify(params)
   });
 
@@ -69,33 +69,33 @@ export const createDownloadWithSSE = async (
       try {
         while (true) {
           const { done, value } = await reader.read();
-          
+
           if (done) break;
-          
+
           const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split('\n');
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const jsonStr = line.slice(6);
               if (jsonStr.trim()) {
                 try {
                   const data = JSON.parse(jsonStr) as SSEMessage;
-                  
+
                   // Log for debugging
                   console.log('SSE message received:', data);
-                  
+
                   if (onProgress) {
                     onProgress(data);
                   }
-                  
+
                   // Handle completion - the URL is in the message field when type is 'complete'
                   if (data.type === 'complete' && data.download_id && data.message) {
                     // The message contains the download URL
                     resolve({ downloadId: data.download_id, url: data.message });
                     return;
                   }
-                  
+
                   if (data.type === 'error') {
                     reject(new Error(data.message || 'Download failed'));
                     return;
@@ -120,7 +120,6 @@ export const createDownloadWithSSE = async (
 };
 
 export const useCreateDownload = () => {
-  const { accessToken } = useAuth();
   const { setCurrentDownloadProgress, setError } = useDownloadStore();
 
   const createDownload = async (params: CreateDownloadRequest) => {
@@ -172,7 +171,7 @@ export const useCreateDownload = () => {
             });
           }
         },
-        accessToken
+        getGlobalAccessToken()
       );
 
       return result;

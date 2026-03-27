@@ -3,7 +3,6 @@ package middleware
 import (
 	"github.com/factly/gopie/application/services"
 	"github.com/factly/gopie/domain"
-	"github.com/factly/gopie/domain/models"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,7 +15,7 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 		projectID := c.Params("projectID")
 		orgID, _ := c.Locals(OrganizationCtxKey).(string)
 		userID, _ := c.Locals(UserCtxKey).(string)
-		role := c.Locals(RoleCtxKey).(models.Role)
+
 		if projectID == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   "Invalid request",
@@ -34,7 +33,7 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 			})
 		}
 
-		_, err := projectSvc.Details(projectID, orgID, userID, role)
+		_, err := projectSvc.Details(projectID, orgID, userID)
 		if err != nil {
 			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

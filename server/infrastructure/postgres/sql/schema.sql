@@ -132,3 +132,94 @@ create table if not exists api_keys(
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now()
 );
+
+-- Better Auth tables (managed by the web app, read-only from the Go server)
+create table if not exists "user" (
+    id text primary key,
+    name text not null,
+    email text not null unique,
+    "emailVerified" boolean not null default false,
+    image text,
+    role text not null default 'user',
+    banned boolean not null default false,
+    "banReason" text,
+    "banExpires" timestamp with time zone,
+    "twoFactorEnabled" boolean default false,
+    "createdAt" timestamp with time zone not null default now(),
+    "updatedAt" timestamp with time zone not null default now()
+);
+
+create table if not exists organization (
+    id text primary key,
+    name text not null,
+    slug text not null unique,
+    logo text,
+    metadata text,
+    "createdAt" timestamp with time zone not null default now()
+);
+
+create table if not exists session (
+    id text primary key,
+    "userId" text not null references "user"(id) on delete cascade,
+    token text not null unique,
+    "expiresAt" timestamp with time zone not null,
+    "ipAddress" text,
+    "userAgent" text,
+    "activeOrganizationId" text references organization(id) on delete set null,
+    "impersonatedBy" text,
+    "createdAt" timestamp with time zone not null default now(),
+    "updatedAt" timestamp with time zone not null default now()
+);
+
+create table if not exists member (
+    id text primary key,
+    "userId" text not null references "user"(id) on delete cascade,
+    "organizationId" text not null references organization(id) on delete cascade,
+    role text not null,
+    "createdAt" timestamp with time zone not null default now()
+);
+
+create table if not exists account (
+    id text primary key,
+    "userId" text not null references "user"(id) on delete cascade,
+    "accountId" text not null,
+    "providerId" text not null,
+    "accessToken" text,
+    "refreshToken" text,
+    "accessTokenExpiresAt" timestamp with time zone,
+    "refreshTokenExpiresAt" timestamp with time zone,
+    scope text,
+    "idToken" text,
+    password text,
+    "createdAt" timestamp with time zone not null default now(),
+    "updatedAt" timestamp with time zone not null default now()
+);
+
+create table if not exists verification (
+    id text primary key,
+    identifier text not null,
+    value text not null,
+    "expiresAt" timestamp with time zone not null,
+    "createdAt" timestamp with time zone not null default now(),
+    "updatedAt" timestamp with time zone not null default now()
+);
+
+create table if not exists invitation (
+    id text primary key,
+    email text not null,
+    "inviterId" text not null references "user"(id) on delete cascade,
+    "organizationId" text not null references organization(id) on delete cascade,
+    role text not null,
+    status text not null default 'pending',
+    "expiresAt" timestamp with time zone not null,
+    "createdAt" timestamp with time zone not null default now()
+);
+
+create table if not exists "twoFactor" (
+    id text primary key,
+    "userId" text not null references "user"(id) on delete cascade,
+    secret text,
+    "backupCodes" text,
+    "createdAt" timestamp with time zone not null default now(),
+    "updatedAt" timestamp with time zone not null default now()
+);

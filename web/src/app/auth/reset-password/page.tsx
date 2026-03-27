@@ -15,6 +15,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authClient } from "@/lib/auth/auth-client";
+import { PasswordRules } from "@/components/auth/password-rules";
+import { validatePassword } from "@/lib/validation/password";
+import { encryptPassword } from "@/lib/crypto/password-encryption";
 
 function ResetPassword() {
   const searchParams = useSearchParams();
@@ -27,26 +31,21 @@ function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Get reset parameters from URL
-  const userID = searchParams.get("userID");
-  const orgID = searchParams.get("orgID");
-  const codeID = searchParams.get("codeID");
-  const code = searchParams.get("code");
+  // Better Auth sends a `token` query param in the reset link
+  const token = searchParams.get("token");
 
   useEffect(() => {
-    // Validate that all required parameters are present
-    if (!userID || !orgID || !codeID || !code) {
+    if (!token) {
       setError(
         "Invalid or expired reset link. Please request a new password reset."
       );
     }
-  }, [userID, orgID, codeID, code]);
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields");
       return;
@@ -57,12 +56,13 @@ function ResetPassword() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    const { valid, errors } = validatePassword(formData.password);
+    if (!valid) {
+      setError(`Password must include: ${errors.join(", ").toLowerCase()}`);
       return;
     }
 
-    if (!userID || !code) {
+    if (!token) {
       setError("Invalid reset link. Please request a new password reset.");
       return;
     }
@@ -70,28 +70,19 @@ function ResetPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/reset-password/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: userID,
-          code: code,
-          newPassword: formData.password,
-        }),
+      const { error: apiError } = await authClient.resetPassword({
+        newPassword: await encryptPassword(formData.password),
+        token,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Failed to reset password. Please try again.");
+      if (apiError) {
+        setError(apiError.message || "Failed to reset password. Please try again.");
         return;
       }
 
       setSuccess(true);
-    } catch (error) {
-      console.error("Password reset error:", error);
+    } catch (err) {
+      console.error("Password reset error:", err);
       setError("Network error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -155,12 +146,13 @@ function ResetPassword() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your new password (min 8 characters)"
+                placeholder="Enter your new password"
                 value={formData.password}
                 onChange={handleInputChange("password")}
                 disabled={isLoading}
                 required
               />
+              <PasswordRules password={formData.password} />
             </div>
 
             <div className="space-y-2">

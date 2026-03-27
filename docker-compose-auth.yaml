@@ -23,34 +23,6 @@ services:
     networks:
       - gopie
 
-  ###########################################################################
-  #######                      ZITADEL                                #######
-  ###########################################################################
-  zitadel:
-    restart: "always"
-    image: "ghcr.io/zitadel/zitadel:v4.6.6"
-    command: "start-from-init --masterkey h9tyO3xu9Qr5ygDhkMgc44x0j3tWHjPL --tlsMode disabled"
-    ports:
-      - "8080:8080"
-    env_file:
-      - ./config-auth.env
-    depends_on:
-      - postgres
-    networks:
-      - gopie
-
-  nginx:
-    image: nginx:latest
-    restart: "always"
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - zitadel
-    networks:
-      - gopie
-
   #########################################################################
   #####                        GOPIE SERVICES                          #####
   #########################################################################
@@ -74,39 +46,33 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./config-auth.env
-    volumes:
-      - ./server/zitadel_key.json:/home/gopie/zitadel_key.json
-      - ./infrastructure/postgres/migrations:/home/gopie/migrations:ro
     ports:
       - "8000:8000"
-      - "8001:8001"
       - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./volumes/duckdb:/home/gopie/dataful
     networks:
       - gopie
-    extra_hosts:
-      - "127.0.0.1.zitadel.local:host-gateway"
     user: "0:0"
     command: >
-      sh -c "chown -R 1001:1001 /home/gopie/dataful && 
-             chmod -R 755 /home/gopie/dataful && 
+      sh -c "chown -R 1001:1001 /home/gopie/dataful &&
+             chmod -R 755 /home/gopie/dataful &&
              su -s /bin/sh gopie -c 'cd /home/gopie && gopie serve'"
 
-  gopie-web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile.prod
-    env_file:
-      - ./config-auth.env
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    extra_hosts:
-      - "127.0.0.1.zitadel.local:host-gateway"
-    networks:
-      - gopie
+  # gopie-web:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile.dev
+  #   env_file:
+  #     - ./config-auth.env
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
+  #   networks:
+  #     - gopie
 
   #########################################################################
   #####                        MINIO                                #######

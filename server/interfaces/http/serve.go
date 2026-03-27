@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/factly/gopie/domain/pkg/config"
-	"github.com/factly/gopie/infrastructure/zitadel"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/factly/gopie/interfaces/http/routes/api"
 	"github.com/factly/gopie/interfaces/http/routes/api/ai"
@@ -12,6 +11,7 @@ import (
 	"github.com/factly/gopie/interfaces/http/routes/api/download"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	s3Routes "github.com/factly/gopie/interfaces/http/routes/source/s3"
 	"github.com/gofiber/contrib/fiberzap"
@@ -22,15 +22,13 @@ import (
 )
 
 // serve starts the web application server
-func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+func serve(cfg *config.GopieConfig, params *ServerParams, pool *pgxpool.Pool, ctx context.Context) error {
 	var authMiddleware []fiber.Handler
-	if cfg.EnableZitadel {
-		// zitadel interceptor setup
-		params.Logger.Info("Zitadel is enabled, setting up zitadel interceptor")
-		zitadel.SetupZitadelInterceptor(cfg, params.Logger)
-		authMiddleware = []fiber.Handler{middleware.ZitadelAuthorizer(params.Logger), middleware.ZitadelAuth(params.Logger), middleware.RoleAuthorization()}
+	if cfg.EnableAuth {
+		params.Logger.Info("Better Auth is enabled, setting up session-based auth middleware")
+		authMiddleware = []fiber.Handler{middleware.BetterAuthMiddleware(pool, params.Logger, cfg.UseSecureAuthCookie)}
 	} else {
-		params.Logger.Info("Zitadel is disabled, setting up authorize headers interceptor")
+		params.Logger.Info("Auth is disabled, setting up authorize headers interceptor")
 		authMiddleware = []fiber.Handler{middleware.AuthorizeHeaders(params.Logger)}
 	}
 
@@ -47,7 +45,10 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{}))
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.CORSAllowOrigins,
+			AllowCredentials: true,
+		}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -152,7 +153,7 @@ func serve(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) e
 	return nil
 }
 
-func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+func serveInternal(cfg *config.GopieConfig, params *ServerParams, pool *pgxpool.Pool, ctx context.Context) error {
 	appLogger := params.Logger
 
 	appLogger.Info("Initializing internal server",
@@ -167,7 +168,10 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{}))
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.CORSAllowOrigins,
+			AllowCredentials: true,
+		}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -226,7 +230,7 @@ func serveInternal(cfg *config.GopieConfig, params *ServerParams, ctx context.Co
 	return nil
 }
 
-func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context) error {
+func serveAPI(cfg *config.GopieConfig, params *ServerParams, pool *pgxpool.Pool, ctx context.Context) error {
 	appLogger := params.Logger
 
 	appLogger.Info("Initializing api server",
@@ -240,7 +244,10 @@ func serveAPI(cfg *config.GopieConfig, params *ServerParams, ctx context.Context
 
 	// Apply CORS middleware only if not handled by ingress
 	if !cfg.CORSHandledByIngress {
-		app.Use(cors.New(cors.Config{}))
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.CORSAllowOrigins,
+			AllowCredentials: true,
+		}))
 	}
 
 	app.Use(fiberzap.New(fiberzap.Config{

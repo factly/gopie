@@ -10,6 +10,8 @@ import { DatasetHeader } from "@/components/dataset/dataset-header";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { useResourcePermissions } from "@/hooks/use-permissions";
 
 export default function DatasetPage({
   params,
@@ -19,13 +21,13 @@ export default function DatasetPage({
   const { datasetId, projectId } = React.use(params);
   const queryClient = useQueryClient();
   const { setOpen } = useSidebar();
-
   const { data: dataset, isLoading } = useDataset({
     variables: {
       datasetId,
       projectId,
     },
   });
+  const permissions = useResourcePermissions(dataset?.created_by);
 
   const tableSchema = dataset?.columns || [];
 
@@ -123,6 +125,7 @@ export default function DatasetPage({
             dataset={dataset}
             projectId={projectId}
             onUpdate={handleUpdate}
+            canEdit={permissions.canEdit}
           />
         </motion.div>
 

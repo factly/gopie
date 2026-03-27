@@ -53,7 +53,7 @@ func (h *httpHandler) update(ctx *fiber.Ctx) error {
 			"code":    fiber.StatusBadRequest,
 		})
 	}
-	existingDataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
+	existingDataset, err := h.datasetsSvc.Details(datasetID, orgID, userID)
 	if err != nil {
 		h.logger.Error("Error updating dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

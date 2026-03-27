@@ -2,7 +2,6 @@ package datasets
 
 import (
 	"github.com/factly/gopie/domain"
-	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -22,8 +21,7 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
-	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID, role)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID)
 	if err != nil {
 		h.logger.Error("Error fetching dataset details", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

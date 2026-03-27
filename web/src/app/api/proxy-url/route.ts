@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "User-Agent": "GoPie-Web/1.0",
       },
+      credentials: "include"
     });
 
     if (!response.ok) {

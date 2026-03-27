@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authClient } from "@/lib/auth/auth-client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -35,26 +36,19 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
+      const { error: apiError } = await authClient.requestPasswordReset({
+        email,
+        redirectTo: "/auth/reset-password",
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(
-          data.error || "Failed to send password reset email. Please try again."
-        );
+      if (apiError) {
+        setError(apiError.message || "Failed to send password reset email. Please try again.");
         return;
       }
 
-      setMessage(data.message);
-    } catch (error) {
-      console.error("Password reset error:", error);
+      setMessage("Password reset link sent. Please check your email.");
+    } catch (err) {
+      console.error("Password reset error:", err);
       setError("Network error occurred. Please try again.");
     } finally {
       setIsLoading(false);

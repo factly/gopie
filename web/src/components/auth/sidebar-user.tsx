@@ -90,11 +90,11 @@ export function SidebarUser() {
           >
             <Avatar className="h-8 w-8">
               <AvatarImage
-                src={ ""}
-                alt={user.displayName || "User"}
+                src={user.image ?? ""}
+                alt={user.name || "User"}
               />
               <AvatarFallback>
-                {getInitials(user.displayName || "")}
+                {getInitials(user.name || "")}
               </AvatarFallback>
             </Avatar>
           </Button>
@@ -103,7 +103,7 @@ export function SidebarUser() {
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">
-                {user.displayName}
+                {user.name}
               </p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user.email}
@@ -118,7 +118,7 @@ export function SidebarUser() {
       </DropdownMenu>
       <div className="ml-2 flex flex-col items-start gap-0.5 overflow-hidden">
         <p className="text-sm font-medium leading-none truncate max-w-[140px]">
-          {user.displayName}
+          {user.name}
         </p>
         <p className="text-xs text-muted-foreground truncate max-w-[140px]">
           {user.email}

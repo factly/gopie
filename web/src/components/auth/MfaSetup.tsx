@@ -12,7 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Copy, Shield } from "lucide-react";
+import { authClient } from "@/lib/auth/auth-client";
+import { encryptPassword } from "@/lib/crypto/password-encryption";
 
 interface MfaSetupProps {
   onVerify: (code: string) => Promise<void>;
@@ -27,39 +30,76 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
   onVerify,
   onSkip,
   isLoading,
-  userId,
-  email,
   password,
 }) => {
   const [mfaData, setMfaData] = useState<{
-    uri: string;
+    totpURI: string;
     secret: string;
+    backupCodes?: string[];
   } | null>(null);
   const [code, setCode] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMfaData = async () => {
+    const setupMfa = async () => {
+      setSetupLoading(true);
+      setError(null);
+
       try {
-        const response = await fetch("/api/auth/mfa/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, email, password }),
+        const encryptedPassword = await encryptPassword(password);
+
+        // First enable 2FA - this returns backup codes
+        const { data: enableData, error: enableError } = await authClient.twoFactor.enable({
+          password: encryptedPassword,
         });
-        if (response.ok) {
-          const data = await response.json();
-          setMfaData(data);
+
+        if (enableError) {
+          onSkip();
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching MFA data:", error);
+
+        // Then get the TOTP URI for QR code
+        const { data: totpData, error: totpError } = await authClient.twoFactor.getTotpUri({
+          password: encryptedPassword,
+        });
+
+        if (totpError) {
+          onSkip();
+          return;
+        }
+
+        if (totpData) {
+          // Extract secret from TOTP URI
+          const secretMatch = totpData.totpURI.match(/secret=([^&]+)/);
+          const secret = secretMatch ? secretMatch[1] : "";
+
+          setMfaData({
+            totpURI: totpData.totpURI,
+            secret,
+            backupCodes: enableData?.backupCodes,
+          });
+        }
+      } catch (err) {
+        console.error("Error setting up MFA:", err);
+        onSkip();
+        return;
+      } finally {
+        setSetupLoading(false);
       }
     };
-    fetchMfaData();
-  }, [userId, email, password]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+    setupMfa();
+  }, [password]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onVerify(code);
+    try {
+      await onVerify(code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed");
+    }
   };
 
   const copyToClipboard = async () => {
@@ -74,7 +114,7 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
     }
   };
 
-  if (!mfaData) {
+  if (setupLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
@@ -93,6 +133,10 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
         </Card>
       </div>
     );
+  }
+
+  if (!mfaData) {
+    return null;
   }
 
   return (
@@ -118,7 +162,7 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
             {/* QR Code with theme-aware colors */}
             <div className="flex justify-center p-6 bg-white dark:bg-white rounded-lg border shadow-sm">
               <div className="p-4 bg-white rounded-lg">
-                <QRCodeCanvas value={mfaData.uri} size={240} />
+                <QRCodeCanvas value={mfaData.totpURI} size={240} />
               </div>
             </div>
           </div>
@@ -145,6 +189,29 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
               <p className="text-xs text-green-600">Copied to clipboard!</p>
             )}
           </div>
+
+          {mfaData.backupCodes && mfaData.backupCodes.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Backup Codes</Label>
+                <p className="text-xs text-muted-foreground">
+                  Save these backup codes in a secure place. You can use them to
+                  access your account if you lose your authenticator device.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {mfaData.backupCodes.map((backupCode, index) => (
+                    <code
+                      key={index}
+                      className="p-2 bg-muted rounded text-sm font-mono text-center"
+                    >
+                      {backupCode}
+                    </code>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 

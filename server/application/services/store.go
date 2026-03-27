@@ -25,11 +25,8 @@ func (service *ProjectService) Create(params models.CreateProjectParams) (*model
 }
 
 // Details - Get project by id
-func (service *ProjectService) Details(id, orgID, createdBy string, role models.Role) (*models.Project, error) {
-	if role == models.Admin {
-		return service.projectRepo.Details(context.Background(), id, orgID)
-	}
-	return service.projectRepo.DetailsByOrgAndCreator(context.Background(), id, orgID, createdBy)
+func (service *ProjectService) Details(id, orgID, createdBy string) (*models.Project, error) {
+	return service.projectRepo.Details(context.Background(), id, orgID)
 }
 
 func (service *ProjectService) GetProjectByID(id string) (*models.Project, error) {
@@ -61,16 +58,13 @@ func (service *ProjectService) DatasetsBelongToOrg(datasetNames []string, orgID 
 }
 
 // List - Search projects
-func (service *ProjectService) List(query string, limit, page int, orgID, createdBy string, role models.Role) (*models.PaginationView[*models.SearchProjectsResults], error) {
+func (service *ProjectService) List(query string, limit, page int, orgID, createdBy string) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
 
-	if role == models.Admin {
-		return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
-	}
 	return service.projectRepo.SearchProjectByOrgAndCreator(context.Background(), query, pagination, orgID, createdBy)
 }
 
@@ -96,10 +90,7 @@ func (service *DatasetService) Create(params *models.CreateDatasetParams) (*mode
 	return service.datasetRepo.Create(context.Background(), params)
 }
 
-func (service *DatasetService) Details(id, orgID, createdBy string, role models.Role) (*models.Dataset, error) {
-	if role == models.Admin {
-		return service.datasetRepo.Details(context.Background(), id, orgID)
-	}
+func (service *DatasetService) Details(id, orgID, createdBy string) (*models.Dataset, error) {
 	return service.datasetRepo.DetailsByOrgAndCreator(context.Background(), id, orgID, createdBy)
 }
 
@@ -113,7 +104,7 @@ func (service *DatasetService) List(projectID string, role models.Role, orgID, c
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
-	return service.datasetRepo.ListByProjectAndRole(context.Background(), projectID, orgID, createdBy, role, pagination)
+	return service.datasetRepo.ListByProjectAndOrg(context.Background(), projectID, orgID, createdBy, pagination)
 }
 
 func (service *DatasetService) Delete(id, orgID, createdBy string, role models.Role) error {

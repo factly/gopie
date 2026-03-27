@@ -8,6 +8,9 @@ import {
   KeyIcon,
   SettingsIcon,
   DownloadIcon,
+  UserCircle,
+  Shield,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -127,8 +130,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return null;
   }
 
-  // Check if we're on a settings page
+  // Check if we're on a settings or admin page
   const isSettingsPage = pathname.startsWith("/settings");
+  const isAdminPage = pathname.startsWith("/admin");
 
   const navSecondary = [
     {
@@ -155,8 +159,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const shouldShowPeek = state === "collapsed" && isPeeking;
 
+  // Admin navigation items
+  const adminItems = [
+    {
+      title: "Users",
+      url: "/admin/users",
+      icon: Users,
+    },
+  ];
+
+  // Admin navigation component
+  const NavAdmin = () => {
+    const isActive = (href: string) => pathname === href;
+
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel className="flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Admin
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {adminItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.url)}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                >
+                  <Link href={item.url}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
+
   // Settings navigation items
   const settingsItems = [
+    {
+      title: "Profile",
+      url: "/settings/profile",
+      icon: UserCircle,
+    },
     {
       title: "Manage Secrets",
       url: "/settings/secrets",
@@ -305,7 +355,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuItem>
                   </SidebarMenu>
 
-                  {!isSettingsPage && (
+                  {!isSettingsPage && !isAdminPage && (
                     <>
                       <CommandSearch
                         projectId={projectId}
@@ -335,6 +385,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarContent className="flex-1">
                   {isSettingsPage ? (
                     <NavSettings />
+                  ) : isAdminPage ? (
+                    <NavAdmin />
                   ) : (
                     <>
                       <NavProjectsChat />
@@ -386,7 +438,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
           </SidebarMenu>
 
-          {!isSettingsPage && (
+          {!isSettingsPage && !isAdminPage && (
             <>
               <CommandSearch projectId={projectId} onNavigate={router.push} />
               <SidebarMenu>
@@ -413,6 +465,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarContent>
           {isSettingsPage ? (
             <NavSettings />
+          ) : isAdminPage ? (
+            <NavAdmin />
           ) : (
             <>
               <NavProjectsChat />

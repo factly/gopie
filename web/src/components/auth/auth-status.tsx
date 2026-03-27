@@ -60,7 +60,7 @@ export function AuthStatus({
     <div className={`flex items-center gap-3 ${className}`}>
       {showName && (
         <span className="text-sm font-medium hidden sm:inline-block">
-          {user.displayName}
+          {user.name}
         </span>
       )}
       <UserDropdown />
