@@ -75,7 +75,6 @@ export function UrlUploader({
 
   // Column description store integration
   const clearColumnDescriptions = useColumnDescriptionStore((state) => state.clearColumnDescriptions);
-  
   // Upload store integration for filename tracking
   const setOriginalFileName = useUploadStore((state) => state.setOriginalFileName);
 
@@ -279,6 +278,7 @@ export function UrlUploader({
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({ url }),
     });
 
@@ -290,7 +290,7 @@ export function UrlUploader({
     const blob = await response.blob();
     const filename = getFilenameFromUrl(url);
     const contentType = response.headers.get("content-type") || "text/csv";
-    
+
     return new File([blob], filename, { type: contentType });
   };
 
@@ -450,7 +450,7 @@ export function UrlUploader({
               );
             }
           }
-          
+
           // Call validation success callback if provided
           if (onValidationSuccess) {
             onValidationSuccess();
@@ -566,7 +566,7 @@ export function UrlUploader({
         >
           {validationResult.isValid ? (
             validationResult.error &&
-            validationResult.error.includes("too large") ? (
+              validationResult.error.includes("too large") ? (
               <AlertCircle className="h-4 w-4 text-blue-500" />
             ) : (
               <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -580,53 +580,53 @@ export function UrlUploader({
                 validationResult.error.includes("too large")
                 ? "Large File Detected"
                 : `DuckDB ${getFileFormatDisplay(
-                    validationResult.format
-                  )} Validation Successful`
-              : `DuckDB ${getFileFormatDisplay(
                   validationResult.format
-                )} Validation Failed`}
+                )} Validation Successful`
+              : `DuckDB ${getFileFormatDisplay(
+                validationResult.format
+              )} Validation Failed`}
           </AlertTitle>
           <AlertDescription>
             {validationResult.error
               ? validationResult.error
               : validationResult.columnNames && (
-                  <div className="mt-2">
-                    <p>
-                      {getFileFormatDisplay(validationResult.format)} file is
-                      valid with {validationResult.columnCount} columns:
-                    </p>
-                    <p className="text-xs mt-1 max-h-20 overflow-y-auto">
-                      {validationResult.columnNames.join(", ")}
-                    </p>
-                    {validationResult.tables &&
-                      validationResult.tables.length > 1 && (
-                        <p className="text-sm mt-2 text-blue-500">
-                          DuckDB file contains {validationResult.tables.length}{" "}
-                          tables: {validationResult.tables.join(", ")}
-                        </p>
-                      )}
-                    {modifiedFile && (
-                      <p className="text-sm mt-2 text-blue-500 font-medium">
-                        File processed with custom datatypes. The column names
-                        will be updated during import.
+                <div className="mt-2">
+                  <p>
+                    {getFileFormatDisplay(validationResult.format)} file is
+                    valid with {validationResult.columnCount} columns:
+                  </p>
+                  <p className="text-xs mt-1 max-h-20 overflow-y-auto">
+                    {validationResult.columnNames.join(", ")}
+                  </p>
+                  {validationResult.tables &&
+                    validationResult.tables.length > 1 && (
+                      <p className="text-sm mt-2 text-blue-500">
+                        DuckDB file contains {validationResult.tables.length}{" "}
+                        tables: {validationResult.tables.join(", ")}
                       </p>
                     )}
-                    {hasDataTypeChanges() &&
-                      !modifiedFile &&
-                      detectedFormat === "csv" && (
-                        <p className="text-sm mt-2 text-amber-500">
-                          Datatype changes will be applied on next edit
-                        </p>
-                      )}
-                    {detectedFormat &&
-                      !["csv"].includes(detectedFormat) &&
-                      hasDataTypeChanges() && (
-                        <p className="text-sm mt-2 text-gray-500">
-                          Datatype conversion is only available for CSV files
-                        </p>
-                      )}
-                  </div>
-                )}
+                  {modifiedFile && (
+                    <p className="text-sm mt-2 text-blue-500 font-medium">
+                      File processed with custom datatypes. The column names
+                      will be updated during import.
+                    </p>
+                  )}
+                  {hasDataTypeChanges() &&
+                    !modifiedFile &&
+                    detectedFormat === "csv" && (
+                      <p className="text-sm mt-2 text-amber-500">
+                        Datatype changes will be applied on next edit
+                      </p>
+                    )}
+                  {detectedFormat &&
+                    !["csv"].includes(detectedFormat) &&
+                    hasDataTypeChanges() && (
+                      <p className="text-sm mt-2 text-gray-500">
+                        Datatype conversion is only available for CSV files
+                      </p>
+                    )}
+                </div>
+              )}
           </AlertDescription>
         </Alert>
       )}
@@ -650,22 +650,22 @@ export function UrlUploader({
                 {validationResult.rejectedRows &&
                   validationResult.rejectedRows.slice(0, 5).map((rejection, index) => {
                     let displayMessage = "";
-                    
+
                     if (rejection.actualValue && rejection.actualValue.trim() !== "") {
                       // Show actual value if it exists and is not just whitespace
-                      const actualValue = rejection.actualValue.length > 50 ? 
-                        `${rejection.actualValue.substring(0, 50)}...` : 
+                      const actualValue = rejection.actualValue.length > 50 ?
+                        `${rejection.actualValue.substring(0, 50)}...` :
                         rejection.actualValue;
                       displayMessage = `got '${actualValue}'`;
                     } else {
                       // For empty values, just say "is empty" or "is missing"
                       displayMessage = "is empty";
                     }
-                    
-                    const displayExpectedType = rejection.expectedType === "unknown" ? 
-                      "a valid type" : 
+
+                    const displayExpectedType = rejection.expectedType === "unknown" ?
+                      "a valid type" :
                       rejection.expectedType;
-                    
+
                     return (
                       <div key={index} className="text-xs bg-amber-100 dark:bg-amber-900 p-2 rounded border border-amber-200 dark:border-amber-700">
                         <span className="font-medium">Row {rejection.rowNumber}:</span>{" "}

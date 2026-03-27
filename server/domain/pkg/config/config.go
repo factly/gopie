@@ -59,14 +59,15 @@ type GopieConfig struct {
 	OpenAI               OpenAIConfig
 	Meterus              MeterusConfig
 	Postgres             PostgresConfig
-	Zitadel              ZitadelConfig
 	AIAgent              AIAgentConfig
 	InternalServer       InternalServerConfig
 	APIServer            APIServerConfig
-	EnableZitadel        bool
+	EnableAuth           bool
+	UseSecureAuthCookie  bool
 	DownloadsServer      DownloadsConfig
 	EncryptionKey        string
 	CORSHandledByIngress bool
+	CORSAllowOrigins     string
 }
 
 type OlapDBConfig struct {
@@ -112,13 +113,6 @@ type DownloadsConfig struct {
 	Bucket string
 }
 
-type ZitadelConfig struct {
-	Protocol     string
-	Domain       string
-	InsecurePort string
-	ProjectID    string
-}
-
 func initializeViper() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("env")
@@ -151,17 +145,6 @@ func validateConfig(config *GopieConfig) (*GopieConfig, error) {
 		{config.Postgres.Password, "postgres password"},
 		{config.AIAgent.Url, "ai agent url"},
 		{config.EncryptionKey, "encryption key"},
-	}
-
-	if config.EnableZitadel {
-		validations = append(validations,
-			validation{config.Zitadel.Protocol, "zitadel protocol"},
-			validation{config.Zitadel.Domain, "zitadel domain"},
-			validation{config.Zitadel.ProjectID, "zitadel project id"},
-		)
-		if viper.GetString("GOPIE_ZITADEL_PROTOCOL") != "https" {
-			validations = append(validations, validation{config.Zitadel.InsecurePort, "zitadel insecure port"})
-		}
 	}
 
 	validations = append(validations, validation{config.DownloadsServer.Bucket, "downloads bucket name"})
@@ -257,7 +240,8 @@ func setDefaults() {
 	viper.SetDefault("GOPIE_LOGGER_MODE", "dev")
 	viper.SetDefault("GOPIE_OLAPDB_ACCESS_MODE", "read_write")
 	viper.SetDefault("GOPIE_DUCKDB_CPU", 1)
-	viper.SetDefault("GOPIE_ENABLE_ZITADEL", false)
+	viper.SetDefault("GOPIE_ENABLE_AUTH", false)
+	viper.SetDefault("GOPIE_USE_SECURE_AUTH_COOKIE", true)
 	viper.SetDefault("GOPIE_DUCKDB_MEMORY_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_STORAGE_LIMIT", 1024)
 	viper.SetDefault("GOPIE_DUCKDB_PATH", "./duckdb/gopie.db")
@@ -288,6 +272,7 @@ func LoadConfig() (*GopieConfig, error) {
 			Host: viper.GetString("GOPIE_API_SERVER_HOST"),
 			Port: viper.GetString("GOPIE_API_SERVER_PORT"),
 		},
+		CORSAllowOrigins:     viper.GetString("GOPIE_CORS_ALLOWED_ORIGINS"),
 		CORSHandledByIngress: viper.GetBool("GOPIE_CORS_HANDLED_BY_INGRESS"),
 		S3: S3Config{
 			AccessKey: viper.GetString("GOPIE_S3_ACCESS_KEY"),
@@ -322,13 +307,8 @@ func LoadConfig() (*GopieConfig, error) {
 			User:     viper.GetString("GOPIE_POSTGRES_USER"),
 			Password: viper.GetString("GOPIE_POSTGRES_PASSWORD"),
 		},
-		Zitadel: ZitadelConfig{
-			Protocol:     viper.GetString("GOPIE_ZITADEL_PROTOCOL"),
-			Domain:       viper.GetString("GOPIE_ZITADEL_DOMAIN"),
-			InsecurePort: viper.GetString("GOPIE_ZITADEL_INSECURE_PORT"),
-			ProjectID:    viper.GetString("GOPIE_ZITADEL_PROJECT_ID"),
-		},
-		EnableZitadel: viper.GetBool("GOPIE_ENABLE_ZITADEL"),
+		EnableAuth:          viper.GetBool("GOPIE_ENABLE_AUTH"),
+		UseSecureAuthCookie: viper.GetBool("GOPIE_USE_SECURE_AUTH_COOKIE"),
 		AIAgent: AIAgentConfig{
 			Url: viper.GetString("GOPIE_AIAGENT_URL"),
 		},

@@ -20,6 +20,7 @@ import (
 	"github.com/factly/gopie/infrastructure/postgres/store/downloads"
 	"github.com/factly/gopie/infrastructure/postgres/store/projects"
 	"github.com/factly/gopie/infrastructure/s3"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -98,6 +99,9 @@ func ServeHttp() error {
 		return err
 	}
 
+	// Get pool for auth middleware
+	pool := storeRepo.GetDB().(*pgxpool.Pool)
+
 	// Create ServerParams to pass to both servers
 	params := &ServerParams{
 		Logger:           appLogger,
@@ -122,7 +126,7 @@ func ServeHttp() error {
 	go func() {
 		defer wg.Done()
 		appLogger.Info("Web Application server is enabled via config. Starting in a goroutine...")
-		if err := serve(cfg, params, ctx); err != nil {
+		if err := serve(cfg, params, pool, ctx); err != nil {
 			appLogger.Error("Web Application server failed to start", zap.Error(err))
 			cancel()
 		}
@@ -131,7 +135,7 @@ func ServeHttp() error {
 	go func() {
 		defer wg.Done()
 		appLogger.Info("Internal server is enabled via config. Starting in a goroutine...")
-		if err := serveInternal(cfg, params, ctx); err != nil {
+		if err := serveInternal(cfg, params, pool, ctx); err != nil {
 			appLogger.Error("Web Application server failed to start", zap.Error(err))
 			cancel()
 		}
@@ -140,7 +144,7 @@ func ServeHttp() error {
 	go func() {
 		defer wg.Done()
 		appLogger.Info("API server is enabled via config. Starting in a goroutine...")
-		if err := serveAPI(cfg, params, ctx); err != nil {
+		if err := serveAPI(cfg, params, pool, ctx); err != nil {
 			appLogger.Error("API server failed to start", zap.Error(err))
 			cancel()
 		}

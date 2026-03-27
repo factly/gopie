@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ACCESS_TOKEN_COOKIE, SESSION_ID_COOKIE, SESSION_TOKEN_COOKIE } from "@/constants/zitade";
-import { zitadelClient } from "@/lib/auth/zitadel-client";
+import { getSessionCookieName } from "@/lib/auth/auth-config";
+
+// Better Auth session cookie name (includes __Secure- prefix in production)
+const SESSION_COOKIE_NAME = getSessionCookieName();
 
 // Protected routes that require authentication
 const protectedRoutes = [
@@ -19,36 +21,45 @@ const publicRoutes = [
   "/auth/register",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/auth/two-factor",
+  "/auth/invitation",
 ];
 
 // This middleware protects all routes
 export async function middleware(request: NextRequest) {
   // Skip authentication if enable auth is set to false
   const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
+  const isRegistrationAllowed = String(process.env.NEXT_PUBLIC_ALLOW_REGISTRATION).trim() === "true";
 
   // If auth is not enabled, skip all authentication checks
   if (!isAuthEnabled) {
-    console.log("Auth is disabled, skipping middleware");
     return NextResponse.next();
   }
 
   const { pathname } = request.nextUrl;
+
+  // Block registration routes if registration is disabled
+  if (!isRegistrationAllowed && pathname.startsWith("/auth/register")) {
+    // Redirect to login page
+    const loginUrl = new URL("/auth/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
-  // Allow API routes (except auth routes which handle their own authentication)
-  if (pathname.startsWith("/api") && !pathname.startsWith("/api/auth")) {
+  // Allow API routes - Better Auth handles its own authentication via /api/auth/*
+  if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  // Check for session cookies
-  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+  // Check for Better Auth session cookie
+  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  // If no session cookies, redirect to login for protected routes
-  if (!accessToken) {
+  // If no session cookie, redirect to login for protected routes
+  if (!sessionToken) {
     if (
       protectedRoutes.some(
         (route) => pathname === route || pathname.startsWith(route + "/")
@@ -67,26 +78,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Validate session (only for protected routes)
-  if (
-    protectedRoutes.some(
-      (route) => pathname === route || pathname.startsWith(route + "/")
-    )
-  ) {
-    const user = await zitadelClient.getUserInfo(accessToken);
-
-    if (!user) {
-      // Clear invalid session cookies
-      const response = NextResponse.redirect(
-        new URL("/auth/login", request.url)
-      );
-      response.cookies.delete(ACCESS_TOKEN_COOKIE);
-      response.cookies.delete(SESSION_TOKEN_COOKIE);
-      response.cookies.delete(SESSION_ID_COOKIE);
-      return response;
-    }
-  }
-
+  // Session exists, allow access
+  // Note: Better Auth validates sessions server-side via the API route
+  // The middleware only checks for cookie presence for routing purposes
   return NextResponse.next();
 }
 
@@ -100,6 +94,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public assets
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.wasm|.*\\.worker\\.js).*)",
   ],
 };

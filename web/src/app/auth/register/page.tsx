@@ -17,21 +17,20 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { authClient } from "@/lib/auth/auth-client";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { useAuthRequest } from "@/hooks/use-auth-request";
-import MfaSetup from '@/components/auth/MfaSetup';
+import MfaSetup from "@/components/auth/MfaSetup";
+import { PasswordRules } from "@/components/auth/password-rules";
+import { validatePassword } from "@/lib/validation/password";
+import { encryptPassword } from "@/lib/crypto/password-encryption";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const {
-    register,
-    loginWithOAuth,
-    isLoading,
-    error,
-    isAuthenticated,
-    checkSession,
-    setError,
-  } = useAuthStore();
+  const { checkSession } = useAuthStore();
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -42,32 +41,14 @@ export default function RegisterPage() {
   });
 
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [showMfaSetup, setShowMfaSetup] = useState(false);
-  const [mfaLoading, setMfaLoading] = useState(false);
-  const [registrationUserId, setRegistrationUserId] = useState<string | null>(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
-
-  // Use the auth request hook - only initialize after session check
-  const {isInitializing } = useAuthRequest(setError);
+  const [emailVerificationPending, setEmailVerificationPending] = useState(false);
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkUserSession = async () => {
-      setSessionLoading(true);
-      await checkSession();
-      setSessionLoading(false);
-    };
-    checkUserSession();
-  }, [checkSession]);
-
-  useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated) {
+    if (!sessionLoading && session?.user && !registrationSuccess) {
       router.push("/");
     }
-  }, [isAuthenticated, router]);
+  }, [session, sessionLoading, router, registrationSuccess]);
 
-  // Show loading screen while checking session
   if (sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -79,7 +60,6 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (
       !formData.email ||
       !formData.firstName ||
@@ -96,28 +76,54 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    const { valid, errors } = validatePassword(formData.password);
+    if (!valid) {
+      setError(`Password must include: ${errors.join(", ").toLowerCase()}`);
       return;
     }
 
-    const { success, userId } = await register({
-      username: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-    });
+    setIsLoading(true);
+    try {
+      const name = `${formData.firstName} ${formData.lastName}`.trim();
+      const encryptedPassword = await encryptPassword(formData.password);
+      const { error: apiError } = await authClient.signUp.email({
+        email: formData.email,
+        password: encryptedPassword,
+        name,
+      });
+      if (apiError) {
+        setError(apiError.message || "Registration failed");
+        return;
+      }
 
-    if (success && userId) {
-      setRegistrationUserId(userId);
-      // Instead of showing success message directly, show MFA setup
-      setShowMfaSetup(true);
+      // Sign in immediately after registration (succeeds in dev where email is auto-verified)
+      const { error: signInError } = await authClient.signIn.email({
+        email: formData.email,
+        password: encryptedPassword,
+      });
+
+      if (signInError) {
+        // Email verification is required before signing in (production)
+        setEmailVerificationPending(true);
+        return;
+      }
+
+      setRegistrationSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleOAuthLogin = async () => {
-    await loginWithOAuth("/");
+    setIsLoading(true);
+    try {
+      await authClient.signIn.social({ provider: "google", callbackURL: "/" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OAuth login failed");
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange =
@@ -128,86 +134,20 @@ export default function RegisterPage() {
       }));
     };
 
-  const handleMfaVerify = async (code: string) => {
-    setMfaLoading(true);
-    try {
-      const response = await fetch('/api/auth/mfa/register/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, userId: registrationUserId }),
-      });
-      if (response.ok) {
-        setRegistrationSuccess(true);
-        setShowMfaSetup(false);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'MFA verification failed');
-      }
-    } catch (error) {
-      console.error("MFA verification error:", error);
-      setError('An unexpected error occurred during MFA verification.');
-    }
-    setMfaLoading(false);
-  };
-
-  const handleMfaSkip = () => {
-    setRegistrationSuccess(true);
-    setShowMfaSetup(false);
-  };
-
-  // Show loading state while auth request is being initialized
-  if (isInitializing) {
+  if (emailVerificationPending) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+            <CardTitle className="text-xl text-center">Check your email</CardTitle>
             <CardDescription className="text-center">
-              Initializing authentication...
+              We sent a verification link to <strong>{formData.email}</strong>.
+              Please verify your email to complete registration.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (registrationSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <div className="flex justify-center mb-2">
-              <Image
-                src="/GoPie_Logo.svg"
-                alt="GoPie Logo"
-                width={150}
-                height={40}
-                className="dark:hidden"
-                priority
-              />
-              <Image
-                src="/GoPie_Logo_Dark.svg"
-                alt="GoPie Logo"
-                width={150}
-                height={40}
-                className="hidden dark:block"
-                priority
-              />
-            </div>
-            <CardTitle className="text-xl text-center text-green-600">
-              Registration Successful!
-            </CardTitle>
-            <CardDescription className="text-center">
-              Your account has been created successfully. You can now sign in.
-            </CardDescription>
-          </CardHeader>
-
           <CardFooter>
             <Link href="/auth/login" className="w-full">
-              <Button className="w-full">Go to Sign In</Button>
+              <Button variant="outline" className="w-full">Back to login</Button>
             </Link>
           </CardFooter>
         </Card>
@@ -215,8 +155,34 @@ export default function RegisterPage() {
     );
   }
 
-  if (showMfaSetup && registrationUserId) {
-    return <MfaSetup onVerify={handleMfaVerify} onSkip={handleMfaSkip} isLoading={mfaLoading} userId={registrationUserId} email={formData.email} password={formData.password}/>;
+  if (registrationSuccess) {
+    return (
+      <MfaSetup
+        userId=""
+        email={formData.email}
+        password={formData.password}
+        isLoading={mfaLoading}
+        onVerify={async (code) => {
+          setMfaLoading(true);
+          try {
+            const { error: apiError } = await authClient.twoFactor.verifyTotp({ code });
+            if (apiError) {
+              throw new Error(apiError.message || "Invalid verification code");
+            }
+            await checkSession();
+            router.push("/");
+          } catch (err) {
+            throw err;
+          } finally {
+            setMfaLoading(false);
+          }
+        }}
+        onSkip={async () => {
+          await checkSession();
+          router.push("/");
+        }}
+      />
+    );
   }
 
   return (
@@ -254,7 +220,6 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          {/* Google OAuth Button */}
           <Button
             type="button"
             variant="outline"
@@ -341,12 +306,13 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter a password (min 8 characters)"
+                placeholder="Enter a password"
                 value={formData.password}
                 onChange={handleInputChange("password")}
                 disabled={isLoading}
                 required
               />
+              <PasswordRules password={formData.password} />
             </div>
 
             <div className="space-y-2">

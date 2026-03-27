@@ -8,7 +8,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // Redirect to the first available settings page
-    router.replace("/settings/secrets");
+    router.replace("/settings/profile");
   }, [router]);
 
   return null;

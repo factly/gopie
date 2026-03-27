@@ -23,12 +23,15 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme/toggle";
 import { ContextSelectionHelper } from "@/components/chat/context-selection-helper";
+import { useAuthStore } from "@/lib/stores/auth-store";
 // import { UserInfo } from "@/components/dashboard/user-info";
 
 export default function HomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { role, user } = useAuthStore();
+  const isAdmin = role === "admin";
   const {
     data: projects,
     isLoading,
@@ -296,11 +299,10 @@ export default function HomePage() {
                       selectedContexts={selectedContexts}
                       onSelectContext={handleSelectContext}
                       onRemoveContext={handleRemoveContext}
-                      triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${
-                        isInputFocused && selectedContexts.length === 0
-                          ? "animate-slow-pulse bg-muted/90"
-                          : "bg-muted/70"
-                      }`}
+                      triggerClassName={`flex items-center justify-center h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ${isInputFocused && selectedContexts.length === 0
+                        ? "animate-slow-pulse bg-muted/90"
+                        : "bg-muted/70"
+                        }`}
                       shouldFlash={
                         isInputFocused && selectedContexts.length === 0
                       }
@@ -360,8 +362,8 @@ export default function HomePage() {
                   >
                     <ProjectCard
                       project={project}
-                      onUpdate={handleUpdateProject}
-                      onDelete={handleDeleteProject}
+                      onUpdate={isAdmin || project.created_by === user?.id ? handleUpdateProject : undefined}
+                      onDelete={isAdmin || project.created_by === user?.id ? handleDeleteProject : undefined}
                     />
                   </motion.div>
                 ))

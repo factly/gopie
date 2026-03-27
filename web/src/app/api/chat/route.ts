@@ -1,4 +1,5 @@
-import { getSession } from "@/lib/auth/auth-utils";
+import { auth } from "@/lib/auth/auth";
+import { headers as nextHeaders } from "next/headers";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -49,7 +50,9 @@ export async function POST(req: Request) {
       String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
     // Retrieve session only when auth is enabled
-    const session = isAuthEnabled ? await getSession() : null;
+    const session = isAuthEnabled
+      ? await auth.api.getSession({ headers: await nextHeaders() })
+      : null;
 
     if (isAuthEnabled && !session) {
       return new Response(
@@ -104,9 +107,10 @@ export async function POST(req: Request) {
     };
 
     if (isAuthEnabled && session) {
-      headers["Authorization"] = `Bearer ${session.accessToken}`;
-      if (session.user.organisationId) {
-        headers["x-organization-id"] = session.user.organisationId;
+      headers["Authorization"] = `Bearer ${session.session.token}`;
+      const orgId = (session.session as { activeOrganizationId?: string }).activeOrganizationId;
+      if (orgId) {
+        headers["x-organization-id"] = orgId;
       }
     } else {
       // Auth disabled: use admin headers
@@ -129,6 +133,7 @@ export async function POST(req: Request) {
             {
               method: "POST",
               headers,
+              credentials: "include",
               body: JSON.stringify({
                 model: "chatgpt-4o-latest",
                 messages: backendMessages,
@@ -184,7 +189,7 @@ export async function POST(req: Request) {
           }
 
           // Text stream placeholder - removed as unused
-          let buffer = ""; 
+          let buffer = "";
 
           while (true) {
             const { done, value } = await reader.read();
@@ -195,7 +200,7 @@ export async function POST(req: Request) {
             buffer = lines.pop() || "";
 
             for (const line of lines) {
-            const trimmed = line.trim();
+              const trimmed = line.trim();
               if (!trimmed) continue;
 
               const parsed = parseSSEData(trimmed);
@@ -283,8 +288,8 @@ export async function POST(req: Request) {
                         case "visualization_paths":
                         case "visualization_result":
                           const paths = args.paths ||
-                                      (args.visualization_json_paths?.map((v: { json_path?: string }) => v.json_path)) ||
-                                      [];
+                            (args.visualization_json_paths?.map((v: { json_path?: string }) => v.json_path)) ||
+                            [];
                           if (paths.length > 0) {
                             writer.write({
                               type: 'data-visualization',

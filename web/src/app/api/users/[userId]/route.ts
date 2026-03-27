@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { zitadelClient } from "@/lib/auth/zitadel-client";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(
   request: NextRequest,
@@ -15,15 +17,16 @@ export async function GET(
       );
     }
 
-    // Get user details from Zitadel
-    const user = await zitadelClient.getUserById(userId);
+    const result = await pool.query(
+      `SELECT id, name, email, "emailVerified", image, "createdAt", "updatedAt" FROM "user" WHERE id = $1`,
+      [userId]
+    );
 
-    if (!user) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Only "user" field in response needs to be passed.
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: result.rows[0] });
   } catch (error) {
     console.error("Error fetching user info:", error);
     return NextResponse.json(

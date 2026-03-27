@@ -49,6 +49,7 @@ export const apiClient = ky.create({
   headers: {
     "Content-Type": "application/json",
   },
+  credentials: "include", // Include cookies for Better Auth session
   timeout: false, // Disable timeout
   // Or if you want a very long timeout instead of disabling:
   // timeout: 300000, // 5 minutes in milliseconds

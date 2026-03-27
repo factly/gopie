@@ -19,7 +19,7 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  RefreshCwIcon, 
+  RefreshCwIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +70,7 @@ interface DatasetHeaderProps {
   dataset: Dataset;
   projectId: string;
   onUpdate?: () => Promise<void>;
+  canEdit?: boolean;
 }
 
 // Helper function to format SQL queries safely
@@ -141,6 +142,7 @@ export function DatasetHeader({
   dataset,
   projectId,
   onUpdate,
+  canEdit = false,
 }: DatasetHeaderProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -181,12 +183,12 @@ export function DatasetHeader({
   // Instantiate the mutation hook
   const { mutateAsync: refreshDbDataset } = useRefreshDatabaseDataset();
   const { data: hasTimestampColumn, isLoading: isLoadingTimestampCheck } =
-  useCheckTimestampColumn({
-    variables: { datasetId: dataset.id }, 
-    enabled: dataset.source === "database",
-  });
-  
- const canIncrementalRefresh = hasTimestampColumn === true;
+    useCheckTimestampColumn({
+      variables: { datasetId: dataset.id },
+      enabled: dataset.source === "database",
+    });
+
+  const canIncrementalRefresh = hasTimestampColumn === true;
 
 
   const handleUpdate = async () => {
@@ -385,7 +387,7 @@ export function DatasetHeader({
         {/* Left Section - Main Info */}
         <div className="flex items-start gap-4 flex-1 min-w-0 pr-[10px]">
           <div className="flex-1 min-w-0 space-y-3">
-            {isEditing ? (
+            {isEditing && canEdit ? (
               <div className="space-y-4 animate-in fade-in">
                 {/* Name Section with Buttons */}
                 <div className="flex items-end gap-3">
@@ -455,14 +457,16 @@ export function DatasetHeader({
                   <h1 className="text-2xl font-bold text-foreground truncate">
                     {dataset.alias || "Untitled Dataset"}
                   </h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 hover:bg-secondary/80 flex-shrink-0"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 hover:bg-secondary/80 flex-shrink-0"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -470,7 +474,7 @@ export function DatasetHeader({
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       {dataset.description &&
-                      dataset.description.length > 200 ? (
+                        dataset.description.length > 200 ? (
                         isDescriptionExpanded ? (
                           <div className="text-muted-foreground leading-relaxed">
                             <span>{dataset.description}</span>{" "}
@@ -506,14 +510,16 @@ export function DatasetHeader({
                         </p>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <PencilIcon className="h-3.5 w-3.5" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <PencilIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -529,14 +535,16 @@ export function DatasetHeader({
                           {dataset.custom_prompt}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <PencilIcon className="h-3.5 w-3.5" />
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          <PencilIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -563,6 +571,7 @@ export function DatasetHeader({
                     <ColumnDescriptionsModal
                       datasetId={dataset.id}
                       datasetName={dataset.alias || dataset.name}
+                      canEdit={canEdit}
                       trigger={
                         <Button
                           variant="ghost"
@@ -622,8 +631,8 @@ export function DatasetHeader({
                                 <div className="font-semibold">
                                   {dataset.size
                                     ? `${(dataset.size / (1024 * 1024)).toFixed(
-                                        1
-                                      )} MB`
+                                      1
+                                    )} MB`
                                     : "N/A"}
                                 </div>
                               </div>
@@ -676,9 +685,9 @@ export function DatasetHeader({
                                 <span className="text-muted-foreground">
                                   Created by:
                                 </span>
-                                <UserDisplayName 
-                                  userId={dataset.created_by} 
-                                  className="font-medium" 
+                                <UserDisplayName
+                                  userId={dataset.created_by}
+                                  className="font-medium"
                                 />
                               </div>
                               <div className="flex items-center gap-2 text-sm">
@@ -686,9 +695,9 @@ export function DatasetHeader({
                                 <span className="text-muted-foreground">
                                   Updated by:
                                 </span>
-                                <UserDisplayName 
-                                  userId={dataset.updated_by} 
-                                  className="font-medium" 
+                                <UserDisplayName
+                                  userId={dataset.updated_by}
+                                  className="font-medium"
                                 />
                               </div>
                             </div>
@@ -859,7 +868,7 @@ export function DatasetHeader({
                               }
                             >
                               {currentDownloadProgress?.status ===
-                              "processing" ? (
+                                "processing" ? (
                                 <>
                                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
                                   Processing...
@@ -903,8 +912,8 @@ export function DatasetHeader({
                           <CodeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                         </Button>
                       </Link>
-                      {/* File source: always navigate */}
-                      {dataset.source === "file" && (
+                      {/* File source: only for admin/creator */}
+                      {canEdit && dataset.source === "file" && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -922,7 +931,7 @@ export function DatasetHeader({
                       )}
 
                       {/* DB source: check if incremental is possible */}
-{dataset.source === "database" && (
+                      {canEdit && dataset.source === "database" && (
                         <>
                           {/* Show a loader while checking for timestamp column */}
                           {isLoadingTimestampCheck ? (

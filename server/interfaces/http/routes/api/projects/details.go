@@ -2,7 +2,6 @@ package projects
 
 import (
 	"github.com/factly/gopie/domain"
-	"github.com/factly/gopie/domain/models"
 	"github.com/factly/gopie/interfaces/http/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,9 +20,8 @@ func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	projectID := ctx.Params("projectID")
 	orgID := ctx.Get(middleware.OrganizationIDHeader)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
-	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
 
-	project, err := h.projectSvc.Details(projectID, orgID, userID, role)
+	project, err := h.projectSvc.Details(projectID, orgID, userID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{

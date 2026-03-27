@@ -20,36 +20,6 @@ services:
     networks:
       - gopie
 
-  ###########################################################################
-  #######             Zitadel                                         #######
-  ###########################################################################
-  zitadel:
-    restart: "always"
-    image: "ghcr.io/zitadel/zitadel:v3.3.2"
-    command: "start-from-init --config /config.yaml --config /secrets.yaml --steps /init-steps.yaml --masterkey h9tyO3xu9Qr5ygDhkMgc44x0j3tWHjPL --tlsMode disabled"
-    ports:
-      - "8080:8080"
-    volumes:
-      - "./zitadel/config.yaml:/config.yaml:ro"
-      - "./zitadel/secrets.yaml:/secrets.yaml:ro"
-      - "./zitadel/init-steps.yaml:/init-steps.yaml:ro"
-    depends_on:
-      - postgres
-    networks:
-      - gopie
-
-  nginx:
-    image: nginx:latest
-    restart: "always"
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - zitadel
-    networks:
-      - gopie
-
   #########################################################################
   #####                        GOPIE SERVICES                          #####
   #########################################################################

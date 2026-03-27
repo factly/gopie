@@ -23,9 +23,10 @@ import { UserDisplayName } from "@/components/user/user-display-name";
 
 interface InlineProjectEditorProps {
   project: Project;
+  canEdit?: boolean;
 }
 
-export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
+export function InlineProjectEditor({ project, canEdit = false }: InlineProjectEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [name, setName] = useState(project.name);
@@ -38,12 +39,12 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       toast.error("Project name is required");
       return;
     }
-    
+
     if (name.trim().length < 3 || name.trim().length > 50) {
       toast.error("Project name must be between 3 and 50 characters");
       return;
     }
-    
+
     if (description.trim().length < 10) {
       toast.error("Project description must be at least 10 characters");
       return;
@@ -108,7 +109,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
       <Card className="border shadow-sm">
         <CardContent className="p-6">
           <div className="space-y-4 animate-in fade-in">
-            
+
             {/* Name Section */}
             <div className="flex items-end gap-3">
               <div className="flex-1 space-y-2">
@@ -172,7 +173,7 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
                 rows={3}
               />
             </div>
-        </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -189,22 +190,24 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
   return (
     <Card className="border shadow-sm relative">
       <div className="absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 ease-in-out opacity-100" />
-      
+
       <CardContent className="p-6">
         <div className="space-y-3 pr-[60px]">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {project.name}
             </h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-muted"
-              title="Edit Project"
-              onClick={() => setIsEditing(true)}
-            >
-              <PencilIcon className="size-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-muted"
+                title="Edit Project"
+                onClick={() => setIsEditing(true)}
+              >
+                <PencilIcon className="size-4" />
+              </Button>
+            )}
           </div>
 
           <div className="min-h-[40px]">
@@ -259,9 +262,9 @@ export function InlineProjectEditor({ project }: InlineProjectEditorProps) {
           <div className="flex items-center gap-2 text-muted-foreground">
             <UserIcon className="size-4" />
             <span>Created by:</span>
-            <UserDisplayName 
-              userId={project.created_by} 
-              className="font-medium text-foreground" 
+            <UserDisplayName
+              userId={project.created_by}
+              className="font-medium text-foreground"
             />
           </div>
         </div>
