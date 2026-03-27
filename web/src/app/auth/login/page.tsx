@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth/auth-client";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import TotpInput from "@/components/auth/Totpinput";
+import TotpInput from "@/components/auth/TotpInput";
 import { encryptPassword } from "@/lib/crypto/password-encryption";
 
 function LoginPageInner() {
