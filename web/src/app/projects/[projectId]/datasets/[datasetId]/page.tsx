@@ -10,7 +10,6 @@ import { DatasetHeader } from "@/components/dataset/dataset-header";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDataset } from "@/lib/queries/dataset/get-dataset";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useAuthStore } from "@/lib/stores/auth-store";
 import { useResourcePermissions } from "@/hooks/use-permissions";
 
 export default function DatasetPage({
