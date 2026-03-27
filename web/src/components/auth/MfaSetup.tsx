@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Copy, Shield } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { encryptPassword } from "@/lib/crypto/password-encryption";
@@ -39,13 +38,11 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
   } | null>(null);
   const [code, setCode] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [setupLoading, setSetupLoading] = useState(true);
 
   useEffect(() => {
     const setupMfa = async () => {
       setSetupLoading(true);
-      setError(null);
 
       try {
         const encryptedPassword = await encryptPassword(password);
@@ -97,8 +94,8 @@ const MfaSetup: React.FC<MfaSetupProps> = ({
     e.preventDefault();
     try {
       await onVerify(code);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed");
+    } catch {
+      // verification error handled by parent via onVerify
     }
   };
 
