@@ -1,58 +1,12 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
-// Allowed external origins derived from env vars — avoids hardcoding URLs per environment.
-const API_URL = process.env.NEXT_PUBLIC_GOPIE_API_URL ?? "http://localhost:8000";
-const COMPANION_URL = process.env.NEXT_PUBLIC_COMPANION_URL ?? "http://localhost:3020";
-const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:9000";
-
-// Global Content Security Policy applied to all routes.
-//
-// Directive notes:
-//   script-src    'unsafe-inline'     — Next.js App Router inline hydration scripts
-//                 'wasm-unsafe-eval'  — DuckDB WASM execution
-//                 'unsafe-eval'       — Monaco Editor worker bootstrap
-//   worker-src    blob:               — DuckDB & Monaco spin up workers via blob: URLs
-//   connect-src   API_URL             — Gopie backend API (may be a different origin/port)
-//                 COMPANION_URL       — Uppy companion for file uploads
-//                 wss: ws:            — LiveKit voice interface (WebRTC signalling)
-//                 blob:               — DuckDB WASM streaming fetches
-//   img-src       blob: data: https:  — QR codes (data:), avatars (https:), DuckDB previews (blob:)
-//   frame-ancestors 'none'            — prevents clickjacking across all pages
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  `connect-src 'self' ${API_URL} ${COMPANION_URL} ${STORAGE_URL} wss: ws: blob:`,
-  "worker-src 'self' blob:",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-].join("; ");
-
-const SECURITY_HEADERS = [
-  { key: "Content-Security-Policy", value: CSP },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // microphone=self — required for LiveKit voice interface
-  // camera/geolocation are not used anywhere in the app so remain blocked
-  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
-];
+// Security headers (CSP, X-Frame-Options, etc.) are applied at request time
+// in src/middleware.ts so that runtime env vars (NEXT_PUBLIC_*) are resolved
+// with their actual values instead of build-time placeholders.
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pg", "pg-native"],
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: SECURITY_HEADERS,
-      },
-    ];
-  },
   webpack: (config) => {
     // Enable WebAssembly
     config.experiments = {

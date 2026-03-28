@@ -21,6 +21,7 @@ find "$NEXT_DIR" -type f -name "*.js" -print0 | while IFS= read -r -d $'\0' file
   sed -i "s|__NEXT_PUBLIC_LIVEKIT_URL__|$NEXT_PUBLIC_LIVEKIT_URL|g" "$file"
   sed -i "s|__NEXT_PUBLIC_ENABLE_AUTH__|$NEXT_PUBLIC_ENABLE_AUTH|g" "$file"
   sed -i "s|__NEXT_PUBLIC_APP_URL__|$NEXT_PUBLIC_APP_URL|g" "$file"
+  sed -i "s|__NEXT_PUBLIC_STORAGE_URL__|$NEXT_PUBLIC_STORAGE_URL|g" "$file"
 done
 
 echo "Placeholder replacement complete."
