@@ -122,8 +122,9 @@ function createAuth() {
     },
     advanced: {
       // Use secure cookies in production (HTTPS)
-      // This automatically adds __Secure- prefix to cookie names in production
-      useSecureCookies: process.env.NODE_ENV === "production",
+      // Can be overridden with BETTER_AUTH_SECURE_COOKIES=false for HTTP deployments
+      useSecureCookies: String(process.env.BETTER_AUTH_SECURE_COOKIES).trim() !== "false"
+        && process.env.NODE_ENV === "production",
       crossSubDomainCookies: process.env.NODE_ENV === "production"
         ? { enabled: true, domain: getCookieDomain()! }
         : undefined,

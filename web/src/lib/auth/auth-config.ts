@@ -21,7 +21,9 @@ export const getBaseUrl = () => {
 // In production with secure cookies (HTTPS), Better Auth prefixes cookie names with "__Secure-"
 // This is a browser security feature: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes
 export const getSessionCookieName = () => {
-  return process.env.NODE_ENV === "production"
+  const useSecureCookies = String(process.env.BETTER_AUTH_SECURE_COOKIES).trim() !== "false"
+    && process.env.NODE_ENV === "production";
+  return useSecureCookies
     ? "__Secure-better-auth.session_token"
     : "better-auth.session_token";
 };
@@ -38,3 +40,4 @@ export const getCookieDomain = (): string | undefined => {
   }
   return domain;
 };
+
