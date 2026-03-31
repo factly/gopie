@@ -25,6 +25,8 @@ services:
       - ./config-noauth.env
     ports:
       - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - gopie
@@ -51,6 +53,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - gopie
 
@@ -67,6 +71,8 @@ services:
         condition: service_healthy
     volumes:
       - ./volumes/duckdb:/home/gopie/dataful
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - gopie
     user: "0:0"
