@@ -34,6 +34,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - gopie
 
@@ -53,6 +55,8 @@ services:
     networks:
       - gopie
     user: "0:0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       sh -c "chown -R 1001:1001 /home/gopie/dataful && 
              chmod -R 755 /home/gopie/dataful && 
@@ -67,6 +71,8 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - gopie
 
