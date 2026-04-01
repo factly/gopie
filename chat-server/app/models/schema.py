@@ -97,7 +97,7 @@ class DatasetSchema(BaseModel):
     dataset_custom_prompt: Optional[str] = None
     dataset_description: str
     project_id: str
-    org_id: str
+    org_id: str = "unknown_org"
     dataset_id: str
     columns: list[ColumnSchema]
 
