@@ -1,5 +1,5 @@
 import { useDownloadStore } from "@/lib/stores/download-store";
-import { getGlobalAccessToken, getGlobalOrganizationId } from "@/lib/api-client";
+import { getGlobalOrganizationId } from "@/lib/api-client";
 
 export interface CreateDownloadRequest {
   dataset_id: string;
@@ -19,8 +19,7 @@ export interface SSEMessage {
 
 export const createDownloadWithSSE = async (
   params: CreateDownloadRequest,
-  onProgress?: (data: SSEMessage) => void,
-  accessToken?: string | null
+  onProgress?: (data: SSEMessage) => void
 ) => {
   const baseUrl = process.env.NEXT_PUBLIC_GOPIE_API_URL || 'http://localhost:8000';
   const url = `${baseUrl}/v1/api/downloads`;
@@ -32,10 +31,6 @@ export const createDownloadWithSSE = async (
     'Content-Type': 'application/json',
   };
 
-  // Add authentication headers
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
 
   // Add organization header
   if (!isAuthEnabled) {
@@ -171,7 +166,6 @@ export const useCreateDownload = () => {
             });
           }
         },
-        getGlobalAccessToken()
       );
 
       return result;
