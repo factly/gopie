@@ -2,11 +2,7 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import Editor, { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
-
-// Use locally installed monaco-editor instead of loading from CDN
-loader.config({ monaco });
+import Editor from "@monaco-editor/react";
 
 interface SqlPreviewProps {
   value: string;
