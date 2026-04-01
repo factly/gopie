@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { authClient } from "@/lib/auth/auth-client";
 import {
-  setGlobalAccessToken,
   setGlobalOrganizationId,
 } from "@/lib/api-client";
 
@@ -58,13 +57,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isLoading: false,
         organizationId: orgId,
       });
-      setGlobalAccessToken(data.token);
       setGlobalOrganizationId(orgId);
       return { success: true };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
       set({ error: msg, isLoading: false, isAuthenticated: false, user: null });
-      setGlobalAccessToken(null);
       return { success: false, error: msg };
     }
   },
@@ -96,7 +93,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isLoading: false,
         error: null,
       });
-      setGlobalAccessToken(null);
       setGlobalOrganizationId(null);
     }
   },
@@ -128,16 +124,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
           organizationId: orgId,
           role: data.user.role
         });
-        setGlobalAccessToken(data.session.token);
         setGlobalOrganizationId(orgId);
       } else {
         set({ user: null, isAuthenticated: false, organizationId: null, role: null, });
-        setGlobalAccessToken(null);
         setGlobalOrganizationId(null);
       }
     } catch {
       set({ user: null, isAuthenticated: false, organizationId: null });
-      setGlobalAccessToken(null);
       setGlobalOrganizationId(null);
     }
   },
