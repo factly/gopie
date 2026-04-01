@@ -122,7 +122,7 @@ func (h *httpHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	// Check if project exists
-	project, err := h.projectSvc.Details(body.ProjectID, orgID, userID)
+	project, err := h.projectSvc.Details(body.ProjectID, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 			h.logger.Error("Project not found", zap.Error(err), zap.String("project_id", body.ProjectID))

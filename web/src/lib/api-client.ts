@@ -25,14 +25,6 @@ class TokenManager {
 
 const tokenManager = new TokenManager();
 
-// Functions to manage global access token
-export function setGlobalAccessToken(token: string | null) {
-  tokenManager.setToken(token);
-}
-
-export function getGlobalAccessToken(): string | null {
-  return tokenManager.getToken();
-}
 
 // Functions to manage global organization id
 export function setGlobalOrganizationId(organizationId: string | null) {
@@ -67,12 +59,6 @@ export const apiClient = ky.create({
             request.headers.set("x-organization-id", "system");
           }
           return;
-        }
-
-        // Auth enabled: attach token and organization headers if present
-        const token = getGlobalAccessToken();
-        if (token && !request.headers.get("Authorization")) {
-          request.headers.set("Authorization", `Bearer ${token}`);
         }
 
         const orgId = getGlobalOrganizationId();

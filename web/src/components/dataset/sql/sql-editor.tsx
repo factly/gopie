@@ -3,7 +3,10 @@
 import * as React from "react";
 import * as monaco from "monaco-editor";
 import { useTheme } from "next-themes";
-import Editor, { BeforeMount, OnMount } from "@monaco-editor/react";
+import Editor, { BeforeMount, OnMount, loader } from "@monaco-editor/react";
+
+// Use locally installed monaco-editor instead of loading from CDN
+loader.config({ monaco });
 
 interface SqlEditorProps {
   value: string;

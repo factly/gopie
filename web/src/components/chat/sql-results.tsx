@@ -38,15 +38,23 @@ import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 
-// Dynamically import Monaco Editor to avoid SSR issues
-const Editor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
-  ),
-});
+// Dynamically import Monaco Editor to avoid SSR issues, using local monaco
+const Editor = dynamic(
+  () =>
+    import("@monaco-editor/react").then(async (mod) => {
+      const monaco = await import("monaco-editor");
+      mod.loader.config({ monaco });
+      return mod;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[150px] flex items-center justify-center border rounded-md bg-muted/20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 // Helper function to format SQL queries safely
 function formatSqlQuery(sql: string): string {

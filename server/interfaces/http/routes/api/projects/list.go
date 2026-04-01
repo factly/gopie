@@ -22,14 +22,13 @@ import (
 // @Router /v1/api/projects [get]
 func (h *httpHandler) list(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
-	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	limitStr := ctx.Query("limit")
 	pageStr := ctx.Query("page")
 	query := ctx.Query("query")
 
 	limit, page := pkg.ParseLimitAndPage(limitStr, pageStr)
 
-	projects, err := h.projectSvc.List(query, limit, page, orgID, userID)
+	projects, err := h.projectSvc.List(query, limit, page, orgID)
 	if err != nil {
 		if domain.IsStoreError(err) {
 			switch err {

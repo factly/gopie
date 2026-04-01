@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { headers as nextHeaders } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,11 +23,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the file from the URL
+    const cookieHeader = (await nextHeaders()).get("cookie") ?? "";
     const response = await fetch(url, {
       headers: {
         "User-Agent": "GoPie-Web/1.0",
+        "Cookie": cookieHeader,
       },
-      credentials: "include"
     });
 
     if (!response.ok) {

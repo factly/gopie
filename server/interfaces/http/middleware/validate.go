@@ -14,7 +14,6 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 	return func(c *fiber.Ctx) error {
 		projectID := c.Params("projectID")
 		orgID, _ := c.Locals(OrganizationCtxKey).(string)
-		userID, _ := c.Locals(UserCtxKey).(string)
 
 		if projectID == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -33,7 +32,7 @@ func ValidateProjectMiddleware(projectSvc *services.ProjectService) fiber.Handle
 			})
 		}
 
-		_, err := projectSvc.Details(projectID, orgID, userID)
+		_, err := projectSvc.Details(projectID, orgID)
 		if err != nil {
 			if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

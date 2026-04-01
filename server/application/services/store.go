@@ -25,7 +25,7 @@ func (service *ProjectService) Create(params models.CreateProjectParams) (*model
 }
 
 // Details - Get project by id
-func (service *ProjectService) Details(id, orgID, createdBy string) (*models.Project, error) {
+func (service *ProjectService) Details(id, orgID string) (*models.Project, error) {
 	return service.projectRepo.Details(context.Background(), id, orgID)
 }
 
@@ -58,14 +58,14 @@ func (service *ProjectService) DatasetsBelongToOrg(datasetNames []string, orgID 
 }
 
 // List - Search projects
-func (service *ProjectService) List(query string, limit, page int, orgID, createdBy string) (*models.PaginationView[*models.SearchProjectsResults], error) {
+func (service *ProjectService) List(query string, limit, page int, orgID string) (*models.PaginationView[*models.SearchProjectsResults], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
 
-	return service.projectRepo.SearchProjectByOrgAndCreator(context.Background(), query, pagination, orgID, createdBy)
+	return service.projectRepo.SearchProject(context.Background(), query, pagination, orgID)
 }
 
 func (service *ProjectService) ListAllProjects() ([]*models.Project, error) {

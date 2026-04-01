@@ -107,7 +107,8 @@ export async function POST(req: Request) {
     };
 
     if (isAuthEnabled && session) {
-      headers["Authorization"] = `Bearer ${session.session.token}`;
+      // Forward the browser's session cookie to the backend so BetterAuthMiddleware can validate it
+      headers["Cookie"] = (await nextHeaders()).get("cookie") ?? "";
       const orgId = (session.session as { activeOrganizationId?: string }).activeOrganizationId;
       if (orgId) {
         headers["x-organization-id"] = orgId;
@@ -133,7 +134,6 @@ export async function POST(req: Request) {
             {
               method: "POST",
               headers,
-              credentials: "include",
               body: JSON.stringify({
                 model: "chatgpt-4o-latest",
                 messages: backendMessages,
