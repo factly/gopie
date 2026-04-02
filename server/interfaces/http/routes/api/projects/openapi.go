@@ -14,7 +14,6 @@ import (
 func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 	role := c.Locals(middleware.RoleCtxKey).(models.Role)
 	orgID := c.Locals(middleware.OrganizationCtxKey).(string)
-	userID := c.Locals(middleware.UserCtxKey).(string)
 
 	projectID := c.Params("projectID")
 	if projectID == "" {
@@ -24,7 +23,7 @@ func (h *httpHandler) projectOpenAPI(c *fiber.Ctx) error {
 	}
 
 	// Get all datasets for this project
-	datasets, err := h.datasetSvc.List(projectID, role, orgID, userID, 1000, 0)
+	datasets, err := h.datasetSvc.List(projectID, role, orgID, 1000, 0)
 	if err != nil {
 		h.logger.Error("Error getting datasets for project", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
