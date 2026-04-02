@@ -14,7 +14,7 @@ const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:900
 // 'unsafe-eval' remains required for Monaco Editor; 'wasm-unsafe-eval' for DuckDB WASM.
 const BASE_CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
