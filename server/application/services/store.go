@@ -90,21 +90,21 @@ func (service *DatasetService) Create(params *models.CreateDatasetParams) (*mode
 	return service.datasetRepo.Create(context.Background(), params)
 }
 
-func (service *DatasetService) Details(id, orgID, createdBy string) (*models.Dataset, error) {
-	return service.datasetRepo.DetailsByOrgAndCreator(context.Background(), id, orgID, createdBy)
+func (service *DatasetService) Details(id, orgID string) (*models.Dataset, error) {
+	return service.datasetRepo.Details(context.Background(), id, orgID)
 }
 
 func (service *DatasetService) GetByTableName(tableName string, orgID string) (*models.Dataset, error) {
 	return service.datasetRepo.GetByTableName(context.Background(), tableName, orgID)
 }
 
-func (service *DatasetService) List(projectID string, role models.Role, orgID, createdBy string, limit, page int) (*models.PaginationView[*models.Dataset], error) {
+func (service *DatasetService) List(projectID string, role models.Role, orgID string, limit, page int) (*models.PaginationView[*models.Dataset], error) {
 	pagination := models.NewPagination()
 	if limit != 0 {
 		pagination.Limit = limit
 	}
 	pagination.Offset = (page - 1) * limit
-	return service.datasetRepo.ListByProjectAndOrg(context.Background(), projectID, orgID, createdBy, pagination)
+	return service.datasetRepo.ListByProjectAndOrg(context.Background(), projectID, orgID, pagination)
 }
 
 func (service *DatasetService) Delete(id, orgID, createdBy string, role models.Role) error {

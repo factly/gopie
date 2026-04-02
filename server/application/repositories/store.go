@@ -77,7 +77,7 @@ type DatasetStoreRepository interface {
 	SearchDatasetsByOrgAndCreator(ctx context.Context, query string, pagination models.Pagination, orgID, createdBy string) (*models.PaginationView[*models.Dataset], error)
 	DeleteByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string) error
 	UpdateByOrgAndCreator(ctx context.Context, datasetID, orgID, createdBy string, params *models.UpdateDatasetParams) (*models.Dataset, error)
-	ListByProjectAndOrg(ctx context.Context, projectID, orgID, createdBy string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
+	ListByProjectAndOrg(ctx context.Context, projectID, orgID string, pagination models.Pagination) (*models.PaginationView[*models.Dataset], error)
 }
 
 type ChatStoreRepository interface {

@@ -30,7 +30,7 @@ func (h *httpHandler) delete(ctx *fiber.Ctx) error {
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
 	userID := ctx.Locals(middleware.UserCtxKey).(string)
 	role := ctx.Locals(middleware.RoleCtxKey).(models.Role)
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
 	if err != nil {
 		h.logger.Error("Error deleting dataset", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {

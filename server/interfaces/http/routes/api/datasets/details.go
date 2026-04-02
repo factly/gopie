@@ -20,8 +20,7 @@ import (
 func (h *httpHandler) details(ctx *fiber.Ctx) error {
 	datasetID := ctx.Params("datasetID")
 	orgID := ctx.Locals(middleware.OrganizationCtxKey).(string)
-	userID := ctx.Locals(middleware.UserCtxKey).(string)
-	dataset, err := h.datasetsSvc.Details(datasetID, orgID, userID)
+	dataset, err := h.datasetsSvc.Details(datasetID, orgID)
 	if err != nil {
 		h.logger.Error("Error fetching dataset details", zap.Error(err), zap.String("datasetID", datasetID))
 		if domain.IsStoreError(err) && err == domain.ErrRecordNotFound {
