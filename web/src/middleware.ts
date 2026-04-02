@@ -15,7 +15,7 @@ const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:900
 const BASE_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' ${API_URL} ${COMPANION_URL} ${STORAGE_URL} wss: ws: blob:`,
