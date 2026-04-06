@@ -92,8 +92,11 @@ services:
     environment:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
+      - MINIO_DOMAIN=localhost
     networks:
-      - gopie
+      gopie:
+        aliases:
+          - gopie.localhost
     command: server -console-address :9002 /export
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]

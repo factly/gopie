@@ -378,18 +378,23 @@ export function DatasetUploadWizard({ projectId }: DatasetUploadWizardProps) {
               s3Url = `s3://${bucket}/${key}`;
             }
           } else {
-            // Non-S3 URL, might be MinIO, presigned URL, or proxy
-            // For localhost:9000 (MinIO) or similar, the format is usually: http://localhost:9000/bucket/key
-            // Try to extract path assuming format: /bucket/key
-            if (pathParts.length >= 2) {
+            // Non-S3 URL, might be MinIO path-style or virtual-hosted style
+            const storageUrl = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:9000";
+            const storageHost = new URL(storageUrl).host; // e.g. "localhost:9000"
+
+            const storageHostname = storageHost.split(":")[0]; // "localhost"
+            if (url.hostname !== storageHostname && url.hostname.endsWith(`.${storageHostname}`)) {
+              // Virtual-hosted style: http://gopie.localhost:9000/key
+              // Bucket is the subdomain prefix, key is the path
+              const bucket = url.hostname.slice(0, url.hostname.lastIndexOf(`.${storageHostname}`));
+              const key = pathParts.join("/");
+              s3Url = `s3://${bucket}/${key}`;
+            } else if (pathParts.length >= 2) {
+              // Path style: http://localhost:9000/bucket/key
               const bucket = pathParts[0];
               const key = pathParts.slice(1).join("/");
               s3Url = `s3://${bucket}/${key}`;
-            } else if (pathParts.length === 1) {
-              // Only one path part, assume it's just the bucket
-              s3Url = `s3://${pathParts[0]}`;
             } else {
-              // No path parts, this shouldn't happen
               throw new Error("No path found in upload URL");
             }
           }

@@ -7,6 +7,17 @@ const API_URL = process.env.NEXT_PUBLIC_GOPIE_API_URL ?? "http://localhost:8000"
 const COMPANION_URL = process.env.NEXT_PUBLIC_COMPANION_URL ?? "http://localhost:3020";
 const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:9000";
 
+// Companion generates presigned URLs using virtual-hosted style (e.g. http://gopie.localhost:9000).
+// Derive a wildcard CSP entry to cover all bucket subdomains.
+const STORAGE_URL_WILDCARD = (() => {
+  try {
+    const u = new URL(STORAGE_URL);
+    return `${u.protocol}//*.${u.host}`;
+  } catch {
+    return "";
+  }
+})();
+
 // NOTE: 'unsafe-inline' in script-src weakens XSS protection significantly.
 // The proper Next.js 15 approach is to generate a per-request nonce in middleware,
 // pass it via a request header (x-nonce), read it in the root layout via headers(),
@@ -18,7 +29,7 @@ const BASE_CSP = [
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${API_URL} ${COMPANION_URL} ${STORAGE_URL} wss: ws: blob:`,
+  `connect-src 'self' ${API_URL} ${COMPANION_URL} ${STORAGE_URL} ${STORAGE_URL_WILDCARD} wss: ws: blob:`,
   "worker-src 'self' blob:",
   "form-action 'self'",
   "frame-ancestors 'none'",
