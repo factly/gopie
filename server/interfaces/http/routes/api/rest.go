@@ -11,35 +11,47 @@ import (
 )
 
 // @Summary Query dataset using REST API
-// @Description Query a dataset using REST-style parameters
+// @Description Query a dataset using REST-style parameters via POST body
 // @Tags query
 // @Accept json
 // @Produce json
 // @Param tableName path string true "Name of the dataset/table" example:"sales_data"
-// @Param columns query string false "Comma-separated list of columns to return" example:"id,name,value"
-// @Param sort query string false "Sort order (column name with optional -prefix for desc)" example:"-created_at"
-// @Param limit query integer false "Number of records to return" example:"10"
-// @Param page query integer false "Page number" example:"1"
+// @Param body body models.RestRequest true "Query parameters"
 // @Success 200 {array} map[string]interface{} "Query results"
 // @Failure 400 {object} responses.ErrorResponse "Invalid query parameters"
 // @Failure 500 {object} responses.ErrorResponse "Internal server error"
-// @Router /v1/api/tables/{tableName} [get]
+// @Router /v1/api/tables/{tableName} [post]
 func (h *httpHandler) rest(ctx *fiber.Ctx) error {
 	table := ctx.Params("tableName")
 	imposeLimits := ctx.Locals(middleware.ImposeLimitsCtxKey).(bool)
 
-	columns := strings.Split(ctx.Query("columns", "*"), ",")
-	filters := ctx.Queries()
-	sort := ctx.Query("sort", "")
-	limit := ctx.QueryInt("limit")
-	page := ctx.QueryInt("page", 1)
+	var req models.RestRequest
+	if len(ctx.Body()) > 0 {
+		if err := ctx.BodyParser(&req); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   err.Error(),
+				"message": "Invalid request body",
+				"code":    fiber.StatusBadRequest,
+			})
+		}
+	}
+
+	columns := req.Columns
+	if len(columns) == 0 {
+		columns = []string{"*"}
+	}
+
+	page := req.Page
+	if page == 0 {
+		page = 1
+	}
 
 	params := models.RestParams{
 		Cols:         columns,
-		Sort:         sort,
-		Limit:        limit,
+		Sort:         req.Sort,
+		Limit:        req.Limit,
 		Page:         page,
-		Filter:       filters,
+		Filter:       req.Filter,
 		Table:        table,
 		ImposeLimits: imposeLimits,
 	}

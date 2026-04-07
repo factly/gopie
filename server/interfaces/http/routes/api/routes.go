@@ -25,7 +25,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 	httpHandler := httpHandler{driverSvc, datasetsSvc, projectSvc, aiSvc, logger, nil}
 	// /sql endpoint with middleware to authorize datasets from sql query
 	router.Post("/sql", middleware.AuthorizeDatasetsAccessFromSql(driverSvc, projectSvc, logger), httpHandler.sql)
-	router.Get("/tables/:tableName", httpHandler.rest)
+	router.Post("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
 	router.Get("/schemas/:tableName", httpHandler.schemas)
 	router.Get("/summary/:tableName", httpHandler.summary)
@@ -39,7 +39,7 @@ func Routes(router fiber.Router, driverSvc *services.OlapService, aiSvc *service
 func InternalRoutes(router fiber.Router, driverSvc *services.OlapService, aiSvc *services.AiDriver, datasetsSvc *services.DatasetService, projectSvc *services.ProjectService, logger *logger.Logger) {
 	httpHandler := httpHandler{driverSvc, datasetsSvc, projectSvc, aiSvc, logger, nil}
 	router.Post("/sql", httpHandler.sql)
-	router.Get("/tables/:tableName", httpHandler.rest)
+	router.Post("/tables/:tableName", httpHandler.rest)
 	router.Post("/nl2sql", httpHandler.nl2sql)
 	router.Get("/schemas/:tableName", httpHandler.schemas)
 	router.Get("/summary/:tableName", httpHandler.summary)
