@@ -87,20 +87,24 @@ export default function RestApiPage({
     },
   });
 
-  const apiUrl =
-    `${process.env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/tables/${tableName}?` +
-    new URLSearchParams({
-      page,
-      limit,
-      ...(selectedColumns.length > 0 && { columns: selectedColumns.join(",") }),
-      ...(filters.length > 0 &&
-        Object.fromEntries(
+  const apiUrl = `${process.env.NEXT_PUBLIC_GOPIE_API_URL}/v1/api/tables/${tableName}`;
+  const requestBody = JSON.stringify(
+    {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      ...(selectedColumns.length > 0 && { columns: selectedColumns }),
+      ...(filters.length > 0 && {
+        filter: Object.fromEntries(
           filters.map((f) => [
             `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
             f.value,
           ])
-        )),
-    }).toString();
+        ),
+      }),
+    },
+    null,
+    2
+  );
 
   const copyToClipboard = (type: string) => {
     let textToCopy = apiUrl;
@@ -110,21 +114,29 @@ export default function RestApiPage({
         textToCopy = apiUrl;
         break;
       case "curl-cmd":
-        textToCopy = `curl -X GET "${apiUrl}"`;
+        textToCopy = `curl -X POST "${apiUrl}" -H "Content-Type: application/json" -d "${requestBody.replace(/"/g, '\\"')}"`;
         break;
       case "curl-bash":
-        textToCopy = `curl -X GET '${apiUrl}'`;
+        textToCopy = `curl -X POST '${apiUrl}' \\\n  -H 'Content-Type: application/json' \\\n  -d '${requestBody}'`;
         break;
       case "powershell":
-        textToCopy = `Invoke-WebRequest -Uri "${apiUrl}" -Method GET`;
+        textToCopy = `Invoke-WebRequest -Uri "${apiUrl}" -Method POST -ContentType "application/json" -Body '${requestBody}'`;
         break;
       case "fetch":
-        textToCopy = `fetch("${apiUrl}")
+        textToCopy = `fetch("${apiUrl}", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(${requestBody})
+})
   .then(response => response.json())
   .then(data => console.log(data));`;
         break;
       case "fetch-node":
-        textToCopy = `fetch("${apiUrl}")
+        textToCopy = `fetch("${apiUrl}", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(${requestBody})
+})
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));`;
@@ -354,7 +366,13 @@ export default function RestApiPage({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <code className="text-xs mt-2 block break-all">{apiUrl}</code>
+            <code className="text-xs mt-2 block break-all">
+              <span className="text-emerald-600 font-semibold">POST</span>{" "}
+              {apiUrl}
+            </code>
+            <pre className="text-xs mt-2 bg-background/50 p-2 rounded overflow-auto max-h-32">
+              {requestBody}
+            </pre>
           </div>
           <div className="bg-zinc-950">
             {tableDataLoading ? (

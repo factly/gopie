@@ -25,15 +25,15 @@ export const useGetTable = createQuery({
       operator: "e" | "gt" | "lt";
     }[];
   }) => {
-    const res = await apiClient.get(`v1/api/tables/${datasetId}`, {
-      searchParams: {
+    const res = await apiClient.post(`v1/api/tables/${datasetId}`, {
+      json: {
         page,
         limit,
-        columns: columns.join(","),
+        columns,
         sort: sort
           .map((s) => `${s.direction === "desc" ? "-" : ""}${s.column}`)
           .join(","),
-        ...Object.fromEntries(
+        filter: Object.fromEntries(
           filter.map((f) => [
             `filter[${f.column}]${f.operator === "e" ? "" : f.operator}`,
             f.value,
