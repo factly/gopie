@@ -118,7 +118,7 @@ export default function UsersPage() {
 
     setCreateLoading(true);
     try {
-      const { data, error: apiError } = await authClient.admin.createUser({
+      const { error: apiError } = await authClient.admin.createUser({
         name: createForm.name,
         email: createForm.email,
         password: createForm.password,
@@ -127,23 +127,6 @@ export default function UsersPage() {
       if (apiError) {
         setCreateError(apiError.message || "Failed to create user");
         return;
-      }
-      // Add the new user as a member of the active organisation
-      const orgId = (session?.session as { activeOrganizationId?: string } | undefined)
-        ?.activeOrganizationId;
-      if (orgId && data?.user?.id) {
-        const res = await fetch("/api/auth/organization/add-member", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: data.user.id, organizationId: orgId, role: "member" }),
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setCreateError(err.message || "User created but failed to add to organisation");
-          await fetchUsers();
-          return;
-        }
       }
       setCreateOpen(false);
       setCreateForm(INITIAL_FORM);

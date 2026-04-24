@@ -1,7 +1,10 @@
 "use client";
 
-import { useUserDetail } from "@/lib/queries/user/get-user-detail";
+import { usePublicUser } from "@/lib/queries/user/get-public-user";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const isAuthEnabled =
+  String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
 interface UserDisplayNameProps {
   userId: string;
@@ -14,16 +17,20 @@ export function UserDisplayName({
   fallback,
   className,
 }: UserDisplayNameProps) {
-  const { data, isLoading } = useUserDetail({
+  const { data, isLoading } = usePublicUser({
     variables: { userId },
-    enabled: !!userId,
+    enabled: isAuthEnabled && !!userId,
   });
+
+  if (!isAuthEnabled) {
+    return <span className={className}>{fallback ?? "System"}</span>;
+  }
 
   if (isLoading) {
     return <Skeleton className="h-4 w-24 inline-block" />;
   }
 
-  const displayName = data?.user?.human?.profile?.displayName || fallback || userId;
+  const displayName = data?.data?.displayName || fallback || userId;
 
   return <span className={className}>{displayName}</span>;
 }

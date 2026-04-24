@@ -24,7 +24,6 @@ func (s *PostgresAPIKeyStore) Create(ctx context.Context, params models.CreateAP
 		CreatedBy:   params.CreatedBy,
 		Description: pgtype.Text{String: params.Description, Valid: params.Description != ""},
 		ExpiresAt:   expiresAt,
-		OrgID:       params.OrgID,
 	})
 	if err != nil {
 		s.logger.Critical("Error creating API key", zap.Error(err))
@@ -37,12 +36,15 @@ func (s *PostgresAPIKeyStore) Create(ctx context.Context, params models.CreateAP
 		KeyHash:     p.KeyHash,
 		CreatedBy:   p.CreatedBy,
 		Description: p.Description.String,
-		LastUsedAt:  &p.LastUsedAt.Time,
-		ExpiresAt:   &p.ExpiresAt.Time,
 		IsRevoked:   p.IsRevoked,
-		OrgID:       p.OrgID,
 		CreatedAt:   p.CreatedAt.Time,
 		UpdatedAt:   p.UpdatedAt.Time,
+	}
+	if p.LastUsedAt.Valid {
+		apiKey.LastUsedAt = &p.LastUsedAt.Time
+	}
+	if p.ExpiresAt.Valid {
+		apiKey.ExpiresAt = &p.ExpiresAt.Time
 	}
 
 	return &models.APIKeyResponse{

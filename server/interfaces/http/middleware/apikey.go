@@ -30,10 +30,9 @@ func WithApiKeyAuth(service *services.ApikeyService, logger *logger.Logger) fibe
 				"code":    fiber.StatusUnauthorized,
 			})
 		}
-		// Hash the incoming API key
 		hash := service.HashKey(key)
 
-		// No need to check for expiry or revoked status as GetAPIKeyByHash does that on the database layer itself
+		// GetAPIKeyByHash filters out expired and revoked keys at the DB layer
 		apiKey, err := service.GetAPIKeyByHash(ctx.Context(), hash)
 		if err != nil || apiKey == nil {
 			logger.Error("API key not found or error", zap.Error(err))
@@ -44,9 +43,15 @@ func WithApiKeyAuth(service *services.ApikeyService, logger *logger.Logger) fibe
 			})
 		}
 
-		// set apikey as user in context for further use
+		// Update last used timestamp asynchronously so it doesn't block the request
+		go func() {
+			if _, err := service.UpdateLastUsedAPIKey(ctx.Context(), apiKey.ID); err != nil {
+				logger.Error("Failed to update API key last used", zap.Error(err))
+			}
+		}()
+
 		ctx.Locals(UserCtxKey, apiKey.ID)
-		ctx.Locals(OrganizationCtxKey, apiKey.OrgID)
+		ctx.Locals(OrganizationCtxKey, "system")
 		ctx.Locals(RoleCtxKey, models.Admin)
 		return ctx.Next()
 	}

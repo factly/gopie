@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { headers as nextHeaders } from "next/headers";
 import { Pool } from "pg";
+import { auth } from "@/lib/auth/auth";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const isAuthEnabled =
+      String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
+
+    if (isAuthEnabled) {
+      const session = await auth.api.getSession({ headers: await nextHeaders() });
+      if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const { userId } = await params;
 
     if (!userId) {
@@ -18,7 +30,7 @@ export async function GET(
     }
 
     const result = await pool.query(
-      `SELECT id, name, email, image FROM "user" WHERE id = $1`,
+      `SELECT id, name, image FROM "user" WHERE id = $1`,
       [userId]
     );
 
@@ -28,7 +40,6 @@ export async function GET(
 
     const row = result.rows[0];
     const publicUserInfo = {
-      id: row.id,
       displayName: row.name,
       profilePicture: row.image,
     };

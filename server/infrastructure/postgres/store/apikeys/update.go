@@ -3,27 +3,22 @@ package apikeys
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/factly/gopie/domain"
 	"github.com/factly/gopie/domain/models"
-	"github.com/factly/gopie/infrastructure/postgres/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
-func (s *PostgresAPIKeyStore) UpdateLastUsed(ctx context.Context, id, orgID string) (*models.APIKey, error) {
+func (s *PostgresAPIKeyStore) UpdateLastUsed(ctx context.Context, id string) (*models.APIKey, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := s.q.UpdateAPIKeyLastUsed(ctx, gen.UpdateAPIKeyLastUsedParams{
-		ID:    pgtype.UUID{Bytes: uid, Valid: true},
-		OrgID: orgID,
-	})
+	p, err := s.q.UpdateAPIKeyLastUsed(ctx, pgtype.UUID{Bytes: uid, Valid: true})
 	if err != nil {
 		s.logger.Error("Error updating API key last used time", zap.Error(err))
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -32,17 +27,21 @@ func (s *PostgresAPIKeyStore) UpdateLastUsed(ctx context.Context, id, orgID stri
 		return nil, err
 	}
 
-	return &models.APIKey{
+	apiKey := &models.APIKey{
 		ID:          p.ID.String(),
 		Name:        p.Name,
 		KeyHash:     p.KeyHash,
 		CreatedBy:   p.CreatedBy,
 		Description: p.Description.String,
-		LastUsedAt:  &p.LastUsedAt.Time,
-		ExpiresAt:   &p.ExpiresAt.Time,
 		IsRevoked:   p.IsRevoked,
-		OrgID:       p.OrgID,
-		CreatedAt:   time.Time(p.CreatedAt.Time),
-		UpdatedAt:   time.Time(p.UpdatedAt.Time),
-	}, nil
+		CreatedAt:   p.CreatedAt.Time,
+		UpdatedAt:   p.UpdatedAt.Time,
+	}
+	if p.LastUsedAt.Valid {
+		apiKey.LastUsedAt = &p.LastUsedAt.Time
+	}
+	if p.ExpiresAt.Valid {
+		apiKey.ExpiresAt = &p.ExpiresAt.Time
+	}
+	return apiKey, nil
 }

@@ -78,7 +78,6 @@ func betterAuthHandler(db gen.DBTX, logger *logger.Logger, useSecureCookie bool)
 					"message": "invalid or expired session",
 				})
 			}
-			// Database error
 			logger.Error("Database error while validating session", zap.Error(err))
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   "internal_error",
@@ -86,23 +85,10 @@ func betterAuthHandler(db gen.DBTX, logger *logger.Logger, useSecureCookie bool)
 			})
 		}
 
-		// Set user ID in context
 		c.Locals(UserCtxKey, userID)
 
-		// Get organization ID from header
-		orgID := c.Get(OrganizationCtxKey)
-		if orgID == "" {
-			logger.Error("Organization ID header missing",
-				zap.String("userId", userID))
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":   "bad_request",
-				"message": "x-organization-id header is required",
-			})
-		}
+		c.Locals(OrganizationCtxKey, "system")
 
-		c.Locals(OrganizationCtxKey, orgID)
-
-		// Get user role
 		role, err := queries.GetUserRole(context.Background(), userID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -129,24 +115,16 @@ func betterAuthHandler(db gen.DBTX, logger *logger.Logger, useSecureCookie bool)
 // It reads user and org IDs from request headers directly.
 func AuthorizeHeaders(logger *logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Extract user ID from the request context
 		userID := c.Get(UserCtxKey)
 		if userID == "" {
 			logger.Error("User ID not found in request context")
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "user ID not found",
+				"error":   "unauthorized",
+				"message": "user ID not found",
 			})
 		}
 		c.Locals(UserCtxKey, userID)
-
-		orgID := c.Get(OrganizationCtxKey)
-		if orgID == "" {
-			logger.Error("Organization ID not found in request context", zap.String("userID", userID))
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "organization ID not found",
-			})
-		}
-		c.Locals(OrganizationCtxKey, orgID)
+		c.Locals(OrganizationCtxKey, "system")
 
 		c.Locals(RoleCtxKey, models.Admin)
 		return c.Next()
@@ -155,25 +133,16 @@ func AuthorizeHeaders(logger *logger.Logger) fiber.Handler {
 
 func APIAuth(logger *logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Extract user ID from the request context
 		userID := c.Get(UserCtxKey)
 		if userID == "" {
 			logger.Error("User ID not found in request context")
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "user ID not found",
+				"error":   "unauthorized",
+				"message": "user ID not found",
 			})
 		}
 		c.Locals(UserCtxKey, userID)
-
-		orgID := c.Get(OrganizationCtxKey)
-		if orgID == "" {
-			logger.Error("Organization ID not found in request context", zap.String("userID", userID))
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "organization ID not found",
-			})
-		}
-		c.Locals(OrganizationCtxKey, orgID)
-
+		c.Locals(OrganizationCtxKey, "system")
 		c.Locals(RoleCtxKey, models.Admin)
 		return c.Next()
 	}

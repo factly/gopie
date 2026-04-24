@@ -27,7 +27,7 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	DatasetWithIDsBelongsToOrg(ctx context.Context, arg DatasetWithIDsBelongsToOrgParams) (bool, error)
 	DatasetWithNamesBelongsToOrg(ctx context.Context, arg DatasetWithNamesBelongsToOrgParams) (bool, error)
-	DeleteAPIKey(ctx context.Context, arg DeleteAPIKeyParams) error
+	DeleteAPIKey(ctx context.Context, id pgtype.UUID) error
 	DeleteChat(ctx context.Context, arg DeleteChatParams) error
 	DeleteDatabaseSource(ctx context.Context, id pgtype.UUID) error
 	DeleteDataset(ctx context.Context, arg DeleteDatasetParams) error
@@ -38,9 +38,9 @@ type Querier interface {
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteProjectByOrgAndCreator(ctx context.Context, arg DeleteProjectByOrgAndCreatorParams) error
 	FindExistingValidDownload(ctx context.Context, arg FindExistingValidDownloadParams) (Download, error)
-	GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, error)
+	GetAPIKey(ctx context.Context, id pgtype.UUID) (ApiKey, error)
 	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
-	GetAPIKeysCount(ctx context.Context, orgID string) (int64, error)
+	GetAPIKeysCount(ctx context.Context) (int64, error)
 	GetChatById(ctx context.Context, id string) (Chat, error)
 	GetChatMessages(ctx context.Context, chatID string) ([]ChatMessage, error)
 	GetChatWithMessages(ctx context.Context, id string) ([]GetChatWithMessagesRow, error)
@@ -80,7 +80,7 @@ type Querier interface {
 	ListProjectsByOrgAndCreator(ctx context.Context, arg ListProjectsByOrgAndCreatorParams) ([]ListProjectsByOrgAndCreatorRow, error)
 	ProjectsBelongToOrg(ctx context.Context, arg ProjectsBelongToOrgParams) (bool, error)
 	RemoveDatasetFromProject(ctx context.Context, arg RemoveDatasetFromProjectParams) error
-	RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (ApiKey, error)
+	RevokeAPIKey(ctx context.Context, id pgtype.UUID) (ApiKey, error)
 	SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([]ApiKey, error)
 	SearchDatasets(ctx context.Context, arg SearchDatasetsParams) ([]Dataset, error)
 	SearchDatasetsByOrgAndCreator(ctx context.Context, arg SearchDatasetsByOrgAndCreatorParams) ([]Dataset, error)
@@ -89,7 +89,7 @@ type Querier interface {
 	SetDownloadAsCompleted(ctx context.Context, arg SetDownloadAsCompletedParams) (Download, error)
 	SetDownloadAsFailed(ctx context.Context, arg SetDownloadAsFailedParams) (Download, error)
 	SetDownloadToProcessing(ctx context.Context, id pgtype.UUID) (Download, error)
-	UpdateAPIKeyLastUsed(ctx context.Context, arg UpdateAPIKeyLastUsedParams) (ApiKey, error)
+	UpdateAPIKeyLastUsed(ctx context.Context, id pgtype.UUID) (ApiKey, error)
 	UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (ChatMessage, error)
 	UpdateChatTitle(ctx context.Context, arg UpdateChatTitleParams) (Chat, error)
 	UpdateChatVisibility(ctx context.Context, arg UpdateChatVisibilityParams) (Chat, error)

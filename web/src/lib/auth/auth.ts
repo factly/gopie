@@ -213,59 +213,25 @@ function createAuth() {
       },
       user: {
         create: {
-          // Before a new user is created, check if registration is allowed
           before: async (user, ctx) => {
             const isRegistrationAllowed = String(process.env.NEXT_PUBLIC_ALLOW_REGISTRATION).trim() === "true";
+            const isAdminCreating = ctx?.path?.includes("/admin/");
 
-            // If registration is disabled, block new user creation
-            if (!isRegistrationAllowed) {
-              // Check if this is coming from a social OAuth callback
-              // OAuth callbacks include "/callback/" in the path
-              const isSocialOAuth = ctx?.path?.includes("/callback/");
-
-              if (isSocialOAuth) {
-                throw new APIError("FORBIDDEN", {
-                  message: "registration_disabled",
-                });
-              }
-
-              // Also block direct email registration as a safety net
+            if (!isRegistrationAllowed && !isAdminCreating) {
               throw new APIError("FORBIDDEN", {
                 message: "registration_disabled",
               });
             }
 
-            // Allow user creation to proceed normally
+            // Admin-created users are always email-verified
+            if (isAdminCreating) {
+              return { data: { ...user, emailVerified: true } };
+            }
+
             return { data: user };
           },
-          // After a new user is created, auto verify in default mode.
           after: async (user) => {
-            // In development mode, auto-verify the email
             await autoVerifyEmail(user.id);
-
-            // Add user to the first organization as a member
-            try {
-              const orgResult = await getPool().query<{ id: string }>(
-                `SELECT id FROM organization ORDER BY "createdAt" ASC LIMIT 1`
-              );
-              const orgId = orgResult.rows[0]?.id;
-              if (orgId) {
-                const existing = await getPool().query(
-                  `SELECT id FROM member WHERE "organizationId" = $1 AND "userId" = $2 LIMIT 1`,
-                  [orgId, user.id]
-                );
-                if (existing.rowCount === 0) {
-                  await getPool().query(
-                    `INSERT INTO member (id, "organizationId", "userId", role, "createdAt")
-                     VALUES (gen_random_uuid()::text, $1, $2, 'member', NOW())`,
-                    [orgId, user.id]
-                  );
-                }
-                console.log(`Added user ${user.id} to organization ${orgId} as member`);
-              }
-            } catch (error) {
-              console.error("Failed to add user to organization:", error);
-            }
           },
         },
       },

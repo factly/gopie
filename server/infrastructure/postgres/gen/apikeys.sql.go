@@ -17,12 +17,11 @@ insert into api_keys (
     key_hash,
     created_by,
     description,
-    expires_at,
-    org_id
+    expires_at
 ) values (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5
 )
-returning id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at
+returning id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at
 `
 
 type CreateAPIKeyParams struct {
@@ -31,7 +30,6 @@ type CreateAPIKeyParams struct {
 	CreatedBy   string
 	Description pgtype.Text
 	ExpiresAt   pgtype.Timestamptz
-	OrgID       string
 }
 
 func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (ApiKey, error) {
@@ -41,12 +39,10 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Api
 		arg.CreatedBy,
 		arg.Description,
 		arg.ExpiresAt,
-		arg.OrgID,
 	)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ApplicationID,
 		&i.Name,
 		&i.KeyHash,
 		&i.CreatedBy,
@@ -54,7 +50,6 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Api
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.IsRevoked,
-		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,35 +58,24 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Api
 
 const deleteAPIKey = `-- name: DeleteAPIKey :exec
 delete from api_keys
-where id = $1 and org_id = $2
+where id = $1
 `
 
-type DeleteAPIKeyParams struct {
-	ID    pgtype.UUID
-	OrgID string
-}
-
-func (q *Queries) DeleteAPIKey(ctx context.Context, arg DeleteAPIKeyParams) error {
-	_, err := q.db.Exec(ctx, deleteAPIKey, arg.ID, arg.OrgID)
+func (q *Queries) DeleteAPIKey(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAPIKey, id)
 	return err
 }
 
 const getAPIKey = `-- name: GetAPIKey :one
-select id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at from api_keys
-where id = $1 and org_id = $2
+select id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at from api_keys
+where id = $1
 `
 
-type GetAPIKeyParams struct {
-	ID    pgtype.UUID
-	OrgID string
-}
-
-func (q *Queries) GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, error) {
-	row := q.db.QueryRow(ctx, getAPIKey, arg.ID, arg.OrgID)
+func (q *Queries) GetAPIKey(ctx context.Context, id pgtype.UUID) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, getAPIKey, id)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ApplicationID,
 		&i.Name,
 		&i.KeyHash,
 		&i.CreatedBy,
@@ -99,7 +83,6 @@ func (q *Queries) GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, e
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.IsRevoked,
-		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -107,8 +90,8 @@ func (q *Queries) GetAPIKey(ctx context.Context, arg GetAPIKeyParams) (ApiKey, e
 }
 
 const getAPIKeyByHash = `-- name: GetAPIKeyByHash :one
-select id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at from api_keys
-where key_hash = $1 
+select id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at from api_keys
+where key_hash = $1
 and (expires_at is null or expires_at > now())
 and is_revoked = false
 `
@@ -118,7 +101,6 @@ func (q *Queries) GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, 
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ApplicationID,
 		&i.Name,
 		&i.KeyHash,
 		&i.CreatedBy,
@@ -126,7 +108,6 @@ func (q *Queries) GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, 
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.IsRevoked,
-		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -135,31 +116,28 @@ func (q *Queries) GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, 
 
 const getAPIKeysCount = `-- name: GetAPIKeysCount :one
 select count(*) from api_keys
-where org_id = $1
 `
 
-func (q *Queries) GetAPIKeysCount(ctx context.Context, orgID string) (int64, error) {
-	row := q.db.QueryRow(ctx, getAPIKeysCount, orgID)
+func (q *Queries) GetAPIKeysCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getAPIKeysCount)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const listAPIKeys = `-- name: ListAPIKeys :many
-select id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at from api_keys
-where org_id = $1
+select id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at from api_keys
 order by created_at desc
-limit $2 offset $3
+limit $1 offset $2
 `
 
 type ListAPIKeysParams struct {
-	OrgID  string
 	Limit  int32
 	Offset int32
 }
 
 func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]ApiKey, error) {
-	rows, err := q.db.Query(ctx, listAPIKeys, arg.OrgID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listAPIKeys, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +147,6 @@ func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]Api
 		var i ApiKey
 		if err := rows.Scan(
 			&i.ID,
-			&i.ApplicationID,
 			&i.Name,
 			&i.KeyHash,
 			&i.CreatedBy,
@@ -177,7 +154,6 @@ func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]Api
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.IsRevoked,
-			&i.OrgID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -192,21 +168,19 @@ func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]Api
 }
 
 const listExpiredAPIKeys = `-- name: ListExpiredAPIKeys :many
-select id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at from api_keys
-where org_id = $1
-and expires_at < now()
+select id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at from api_keys
+where expires_at < now()
 order by expires_at desc
-limit $2 offset $3
+limit $1 offset $2
 `
 
 type ListExpiredAPIKeysParams struct {
-	OrgID  string
 	Limit  int32
 	Offset int32
 }
 
 func (q *Queries) ListExpiredAPIKeys(ctx context.Context, arg ListExpiredAPIKeysParams) ([]ApiKey, error) {
-	rows, err := q.db.Query(ctx, listExpiredAPIKeys, arg.OrgID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listExpiredAPIKeys, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +190,6 @@ func (q *Queries) ListExpiredAPIKeys(ctx context.Context, arg ListExpiredAPIKeys
 		var i ApiKey
 		if err := rows.Scan(
 			&i.ID,
-			&i.ApplicationID,
 			&i.Name,
 			&i.KeyHash,
 			&i.CreatedBy,
@@ -224,7 +197,6 @@ func (q *Queries) ListExpiredAPIKeys(ctx context.Context, arg ListExpiredAPIKeys
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.IsRevoked,
-			&i.OrgID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -241,21 +213,15 @@ func (q *Queries) ListExpiredAPIKeys(ctx context.Context, arg ListExpiredAPIKeys
 const revokeAPIKey = `-- name: RevokeAPIKey :one
 update api_keys
 set is_revoked = true
-where id = $1 and org_id = $2
-returning id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at
+where id = $1
+returning id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at
 `
 
-type RevokeAPIKeyParams struct {
-	ID    pgtype.UUID
-	OrgID string
-}
-
-func (q *Queries) RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (ApiKey, error) {
-	row := q.db.QueryRow(ctx, revokeAPIKey, arg.ID, arg.OrgID)
+func (q *Queries) RevokeAPIKey(ctx context.Context, id pgtype.UUID) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, revokeAPIKey, id)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ApplicationID,
 		&i.Name,
 		&i.KeyHash,
 		&i.CreatedBy,
@@ -263,7 +229,6 @@ func (q *Queries) RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (Api
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.IsRevoked,
-		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -271,36 +236,29 @@ func (q *Queries) RevokeAPIKey(ctx context.Context, arg RevokeAPIKeyParams) (Api
 }
 
 const searchAPIKeys = `-- name: SearchAPIKeys :many
-SELECT id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at
+SELECT id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at
 FROM api_keys
 WHERE
-    org_id = $1 AND
-    (name ILIKE concat('%', $2::text, '%') OR
-    description ILIKE concat('%', $2::text, '%'))
+    name ILIKE concat('%', $1::text, '%') OR
+    description ILIKE concat('%', $1::text, '%')
 ORDER BY
     CASE
-        WHEN name ILIKE concat($2::text, '%') THEN 1
-        WHEN name ILIKE concat('%', $2::text, '%') THEN 2
+        WHEN name ILIKE concat($1::text, '%') THEN 1
+        WHEN name ILIKE concat('%', $1::text, '%') THEN 2
         ELSE 3
     END,
     created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $2 OFFSET $3
 `
 
 type SearchAPIKeysParams struct {
-	OrgID   string
-	Column2 string
+	Column1 string
 	Limit   int32
 	Offset  int32
 }
 
 func (q *Queries) SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([]ApiKey, error) {
-	rows, err := q.db.Query(ctx, searchAPIKeys,
-		arg.OrgID,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
-	)
+	rows, err := q.db.Query(ctx, searchAPIKeys, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +268,6 @@ func (q *Queries) SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([
 		var i ApiKey
 		if err := rows.Scan(
 			&i.ID,
-			&i.ApplicationID,
 			&i.Name,
 			&i.KeyHash,
 			&i.CreatedBy,
@@ -318,7 +275,6 @@ func (q *Queries) SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([
 			&i.LastUsedAt,
 			&i.ExpiresAt,
 			&i.IsRevoked,
-			&i.OrgID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -335,21 +291,15 @@ func (q *Queries) SearchAPIKeys(ctx context.Context, arg SearchAPIKeysParams) ([
 const updateAPIKeyLastUsed = `-- name: UpdateAPIKeyLastUsed :one
 update api_keys
 set last_used_at = now()
-where id = $1 and org_id = $2
-returning id, application_id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, org_id, created_at, updated_at
+where id = $1
+returning id, name, key_hash, created_by, description, last_used_at, expires_at, is_revoked, created_at, updated_at
 `
 
-type UpdateAPIKeyLastUsedParams struct {
-	ID    pgtype.UUID
-	OrgID string
-}
-
-func (q *Queries) UpdateAPIKeyLastUsed(ctx context.Context, arg UpdateAPIKeyLastUsedParams) (ApiKey, error) {
-	row := q.db.QueryRow(ctx, updateAPIKeyLastUsed, arg.ID, arg.OrgID)
+func (q *Queries) UpdateAPIKeyLastUsed(ctx context.Context, id pgtype.UUID) (ApiKey, error) {
+	row := q.db.QueryRow(ctx, updateAPIKeyLastUsed, id)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
-		&i.ApplicationID,
 		&i.Name,
 		&i.KeyHash,
 		&i.CreatedBy,
@@ -357,7 +307,6 @@ func (q *Queries) UpdateAPIKeyLastUsed(ctx context.Context, arg UpdateAPIKeyLast
 		&i.LastUsedAt,
 		&i.ExpiresAt,
 		&i.IsRevoked,
-		&i.OrgID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

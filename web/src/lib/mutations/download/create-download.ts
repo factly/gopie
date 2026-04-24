@@ -1,5 +1,4 @@
 import { useDownloadStore } from "@/lib/stores/download-store";
-import { getGlobalOrganizationId } from "@/lib/api-client";
 
 export interface CreateDownloadRequest {
   dataset_id: string;
@@ -25,20 +24,16 @@ export const createDownloadWithSSE = async (
   const url = `${baseUrl}/v1/api/downloads`;
 
   const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
-  const orgId = getGlobalOrganizationId();
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-
   // Add organization header
   if (!isAuthEnabled) {
     headers['x-user-id'] = 'system';
-    headers['x-organization-id'] = 'system';
-  } else if (orgId) {
-    headers['x-organization-id'] = orgId;
   }
+  headers['x-organization-id'] = 'system';
 
   const response = await fetch(url, {
     method: 'POST',

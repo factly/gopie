@@ -11,6 +11,7 @@ import {
   UserCircle,
   Shield,
   Users,
+  KeyRoundIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { useTheme } from "next-themes";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { authClient } from "@/lib/auth/auth-client";
 import { NavProjects } from "@/components/nav-projects";
 import { NavProjectsChat } from "@/components/nav-projects-chat";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -45,6 +47,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const { state } = useSidebar();
+  const { data: session } = authClient.useSession();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   const [mounted, setMounted] = React.useState(false);
   const [isPeeking, setIsPeeking] = React.useState(false);
@@ -212,6 +216,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/settings/secrets",
       icon: KeyIcon,
     },
+    ...(isAdmin
+      ? [{ title: "API Keys", url: "/settings/api-keys", icon: KeyRoundIcon }]
+      : []),
   ];
 
   // Settings navigation component

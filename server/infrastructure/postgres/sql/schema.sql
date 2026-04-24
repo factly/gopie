@@ -108,19 +108,8 @@ create table downloads(
   org_id text not null
 );
 
-create table if not exists applications(
-    id uuid primary key default uuid_generate_v4(),
-    name text not null,
-    description text default null,
-    created_by text not null,
-    org_id text not null,
-    created_at timestamp with time zone not null default now(),
-    updated_at timestamp with time zone not null default now()
-);
-
 create table if not exists api_keys(
     id uuid primary key default uuid_generate_v4(),
-    application_id uuid not null references applications(id) on delete cascade,
     name text not null,
     key_hash text not null,
     created_by text not null,
@@ -128,7 +117,6 @@ create table if not exists api_keys(
     last_used_at timestamp with time zone default null,
     expires_at timestamp with time zone default null,
     is_revoked boolean not null default false,
-    org_id text not null,
     created_at timestamp with time zone not null default now(),
     updated_at timestamp with time zone not null default now()
 );

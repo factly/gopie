@@ -36,17 +36,9 @@ func AuthorizeDatasetsAccessFromSql(olap *services.OlapService, store *services.
 			})
 		}
 
-		orgID := ctx.Locals("x-organization-id")
-		if orgID == nil {
-			logger.Error("Organization ID not found in context")
-			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"message": "Unauthorized",
-				"error":   "Organization ID not found",
-				"code":    fiber.StatusUnauthorized,
-			})
-		}
+		orgID := "system"
 
-		belongs, err := store.DatasetsBelongToOrg(tableNames, orgID.(string))
+		belongs, err := store.DatasetsBelongToOrg(tableNames, orgID)
 		if err != nil {
 			logger.Error("Error checking if datasets belong to org", zap.Error(err))
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -83,17 +75,9 @@ func AuthorizeDatasetsFromParams(store *services.ProjectService, logger *logger.
 			return ctx.Next()
 		}
 
-		orgID := ctx.Locals("x-organization-id")
-		if orgID == nil {
-			logger.Error("Organization ID not found in context")
-			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"message": "Unauthorized",
-				"error":   "Organization ID not found",
-				"code":    fiber.StatusUnauthorized,
-			})
-		}
+		orgID := "system"
 
-		belongs, err := store.DatasetsBelongToOrg([]string{tableName}, orgID.(string))
+		belongs, err := store.DatasetsBelongToOrg([]string{tableName}, orgID)
 		if err != nil {
 			logger.Error("Error checking if dataset belongs to org", zap.Error(err))
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -119,16 +103,7 @@ func AuthorizeProjectsAndDatasetsFromHeaders(store *services.ProjectService, log
 	return func(ctx *fiber.Ctx) error {
 		projectIDs := strings.Split(ctx.Get("x-project-ids"), ",")
 		datasetNames := strings.Split(ctx.Get("x-dataset-ids"), ",")
-		orgID := ctx.Locals("x-organization-id")
-		if orgID == nil {
-			logger.Error("Organization ID not found in context")
-			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"message": "Unauthorized",
-				"error":   "Organization ID not found",
-				"code":    fiber.StatusUnauthorized,
-			})
-		}
-		orgIDStr := orgID.(string)
+		orgID := "system"
 
 		if len(projectIDs) > 0 && projectIDs[0] != "" {
 			type result struct {
@@ -140,12 +115,12 @@ func AuthorizeProjectsAndDatasetsFromHeaders(store *services.ProjectService, log
 			datasetCh := make(chan result, 1)
 
 			go func() {
-				belongs, err := store.ProjectsBelongToOrg(projectIDs, orgIDStr)
+				belongs, err := store.ProjectsBelongToOrg(projectIDs, orgID)
 				projectCh <- result{belongs, err}
 			}()
 
 			go func() {
-				belongs, err := store.DatasetsBelongToOrg(datasetNames, orgIDStr)
+				belongs, err := store.DatasetsBelongToOrg(datasetNames, orgID)
 				datasetCh <- result{belongs, err}
 			}()
 

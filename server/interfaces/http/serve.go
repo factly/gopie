@@ -10,6 +10,7 @@ import (
 	chatApi "github.com/factly/gopie/interfaces/http/routes/api/chats"
 	"github.com/factly/gopie/interfaces/http/routes/api/download"
 	projectApi "github.com/factly/gopie/interfaces/http/routes/api/projects"
+	apikeyRoutes "github.com/factly/gopie/interfaces/http/routes/apikeys"
 	databaseRoutes "github.com/factly/gopie/interfaces/http/routes/source/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -121,6 +122,9 @@ func serve(cfg *config.GopieConfig, params *ServerParams, pool *pgxpool.Pool, ct
 		params.DownloadsService,
 		appLogger,
 	)
+
+	// API key management routes
+	apikeyRoutes.Routes(app.Group("/apikeys", authMiddleware...), params.ApikeyService, appLogger)
 
 	// Create a channel to listen for server shutdown
 	serverShutdown := make(chan struct{})

@@ -50,20 +50,16 @@ export const apiClient = ky.create({
       (request) => {
         const isAuthEnabled = String(process.env.NEXT_PUBLIC_ENABLE_AUTH).trim() === "true";
 
+        if (!request.headers.get("x-organization-id")) {
+          request.headers.set("x-organization-id", "system");
+        }
+
         // If auth is disabled, force admin headers and skip token logic
         if (!isAuthEnabled) {
           if (!request.headers.get("x-user-id")) {
             request.headers.set("x-user-id", "system");
           }
-          if (!request.headers.get("x-organization-id")) {
-            request.headers.set("x-organization-id", "system");
-          }
           return;
-        }
-
-        const orgId = getGlobalOrganizationId();
-        if (orgId && !request.headers.get("x-organization-id")) {
-          request.headers.set("x-organization-id", orgId);
         }
       },
     ],

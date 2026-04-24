@@ -35,4 +35,16 @@ export const usePublicUser = createQuery<
 >({
   queryKey: ["public-user"],
   fetcher: fetchPublicUser,
+  use: [
+    (next) => (options, queryClient) => {
+      const { variables } = options;
+      return next(
+        {
+          ...options,
+          queryKey: ["public-user", variables?.userId],
+        },
+        queryClient
+      );
+    },
+  ],
 });
