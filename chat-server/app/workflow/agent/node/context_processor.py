@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.core.log import custom_logger as logger
 from app.models.schema import DatasetSchema
+from app.services.gopie.dataset_info import get_project_info
 from app.services.qdrant.get_schema import (
     get_project_schemas,
     get_schema_from_qdrant,
@@ -54,7 +55,9 @@ class ProcessContextOutput(BaseModel):
 
 
 async def get_projects_with_custom_prompts(
-    dataset_ids: list[str] | None, project_ids: list[str] | None
+    dataset_ids: list[str] | None,
+    project_ids: list[str] | None,
+    org_id: str | None = None,
 ) -> tuple[dict[str, str], list[DatasetSchema]]:
     dataset_schemas = []
     if dataset_ids:
@@ -76,9 +79,14 @@ async def get_projects_with_custom_prompts(
     schemas = dataset_schemas + project_schemas
 
     project_custom_prompts = {}
-    for schema in schemas:
-        if schema and schema.project_custom_prompt and schema.project_id:
-            project_custom_prompts[schema.project_id] = schema.project_custom_prompt
+    if project_ids:
+        project_info_tasks = [
+            get_project_info(project_id=project_id, org_id=org_id) for project_id in project_ids
+        ]
+        project_info_results = await asyncio.gather(*project_info_tasks, return_exceptions=True)
+        for project_id, result in zip(project_ids, project_info_results):
+            if not isinstance(result, Exception):
+                project_custom_prompts[project_id] = result.custom_prompt
 
     return project_custom_prompts, schemas[:5]
 
@@ -98,8 +106,9 @@ async def process_context(state: AgentState, config: RunnableConfig) -> dict:
     relevant_datasets_ids = history_context["datasets_used"]
     dataset_ids = state.get("dataset_ids", [])
     project_ids = state.get("project_ids", [])
+    org_id = config.get("metadata", {}).get("org_id", None)
     project_custom_prompts_dict, schemas = await get_projects_with_custom_prompts(
-        dataset_ids=dataset_ids, project_ids=project_ids
+        dataset_ids=dataset_ids, project_ids=project_ids, org_id=org_id
     )
     chain_input = {
         "current_query": user_input,
