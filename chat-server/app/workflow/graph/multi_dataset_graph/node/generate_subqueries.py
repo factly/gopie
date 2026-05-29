@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from app.core.log import custom_logger as logger
 from app.models.message import ErrorMessage, IntermediateStep
 from app.models.schema import DatasetSchema
+from app.services.gopie.dataset_info import get_project_info
 from app.services.qdrant.get_schema import get_project_schemas
 from app.utils.langsmith.prompt_manager import get_prompt_llm_chain
 from app.workflow.events.event_utils import (
@@ -15,6 +16,8 @@ from app.workflow.graph.multi_dataset_graph.types import State
 
 async def _format_context_info(
     project_ids: list[str] | None,
+    org_id: str | None = None,
+    user_id: str | None = None,
     max_datasets: int = 30,
 ) -> str:
     """
@@ -22,6 +25,8 @@ async def _format_context_info(
 
     Args:
         project_ids: List of project IDs (or None)
+        org_id: Optional organization ID
+        user_id: Optional user ID
         max_datasets: Maximum number of datasets to include in the context
 
     Returns:
@@ -33,12 +38,13 @@ async def _format_context_info(
     context_info = ""
 
     try:
+        project_info = await get_project_info(project_ids[0], org_id=org_id, user_id=user_id)
+        project_custom_prompt = project_info.custom_prompt
+
         dataset_schemas: list[DatasetSchema] = await get_project_schemas(project_ids[0], limit=50)
 
         if not dataset_schemas:
             return ""
-
-        project_custom_prompt = dataset_schemas[0].project_custom_prompt
 
         context_info = "PROJECT CONTEXT:\n"
         if project_custom_prompt:
@@ -81,8 +87,10 @@ async def generate_subqueries(state: State, config: RunnableConfig):
     user_input = state.get("user_query", "")
     query_result = state.get("query_result")
     project_ids = state.get("project_ids", [])
+    org_id = config.get("metadata", {}).get("org_id", None)
+    user_id = config.get("metadata", {}).get("user", None)
 
-    context_info = await _format_context_info(project_ids)
+    context_info = await _format_context_info(project_ids, org_id=org_id, user_id=user_id)
 
     try:
         subqueries_llm = get_prompt_llm_chain(
