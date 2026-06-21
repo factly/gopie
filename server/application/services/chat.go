@@ -47,11 +47,11 @@ func (service *ChatService) AddNewMessage(ctx context.Context, chatID string, me
 	return service.store.AddNewMessage(ctx, chatID, messages)
 }
 
-func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams) (*models.D_ChatWithMessages, error) {
+func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams, maxTokens *int) (*models.D_ChatWithMessages, error) {
 	messages := params.Messages
 	prevMsgs := &models.PaginationView[*models.D_ChatMessage]{}
 
-	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt, prevMsgs.Results)
+	aiResponse, err := service.ai.GenerateChatResponse(context.Background(), params.Prompt, prevMsgs.Results, maxTokens)
 	if err != nil {
 		return nil, fmt.Errorf("Error generating chat response from ai: %v", err)
 	}
@@ -64,7 +64,7 @@ func (service *ChatService) D_ChatWithAi(params *models.D_ChatWithAiParams) (*mo
 	// new chat
 	if params.ChatID == "" {
 
-		title, err := service.ai.GenerateTitle(context.Background(), messages[len(messages)-1].Content)
+		title, err := service.ai.GenerateTitle(context.Background(), messages[len(messages)-1].Content, maxTokens)
 		if err != nil {
 			return nil, fmt.Errorf("Error generating title from ai: %v", err)
 		}
@@ -94,7 +94,7 @@ func (service *ChatService) ChatWithAiAgent(ctx context.Context, params *models.
 	service.aiAgent.Chat(ctx, params)
 }
 
-func (service *ChatService) CreateChat(ctx context.Context, params *models.CreateChatParams) (*models.ChatWithMessages, error) {
+func (service *ChatService) CreateChat(ctx context.Context, params *models.CreateChatParams, maxTokens *int) (*models.ChatWithMessages, error) {
 	var userMessage *models.ChatMessage
 	var filteredMessages []models.ChatMessage
 
@@ -127,7 +127,7 @@ func (service *ChatService) CreateChat(ctx context.Context, params *models.Creat
 	// Generate title only if we have a user message
 	if userMessage != nil && userMessage.Choices != nil && len(userMessage.Choices) > 0 &&
 		userMessage.Choices[0].Delta.Content != nil {
-		title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content)
+		title, err := service.ai.GenerateTitle(ctx, *userMessage.Choices[0].Delta.Content, maxTokens)
 		if err != nil {
 			fmt.Printf("Error generating title from AI: %v\n", err)
 			title = &models.D_AiChatResponse{

@@ -342,12 +342,16 @@ func (h *httpHandler) chatWithAgent(ctx *fiber.Ctx) error {
 					var chatWithMessages *models.ChatWithMessages
 					var err error
 					if chatIdHeader == "" {
+						var maxTokens *int
+						if body.MaxTokens > 0 {
+							maxTokens = &body.MaxTokens
+						}
 						chatWithMessages, err = h.chatSvc.CreateChat(context.Background(), &models.CreateChatParams{
 							ID:             sessionID,
 							Messages:       messages,
 							CreatedBy:      userID,
 							OrganizationID: orgID,
-						})
+						}, maxTokens)
 						if err != nil {
 							h.logger.Critical("SSE: Error creating new chat", zap.Error(err), zap.String("session_id", sessionID))
 							errorEvent := pkg.ChatMessageFromError(err)

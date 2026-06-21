@@ -13,6 +13,8 @@ type genColumnsDescBody struct {
 	Summary any `json:"summary" validate:"required" example:"{\"column_name\": {\"type\": \"string\", \"count\": 1000}}"`
 	// Sample rows from the dataset to help AI understand the data context
 	Rows any `json:"rows" validate:"required" example:"[[\"value1\", \"value2\"], [\"value3\", \"value4\"]]"`
+	// Maximum number of tokens to generate (optional)
+	MaxTokens *int `json:"maxTokens,omitempty" example:"1000"`
 }
 
 // @Summary Generate AI-powered column descriptions
@@ -38,7 +40,7 @@ func (h *httpHandler) genColumnsDesc(c *fiber.Ctx) error {
 	rowsString := fmt.Sprintf("%v", body.Rows)
 	SummaryString := fmt.Sprintf("%v", body.Summary)
 
-	descriptions, err := h.aiSvc.GenerateColumnDescriptions(rowsString, SummaryString)
+	descriptions, err := h.aiSvc.GenerateColumnDescriptions(rowsString, SummaryString, body.MaxTokens)
 	if err != nil {
 		h.logger.Error("Error generating column descriptions", zap.Error(err))
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate column descriptions")
@@ -61,6 +63,8 @@ type genDatasetDescBody struct {
 	Rows any `json:"rows" validate:"required" example:"[[\"2024-01-01\", \"Widget A\", 10, 100.00]]"`
 	// Dataset summary statistics
 	Summary any `json:"summary" example:"{\"rowCount\": 1000, \"columnCount\": 4}"`
+	// Maximum number of tokens to generate (optional)
+	MaxTokens *int `json:"maxTokens,omitempty" example:"1000"`
 }
 
 // @Summary Generate AI-powered dataset description
@@ -89,6 +93,7 @@ func (h *httpHandler) genDatasetDesc(c *fiber.Ctx) error {
 		body.ColumnDescriptions,
 		fmt.Sprintf("%v", body.Rows),
 		fmt.Sprintf("%v", body.Summary),
+		body.MaxTokens,
 	)
 	if err != nil {
 		h.logger.Error("Error generating dataset description", zap.Error(err))
